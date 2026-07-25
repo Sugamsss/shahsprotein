@@ -23,20 +23,22 @@ export const WaitlistModal: React.FC = () => {
 
   return (
     <Modal isOpen={isWaitlistModalOpen} onClose={closeWaitlistModal} title="Join the VIP Waitlist">
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', paddingTop: '0.5rem' }}>
         <div
           style={{
-            width: '48px',
-            height: '48px',
+            width: '52px',
+            height: '52px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: 'var(--color-bg-badge)',
+            border: '1px solid var(--color-border-card)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '1rem',
+            marginBottom: '1.25rem',
+            boxShadow: 'var(--shadow-glow)',
           }}
         >
-          <Sparkles size={24} color="var(--color-text-accent)" />
+          <Sparkles size={26} color="var(--color-text-accent)" />
         </div>
 
         <p
@@ -47,10 +49,10 @@ export const WaitlistModal: React.FC = () => {
             lineHeight: 1.6,
           }}
         >
-          Join <strong style={{ color: 'var(--color-text-primary)' }}>{waitlistCount}+ early members</strong> getting first access to our natural high-protein products + exclusive launch discounts.
+          Join <strong style={{ color: 'var(--color-text-accent)', fontWeight: 700 }}>{waitlistCount}+ early members</strong> getting first access to our natural high-protein products + exclusive launch discounts.
         </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           <Input
             type="email"
             placeholder="Enter your email address"
