@@ -29,7 +29,23 @@ export const ProductsSection: React.FC = () => {
       <Container>
         <SectionHeader
           badge="OUR FIRST PRODUCTS"
-          title="We're starting with Protein Chivda, Muesli, and Protein Bars."
+          title={
+            <>
+              We're starting with{' '}
+              <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
+                Protein Chivda
+              </span>
+              ,{' '}
+              <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
+                Muesli
+              </span>
+              , and{' '}
+              <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
+                Protein Bars
+              </span>
+              .
+            </>
+          }
         />
 
         <div

@@ -3,8 +3,8 @@ import { Badge } from '../ui/Badge';
 
 export interface SectionHeaderProps {
   badge?: string;
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   centered?: boolean;
 }
 
@@ -31,6 +31,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       )}
       <h2
         style={{
+          fontFamily: 'var(--font-family-heading)',
           fontSize: 'var(--font-size-3xl)',
           color: 'var(--color-text-primary)',
           marginBottom: subtitle ? 'var(--space-3)' : 0,
