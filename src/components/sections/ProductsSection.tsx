@@ -5,27 +5,115 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { productsData } from '../../data/products';
 import { useModal } from '../../context/ModalContext';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { Leaf, Wheat, Dumbbell, ArrowRight } from 'lucide-react';
-import { IconType } from '../../types/product';
+import { IconType, Product } from '../../types/product';
 
-export const ProductsSection: React.FC = () => {
+const renderIcon = (type: IconType) => {
+  switch (type) {
+    case 'leaf':
+      return <Leaf size={20} color="var(--color-text-accent)" />;
+    case 'wheat':
+      return <Wheat size={20} color="var(--color-text-accent)" />;
+    case 'dumbbell':
+      return <Dumbbell size={20} color="var(--color-text-accent)" />;
+    default:
+      return <Leaf size={20} color="var(--color-text-accent)" />;
+  }
+};
+
+const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ product, index }) => {
   const { openProductModal } = useModal();
-
-  const renderIcon = (type: IconType) => {
-    switch (type) {
-      case 'leaf':
-        return <Leaf size={24} color="var(--color-text-accent)" />;
-      case 'wheat':
-        return <Wheat size={24} color="var(--color-text-accent)" />;
-      case 'dumbbell':
-        return <Dumbbell size={24} color="var(--color-text-accent)" />;
-      default:
-        return <Leaf size={24} color="var(--color-text-accent)" />;
-    }
-  };
+  const cardRef = useScrollReveal<HTMLDivElement>();
+  const delayClass = `delay-${((index % 5) + 1) * 100}`;
 
   return (
-    <section id="products" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
+    <div ref={cardRef} className={`reveal ${delayClass}`}>
+      <Card interactive onClick={() => openProductModal(product)}>
+        {/* Product Image + Icon Badge Container */}
+        <div style={{ position: 'relative', marginBottom: 'var(--space-4)' }}>
+          <img
+            src={product.image}
+            alt={product.name}
+            style={{
+              width: '100%',
+              aspectRatio: '4/3',
+              objectFit: 'cover',
+              borderRadius: 'var(--radius-lg)',
+              display: 'block',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 'var(--space-3)',
+              right: 'var(--space-3)',
+              width: '40px',
+              height: '40px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: 'var(--color-bg-badge)',
+              backdropFilter: 'var(--glass-backdrop)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            {renderIcon(product.iconType)}
+          </div>
+        </div>
+
+        {/* Product Name */}
+        <h3
+          style={{
+            fontSize: 'var(--font-size-xl)',
+            color: 'var(--color-product-name)',
+            marginBottom: 'var(--space-2)',
+            fontWeight: 600,
+          }}
+        >
+          {product.name}
+        </h3>
+
+        {/* Short Description */}
+        <p
+          style={{
+            fontSize: 'var(--font-size-sm)',
+            color: 'var(--color-text-secondary)',
+            lineHeight: 1.6,
+            marginBottom: 'var(--space-6)',
+          }}
+        >
+          {product.shortDescription}
+        </p>
+
+        {/* Learn More Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            openProductModal(product);
+          }}
+          style={{ paddingLeft: 0, color: 'var(--color-text-accent)' }}
+        >
+          Learn more <ArrowRight size={16} />
+        </Button>
+      </Card>
+    </div>
+  );
+};
+
+export const ProductsSection: React.FC = () => {
+  const sectionRef = useScrollReveal<HTMLElement>();
+
+  return (
+    <section
+      id="products"
+      ref={sectionRef}
+      className="reveal"
+      style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}
+    >
       <Container>
         <SectionHeader
           badge="OUR FIRST PRODUCTS"
@@ -55,60 +143,12 @@ export const ProductsSection: React.FC = () => {
             gap: 'var(--space-8)',
           }}
         >
-          {productsData.map((product) => (
-            <Card key={product.id} interactive onClick={() => openProductModal(product)}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: 'var(--color-bg-badge)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 'var(--space-4)',
-                }}
-              >
-                {renderIcon(product.iconType)}
-              </div>
-
-              <h3
-                style={{
-                  fontSize: 'var(--font-size-xl)',
-                  color: 'var(--color-text-primary)',
-                  marginBottom: 'var(--space-2)',
-                }}
-              >
-                {product.name}
-              </h3>
-
-              <p
-                style={{
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'var(--color-text-secondary)',
-                  lineHeight: 1.6,
-                  marginBottom: 'var(--space-6)',
-                  minHeight: '4.8em',
-                }}
-              >
-                {product.shortDescription}
-              </p>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openProductModal(product);
-                }}
-                style={{ paddingLeft: 0, color: 'var(--color-text-accent)' }}
-              >
-                Learn more <ArrowRight size={16} />
-              </Button>
-            </Card>
+          {productsData.map((product, index) => (
+            <ProductCardItem key={product.id} product={product} index={index} />
           ))}
         </div>
       </Container>
     </section>
   );
 };
+
