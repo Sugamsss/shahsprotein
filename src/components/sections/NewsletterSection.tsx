@@ -89,6 +89,7 @@ export const NewsletterSection: React.FC = () => {
 
             <form
               onSubmit={handleSubmit}
+              className="hero-form"
               style={{
                 display: 'flex',
                 gap: '0.75rem',
