@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -14,33 +14,52 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   className = '',
   style,
+  onMouseEnter,
+  onMouseLeave,
+  disabled,
   ...props
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    setIsHovered(true);
+    if (onMouseEnter) onMouseEnter(e);
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    setIsHovered(false);
+    if (onMouseLeave) onMouseLeave(e);
+  };
+
   const getVariantStyles = (): React.CSSProperties => {
+    const isInteractive = !disabled && isHovered;
     switch (variant) {
       case 'primary':
         return {
           background: 'var(--color-accent-gradient)',
           color: 'var(--color-btn-text)',
           fontWeight: 600,
-          boxShadow: 'var(--shadow-glow)',
+          boxShadow: isInteractive ? '0 0 32px var(--color-accent-primary)' : 'var(--shadow-glow)',
+          border: 'none',
         };
       case 'secondary':
         return {
-          background: 'var(--color-bg-card)',
+          background: isInteractive ? 'var(--color-bg-card-hover)' : 'var(--color-bg-card)',
           color: 'var(--color-text-primary)',
           border: '1px solid var(--color-border-card)',
+          boxShadow: isInteractive ? 'var(--shadow-card)' : 'none',
         };
       case 'outline':
         return {
           background: 'transparent',
           color: 'var(--color-text-primary)',
-          border: '1px solid var(--color-border-hover)',
+          border: isInteractive ? '1px solid var(--color-border-hover)' : '1px solid var(--color-border-card)',
         };
       case 'ghost':
         return {
-          background: 'transparent',
-          color: 'var(--color-text-secondary)',
+          background: isInteractive ? 'var(--color-bg-badge)' : 'transparent',
+          color: 'var(--color-text-accent)',
+          border: 'none',
         };
     }
   };
@@ -62,19 +81,28 @@ export const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center',
     gap: '0.5rem',
     borderRadius: 'var(--radius-full)',
-    transition: 'all var(--transition-fast)',
+    transition: 'transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast)',
     whiteSpace: 'nowrap',
     width: fullWidth ? '100%' : 'auto',
-    cursor: props.disabled ? 'not-allowed' : 'pointer',
-    opacity: props.disabled ? 0.6 : 1,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    transform: !disabled && isHovered ? 'scale(1.03)' : 'scale(1)',
     ...getVariantStyles(),
     ...getSizeStyles(),
     ...style,
   };
 
   return (
-    <button className={`btn ${className}`} style={baseStyle} {...props}>
+    <button
+      className={`btn ${className}`}
+      style={baseStyle}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      disabled={disabled}
+      {...props}
+    >
       {children}
     </button>
   );
 };
+
