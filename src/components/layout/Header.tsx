@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container } from './Container';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { Button } from '../ui/Button';
@@ -10,6 +10,7 @@ export const Header: React.FC = () => {
   const { openWaitlistModal } = useModal();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,15 +20,44 @@ export const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <header
+      ref={headerRef}
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 'var(--z-header)' as any,
-        height: 'var(--header-height)',
+        zIndex: 'var(--z-header)' as unknown as number,
+        height: 'auto',
+        minHeight: 'var(--header-height)',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
+        justifyContent: 'center',
         backgroundColor: 'var(--color-bg-header)',
         backdropFilter: 'var(--glass-backdrop)',
         WebkitBackdropFilter: 'var(--glass-backdrop)',
@@ -36,7 +66,7 @@ export const Header: React.FC = () => {
       }}
     >
       <Container>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'var(--header-height)' }}>
           {/* Brand Logo */}
           <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <img
@@ -93,7 +123,9 @@ export const Header: React.FC = () => {
             <button
               className="mobile-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-drawer"
               style={{
                 color: 'var(--color-text-primary)',
                 padding: '0.25rem',
@@ -108,39 +140,58 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Mobile Dropdown Drawer */}
-        {mobileMenuOpen && (
-          <div
-            className="animate-fade-in"
+        <div
+          id="mobile-drawer"
+          aria-hidden={!mobileMenuOpen}
+          style={{
+            maxHeight: mobileMenuOpen ? '300px' : '0px',
+            opacity: mobileMenuOpen ? 1 : 0,
+            overflow: 'hidden',
+            borderTop: mobileMenuOpen ? '1px solid var(--color-border-subtle)' : '1px solid transparent',
+            marginTop: mobileMenuOpen ? '0.25rem' : '0px',
+            paddingTop: mobileMenuOpen ? '0.5rem' : '0px',
+            paddingBottom: mobileMenuOpen ? '0.75rem' : '0px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            width: '100%',
+            transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease, border-color 0.3s ease',
+            pointerEvents: mobileMenuOpen ? 'auto' : 'none',
+          }}
+        >
+          <a
+            href="#products"
+            className="nav-link"
+            onClick={() => setMobileMenuOpen(false)}
             style={{
-              paddingTop: '1rem',
-              paddingBottom: '1rem',
-              borderTop: '1px solid var(--color-border-subtle)',
-              marginTop: '0.75rem',
+              fontSize: 'var(--font-size-base)',
+              minHeight: '44px',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
+              alignItems: 'center',
               width: '100%',
+              padding: '0 0.5rem',
             }}
           >
-            <a
-              href="#products"
-              className="nav-link"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ fontSize: 'var(--font-size-base)', padding: '0.25rem 0' }}
-            >
-              Products
-            </a>
-            <a
-              href="#our-story"
-              className="nav-link"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ fontSize: 'var(--font-size-base)', padding: '0.25rem 0' }}
-            >
-              Our Story
-            </a>
-          </div>
-        )}
+            Products
+          </a>
+          <a
+            href="#our-story"
+            className="nav-link"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              fontSize: 'var(--font-size-base)',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              padding: '0 0.5rem',
+            }}
+          >
+            Our Story
+          </a>
+        </div>
       </Container>
     </header>
   );
 };
+
