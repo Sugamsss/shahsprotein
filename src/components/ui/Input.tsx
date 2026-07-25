@@ -16,6 +16,7 @@ export const Input: React.FC<InputProps> = ({ icon, className = '', style, ...pr
             display: 'flex',
             alignItems: 'center',
             pointerEvents: 'none',
+            zIndex: 1,
           }}
         >
           {icon}
@@ -29,13 +30,6 @@ export const Input: React.FC<InputProps> = ({ icon, className = '', style, ...pr
           paddingRight: '1.25rem',
           paddingTop: '0.75rem',
           paddingBottom: '0.75rem',
-          backgroundColor: 'var(--color-bg-input)',
-          color: 'var(--color-text-primary)',
-          border: '1px solid var(--color-border-card)',
-          borderRadius: 'var(--radius-full)',
-          outline: 'none',
-          fontSize: 'var(--font-size-sm)',
-          transition: 'all var(--transition-fast)',
           ...style,
         }}
         {...props}

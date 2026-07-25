@@ -45,6 +45,28 @@ button, input, select, textarea {
   font: inherit;
 }
 
+.input {
+  width: 100%;
+  background-color: var(--color-bg-input);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-full);
+  outline: none;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.input:focus {
+  background-color: var(--color-bg-input-focus);
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px var(--color-bg-badge);
+}
+
 button {
   cursor: pointer;
   border: none;
