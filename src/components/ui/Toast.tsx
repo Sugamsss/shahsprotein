@@ -16,7 +16,7 @@ export const Toast: React.FC = () => {
         position: 'fixed',
         bottom: '2rem',
         right: '2rem',
-        zIndex: 2000,
+        zIndex: 'var(--z-toast)',
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
@@ -24,22 +24,38 @@ export const Toast: React.FC = () => {
         borderRadius: 'var(--radius-lg)',
         backgroundColor: 'var(--color-bg-card)',
         backdropFilter: 'blur(16px)',
-        border: `1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+        border: `1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
         boxShadow: 'var(--shadow-card)',
         color: 'var(--color-text-primary)',
         fontSize: 'var(--font-size-sm)',
-        maxWidth: '400px',
+        maxWidth: '380px',
       }}
     >
       {isSuccess ? (
-        <CheckCircle2 size={20} color="#22c55e" />
+        <CheckCircle2 size={20} color="#22c55e" style={{ flexShrink: 0 }} />
       ) : (
-        <AlertCircle size={20} color="#ef4444" />
+        <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0 }} />
       )}
-      <span style={{ flex: 1 }}>{toastMessage}</span>
-      <button onClick={clearToast} style={{ color: 'var(--color-text-muted)', padding: '2px' }}>
+      <span style={{ flex: 1, lineHeight: 1.4 }}>{toastMessage}</span>
+      <button
+        type="button"
+        onClick={clearToast}
+        aria-label="Close notification"
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--color-text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2px',
+          flexShrink: 0,
+        }}
+      >
         <X size={16} />
       </button>
     </div>
   );
 };
+
