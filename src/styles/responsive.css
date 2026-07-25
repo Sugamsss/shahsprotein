@@ -1,0 +1,32 @@
+/* Tablet landscape */
+@media (max-width: 1024px) {
+  :root {
+    --font-size-4xl: 2.75rem;
+    --font-size-3xl: 2.25rem;
+    --container-max-width: 960px;
+  }
+}
+
+/* Tablet portrait / large mobile */
+@media (max-width: 768px) {
+  :root {
+    --font-size-4xl: 2.25rem;
+    --font-size-3xl: 1.875rem;
+    --section-padding-y: var(--space-12);
+  }
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-toggle {
+    display: flex !important;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  :root {
+    --font-size-4xl: 1.875rem;
+    --font-size-3xl: 1.625rem;
+    --container-padding-x: var(--space-4);
+  }
+}

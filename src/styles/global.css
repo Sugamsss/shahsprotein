@@ -2,6 +2,7 @@
 @import './dark-theme.css';
 @import './light-theme.css';
 @import './animations.css';
+@import './responsive.css';
 
 /* Reset & Box Sizing */
 *, *::before, *::after {
