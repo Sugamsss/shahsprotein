@@ -13,6 +13,7 @@ import { Footer } from './components/layout/Footer';
 import { ProductDetailModal } from './components/modals/ProductDetailModal';
 import { WaitlistModal } from './components/modals/WaitlistModal';
 import { Toast } from './components/ui/Toast';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import './styles/global.css';
 
 export const App: React.FC = () => {
@@ -24,12 +25,24 @@ export const App: React.FC = () => {
             <a href="#main-content" className="skip-link">Skip to main content</a>
             <Header />
             <main id="main-content" style={{ flex: 1 }}>
-              <HeroSection />
-              <ProductsSection />
-              <ValuesSection />
-              <StorySection />
-              <FAQSection />
-              <NewsletterSection />
+              <ErrorBoundary>
+                <HeroSection />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <ProductsSection />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <ValuesSection />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <StorySection />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <FAQSection />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <NewsletterSection />
+              </ErrorBoundary>
             </main>
             <Footer />
 
