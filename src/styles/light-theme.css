@@ -35,4 +35,16 @@
   --shadow-card: 0 10px 30px rgba(59, 130, 246, 0.08);
   --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.3);
   --glass-backdrop: blur(16px);
+
+  /* Section Backgrounds */
+  --color-bg-section: transparent;
+  --color-bg-newsletter: rgba(255, 255, 255, 0.9);
+  --color-bg-faq-active: rgba(59, 130, 246, 0.04);
+
+  /* Hero Background Glow */
+  --color-hero-gradient: radial-gradient(ellipse at 70% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 60%);
+
+  /* Product Name Accent (shown in blue in light mode per reference) */
+  --color-product-name: #2563eb;
 }
+
