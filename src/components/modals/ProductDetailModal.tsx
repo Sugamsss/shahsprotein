@@ -46,6 +46,18 @@ export const ProductDetailModal: React.FC = () => {
           </div>
         </div>
 
+        {/* Ingredients List */}
+        {selectedProduct.ingredients && selectedProduct.ingredients.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+              INGREDIENTS
+            </h4>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+              {selectedProduct.ingredients.join(', ')}
+            </p>
+          </div>
+        )}
+
         {/* Nutrition Table */}
         <div style={{ marginBottom: '1.5rem', backgroundColor: 'var(--color-bg-pill)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
           <h4 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
@@ -62,6 +74,32 @@ export const ProductDetailModal: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Weight Options */}
+        {selectedProduct.weightOptions && selectedProduct.weightOptions.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+              AVAILABLE SIZES
+            </h4>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {selectedProduct.weightOptions.map((opt, i) => (
+                <span
+                  key={i}
+                  style={{
+                    padding: '0.3rem 0.7rem',
+                    borderRadius: 'var(--radius-full)',
+                    border: '1px solid var(--color-border-card)',
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--color-text-secondary)',
+                    backgroundColor: 'var(--color-bg-pill)',
+                  }}
+                >
+                  {opt}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Product Waitlist Pre-order */}
         <div style={{ paddingTop: '0.5rem', borderTop: '1px solid var(--color-border-subtle)' }}>
