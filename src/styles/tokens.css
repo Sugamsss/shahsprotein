@@ -46,4 +46,18 @@
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-theme: 350ms ease-in-out;
+
+  /* Z-Index Scale */
+  --z-header: 500;
+  --z-modal-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 2000;
+
+  /* Section Layout */
+  --section-padding-y: var(--space-16);
+  --container-padding-x: var(--space-6);
+
+  /* Card */
+  --card-padding: var(--space-6);
 }
+
