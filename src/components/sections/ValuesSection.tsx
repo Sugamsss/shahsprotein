@@ -45,7 +45,7 @@ export const ValuesSection: React.FC = () => {
   const sectionRef = useScrollReveal<HTMLElement>();
 
   return (
-    <section id="values" ref={sectionRef} style={{ paddingTop: 'var(--space-12)', paddingBottom: 'var(--space-16)' }}>
+    <section id="values" ref={sectionRef} className="reveal" style={{ paddingTop: 'var(--space-12)', paddingBottom: 'var(--space-16)' }}>
       <Container>
         <SectionHeader badge="WHAT WE BELIEVE IN" title="" />
 
