@@ -1,0 +1,38 @@
+/**
+ * Shah's Nutrition — Dark Theme Palette
+ * Obsidian & Gold Palette matching Dark Mode mockup
+ */
+
+[data-theme="dark"] {
+  /* Surface Colors */
+  --color-bg-main: #0d1015;
+  --color-bg-header: rgba(13, 16, 21, 0.85);
+  --color-bg-card: rgba(26, 32, 41, 0.65);
+  --color-bg-card-hover: rgba(35, 43, 54, 0.85);
+  --color-bg-input: rgba(255, 255, 255, 0.06);
+  --color-bg-input-focus: rgba(255, 255, 255, 0.1);
+  --color-bg-badge: rgba(212, 175, 55, 0.12);
+  --color-bg-pill: rgba(255, 255, 255, 0.08);
+
+  /* Border Colors */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-card: rgba(255, 255, 255, 0.12);
+  --color-border-hover: rgba(212, 175, 55, 0.4);
+
+  /* Text Colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9da7b7;
+  --color-text-muted: #6b778c;
+  --color-text-accent: #e5c158;
+
+  /* Accent & Buttons */
+  --color-accent-primary: #d4af37;
+  --color-accent-hover: #e5c158;
+  --color-accent-gradient: linear-gradient(135deg, #d4af37 0%, #b89327 100%);
+  --color-btn-text: #0d1015;
+
+  /* Shadows & Glass */
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px rgba(212, 175, 55, 0.25);
+  --glass-backdrop: blur(16px);
+}

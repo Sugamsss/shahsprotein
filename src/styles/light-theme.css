@@ -1,0 +1,38 @@
+/**
+ * Shah's Nutrition — Light Theme Palette
+ * Sky Blue & Fresh Luminous Palette matching Light Mode mockup
+ */
+
+[data-theme="light"] {
+  /* Surface Colors */
+  --color-bg-main: #f0f7ff;
+  --color-bg-header: rgba(240, 247, 255, 0.85);
+  --color-bg-card: rgba(255, 255, 255, 0.75);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.95);
+  --color-bg-input: rgba(255, 255, 255, 0.8);
+  --color-bg-input-focus: #ffffff;
+  --color-bg-badge: rgba(59, 130, 246, 0.1);
+  --color-bg-pill: rgba(255, 255, 255, 0.6);
+
+  /* Border Colors */
+  --color-border-subtle: rgba(59, 130, 246, 0.12);
+  --color-border-card: rgba(255, 255, 255, 0.9);
+  --color-border-hover: rgba(59, 130, 246, 0.4);
+
+  /* Text Colors */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-text-accent: #2563eb;
+
+  /* Accent & Buttons */
+  --color-accent-primary: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --color-btn-text: #ffffff;
+
+  /* Shadows & Glass */
+  --shadow-card: 0 10px 30px rgba(59, 130, 246, 0.08);
+  --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.3);
+  --glass-backdrop: blur(16px);
+}
