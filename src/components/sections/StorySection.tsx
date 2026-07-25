@@ -70,6 +70,9 @@ export const StorySection: React.FC = () => {
               <img
                 src="/assets/story-kitchen.png"
                 alt="Founders preparing Shah's Nutrition"
+                width={1376}
+                height={768}
+                loading="lazy"
                 style={{ borderRadius: 'var(--radius-lg)', width: '100%', objectFit: 'cover' }}
               />
             </Card>

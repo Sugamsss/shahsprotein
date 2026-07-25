@@ -72,6 +72,9 @@ export const Header: React.FC = () => {
             <img
               src="/assets/logo.png"
               alt={siteConfig.name}
+              width={1536}
+              height={1024}
+              loading="eager"
               style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
             />
           </a>

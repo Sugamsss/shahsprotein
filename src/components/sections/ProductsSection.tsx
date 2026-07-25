@@ -35,6 +35,9 @@ const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ produc
           <img
             src={product.image}
             alt={product.name}
+            width={1200}
+            height={896}
+            loading="lazy"
             style={{
               width: '100%',
               aspectRatio: '4/3',

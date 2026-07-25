@@ -115,6 +115,9 @@ export const HeroSection: React.FC = () => {
               <img
                 src="/assets/hero-composition.png"
                 alt="Shah's Nutrition Product Lineup"
+                width={1200}
+                height={896}
+                fetchPriority="high"
                 style={{ borderRadius: 'var(--radius-lg)', width: '100%', objectFit: 'cover' }}
               />
             </div>

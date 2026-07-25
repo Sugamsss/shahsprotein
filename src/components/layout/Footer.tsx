@@ -29,6 +29,9 @@ export const Footer: React.FC = () => {
             <img
               src="/assets/logo.png"
               alt={siteConfig.name}
+              width={1536}
+              height={1024}
+              loading="lazy"
               style={{ height: '42px', width: 'auto', marginBottom: 'var(--space-4)' }}
             />
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>

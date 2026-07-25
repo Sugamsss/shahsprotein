@@ -27,6 +27,9 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({ count, avatars }) => {
             key={idx}
             src={url}
             alt="Waitlist Member"
+            width={32}
+            height={32}
+            loading="lazy"
             style={{
               width: '32px',
               height: '32px',
