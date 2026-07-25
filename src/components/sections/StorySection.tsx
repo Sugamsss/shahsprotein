@@ -2,8 +2,13 @@ import React from 'react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
+import { siteConfig } from '../../data/siteConfig';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 export const StorySection: React.FC = () => {
+  const leftRef = useScrollReveal<HTMLDivElement>();
+  const rightRef = useScrollReveal<HTMLDivElement>();
+
   return (
     <section id="our-story" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
       <Container>
@@ -16,7 +21,7 @@ export const StorySection: React.FC = () => {
           }}
         >
           {/* Story Text */}
-          <div>
+          <div ref={leftRef} className="reveal reveal-left">
             <Badge style={{ marginBottom: 'var(--space-4)' }}>OUR STORY</Badge>
 
             <h2
@@ -26,7 +31,7 @@ export const StorySection: React.FC = () => {
                 marginBottom: 'var(--space-6)',
               }}
             >
-              Why we started Shah's Nutrition.
+              {siteConfig.story.heading}
             </h2>
 
             <div
@@ -39,21 +44,28 @@ export const StorySection: React.FC = () => {
                 gap: '1rem',
               }}
             >
-              <p>
-                We looked around and realized most nutrition foods were either packed with artificial ingredients, ridiculously expensive, or just didn't taste good.
-              </p>
-              <p>We wanted to change that.</p>
-              <p>
-                Shah's Nutrition was born out of a simple idea - to make natural, high quality nutrition that fits into everyday life and is affordable for everyone.
-              </p>
-              <p style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                This is just the beginning.
-              </p>
+              {siteConfig.story.paragraphs.map((paragraph, index) => {
+                const isLast = index === siteConfig.story.paragraphs.length - 1;
+                const isBold = isLast && siteConfig.story.boldLastParagraph;
+
+                return (
+                  <p
+                    key={index}
+                    style={
+                      isBold
+                        ? { fontWeight: 600, color: 'var(--color-text-primary)' }
+                        : undefined
+                    }
+                  >
+                    {paragraph}
+                  </p>
+                );
+              })}
             </div>
           </div>
 
           {/* Story Visual */}
-          <div>
+          <div ref={rightRef} className="reveal reveal-right">
             <Card style={{ padding: 'var(--space-4)' }}>
               <img
                 src="/assets/story-kitchen.png"
