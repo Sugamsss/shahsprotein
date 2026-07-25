@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div>
             <img
-              src="/Design/Logo.png"
+              src="/assets/logo.png"
               alt={siteConfig.name}
               style={{ height: '42px', width: 'auto', marginBottom: 'var(--space-4)' }}
             />
