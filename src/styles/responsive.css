@@ -20,6 +20,9 @@
   .mobile-toggle {
     display: flex !important;
   }
+  .values-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Small mobile */
