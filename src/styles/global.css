@@ -111,6 +111,14 @@ img {
   box-shadow: var(--shadow-glow);
 }
 
+.modal-close-btn {
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+  color: var(--color-text-primary) !important;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

@@ -30,13 +30,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 1000,
+        zIndex: 'var(--z-modal-overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
       onClick={onClose}
     >
@@ -45,19 +46,22 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '600px',
           maxHeight: '90vh',
           overflowY: 'auto',
           backgroundColor: 'var(--color-bg-main)',
           border: '1px solid var(--color-border-hover)',
           boxShadow: 'var(--shadow-card)',
           padding: '2rem',
+          zIndex: 'var(--z-modal)',
+          transform: 'scale(1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
           aria-label="Close Modal"
+          className="modal-close-btn"
           style={{
             position: 'absolute',
             top: '1.25rem',
