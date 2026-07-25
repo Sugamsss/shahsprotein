@@ -21,8 +21,9 @@ export const App: React.FC = () => {
       <WaitlistProvider>
         <ModalProvider>
           <div className="app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <a href="#main-content" className="skip-link">Skip to main content</a>
             <Header />
-            <main style={{ flex: 1 }}>
+            <main id="main-content" style={{ flex: 1 }}>
               <HeroSection />
               <ProductsSection />
               <ValuesSection />
