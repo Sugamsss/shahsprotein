@@ -24,12 +24,13 @@ export const Header: React.FC = () => {
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 500,
+        zIndex: 'var(--z-header)' as any,
         height: 'var(--header-height)',
         display: 'flex',
         alignItems: 'center',
         backgroundColor: 'var(--color-bg-header)',
         backdropFilter: 'var(--glass-backdrop)',
+        WebkitBackdropFilter: 'var(--glass-backdrop)',
         borderBottom: isScrolled ? '1px solid var(--color-border-card)' : '1px solid transparent',
         transition: 'all var(--transition-normal)',
       }}
@@ -54,26 +55,10 @@ export const Header: React.FC = () => {
             }}
             className="desktop-nav"
           >
-            <a
-              href="#products"
-              style={{
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 500,
-                color: 'var(--color-text-secondary)',
-                transition: 'color var(--transition-fast)',
-              }}
-            >
+            <a href="#products" className="nav-link">
               Products
             </a>
-            <a
-              href="#our-story"
-              style={{
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 500,
-                color: 'var(--color-text-secondary)',
-                transition: 'color var(--transition-fast)',
-              }}
-            >
+            <a href="#our-story" className="nav-link">
               Our Story
             </a>
           </nav>
@@ -87,7 +72,7 @@ export const Header: React.FC = () => {
               target="_blank"
               rel="noreferrer"
               aria-label="Instagram"
-              style={{ color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}
+              className="icon-link"
             >
               <Instagram size={18} />
             </a>
@@ -95,7 +80,7 @@ export const Header: React.FC = () => {
             <a
               href={`mailto:${siteConfig.social.email}`}
               aria-label="Email Us"
-              style={{ color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}
+              className="icon-link"
             >
               <Mail size={18} />
             </a>
@@ -113,6 +98,8 @@ export const Header: React.FC = () => {
                 color: 'var(--color-text-primary)',
                 padding: '0.25rem',
                 display: 'none',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -132,19 +119,22 @@ export const Header: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
+              width: '100%',
             }}
           >
             <a
               href="#products"
+              className="nav-link"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', fontWeight: 500 }}
+              style={{ fontSize: 'var(--font-size-base)', padding: '0.25rem 0' }}
             >
               Products
             </a>
             <a
               href="#our-story"
+              className="nav-link"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', fontWeight: 500 }}
+              style={{ fontSize: 'var(--font-size-base)', padding: '0.25rem 0' }}
             >
               Our Story
             </a>

@@ -41,6 +41,28 @@ a {
   text-decoration: none;
 }
 
+.nav-link {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.nav-link:hover {
+  color: var(--color-text-primary);
+}
+
+.icon-link {
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+
+.icon-link:hover {
+  color: var(--color-text-primary);
+}
+
 button, input, select, textarea {
   font: inherit;
 }

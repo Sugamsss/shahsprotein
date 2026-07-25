@@ -1,21 +1,28 @@
 import React from 'react';
 import { useWaitlist } from '../../context/WaitlistContext';
 
-export const AvatarGroup: React.FC = () => {
+export interface AvatarGroupProps {
+  count?: number;
+  avatars?: string[];
+}
+
+export const AvatarGroup: React.FC<AvatarGroupProps> = ({ count, avatars }) => {
   const { waitlistCount } = useWaitlist();
 
   // Local avatar asset paths
-  const avatars = [
+  const avatarList = avatars ?? [
     '/assets/avatar-1.png',
     '/assets/avatar-2.png',
     '/assets/avatar-3.png',
     '/assets/avatar-4.png',
   ];
 
+  const displayCount = count ?? waitlistCount;
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        {avatars.map((url, idx) => (
+        {avatarList.map((url, idx) => (
           <img
             key={idx}
             src={url}
@@ -38,7 +45,7 @@ export const AvatarGroup: React.FC = () => {
           fontWeight: 500,
         }}
       >
-        <strong style={{ color: 'var(--color-text-primary)' }}>{waitlistCount}+ people</strong> have already joined!
+        <strong style={{ color: 'var(--color-text-primary)' }}>{displayCount}+ people</strong> have already joined!
       </span>
     </div>
   );
