@@ -4,8 +4,8 @@
 
 ## 0. Project Status
 
-> **BUILD COMPLETE.** All 47 tasks across 6 phases of [`BUILD_PLAN.md`](../BUILD_PLAN.md) have been executed and verified.
-> The site is production-ready. This file now serves as the living architectural reference for all future maintenance and feature work.
+> **BUILD COMPLETE.** All 47 tasks across 6 phases have been executed and verified.
+> The site is production-ready. This file serves as the living architectural reference for all future maintenance and feature work.
 
 ---
 
