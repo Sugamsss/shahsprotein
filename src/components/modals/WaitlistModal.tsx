@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -10,6 +10,12 @@ export const WaitlistModal: React.FC = () => {
   const { isWaitlistModalOpen, closeWaitlistModal } = useModal();
   const { submitEmail, isLoading, waitlistCount } = useWaitlist();
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (isWaitlistModalOpen) {
+      setEmail('');
+    }
+  }, [isWaitlistModalOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

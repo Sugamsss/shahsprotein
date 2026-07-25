@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useModal } from '../../context/ModalContext';
@@ -11,6 +11,11 @@ export const ProductDetailModal: React.FC = () => {
   const { submitEmail, isLoading } = useWaitlist();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    setEmail('');
+    setSubmitted(false);
+  }, [selectedProduct]);
 
   if (!selectedProduct) return null;
 
