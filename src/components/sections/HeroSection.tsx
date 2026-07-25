@@ -5,12 +5,14 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { AvatarGroup } from '../ui/AvatarGroup';
 import { useWaitlist } from '../../context/WaitlistContext';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { Mail } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 
 export const HeroSection: React.FC = () => {
   const [email, setEmail] = useState('');
   const { submitEmail, isLoading } = useWaitlist();
+  const sectionRef = useScrollReveal<HTMLElement>();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +23,12 @@ export const HeroSection: React.FC = () => {
 
   return (
     <section
+      ref={sectionRef}
+      className="reveal"
       style={{
-        paddingTop: 'var(--space-12)',
-        paddingBottom: 'var(--space-16)',
+        paddingTop: 'calc(var(--section-padding-y) * 0.75)',
+        paddingBottom: 'var(--section-padding-y)',
+        background: 'var(--color-hero-gradient)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -57,6 +62,8 @@ export const HeroSection: React.FC = () => {
                 fontSize: 'var(--font-size-md)',
                 color: 'var(--color-text-secondary)',
                 marginBottom: 'var(--space-8)',
+                maxWidth: '540px',
+                lineHeight: 1.6,
               }}
             >
               {siteConfig.motto}
@@ -115,3 +122,4 @@ export const HeroSection: React.FC = () => {
     </section>
   );
 };
+
