@@ -16,6 +16,7 @@ export const Footer: React.FC = () => {
     >
       <Container>
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
