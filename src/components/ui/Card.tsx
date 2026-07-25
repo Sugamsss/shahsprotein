@@ -12,12 +12,15 @@ export const Card: React.FC<CardProps> = ({
   style,
   ...props
 }) => {
+  const cardClassName = ['glass-card', interactive ? 'interactive' : '', className]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div
-      className={`glass-card ${className}`}
+      className={cardClassName}
       style={{
         padding: 'var(--space-6)',
-        cursor: interactive ? 'pointer' : 'default',
         ...style,
       }}
       {...props}
