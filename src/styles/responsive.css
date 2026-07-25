@@ -29,4 +29,7 @@
     --font-size-3xl: 1.625rem;
     --container-padding-x: var(--space-4);
   }
+  .hero-form > button {
+    width: 100% !important;
+  }
 }

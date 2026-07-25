@@ -37,7 +37,7 @@ export const HeroSection: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: 'var(--space-12)',
             alignItems: 'center',
           }}
@@ -72,6 +72,7 @@ export const HeroSection: React.FC = () => {
             {/* Email Waitlist Form */}
             <form
               onSubmit={handleSubmit}
+              className="hero-form"
               style={{
                 display: 'flex',
                 gap: '0.75rem',
