@@ -25,6 +25,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
   if (!isOpen) return null;
 
+  const titleId = title ? `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined;
+
   return (
     <div
       style={{
@@ -42,6 +44,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="glass-card animate-fade-in"
         style={{
           position: 'relative',
@@ -76,6 +81,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
         {title && (
           <h3
+            id={titleId}
             style={{
               marginBottom: '1.25rem',
               fontSize: 'var(--font-size-xl)',

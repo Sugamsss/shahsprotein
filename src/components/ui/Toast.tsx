@@ -11,6 +11,8 @@ export const Toast: React.FC = () => {
 
   return (
     <div
+      role="alert"
+      aria-live="polite"
       className="animate-fade-in"
       style={{
         position: 'fixed',

@@ -10,7 +10,7 @@ export const StorySection: React.FC = () => {
   const rightRef = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section id="our-story" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
+    <section id="our-story" aria-label="Our Story" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
       <Container>
         <div
           style={{

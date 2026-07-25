@@ -25,6 +25,7 @@ export const HeroSection: React.FC = () => {
     <section
       ref={sectionRef}
       className="reveal"
+      aria-label="Hero"
       style={{
         paddingTop: 'calc(var(--section-padding-y) * 0.75)',
         paddingBottom: 'var(--section-padding-y)',

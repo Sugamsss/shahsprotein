@@ -112,6 +112,7 @@ export const ProductsSection: React.FC = () => {
       id="products"
       ref={sectionRef}
       className="reveal"
+      aria-label="Our Products"
       style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}
     >
       <Container>

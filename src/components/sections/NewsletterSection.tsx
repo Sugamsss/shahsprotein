@@ -23,6 +23,7 @@ export const NewsletterSection: React.FC = () => {
   return (
     <section
       id="waitlist"
+      aria-label="Newsletter Subscription"
       style={{
         position: 'relative',
         overflow: 'hidden',
