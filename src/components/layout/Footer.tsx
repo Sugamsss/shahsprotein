@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
     <footer
       style={{
         backgroundColor: 'var(--color-bg-main)',
-        borderTop: '1px solid var(--color-border-card)',
+        borderTop: '1px solid var(--color-border-subtle)',
         paddingTop: 'var(--space-16)',
         paddingBottom: 'var(--space-8)',
         color: 'var(--color-text-secondary)',
@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: 'var(--space-8)',
             marginBottom: 'var(--space-12)',
           }}
@@ -41,9 +41,9 @@ export const Footer: React.FC = () => {
               Quick Links
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
-              <li><a href="#products">Products</a></li>
-              <li><a href="#our-story">Our Story</a></li>
-              <li><a href="#waitlist">Join Waitlist</a></li>
+              <li><a href="#products" className="footer-link">Products</a></li>
+              <li><a href="#our-story" className="footer-link">Our Story</a></li>
+              <li><a href="#waitlist" className="footer-link">Join Waitlist</a></li>
             </ul>
           </div>
 
@@ -53,10 +53,10 @@ export const Footer: React.FC = () => {
               Follow Us
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
-              <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Instagram size={16} /> Instagram
               </a>
-              <a href={`mailto:${siteConfig.social.email}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <a href={`mailto:${siteConfig.social.email}`} className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Mail size={16} /> {siteConfig.social.email}
               </a>
             </div>
@@ -67,8 +67,10 @@ export const Footer: React.FC = () => {
             <h4 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
               For Business Inquiries
             </h4>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              {siteConfig.social.business}
+            <p style={{ fontSize: 'var(--font-size-xs)' }}>
+              <a href={`mailto:${siteConfig.social.business}`} className="footer-link">
+                {siteConfig.social.business}
+              </a>
             </p>
           </div>
         </div>

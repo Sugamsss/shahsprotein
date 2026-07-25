@@ -156,6 +156,15 @@ img {
   border: 1px solid var(--color-border-subtle);
 }
 
+.footer-link {
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+  color: var(--color-text-accent);
+}
+
 /* Responsive Navigation Breakpoints */
 @media (max-width: 768px) {
   .desktop-nav {
