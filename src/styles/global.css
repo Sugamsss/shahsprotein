@@ -129,9 +129,17 @@ img {
 }
 
 .glass-card.interactive:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   border-color: var(--color-border-hover);
   box-shadow: var(--shadow-glow);
+}
+
+.product-card-arrow {
+  transition: transform var(--transition-fast);
+}
+
+.glass-card.interactive:hover .product-card-arrow {
+  transform: translateX(3px);
 }
 
 .modal-close-btn {

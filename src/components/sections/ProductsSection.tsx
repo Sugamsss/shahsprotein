@@ -97,7 +97,7 @@ const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ produc
           }}
           style={{ paddingLeft: 0, color: 'var(--color-text-accent)' }}
         >
-          Learn more <ArrowRight size={16} />
+          Learn more <ArrowRight size={16} className="product-card-arrow" />
         </Button>
       </Card>
     </div>
