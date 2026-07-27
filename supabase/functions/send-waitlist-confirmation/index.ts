@@ -10,32 +10,91 @@ Deno.serve(async (request) => {
 
   try {
     const { email } = await request.json();
-    if (typeof email !== 'string' || !email.trim()) return new Response('ok', { status: 202, headers: corsHeaders });
+    if (typeof email !== 'string' || !email.trim()) {
+      console.warn('send-waitlist-confirmation: no email provided');
+      return new Response('ok', { status: 202, headers: corsHeaders });
+    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
-    const { data: token } = await supabase.rpc('issue_waitlist_email_token', { p_email: email, p_purpose: 'verify' });
-    if (!token) return new Response('ok', { status: 202, headers: corsHeaders });
+
+    // Issue verify token
+    const { data: token, error: tokenError } = await supabase.rpc(
+      'issue_waitlist_email_token',
+      { p_email: email, p_purpose: 'verify' },
+    );
+    if (tokenError) {
+      console.error('send-waitlist-confirmation: failed to issue verify token', tokenError.message);
+      return new Response('ok', { status: 202, headers: corsHeaders });
+    }
+    if (!token) {
+      console.warn('send-waitlist-confirmation: no member found for', email);
+      return new Response('ok', { status: 202, headers: corsHeaders });
+    }
 
     const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'http://localhost:5173';
     const verifyUrl = `${siteUrl}/verify-email?token=${encodeURIComponent(token)}`;
-    const unsubscribeToken = await supabase.rpc('issue_waitlist_email_token', { p_email: email, p_purpose: 'unsubscribe' });
-    const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken.data ?? '')}`;
+
+    // Issue unsubscribe token
+    const { data: unsubToken, error: unsubError } = await supabase.rpc(
+      'issue_waitlist_email_token',
+      { p_email: email, p_purpose: 'unsubscribe' },
+    );
+    if (unsubError) {
+      console.error('send-waitlist-confirmation: failed to issue unsubscribe token', unsubError.message);
+    }
+    const unsubscribeUrl = unsubToken
+      ? `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubToken)}`
+      : `${siteUrl}/#unsubscribe`;
+
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      console.error('send-waitlist-confirmation: RESEND_API_KEY is not configured');
+      return new Response(JSON.stringify({
+        sent: false,
+        config_error: 'RESEND_API_KEY not set',
+      }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const emailFrom = Deno.env.get('EMAIL_FROM') ?? "Shah's Nutrition <hello@shahsnutrition.com>";
+
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        from: Deno.env.get('EMAIL_FROM') ?? 'Shah\'s Nutrition <hello@shahsnutrition.com>',
+        from: emailFrom,
         to: [email],
-        subject: 'Confirm your Shah\'s Nutrition launch updates',
-        html: `<p>Thanks for joining Shah's Nutrition.</p><p><a href="${verifyUrl}">Confirm your launch updates</a></p><p>You can <a href="${unsubscribeUrl}">unsubscribe at any time</a>.</p>`,
+        subject: "Confirm your Shah's Nutrition launch updates",
+        html: `<p>Thanks for joining Shah's Nutrition.</p>
+<p><a href="${verifyUrl}">Confirm your launch updates</a></p>
+<p>You can <a href="${unsubscribeUrl}">unsubscribe at any time</a>.</p>`,
       }),
     });
 
-    return new Response(JSON.stringify({ sent: resendResponse.ok }), { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch {
-    return new Response('ok', { status: 202, headers: corsHeaders });
+    if (!resendResponse.ok) {
+      const errBody = await resendResponse.text();
+      console.error('send-waitlist-confirmation: Resend API error', resendResponse.status, errBody);
+    }
+
+    return new Response(JSON.stringify({ sent: resendResponse.ok }), {
+      status: 202,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('send-waitlist-confirmation: unexpected error', msg);
+    // Still return 202 to avoid blocking the signup flow
+    return new Response(JSON.stringify({ sent: false, error: msg }), {
+      status: 202,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

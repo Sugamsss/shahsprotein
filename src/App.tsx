@@ -19,9 +19,12 @@ import { useTheme } from './context/ThemeContext';
 import './styles/global.css';
 import { AdminLogin } from './components/admin/AdminLogin';
 import { AdminAnalytics } from './components/admin/AdminAnalytics';
-import { AdminWaitlist } from './components/admin/AdminWaitlist';
+import AdminWaitlist from './components/admin/AdminWaitlist';
+import AdminDashboard from './components/admin/AdminDashboard';
+import Campaigns from './components/admin/Campaigns';
 import { DashboardLayout } from './components/admin/DashboardLayout';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
+import { AccountSettings } from './components/admin/AccountSettings';
 
 const AnalyticsTracker: React.FC = () => {
   const { theme } = useTheme();
@@ -84,9 +87,12 @@ export const App: React.FC = () => (
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="waitlist" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="waitlist" element={<AdminWaitlist />} />
+            <Route path="campaigns" element={<Campaigns />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="settings" element={<AccountSettings />} />
           </Route>
         </Route>
       </Routes>

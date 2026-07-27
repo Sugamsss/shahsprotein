@@ -85,3 +85,178 @@
     align-items: center;
   }
 }
+
+/* Phone hero: give the artwork its own breathing room, then let the goal
+   panel read as a compact content block below it. The desktop hero relies on
+   a two-column canvas, which is too tall and crowded when simply stacked. */
+@media (max-width: 600px) {
+  .reveal.snap-section[aria-label="Hero"] {
+    min-height: auto !important;
+    padding-top: calc(var(--header-height) + 1.5rem) !important;
+    padding-bottom: 2.5rem !important;
+  }
+
+  .hero-grid {
+    min-height: 0;
+  }
+
+  .hero-visual-space {
+    top: -1.5rem !important;
+    height: 18rem !important;
+  }
+
+  .hero-visual-image {
+    width: 145% !important;
+    max-width: none !important;
+    margin-left: -45% !important;
+    object-position: right center !important;
+  }
+
+  .hero-content {
+    margin-top: 13rem !important;
+    padding: 1rem 1.125rem 1rem !important;
+    border-radius: 24px !important;
+  }
+
+  .hero-content h1 {
+    font-size: 2rem !important;
+    line-height: 1.06 !important;
+    letter-spacing: -0.035em !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .hero-content p {
+    font-size: 0.95rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .waitlist-form {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  .waitlist-form .input,
+  .waitlist-form > button {
+    min-height: 2.9rem !important;
+  }
+
+  /* Keep the action sequence natural on a phone: consent, email, CTA. */
+  .waitlist-form .waitlist-consent {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    margin: 0.15rem 0.125rem 0 !important;
+  }
+
+  .waitlist-form > div {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+
+  .waitlist-form > button {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    width: auto !important;
+    min-width: 12rem;
+    justify-self: center;
+  }
+
+  .waitlist-social-proof {
+    margin-top: 0.5rem;
+  }
+
+  /* The principles statement is intentionally expressive, but the desktop
+     scale becomes tiring to scan on a phone. */
+  #values h2 {
+    font-size: clamp(1.8rem, 7.8vw, 2.15rem) !important;
+    line-height: 1.28 !important;
+    letter-spacing: -0.025em !important;
+  }
+}
+
+/* Compact product rows on phones. Desktop keeps the existing image-led card
+   grid; on a narrow screen the three products become quick, scannable rows. */
+@media (max-width: 600px) {
+  .products-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  .products-grid > div {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .products-grid > div > div {
+    width: 100% !important;
+  }
+
+  .products-grid .glass-card {
+    display: grid !important;
+    grid-template-columns: 6.25rem minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: 0.875rem;
+    min-height: 8.5rem;
+    padding: 0.75rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  .products-grid .glass-card > div:first-child {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-height: 0;
+    height: 100%;
+    margin-bottom: 0 !important;
+  }
+
+  .products-grid .glass-card > div:first-child .product-card-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: auto !important;
+    object-fit: cover;
+    border-radius: 0.9rem !important;
+  }
+
+  .products-grid .product-icon-badge {
+    top: 0.45rem !important;
+    right: 0.45rem !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+
+  .products-grid .product-icon-badge svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .products-grid .glass-card h3 {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 1.05rem !important;
+    line-height: 1.15 !important;
+    margin: 0 0 0.25rem !important;
+  }
+
+  .products-grid .glass-card p {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.75rem !important;
+    line-height: 1.35 !important;
+    margin: 0 0 0.25rem !important;
+  }
+
+  .products-grid .product-learn-more-btn {
+    grid-column: 2;
+    grid-row: 3;
+    font-size: 0.75rem !important;
+  }
+}

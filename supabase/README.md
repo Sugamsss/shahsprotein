@@ -37,4 +37,30 @@ supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://shahsnutrition.c
 
 The confirmation function is invoked after a successful signup and is non-blocking. Verification and unsubscribe links update the corresponding member fields through service-role-only database functions.
 
+## CRM admin functions
+
+Migration `20260727000003` adds member tags/notes/status tracking, `email_campaigns` and `email_log` tables, and admin-safe RPCs.
+
+### Deploy the send-admin-email edge function
+
+```bash
+supabase functions deploy send-admin-email
+supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://shahsnutrition.com EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.com>"
+```
+
+The function validates the caller is an admin via JWT, accepts up to 100 member IDs, excludes unsubscribed/non-consenting/bounced/spam members, sends via Resend with unsubscribe links, logs delivery/failure to `email_log`, and returns per-member results.
+
+### Admin RPCs available
+
+| Function | Purpose |
+|---|---|
+| `get_admin_waitlist(p_page, p_per_page, p_search, p_source, p_theme, p_marketing_consent, p_status)` | List members with session stats and new fields |
+| `get_admin_member_detail(p_member_id)` | Full member profile + sessions + email log |
+| `update_admin_member(p_member_id, p_tags, p_notes, p_status, p_marketing_consent, p_product_id, p_theme)` | Update member fields |
+| `get_admin_campaigns(p_page, p_per_page)` | List campaigns with delivery stats |
+| `get_admin_campaign_log(p_campaign_id, p_page, p_per_page)` | Campaign delivery log |
+| `get_waitlist_count_stats()` | Consistent count breakdown (active, bounced, etc.) |
+
+All admin RPCs check `public.is_admin()` and return 401 for non-admins.
+
 Schedule `select public.purge_waitlist_retention();` daily with Supabase Cron or an external scheduled job.
