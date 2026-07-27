@@ -15,15 +15,16 @@ export const ThemeToggle: React.FC = () => {
         position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
-        width: '52px',
-        height: '28px',
+        width: '48px',
+        height: '26px',
         padding: '2px',
-        borderRadius: 'var(--radius-full)',
-        backgroundColor: 'var(--color-bg-card)',
-        border: '1px solid var(--color-border-card)',
+        borderRadius: '9999px',
+        backgroundColor: 'var(--color-bg-pill)',
+        border: '1px solid var(--color-border-subtle)',
         cursor: 'pointer',
         transition: 'background-color var(--transition-normal), border-color var(--transition-normal)',
         outline: 'none',
+        flexShrink: 0,
       }}
     >
       <span
@@ -31,19 +32,18 @@ export const ThemeToggle: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '22px',
-          height: '22px',
-          borderRadius: 'var(--radius-full)',
+          width: '20px',
+          height: '20px',
+          borderRadius: '9999px',
           backgroundColor: 'var(--color-accent-primary)',
           color: 'var(--color-btn-text)',
-          transform: isDark ? 'translateX(0px)' : 'translateX(24px)',
+          transform: isDark ? 'translateX(0px)' : 'translateX(22px)',
           transition: 'transform var(--transition-normal), background-color var(--transition-normal)',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
         }}
       >
-        {isDark ? <Moon size={12} /> : <Sun size={12} />}
+        {isDark ? <Moon size={11} /> : <Sun size={11} />}
       </span>
     </button>
   );
 };
-

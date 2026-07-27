@@ -12,6 +12,16 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [toastType, setToastType] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
+    let active = true;
+    WaitlistService.getCount().then((count) => {
+      if (active) setWaitlistCount(count);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     // Auto clear toast after 4 seconds
     if (toastMessage) {
       const timer = setTimeout(() => {
@@ -29,19 +39,26 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const submitEmail = async (
     email: string,
     source = 'hero',
-    productId?: string
+    productId?: string,
+    marketingConsent = false,
   ): Promise<WaitlistResponse> => {
     setIsLoading(true);
     clearToast();
 
     try {
-      const res = await WaitlistService.submitEmail(email, source, productId);
+      const res = await WaitlistService.submitEmail(
+        email,
+        source,
+        productId,
+        marketingConsent,
+        AnalyticsService.getSessionSnapshot(),
+      );
       setWaitlistCount(res.totalCount);
 
       if (res.success) {
         setToastMessage(res.message);
         setToastType('success');
-        AnalyticsService.trackEvent('waitlist_submission_success', { source, productId });
+        AnalyticsService.trackEvent('waitlist_submission_success', { source, productId, alreadySubscribed: res.alreadySubscribed });
       } else {
         setToastMessage(res.message);
         setToastType('error');

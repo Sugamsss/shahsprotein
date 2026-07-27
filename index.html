@@ -2,9 +2,26 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Static light-mode links ensure T3 and browsers always detect a favicon. -->
+    <link id="theme-favicon" rel="icon" type="image/png" sizes="512x512" href="/favicon-light.png?v=5" />
+    <link id="theme-favicon-ico" rel="icon" type="image/x-icon" href="/favicon-light.ico?v=5" />
+    <link id="theme-favicon-32" rel="icon" type="image/png" sizes="32x32" href="/favicon-light-32x32.png?v=5" />
+    <link id="theme-apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-light.png?v=5" />
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem('shahsnutrition_theme');
+        const theme = savedTheme === 'light' || savedTheme === 'dark'
+          ? savedTheme
+          : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        const prefix = theme === 'light' ? 'light' : 'dark';
+        const version = '?v=5';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('theme-favicon').setAttribute('href', '/favicon-' + prefix + '.png' + version);
+        document.getElementById('theme-favicon-ico').setAttribute('href', '/favicon-' + prefix + '.ico' + version);
+        document.getElementById('theme-favicon-32').setAttribute('href', '/favicon-' + prefix + '-32x32.png' + version);
+        document.getElementById('theme-apple-touch-icon').setAttribute('href', '/apple-touch-icon-' + prefix + '.png' + version);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shah's Nutrition — Real Nutrition. Real Ingredients. Real Good.</title>
     <meta
@@ -49,19 +66,6 @@
       rel="stylesheet"
     />
 
-    <!-- Prevent Theme Flash (FOUC) -->
-    <script>
-      (function () {
-        const savedTheme = localStorage.getItem('shahsnutrition_theme');
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-          document.documentElement.setAttribute('data-theme', savedTheme);
-        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-          document.documentElement.setAttribute('data-theme', 'light');
-        } else {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,7 +10,17 @@ export const StorySection: React.FC = () => {
   const rightRef = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section id="our-story" aria-label="Our Story" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
+    <section
+      id="our-story"
+      className="snap-section"
+      aria-label="Our Story"
+      style={{
+        minHeight: '100vh',
+        paddingTop: 'calc(var(--header-height) + var(--space-8))',
+        paddingBottom: 'var(--space-12)',
+        boxSizing: 'border-box',
+      }}
+    >
       <Container>
         <div
           style={{
@@ -21,7 +31,7 @@ export const StorySection: React.FC = () => {
           }}
         >
           {/* Story Text */}
-          <div ref={leftRef} className="reveal reveal-left">
+          <div ref={leftRef} className="reveal reveal-left-far reveal-story-slow">
             <Badge style={{ marginBottom: 'var(--space-4)' }}>OUR STORY</Badge>
 
             <h2
@@ -65,7 +75,7 @@ export const StorySection: React.FC = () => {
           </div>
 
           {/* Story Visual */}
-          <div ref={rightRef} className="reveal reveal-right">
+          <div ref={rightRef} className="reveal reveal-right-far reveal-story-slow delay-200">
             <Card style={{ padding: 'var(--space-4)' }}>
               <img
                 src="/assets/story-kitchen.png"

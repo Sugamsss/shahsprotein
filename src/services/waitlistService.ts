@@ -1,91 +1,87 @@
-import { WaitlistSubmission, WaitlistResponse } from '../types/waitlist';
+import { WaitlistAnalytics, WaitlistResponse } from '../types/waitlist';
 import { siteConfig } from '../data/siteConfig';
+import { supabase } from './supabaseClient';
 
-const STORAGE_KEY = 'shahsnutrition_waitlist';
-const COUNT_KEY = 'shahsnutrition_waitlist_count';
+const DUPLICATE_MESSAGE = "Love your enthusiasm! You've signed up already. We'll make sure you're the first one to get the updates as we launch.";
+const FALLBACK_MESSAGE = 'The waitlist is temporarily unavailable. Please try again in a moment.';
 
-/**
- * Service to handle Waitlist submissions and state persistence.
- * Designed with a plug-and-play interface for future backend integration.
- */
 export class WaitlistService {
-  /**
-   * Validate email syntax
-   */
   static validateEmail(email: string): boolean {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email.trim());
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   }
 
-  /**
-   * Submit an email to the waitlist
-   */
   static async submitEmail(
     email: string,
     source = 'hero',
-    productId?: string
+    productId?: string,
+    marketingConsent = false,
+    analytics?: WaitlistAnalytics,
   ): Promise<WaitlistResponse> {
     const trimmed = email.trim();
 
     if (!this.validateEmail(trimmed)) {
-      return {
-        success: false,
-        message: 'Please enter a valid email address.',
-        totalCount: this.getStoredCount(),
-      };
+      return { success: false, message: 'Please enter a valid email address.', totalCount: this.getStoredCount() };
     }
 
-    // Simulate async network request
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    const existing = this.getStoredSubmissions();
-    const isAlreadySubscribed = existing.some(
-      (sub) => sub.email.toLowerCase() === trimmed.toLowerCase()
-    );
-
-    if (isAlreadySubscribed) {
-      return {
-        success: true,
-        message: "You're already on the VIP waitlist! We'll notify you first.",
-        totalCount: this.getStoredCount(),
-      };
+    if (!supabase) {
+      return { success: false, message: FALLBACK_MESSAGE, totalCount: this.getStoredCount() };
     }
 
-    // Save new submission
-    const newSubmission: WaitlistSubmission = {
-      email: trimmed,
-      source,
-      productId,
-      createdAt: new Date().toISOString(),
+    const { data, error } = await supabase.rpc('submit_waitlist_member', {
+      p_email: trimmed,
+      p_source: source,
+      p_product_id: productId || null,
+      p_theme: analytics?.theme || null,
+      p_marketing_consent: marketingConsent,
+      p_consent_version: marketingConsent ? 'waitlist-v1' : null,
+      p_session_key: analytics?.sessionKey || null,
+      p_session_started_at: analytics?.startedAt || null,
+      p_session_ended_at: analytics?.endedAt || null,
+      p_active_seconds: analytics?.activeSeconds || 0,
+      p_section_dwell: analytics?.sectionDwell || {},
+      p_device_type: analytics?.deviceType || 'unknown',
+      p_referrer: analytics?.referrer || null,
+      p_utm_source: analytics?.utmSource || null,
+      p_utm_medium: analytics?.utmMedium || null,
+      p_utm_campaign: analytics?.utmCampaign || null,
+    });
+
+    if (error) {
+      console.error('[Waitlist] Submission failed', error);
+      return { success: false, message: FALLBACK_MESSAGE, totalCount: this.getStoredCount() };
+    }
+
+    const result = data as {
+      success: boolean;
+      already_subscribed: boolean;
+      message: string;
+      total_count: number;
     };
 
-    existing.push(newSubmission);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-
-    // Increment counter
-    const newCount = this.getStoredCount() + 1;
-    localStorage.setItem(COUNT_KEY, newCount.toString());
-
-    return {
-      success: true,
-      message: 'Welcome aboard! You have joined the VIP waitlist.',
-      totalCount: newCount,
+    const response = {
+      success: result.success,
+      alreadySubscribed: result.already_subscribed,
+      message: result.already_subscribed ? DUPLICATE_MESSAGE : result.message,
+      totalCount: Number(result.total_count) || 0,
     };
+
+    if (response.success && !response.alreadySubscribed) {
+      // Email delivery is intentionally non-blocking: joining the list should
+      // still succeed if the provider is temporarily unavailable.
+      void supabase.functions.invoke('send-waitlist-confirmation', { body: { email: trimmed } });
+    }
+
+    return response;
   }
 
-  /**
-   * Retrieve total stored waitlist count
-   */
   static getStoredCount(): number {
-    const stored = localStorage.getItem(COUNT_KEY);
-    return stored ? parseInt(stored, 10) : siteConfig.waitlist.initialCount;
+    return siteConfig.waitlist.initialCount;
   }
 
-  /**
-   * Retrieve stored submissions list
-   */
-  private static getStoredSubmissions(): WaitlistSubmission[] {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+  static async getCount(): Promise<number> {
+    if (!supabase) return this.getStoredCount();
+    const { data, error } = await supabase.rpc('get_waitlist_count');
+    if (error) return this.getStoredCount();
+    return Number(data) || this.getStoredCount();
   }
 }

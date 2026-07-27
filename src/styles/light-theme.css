@@ -5,19 +5,35 @@
 
 [data-theme="light"] {
   /* Surface Colors */
-  --color-bg-main: #f0f7ff;
-  --color-bg-header: rgba(240, 247, 255, 0.85);
-  --color-bg-card: rgba(255, 255, 255, 0.75);
-  --color-bg-card-hover: rgba(255, 255, 255, 0.95);
-  --color-bg-input: rgba(255, 255, 255, 0.8);
+  --color-bg-main: #eef4fc;
+  /* Same atmospheric geometry as dark mode, translated into the light palette:
+     identical glow placement, diagonal bands, vignette and fine texture. */
+  --bg-page-image:
+    radial-gradient(ellipse 88% 62% at 100% -4%, rgba(255, 226, 208, 0.76) 0%, rgba(147, 197, 253, 0.38) 35%, transparent 72%),
+    radial-gradient(ellipse 56% 40% at 12% 32%, rgba(59, 130, 246, 0.26) 0%, rgba(125, 211, 252, 0.17) 52%, transparent 78%),
+    linear-gradient(124deg, transparent 0%, transparent 22%, rgba(255, 255, 255, 0.64) 33%, rgba(191, 219, 254, 0.28) 43%, transparent 54%),
+    linear-gradient(124deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.52) 50%, rgba(186, 230, 253, 0.22) 60%, transparent 70%),
+    linear-gradient(124deg, transparent 0%, transparent 57%, rgba(255, 255, 255, 0.42) 67%, rgba(244, 114, 182, 0.14) 76%, transparent 86%),
+    radial-gradient(ellipse 56% 34% at 84% 74%, rgba(244, 114, 182, 0.27) 0%, rgba(196, 181, 253, 0.22) 35%, transparent 72%),
+    radial-gradient(ellipse 70% 54% at 50% 50%, transparent 42%, rgba(147, 197, 253, 0.22) 100%),
+    repeating-linear-gradient(22deg, rgba(37, 99, 235, 0.042) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #e4f1ff 0%, #edf4fc 54%, #f8eaf9 100%);
+  /* Unified Glass Material System — Top Bar, Hero Box, Cards, Story, Newsletter */
+  --color-bg-header: rgba(255, 255, 255, 0.72);
+  --color-bg-card: rgba(255, 255, 255, 0.72);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.88);
+  --color-bg-input: rgba(255, 255, 255, 0.85);
   --color-bg-input-focus: #ffffff;
-  --color-bg-badge: rgba(59, 130, 246, 0.1);
+  --color-bg-badge: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(59, 130, 246, 0.18) 100%);
+  --color-border-badge: rgba(37, 99, 235, 0.28);
+  --shadow-badge: 0 2px 10px rgba(37, 99, 235, 0.12);
   --color-bg-pill: rgba(255, 255, 255, 0.6);
 
   /* Border Colors */
-  --color-border-subtle: rgba(59, 130, 246, 0.12);
-  --color-border-card: rgba(255, 255, 255, 0.9);
-  --color-border-hover: rgba(59, 130, 246, 0.4);
+  --color-border-subtle: rgba(255, 255, 255, 0.50);
+  --color-border-card: rgba(255, 255, 255, 0.65);
+  --color-border-input: rgba(15, 23, 42, 0.16);
+  --color-border-hover: rgba(59, 130, 246, 0.45);
 
   /* Text Colors */
   --color-text-primary: #0f172a;
@@ -32,19 +48,27 @@
   --color-btn-text: #ffffff;
 
   /* Shadows & Glass */
-  --shadow-card: 0 10px 30px rgba(59, 130, 246, 0.08);
+  --shadow-card: 0 10px 32px rgba(10, 20, 60, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.60);
   --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.3);
-  --glass-backdrop: blur(16px);
+  --glass-backdrop: blur(20px) saturate(180%);
+
+  /* Header Glass */
+  --color-border-header: rgba(255, 255, 255, 0.65);
+  --color-bg-icon-group: rgba(255, 255, 255, 0.10);
+  --shadow-header: 0 4px 24px rgba(10, 20, 60, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  --shadow-header-scrolled: 0 8px 32px rgba(10, 20, 60, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.80);
 
   /* Section Backgrounds */
   --color-bg-section: transparent;
-  --color-bg-newsletter: rgba(255, 255, 255, 0.9);
-  --color-bg-faq-active: rgba(59, 130, 246, 0.04);
+  --color-bg-newsletter: rgba(255, 255, 255, 0.72);
+  --color-bg-faq-active: rgba(59, 130, 246, 0.06);
 
-  /* Hero Background Glow */
+  /* Hero Background Glow & Text Contrast Vignette */
   --color-hero-gradient: radial-gradient(ellipse at 70% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 60%);
+  --color-hero-vignette: rgba(255, 255, 255, 0.72);
+  --hero-vignette-blur: blur(20px) saturate(180%);
+  --hero-vignette-padding: 2rem 2.25rem;
 
   /* Product Name Accent (shown in blue in light mode per reference) */
   --color-product-name: #2563eb;
 }
-

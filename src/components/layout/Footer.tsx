@@ -2,12 +2,15 @@ import React from 'react';
 import { Container } from './Container';
 import { siteConfig } from '../../data/siteConfig';
 import { Instagram, Mail } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export const Footer: React.FC = () => {
+  const { theme } = useTheme();
+
   return (
     <footer
       style={{
-        backgroundColor: 'var(--color-bg-main)',
+        backgroundColor: theme === 'dark' ? 'transparent' : 'var(--color-bg-main)',
         borderTop: '1px solid var(--color-border-subtle)',
         paddingTop: 'var(--space-16)',
         paddingBottom: 'var(--space-8)',
@@ -27,10 +30,10 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div>
             <img
-              src="/assets/logo.png"
+              src={theme === 'dark' ? '/assets/logo-dark.png' : '/assets/logo.png'}
               alt={siteConfig.name}
-              width={1536}
-              height={1024}
+              width={507}
+              height={160}
               loading="lazy"
               style={{ height: '42px', width: 'auto', marginBottom: 'var(--space-4)' }}
             />

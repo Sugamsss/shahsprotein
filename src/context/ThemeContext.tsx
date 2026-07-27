@@ -15,6 +15,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(STORAGE_KEY, theme);
+
+    const prefix = theme === 'light' ? 'light' : 'dark';
+    const version = '?v=5';
+    document.getElementById('theme-favicon')?.setAttribute('href', `/favicon-${prefix}.png${version}`);
+    document.getElementById('theme-favicon-ico')?.setAttribute('href', `/favicon-${prefix}.ico${version}`);
+    document.getElementById('theme-favicon-32')?.setAttribute('href', `/favicon-${prefix}-32x32.png${version}`);
+    document.getElementById('theme-apple-touch-icon')?.setAttribute('href', `/apple-touch-icon-${prefix}.png${version}`);
   }, [theme]);
 
   const toggleTheme = () => {

@@ -2,25 +2,26 @@ import React from 'react';
 
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'gold' | 'blue' | 'pill';
+  icon?: React.ReactNode | null;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
+  icon = null,
   className = '',
   style,
 }) => {
   return (
     <span
-      className={`badge ${className}`}
+      className={`badge badge-underline ${className}`}
       style={{
         ...style,
       }}
     >
-      {children}
+      {icon ? icon : null}
+      <span>{children}</span>
     </span>
   );
 };
-

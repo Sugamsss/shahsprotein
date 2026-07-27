@@ -25,6 +25,25 @@
   }
 }
 
+/* Products section centering */
+@media (max-width: 768px) {
+  .products-section {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .products-section {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
 /* Small mobile */
 @media (max-width: 480px) {
   :root {
@@ -34,6 +53,23 @@
   }
   .hero-form > button {
     width: 100% !important;
+  }
+  .waitlist-form {
+    grid-template-columns: 1fr;
+  }
+  .waitlist-form > div,
+  .waitlist-form > button,
+  .waitlist-consent {
+    grid-column: 1;
+  }
+  .waitlist-consent {
+    grid-row: 1;
+  }
+  .waitlist-form > div {
+    grid-row: 2;
+  }
+  .waitlist-form > button {
+    grid-row: 3;
   }
   .footer-grid {
     grid-template-columns: 1fr !important;

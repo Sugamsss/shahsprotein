@@ -10,23 +10,26 @@ import { Mail } from 'lucide-react';
 
 export const NewsletterSection: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const { submitEmail, isLoading } = useWaitlist();
-  const cardRef = useScrollReveal<HTMLDivElement>();
+  const sectionRef = useScrollReveal<HTMLElement>();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    const res = await submitEmail(email, 'footer_newsletter');
+    const res = await submitEmail(email, 'footer_newsletter', undefined, marketingConsent);
     if (res.success) setEmail('');
   };
 
   return (
     <section
       id="waitlist"
+      ref={sectionRef}
+      className="reveal newsletter-section"
       aria-label="Newsletter Subscription"
       style={{
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'visible',
         paddingTop: 'var(--space-12)',
         paddingBottom: 'var(--space-16)',
       }}
@@ -42,10 +45,10 @@ export const NewsletterSection: React.FC = () => {
         }}
       />
       <Container>
-        <div ref={cardRef} className="reveal">
+        <div>
           <Card
-            style={{
-              textAlign: 'center',
+              style={{
+                textAlign: 'center',
               padding: 'var(--space-12) var(--space-6)',
               maxWidth: '840px',
               margin: '0 auto',
@@ -90,16 +93,13 @@ export const NewsletterSection: React.FC = () => {
 
             <form
               onSubmit={handleSubmit}
-              className="hero-form"
+              className="hero-form waitlist-form"
               style={{
-                display: 'flex',
-                gap: '0.75rem',
-                maxWidth: '480px',
-                margin: '0 auto var(--space-6) auto',
-                flexWrap: 'wrap',
+                 maxWidth: '520px',
+                 margin: '0 auto var(--space-3)',
               }}
             >
-              <div style={{ flex: 1, minWidth: '240px' }}>
+              <div style={{ flex: 1, minWidth: '0' }}>
                 <Input
                   type="email"
                   placeholder="Enter your email address"
@@ -107,14 +107,32 @@ export const NewsletterSection: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   icon={<Mail size={18} />}
                   required
+                  style={{
+                    paddingTop: '0.7rem',
+                    paddingBottom: '0.7rem',
+                    fontSize: 'var(--font-size-sm)',
+                  }}
                 />
               </div>
-              <Button type="submit" disabled={isLoading}>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  padding: '0.7rem 1.25rem',
+                  fontSize: 'var(--font-size-sm)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {isLoading ? 'Joining...' : 'Join Waitlist \u2192'}
               </Button>
+              <label className="waitlist-consent">
+                <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} required />
+                <span className="waitlist-checkbox" aria-hidden="true" />
+                <span className="waitlist-consent__text">I agree to receive an email about the product launch.</span>
+              </label>
             </form>
 
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="waitlist-social-proof" style={{ display: 'flex', justifyContent: 'center' }}>
               <AvatarGroup />
             </div>
           </Card>

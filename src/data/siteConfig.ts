@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: "Shah's Nutrition",
   tagline: "Natural. Honest. Accessible.",
-  motto: "Real nutrition. Real ingredients. Real good.",
+  motto: "Real nutrition. Trustworthy. Affordable.",
   heroGoal: "To make natural, high quality nutrition available and affordable to everyone.",
   story: {
     heading: "Why we started Shah's Nutrition.",

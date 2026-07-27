@@ -5,22 +5,15 @@ interface ModalContextType {
   selectedProduct: Product | null;
   openProductModal: (product: Product) => void;
   closeProductModal: () => void;
-  isWaitlistModalOpen: boolean;
-  openWaitlistModal: () => void;
-  closeWaitlistModal: () => void;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
 export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
 
   const openProductModal = (product: Product) => setSelectedProduct(product);
   const closeProductModal = () => setSelectedProduct(null);
-
-  const openWaitlistModal = () => setIsWaitlistModalOpen(true);
-  const closeWaitlistModal = () => setIsWaitlistModalOpen(false);
 
   return (
     <ModalContext.Provider
@@ -28,9 +21,6 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedProduct,
         openProductModal,
         closeProductModal,
-        isWaitlistModalOpen,
-        openWaitlistModal,
-        closeWaitlistModal,
       }}
     >
       {children}

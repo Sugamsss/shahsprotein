@@ -67,11 +67,11 @@ export const Button: React.FC<ButtonProps> = ({
   const getSizeStyles = (): React.CSSProperties => {
     switch (size) {
       case 'sm':
-        return { padding: '0.4rem 0.85rem', fontSize: 'var(--font-size-xs)' };
+        return { padding: '0.35rem 0.85rem', fontSize: '0.8125rem', fontWeight: 500 };
       case 'md':
-        return { padding: '0.65rem 1.25rem', fontSize: 'var(--font-size-sm)' };
+        return { padding: '0.65rem 1.35rem', fontSize: 'var(--font-size-base)', fontWeight: 600 };
       case 'lg':
-        return { padding: '0.85rem 1.75rem', fontSize: 'var(--font-size-base)' };
+        return { padding: '0.85rem 1.85rem', fontSize: 'var(--font-size-md)', fontWeight: 600 };
     }
   };
 

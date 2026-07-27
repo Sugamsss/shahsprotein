@@ -10,11 +10,15 @@ export const ProductDetailModal: React.FC = () => {
   const { selectedProduct, closeProductModal } = useModal();
   const { submitEmail, isLoading } = useWaitlist();
   const [email, setEmail] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedMessage, setSubmittedMessage] = useState('');
 
   useEffect(() => {
     setEmail('');
+    setMarketingConsent(false);
     setSubmitted(false);
+    setSubmittedMessage('');
   }, [selectedProduct]);
 
   if (!selectedProduct) return null;
@@ -22,9 +26,10 @@ export const ProductDetailModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    const res = await submitEmail(email, 'product_modal', selectedProduct.id);
+    const res = await submitEmail(email, 'product_modal', selectedProduct.id, marketingConsent);
     if (res.success) {
       setSubmitted(true);
+      setSubmittedMessage(res.message);
       setEmail('');
     }
   };
@@ -113,11 +118,11 @@ export const ProductDetailModal: React.FC = () => {
           </h4>
 
           {submitted ? (
-            <div style={{ color: '#22c55e', fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
-              &check; You are on the VIP reservation list!
+            <div style={{ color: '#22c55e', fontSize: 'var(--font-size-sm)', fontWeight: 500, lineHeight: 1.5 }}>
+              &check; {submittedMessage}
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem' }}>
+            <form onSubmit={handleSubmit} className="waitlist-form waitlist-form--modal">
               <Input
                 type="email"
                 placeholder="Enter your email"
@@ -129,6 +134,11 @@ export const ProductDetailModal: React.FC = () => {
               <Button type="submit" size="sm" disabled={isLoading}>
                 Reserve
               </Button>
+              <label className="waitlist-consent">
+                <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} required />
+                <span className="waitlist-checkbox" aria-hidden="true" />
+                <span className="waitlist-consent__text">I agree to receive an email about the product launch.</span>
+              </label>
             </form>
           )}
         </div>

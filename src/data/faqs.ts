@@ -3,22 +3,27 @@ import { FAQItem } from '../types/faqs';
 export const faqsData: FAQItem[] = [
   {
     id: 'faq-1',
-    question: 'When will Shah’s Nutrition products be available?',
-    answer: 'We are currently finalizing our first batch production! By joining our waitlist, you get early access 48 hours before official launch plus exclusive launch discounts.',
+    question: 'When will the products be available?',
+    answer: "If you've signed up for the waitlist, you'll be able to order within a week. General launch will take months because of all the paperwork.",
   },
   {
     id: 'faq-2',
-    question: 'Are all products 100% natural with no artificial preservatives?',
-    answer: 'Yes! We believe in 100% transparent ingredient labels. We use real nuts, seeds, unrefined spices, and zero synthetic preservatives, palm oil, or artificial flavorings.',
+    question: 'Do you deliver across india?',
+    answer: "Yes, we do!! And we don't take any extra delivery charges.",
   },
   {
     id: 'faq-3',
-    question: 'How much protein is in each serving?',
-    answer: 'Our Protein Chivda delivers 15g protein, Muesli has 18g protein, and Protein Bars pack 20g of clean protein per bar.',
+    question: 'How Affordable will your products be?',
+    answer: 'We operate on just 10% net profits and reinvest that into making the products cheaper! Ensuring affordability while maintaining quality is our second goal.',
   },
   {
     id: 'faq-4',
-    question: 'Do you deliver across India?',
-    answer: 'Yes, we ship nationwide! Waitlist members will also enjoy free shipping on their first launch order.',
+    question: 'What is your primary business goal?',
+    answer: 'Fulfilling your nutritional requirements that remain unfulfilled in our general Indian diet.',
+  },
+  {
+    id: 'faq-5',
+    question: 'Will you spam me if I give you my mail id?',
+    answer: "No, I won't. Will just remind you thrice. Once when orders are open for you, once when orders are generally open, once when we launch other two products.",
   },
 ];
