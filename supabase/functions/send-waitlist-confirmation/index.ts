@@ -61,7 +61,8 @@ Deno.serve(async (request) => {
       });
     }
 
-    const emailFrom = Deno.env.get('EMAIL_FROM') ?? "Shah's Nutrition <hello@shahsnutrition.com>";
+    const emailFrom = Deno.env.get('EMAIL_FROM') ?? "Shah's Nutrition <hello@shahsnutrition.food>";
+    const replyTo = Deno.env.get('EMAIL_REPLY_TO') ?? 'pranjalishah25@gmail.com';
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -71,6 +72,7 @@ Deno.serve(async (request) => {
       },
       body: JSON.stringify({
         from: emailFrom,
+        reply_to: replyTo,
         to: [email],
         subject: "Confirm your Shah's Nutrition launch updates",
         html: `<p>Thanks for joining Shah's Nutrition.</p>

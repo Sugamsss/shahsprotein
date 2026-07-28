@@ -90,7 +90,7 @@ export interface FAQItem {
 - Center: Quick navigation links (`Products`, `Our Story`). Smooth scroll to `#products` and `#our-story`.
 - Right:
   - Theme Toggle Switch (Sun / Moon icon with smooth slider transition).
-  - Social Icon Links (Instagram `@shahsnutrition`, Email `hello@shahsnutrition.com`).
+  - Social Icon Links (Instagram `@shahsnutrition`, Email `pranjalishah25@gmail.com` until a branded inbox is configured).
   - `Join Waitlist →` button trigger opening `WaitlistModal`.
 
 ### 2. Hero Section (`HeroSection.tsx`)
@@ -132,5 +132,5 @@ export interface FAQItem {
 
 ### 8. Footer (`Footer.tsx`)
 - Left: Logo + Tagline (`Natural. Honest. Accessible.`).
-- Columns: Quick Links, Follow Us, For Business Inquiries (`business@shahsnutrition.com`).
+- Columns: Quick Links, Follow Us, For Business Inquiries (`pranjalishah25@gmail.com` until branded inboxes are configured).
 - Copyright statement.

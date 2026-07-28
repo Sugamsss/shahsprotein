@@ -32,7 +32,7 @@ The owner dashboard is available at `/admin/login` after setting `VITE_SUPABASE_
 supabase functions deploy send-waitlist-confirmation
 supabase functions deploy verify-waitlist-email --no-verify-jwt
 supabase functions deploy unsubscribe --no-verify-jwt
-supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://shahsnutrition.com EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.com>"
+supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://www.shahsnutrition.food EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>" EMAIL_REPLY_TO=pranjalishah25@gmail.com
 ```
 
 The confirmation function is invoked after a successful signup and is non-blocking. Verification and unsubscribe links update the corresponding member fields through service-role-only database functions.
@@ -45,7 +45,7 @@ Migration `20260727000003` adds member tags/notes/status tracking, `email_campai
 
 ```bash
 supabase functions deploy send-admin-email
-supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://shahsnutrition.com EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.com>"
+supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://www.shahsnutrition.food EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>" EMAIL_REPLY_TO=pranjalishah25@gmail.com
 ```
 
 The function validates the caller is an admin via JWT, accepts up to 100 member IDs, excludes unsubscribed/non-consenting/bounced/spam members, sends via Resend with unsubscribe links, logs delivery/failure to `email_log`, and returns per-member results.

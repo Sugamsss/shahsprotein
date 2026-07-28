@@ -15,8 +15,9 @@ export const siteConfig = {
   },
   social: {
     instagram: "https://instagram.com/shahsnutrition",
-    email: "hello@shahsnutrition.com",
-    business: "business@shahsnutrition.com",
+    // Use the founder's confirmed inbox until branded receiving mailboxes are created.
+    email: "pranjalishah25@gmail.com",
+    business: "pranjalishah25@gmail.com",
   },
   waitlist: {
     initialCount: 524,

@@ -111,7 +111,8 @@ Deno.serve(async (request) => {
       });
     }
 
-    const emailFrom = Deno.env.get('EMAIL_FROM') ?? "Shah's Nutrition <hello@shahsnutrition.com>";
+    const emailFrom = Deno.env.get('EMAIL_FROM') ?? "Shah's Nutrition <hello@shahsnutrition.food>";
+    const replyTo = Deno.env.get('EMAIL_REPLY_TO') ?? 'pranjalishah25@gmail.com';
     const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'http://localhost:5173';
 
     // ── Create service-role client for DB operations ──────────
@@ -231,6 +232,7 @@ Deno.serve(async (request) => {
           },
           body: JSON.stringify({
             from: emailFrom,
+            reply_to: replyTo,
             to: [recipient.email],
             subject: subject.trim(),
             html: htmlWithUnsubscribe,

@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://shahsnutrition.com/sitemap.xml
+Sitemap: https://www.shahsnutrition.food/sitemap.xml
