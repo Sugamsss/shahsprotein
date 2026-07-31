@@ -30,6 +30,7 @@ const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ produc
     <div style={{ display: 'flex', height: '100%', width: '100%' }}>
       <div ref={tiltRef} style={{ width: '100%', display: 'flex' }}>
         <Card
+          interactive
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -86,6 +87,19 @@ const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ produc
           >
             {product.name}
           </h3>
+
+          {/* Short Description */}
+          <p
+            style={{
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.6,
+              marginBottom: 'var(--space-6)',
+              flex: 1,
+            }}
+          >
+            {product.shortDescription}
+          </p>
 
         </Card>
       </div>
