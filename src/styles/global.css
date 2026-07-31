@@ -15,6 +15,7 @@ html {
   font-family: var(--font-family-body);
   background-color: var(--color-bg-main);
   color: var(--color-text-primary);
+  overflow-x: clip;
   scroll-behavior: smooth;
   scroll-snap-type: y mandatory;
   -webkit-font-smoothing: antialiased;
@@ -43,6 +44,10 @@ body {
   transition: background-color var(--transition-theme), color var(--transition-theme);
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+.app-shell {
+  overflow-x: clip;
 }
 
 /* The hero artwork is intentionally allowed to fill the first viewport. */
