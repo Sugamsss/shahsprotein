@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { WaitlistProvider } from './context/WaitlistContext';
-import { ModalProvider } from './context/ModalContext';
 import { Header } from './components/layout/Header';
 import { HeroSection } from './components/sections/HeroSection';
 import { ProductsSection } from './components/sections/ProductsSection';
@@ -11,7 +10,6 @@ import { StorySection } from './components/sections/StorySection';
 import { FAQSection } from './components/sections/FAQSection';
 import { NewsletterSection } from './components/sections/NewsletterSection';
 import { Footer } from './components/layout/Footer';
-import { ProductDetailModal } from './components/modals/ProductDetailModal';
 import { Toast } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AnalyticsService } from './services/analyticsService';
@@ -42,7 +40,7 @@ const LandingPage: React.FC = () => (
   <>
     <AnalyticsTracker />
     <WaitlistProvider>
-      <ModalProvider>
+      <>
         <div className="app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <a href="#main-content" className="skip-link">Skip to main content</a>
             <Header />
@@ -70,11 +68,9 @@ const LandingPage: React.FC = () => (
               </ErrorBoundary>
             </main>
 
-            {/* Global Modals & Toast */}
-            <ProductDetailModal />
             <Toast />
         </div>
-      </ModalProvider>
+      </>
     </WaitlistProvider>
   </>
 );

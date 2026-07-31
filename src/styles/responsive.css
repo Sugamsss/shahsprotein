@@ -241,22 +241,4 @@
     margin: 0 0 0.25rem !important;
   }
 
-  .products-grid .glass-card p {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: start;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    font-size: 0.75rem !important;
-    line-height: 1.35 !important;
-    margin: 0 0 0.25rem !important;
-  }
-
-  .products-grid .product-learn-more-btn {
-    grid-column: 2;
-    grid-row: 3;
-    font-size: 0.75rem !important;
-  }
 }

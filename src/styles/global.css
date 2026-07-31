@@ -219,65 +219,6 @@ a {
   color: #ffffff;
 }
 
-/* ─── Product Card Learn More Highlight & Text-Only Underline ─── */
-.product-learn-more-btn {
-  background: none !important;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  color: var(--color-text-secondary) !important;
-  font-size: var(--font-size-sm) !important;
-  font-weight: 600 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.4rem !important;
-  cursor: pointer !important;
-  transition: color var(--transition-fast) !important;
-}
-
-.learn-more-text {
-  position: relative;
-  display: inline-block;
-}
-
-.learn-more-text::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: var(--color-text-accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform var(--transition-fast);
-}
-
-.glass-card:hover .product-learn-more-btn,
-.product-learn-more-btn:hover {
-  background: none !important;
-  background-color: transparent !important;
-  color: var(--color-text-accent) !important;
-}
-
-.glass-card:hover .learn-more-text::after,
-.product-learn-more-btn:hover .learn-more-text::after {
-  transform: scaleX(1);
-}
-
-.product-card-arrow {
-  transition: transform var(--transition-fast), color var(--transition-fast);
-}
-
-.glass-card:hover .product-card-arrow,
-.product-learn-more-btn:hover .product-card-arrow {
-  transform: translateX(4px);
-  color: var(--color-text-accent);
-}
-
 /* Header icon buttons inside the glass pill */
 .header-icon-btn {
   width: 32px;

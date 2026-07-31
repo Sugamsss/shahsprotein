@@ -3,10 +3,9 @@ import { Container } from '../layout/Container';
 import { SectionHeader } from '../layout/SectionHeader';
 import { Card } from '../ui/Card';
 import { productsData } from '../../data/products';
-import { useModal } from '../../context/ModalContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { use3DTilt } from '../../hooks/use3DTilt';
-import { Leaf, Wheat, Dumbbell, ArrowRight, IndianRupee } from 'lucide-react';
+import { Leaf, Wheat, Dumbbell, IndianRupee } from 'lucide-react';
 import { IconType, Product } from '../../types/product';
 
 const renderIcon = (type: IconType) => {
@@ -25,15 +24,12 @@ const renderIcon = (type: IconType) => {
 };
 
 const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ product }) => {
-  const { openProductModal } = useModal();
   const tiltRef = use3DTilt<HTMLDivElement>(8);
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%' }}>
       <div ref={tiltRef} style={{ width: '100%', display: 'flex' }}>
         <Card
-          interactive
-          onClick={() => openProductModal(product)}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -91,30 +87,6 @@ const ProductCardItem: React.FC<{ product: Product; index: number }> = ({ produc
             {product.name}
           </h3>
 
-          {/* Short Description */}
-          <p
-            style={{
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-text-secondary)',
-              lineHeight: 1.6,
-              marginBottom: 'var(--space-6)',
-              flex: 1,
-            }}
-          >
-            {product.shortDescription}
-          </p>
-
-          {/* Learn More Button */}
-          <button
-            type="button"
-            className="product-learn-more-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              openProductModal(product);
-            }}
-          >
-            <span className="learn-more-text">Learn more</span> <ArrowRight size={16} className="product-card-arrow" />
-          </button>
         </Card>
       </div>
     </div>
