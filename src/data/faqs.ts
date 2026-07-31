@@ -12,11 +12,6 @@ export const faqsData: FAQItem[] = [
     answer: "Yes, we do!! And we don't take any extra delivery charges.",
   },
   {
-    id: 'faq-3',
-    question: 'How Affordable will your products be?',
-    answer: 'We operate on just 10% net profits and reinvest that into making the products cheaper! Ensuring affordability while maintaining quality is our second goal.',
-  },
-  {
     id: 'faq-4',
     question: 'What is your primary business goal?',
     answer: 'Fulfilling your nutritional requirements that remain unfulfilled in our general Indian diet.',
