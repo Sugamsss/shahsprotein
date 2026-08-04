@@ -8,7 +8,7 @@ This document provides an **exhaustive, pixel-faithful specification** for gener
 
 1. **Aesthetic**: Premium Direct-to-Consumer (D2C) food & wellness brand photography. Clean, authentic, appetite-appealing, with tactile natural textures (roasted nuts, whole grains, raw spices, slate, ceramic, warm wood). Think editorial food magazine covers — not stock photography.
 2. **Photography Direction**: Shoot with the look of a 50mm or 85mm prime lens at f/2.8–f/4. Soft directional key light from the upper-left at ~45°, with a warm fill light and subtle rim/backlight to separate subjects from the background. Avoid harsh flat flash, on-camera flash, or overly CGI/rendered aesthetics.
-3. **Packaging Detail**: The Shah's Nutrition pouch is a **matte kraft-paper stand-up pouch** in a warm beige/tan tone. It features the brand name "Shah's Nutrition" in clean, dark serif typography, with sub-text reading "Real Nutrition. Real Ingredients. Real Good." The pouch has a clean, premium, minimal design — no busy graphics.
+3. **Packaging Detail**: The Shah's Nutrition pouch is a **matte kraft-paper stand-up pouch** in a warm beige/tan tone. It features the brand name "Shah's Nutrition" in clean, dark serif typography, with sub-text reading "Healthy Food that Tastes Unhealthy." The pouch has a clean, premium, minimal design — no busy graphics.
 4. **Color Grading**: Warm, rich tones. Highlight warm golds, amber, and earth tones in the food. Shadows should lean warm charcoal (not cool blue/gray). Slight warm color cast across the frame.
 5. **Vignette & Framing Rules**:
    - For **Hero Composition**: The main subjects (pouch & falling ingredients) must be positioned strictly on the **right half (50%–95% of frame)**, leaving the **left half (0%–45% of frame) empty and softly faded** to dark vignette for headline text and CTA overlay.
@@ -78,7 +78,7 @@ This document provides an **exhaustive, pixel-faithful specification** for gener
 ### Asset 5: Our Story — Founders Kitchen Photograph
 - **Filename**: `public/assets/story-kitchen.png`
 - **Aspect Ratio**: `16:9` (Recommended resolution: 1920×1080)
-- **Reference Location**: "OUR STORY — Why we started Shah's Nutrition" right-side image
+- **Reference Location**: "OUR STORY — Making healthy food that tastes unhealthy" right-side image
 - **Composition & Layout**:
   - Wide 16:9 panoramic shot inside a modern, warmly lit kitchen.
   - Two young Indian men (co-founders, mid-20s) wearing casual black t-shirts, standing behind a clean wooden kitchen island counter.

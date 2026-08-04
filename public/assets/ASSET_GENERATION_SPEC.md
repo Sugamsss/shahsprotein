@@ -8,7 +8,7 @@ This document provides an **exhaustive, pixel-faithful specification** for gener
 
 1. **Aesthetic**: Premium Direct-to-Consumer (D2C) food & wellness brand photography. Clean, authentic, appetite-appealing, with tactile natural textures (roasted nuts, whole grains, raw spices, slate, ceramic, warm wood).
 2. **Lighting**: Soft directional studio lighting combined with warm ambient glows. Avoid harsh flat flash or artificial CGI looks.
-3. **Packaging Detail**: Stand-up pouches should be craft matte paper finish in warm neutral/beige tones featuring the **Shah's Nutrition** logo and clean typography ("Real Nutrition. Real Ingredients. Real Good.").
+3. **Packaging Detail**: Stand-up pouches should be craft matte paper finish in warm neutral/beige tones featuring the **Shah's Nutrition** logo and clean typography ("Healthy Food that Tastes Unhealthy").
 4. **Vignette & Framing Rules**:
    - For **Hero Composition**: The main subjects (bowl & pouch) must be positioned strictly on the **right half (50% to 95% of frame)**, leaving the **left half (0% to 45% of frame) empty, dark, and softly faded** to accommodate headline text and CTA forms seamlessly.
 
@@ -73,7 +73,7 @@ This document provides an **exhaustive, pixel-faithful specification** for gener
 ### Asset 5: Our Story — Founders Kitchen Photograph
 - **Filename**: `public/assets/story-kitchen.png`
 - **Aspect Ratio**: `16:9` (Recommended resolution: 1920x1080)
-- **Reference Location**: "OUR STORY — Why we started Shah's Nutrition" right side image
+- **Reference Location**: "OUR STORY — Making healthy food that tastes unhealthy" right side image
 - **Composition & Layout**:
   - Wide 16:9 panoramic shot set inside a modern, warm, naturally lit kitchen.
   - Two young Indian men (co-founders in their mid-20s) wearing simple black t-shirts standing behind a clean wooden kitchen island counter.

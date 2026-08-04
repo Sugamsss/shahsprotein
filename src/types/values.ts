@@ -1,8 +1,8 @@
-import { IconType } from './product';
+export type ValueIconType = 'utensils' | 'scan-search' | 'users-round';
 
 export interface BrandValue {
   id: string;
   title: string;
   description: string;
-  iconType: IconType;
+  iconType: ValueIconType;
 }

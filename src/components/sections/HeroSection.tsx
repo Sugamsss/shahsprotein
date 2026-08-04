@@ -10,7 +10,27 @@ import { useTheme } from '../../context/ThemeContext';
 import { Mail } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 
+type HeroHeadingParts = readonly [beforeTaste: string, tasteAndHealthy: string, between: string, you: string, afterYou: string];
+
+const splitHeroHeading = (heading: string): HeroHeadingParts => {
+  const tasteStart = heading.indexOf('tasty and healthy');
+  const youStart = heading.indexOf('you', tasteStart + 'tasty and healthy'.length);
+
+  if (tasteStart < 0 || youStart < 0) {
+    return [heading, '', '', '', ''];
+  }
+
+  return [
+    heading.slice(0, tasteStart),
+    heading.slice(tasteStart, tasteStart + 'tasty and healthy'.length),
+    heading.slice(tasteStart + 'tasty and healthy'.length, youStart),
+    heading.slice(youStart, youStart + 'you'.length),
+    heading.slice(youStart + 'you'.length),
+  ];
+};
+
 export const HeroSection: React.FC = () => {
+  const [beforeTaste, tasteAndHealthy, between, you, afterYou] = splitHeroHeading(siteConfig.heroHeading);
   const [email, setEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const { submitEmail, isLoading } = useWaitlist();
@@ -60,7 +80,11 @@ export const HeroSection: React.FC = () => {
                 letterSpacing: '-0.02em',
               }}
             >
-              To make <span className="text-gradient">natural, <span style={{ whiteSpace: 'nowrap' }}>high quality</span></span> nutrition available and <span className="text-gradient">affordable</span> to everyone.
+              {beforeTaste}
+              <span className="text-gradient">{tasteAndHealthy}</span>
+              {between}
+              <span className="text-gradient">{you}</span>
+              {afterYou}
             </h1>
 
             <p

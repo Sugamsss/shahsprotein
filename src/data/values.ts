@@ -1,22 +1,24 @@
 import { BrandValue } from '../types/values';
 
+export const valuesHeading = 'What we believe';
+
 export const valuesData: BrandValue[] = [
   {
-    id: 'natural-ingredients',
-    title: 'Natural Ingredients',
-    description: 'Real food first. No artificial additives, ever.',
-    iconType: 'leaf',
+    id: 'good-tastes-only',
+    title: 'Good Tastes Only',
+    description: 'Healthy should never taste like a downgrade.',
+    iconType: 'utensils',
   },
   {
-    id: 'meaningful-nutrition',
-    title: 'Meaningful Nutrition',
-    description: 'High in protein. Made to support your everyday.',
-    iconType: 'dumbbell',
+    id: 'know-whats-inside',
+    title: "Know What's Inside",
+    description: "I'll always keep the ingredients clear, so you know what you're eating.",
+    iconType: 'scan-search',
   },
   {
-    id: 'honest-pricing',
-    title: 'Honest Pricing',
-    description: "Premium quality shouldn't come with a premium price tag.",
-    iconType: 'currency',
+    id: 'for-every-day-and-every-one',
+    title: 'For Every Day and Every One',
+    description: 'Complete, honest nutrition at a price that works for the whole household, every ordinary day.',
+    iconType: 'users-round',
   },
 ];

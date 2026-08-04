@@ -8,9 +8,10 @@ This specification document outlines the complete technical blueprint, visual de
 
 ### Brand Identity
 - **Brand Name**: Shah's Nutrition
-- **Tagline**: *Natural. Honest. Accessible.*
-- **Core Value Proposition**: *Real nutrition. Real ingredients. Real good.*
-- **Goal**: Make natural, high-quality nutrition available and affordable to everyone.
+- **Tagline**: *Healthy Food that Tastes Unhealthy 😉*
+- **Core Value Proposition**: *Complete, everyday nutrition made normal — tasty enough that kids eat it, honest enough that you know what's inside, affordable for the whole household.*
+- **Goal**: Make complete, everyday nutrition normal again — one familiar food at a time.
+- **Voice**: First-person founder (Pranjali). Warm, playful, honest, everyday-Indian. Not corporate, not gym-coded.
 
 ### Color Palettes & Aesthetics
 
@@ -63,11 +64,13 @@ export interface Product {
 
 #### Value Schema (`src/types/values.ts`)
 ```typescript
+export type ValueIconType = 'utensils' | 'scan-search' | 'users-round';
+
 export interface BrandValue {
   id: string;
-  title: string; // "Natural Ingredients"
+  title: string;
   description: string;
-  icon: 'leaf' | 'dumbbell' | 'currency';
+  iconType: ValueIconType;
 }
 ```
 
@@ -95,8 +98,8 @@ export interface FAQItem {
 
 ### 2. Hero Section (`HeroSection.tsx`)
 - Badge: `OUR GOAL` pill badge.
-- Main Heading: `To make natural, high quality nutrition available and affordable to everyone.` with gradient accent on key words.
-- Subtitle: `Real nutrition. Real ingredients. Real good.`
+- Main Heading: `To make tasty and healthy food for you` with gradient accent on **"tasty and healthy"** and **"you"**. The heading text lives in `siteConfig.heroHeading` and is split for the two gradient spans.
+- Subtitle: `Complete Nutrition for Every Day and Every One` (from `siteConfig.motto`).
 - Waitlist Form: Email text input + `Join Waitlist →` submit button.
 - Live Social Proof Stack: 4 overlapping avatar thumbnails + `500+ people have already joined!` counter text.
 - Hero Visual: Composition of product pouch, natural ingredients bowl, and floating spices.
@@ -110,15 +113,16 @@ export interface FAQItem {
   - `Learn more →` button opening `ProductDetailModal`.
 
 ### 4. Brand Values (`ValuesSection.tsx`)
-- Section Header: `WHAT WE BELIEVE IN`
-- 3 Column Cards:
-  - **Natural Ingredients**: "Real food first. No artificial additives, ever."
-  - **Meaningful Nutrition**: "High in protein. Made to support your everyday."
-  - **Honest Pricing**: "Premium quality shouldn't come with a premium price tag."
+- Section Header: `What we believe` (from `valuesHeading` in `src/data/values.ts`).
+- 3 Glass Cards (data-driven from `valuesData`), 3-column grid on desktop, stacked on mobile:
+  - **Good Tastes Only** (icon: `Utensils`): "Healthy should never taste like a downgrade."
+  - **Know What's Inside** (icon: `ScanSearch`): "I'll always keep the ingredients clear, so you know what you're eating."
+  - **For Every Day and Every One** (icon: `UsersRound`): "Complete, honest nutrition at a price that works for the whole household, every ordinary day."
+- Each card: restrained single-color icon in a circle, title, supporting line, subtle hover lift/glow. Theme-aware via `--color-bg-card`, `--glass-backdrop`, `--color-text-accent`.
 
 ### 5. Our Story Section (`StorySection.tsx`)
-- Section Header: `OUR STORY` — `Why we started Shah's Nutrition.`
-- Story Paragraphs: Founders journey narrative explaining the mission to eliminate fake ingredients and high markups.
+- Section Header: `OUR STORY` — `Making healthy food that tastes unhealthy.`
+- Story Paragraphs (first-person founder voice, from `siteConfig.story`): pain → belief → decision arc. Opens with the modern Indian diet failing nutrition and healthy food feeling like a downgrade; the belief that healthy shouldn't mean a downgrade (the son's "betrayal"); and the decision to build Shah's Nutrition so complete everyday nutrition feels normal again. Last paragraph renders bold.
 - Image: High quality founders kitchen / preparation photograph.
 
 ### 6. Interactive FAQ Accordion (`FAQSection.tsx`)
@@ -131,6 +135,6 @@ export interface FAQItem {
 - Reusable Waitlist Form & Avatar Stack.
 
 ### 8. Footer (`Footer.tsx`)
-- Left: Logo + Tagline (`Natural. Honest. Accessible.`).
+- Left: Logo + Tagline (`Healthy Food that Tastes Unhealthy 😉` from `siteConfig.tagline`).
 - Columns: Quick Links, Follow Us, For Business Inquiries (`pranjalishah25@gmail.com` until branded inboxes are configured).
 - Copyright statement.

@@ -38,7 +38,7 @@ export const Footer: React.FC = () => {
               style={{ height: '42px', width: 'auto', marginBottom: 'var(--space-4)' }}
             />
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-              {siteConfig.motto}
+              {siteConfig.tagline}
             </p>
           </div>
 
