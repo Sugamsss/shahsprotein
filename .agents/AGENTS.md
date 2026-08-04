@@ -60,7 +60,7 @@ src/
 ### C. Content & Data Separation
 - **CRITICAL**: All text, product details, FAQs, values, and site configuration live strictly inside `src/data/*.ts`.
 - Never hardcode text content directly inside section components. Modifying `src/data/products.ts` or `src/data/faqs.ts` must update the site without changing JSX components.
-- The hero headline lives in `siteConfig.heroHeading` (the Hero section splits it into two gradient spans on "tasty and healthy" and "you"). The Values section renders `valuesData` + `valuesHeading` from `src/data/values.ts` as glass cards; `ValueIconType` in `src/types/values.ts` maps to lucide icons.
+- The hero headline lives in `siteConfig.heroHeading` as an array of `TextSegment`s (`src/types/content.ts`); highlighted segments render with the `text-gradient` class. The Our Story paragraphs are also `TextSegment[][]`, with highlighted phrases rendering via `.story-highlight` (gradient + underline). The Values section renders `valuesData` + `valuesHeading` from `src/data/values.ts` as glass cards; `ValueIconType` in `src/types/values.ts` maps to lucide icons.
 
 ### D. Backend API Encapsulation
 - All email submission logic, validation, and count state MUST go through `src/services/waitlistService.ts`.

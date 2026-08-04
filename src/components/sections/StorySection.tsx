@@ -54,23 +54,17 @@ export const StorySection: React.FC = () => {
                 gap: '1rem',
               }}
             >
-              {siteConfig.story.paragraphs.map((paragraph, index) => {
-                const isLast = index === siteConfig.story.paragraphs.length - 1;
-                const isBold = isLast && siteConfig.story.boldLastParagraph;
-
-                return (
-                  <p
-                    key={index}
-                    style={
-                      isBold
-                        ? { fontWeight: 600, color: 'var(--color-text-primary)' }
-                        : undefined
-                    }
-                  >
-                    {paragraph}
-                  </p>
-                );
-              })}
+              {siteConfig.story.paragraphs.map((paragraph, index) => (
+                <p key={index}>
+                  {paragraph.map((segment, segmentIndex) => (
+                    segment.highlight ? (
+                      <span key={`${segment.text}-${segmentIndex}`} className="story-highlight">
+                        {segment.text}
+                      </span>
+                    ) : segment.text
+                  ))}
+                </p>
+              ))}
             </div>
           </div>
 

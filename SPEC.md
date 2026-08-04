@@ -98,7 +98,7 @@ export interface FAQItem {
 
 ### 2. Hero Section (`HeroSection.tsx`)
 - Badge: `OUR GOAL` pill badge.
-- Main Heading: `To make tasty and healthy food for you` with gradient accent on **"tasty and healthy"** and **"you"**. The heading text lives in `siteConfig.heroHeading` and is split for the two gradient spans.
+- Main Heading: `To make tasty and healthy food for you and your family` with gradient accent on **"tasty"**, **"healthy"**, **"you"**, and **"family"**. The heading lives in `siteConfig.heroHeading` as an array of `TextSegment`s (`src/types/content.ts`); highlighted segments render with the `text-gradient` class.
 - Subtitle: `Complete Nutrition for Every Day and Every One` (from `siteConfig.motto`).
 - Waitlist Form: Email text input + `Join Waitlist →` submit button.
 - Live Social Proof Stack: 4 overlapping avatar thumbnails + `500+ people have already joined!` counter text.
@@ -122,7 +122,8 @@ export interface FAQItem {
 
 ### 5. Our Story Section (`StorySection.tsx`)
 - Section Header: `OUR STORY` — `Making healthy food that tastes unhealthy.`
-- Story Paragraphs (first-person founder voice, from `siteConfig.story`): pain → belief → decision arc. Opens with the modern Indian diet failing nutrition and healthy food feeling like a downgrade; the belief that healthy shouldn't mean a downgrade (the son's "betrayal"); and the decision to build Shah's Nutrition so complete everyday nutrition feels normal again. Last paragraph renders bold.
+- Story Paragraphs (first-person founder voice, from `siteConfig.story`): pain → belief → decision arc. Opens with the modern Indian diet failing nutrition and healthy food feeling like a downgrade; the belief that healthy shouldn't mean a downgrade (the son's "betrayal"); and the decision to build Shah's Nutrition so complete everyday nutrition feels normal again.
+- Selective highlights: paragraphs are arrays of `TextSegment`s; the key phrases render with the `.story-highlight` class (gradient text + 2px underline). Highlighted phrases: "It tastes...healthy.", "Healthy food shouldn't feel like a downgrade.", "healthy food that tastes unhealthy", "This is just the beginning". No whole-paragraph bolding.
 - Image: High quality founders kitchen / preparation photograph.
 
 ### 6. Interactive FAQ Accordion (`FAQSection.tsx`)

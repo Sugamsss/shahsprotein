@@ -15,7 +15,6 @@ html {
   font-family: var(--font-family-body);
   background-color: var(--color-bg-main);
   color: var(--color-text-primary);
-  overflow-x: clip;
   scroll-behavior: smooth;
   scroll-snap-type: y mandatory;
   -webkit-font-smoothing: antialiased;
@@ -761,6 +760,17 @@ img {
   background: var(--color-accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.story-highlight {
+  background: var(--color-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+  text-decoration-skip-ink: auto;
+  text-decoration-color: var(--color-accent-primary);
 }
 
 .glass-card {
