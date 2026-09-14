@@ -129,7 +129,7 @@ export const ProductsSection: React.FC = () => {
             <>
               We're starting with{' '}
               <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
-                Protein Chivda
+                Bites
               </span>
               ,{' '}
               <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
@@ -137,7 +137,7 @@ export const ProductsSection: React.FC = () => {
               </span>
               , and{' '}
               <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
-                Protein Bars
+                Raggi Jaggi
               </span>
               .
             </>
@@ -148,7 +148,7 @@ export const ProductsSection: React.FC = () => {
           className="products-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
             gap: 'var(--space-8)',
           }}
         >
