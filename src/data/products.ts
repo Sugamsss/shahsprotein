@@ -3,7 +3,7 @@ import { Product } from '../types/product';
 export const productsData: Product[] = [
   {
     id: 'bites',
-    name: 'Bites',
+    name: 'Date Bites',
     tagline: 'Small bites, big everyday energy.',
     shortDescription: 'Chewy square bites bound with dates, trial mix, garden cress seeds, coconut milk powder, and buffalo ghee.',
     fullDescription: 'A satisfying square bite made from dates, trial mix, garden cress seeds, coconut milk powder, and homemade buffalo ghee for a naturally chewy texture.',

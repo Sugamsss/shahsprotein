@@ -129,7 +129,7 @@ export const ProductsSection: React.FC = () => {
             <>
               We're starting with{' '}
               <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
-                Bites
+                Date Bites
               </span>
               ,{' '}
               <span style={{ color: 'var(--color-product-name)', textDecoration: 'underline' }}>
