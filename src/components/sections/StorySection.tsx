@@ -72,7 +72,7 @@ export const StorySection: React.FC = () => {
           <div ref={rightRef} className="reveal reveal-right-far reveal-story-slow delay-200">
             <Card style={{ padding: 'var(--space-4)' }}>
               <img
-                src="/assets/story-ideas/story-family-logo-correct.png"
+                src="/assets/story-family-approved.png"
                 alt="The Shah family working together on Shah's Nutrition"
                 width={1672}
                 height={941}
