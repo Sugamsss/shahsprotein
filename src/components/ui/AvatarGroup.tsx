@@ -18,33 +18,43 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({ count, avatars }) => {
   ];
 
   const displayCount = count ?? waitlistCount;
+  const hasMembers = displayCount > 0;
 
   return (
     <div className="avatar-group">
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        {avatarList.map((url, idx) => (
-          <img
-            key={idx}
-            src={url}
-            alt="Waitlist Member"
-            width={28}
-            height={28}
-            loading="lazy"
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '2px solid var(--color-bg-main)',
-              marginLeft: idx === 0 ? 0 : '-8px',
-            }}
-          />
-        ))}
-      </div>
+      {hasMembers && (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {avatarList.map((url, idx) => (
+            <img
+              key={idx}
+              src={url}
+              alt="Waitlist Member"
+              width={28}
+              height={28}
+              loading="lazy"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid var(--color-bg-main)',
+                marginLeft: idx === 0 ? 0 : '-8px',
+              }}
+            />
+          ))}
+        </div>
+      )}
       <span
         className="avatar-group__label"
       >
-        <strong style={{ color: 'var(--color-text-primary)' }}>{displayCount}+ people</strong> have already joined!
+        {hasMembers ? (
+          <>
+            <strong style={{ color: 'var(--color-text-primary)' }}>{displayCount}</strong>{' '}
+            {displayCount === 1 ? 'person has joined.' : 'people have joined.'}
+          </>
+        ) : (
+          'Join the early-access list.'
+        )}
       </span>
     </div>
   );

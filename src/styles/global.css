@@ -308,6 +308,12 @@ a {
   grid-row: 2;
 }
 
+.waitlist-input-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .waitlist-form .input,
 .waitlist-form > button {
   min-height: 3.25rem;
@@ -318,6 +324,7 @@ a {
   grid-column: 2;
   grid-row: 2;
   padding-inline: 1.25rem !important;
+  align-self: start;
 }
 
 .waitlist-consent {
@@ -387,6 +394,13 @@ a {
 
 .waitlist-social-proof {
   margin-top: 1.125rem;
+}
+
+.waitlist-input-stack .waitlist-social-proof--hero {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0;
 }
 
 .avatar-group {

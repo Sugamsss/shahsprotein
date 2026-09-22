@@ -41,7 +41,8 @@ export const siteConfig = {
     business: "pranjalishah25@gmail.com",
   },
   waitlist: {
-    initialCount: 524,
+    // Keep the offline fallback truthful. The live count is read from Supabase.
+    initialCount: 0,
   },
   copyright: `© ${new Date().getFullYear()} Shah's Nutrition. All rights reserved.`,
 };

@@ -9,3 +9,9 @@ dist/
 *.log
 .vercel
 .env*
+
+# Scratch and testing
+.playwright-cli/
+.temp/
+temp/
+.trash/

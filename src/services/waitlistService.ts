@@ -3,6 +3,7 @@ import { siteConfig } from '../data/siteConfig';
 import { supabase } from './supabaseClient';
 
 const DUPLICATE_MESSAGE = "Love your enthusiasm! You've signed up already. We'll make sure you're the first one to get the updates as we launch.";
+const CONFIRMATION_MESSAGE = 'Welcome aboard! Check your inbox to confirm your email and save your spot for launch updates.';
 const FALLBACK_MESSAGE = 'The waitlist is temporarily unavailable. Please try again in a moment.';
 
 export class WaitlistService {
@@ -61,14 +62,16 @@ export class WaitlistService {
     const response = {
       success: result.success,
       alreadySubscribed: result.already_subscribed,
-      message: result.already_subscribed ? DUPLICATE_MESSAGE : result.message,
+      message: result.already_subscribed ? DUPLICATE_MESSAGE : CONFIRMATION_MESSAGE,
       totalCount: Number(result.total_count) || 0,
     };
 
     if (response.success && !response.alreadySubscribed) {
       // Email delivery is intentionally non-blocking: joining the list should
       // still succeed if the provider is temporarily unavailable.
-      void supabase.functions.invoke('send-waitlist-confirmation', { body: { email: trimmed } });
+      void supabase.functions.invoke('sync-waitlist-loops', {
+        body: { email: trimmed, source },
+      });
     }
 
     return response;

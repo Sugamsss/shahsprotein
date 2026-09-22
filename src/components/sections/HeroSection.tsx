@@ -88,20 +88,25 @@ export const HeroSection: React.FC = () => {
                  maxWidth: '500px',
                }}
             >
-              <div style={{ flex: 1, minWidth: '0' }}>
-                <Input
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  icon={<Mail size={18} />}
-                  required
-                  style={{
-                    paddingTop: '0.7rem',
-                    paddingBottom: '0.7rem',
-                    fontSize: 'var(--font-size-sm)',
-                  }}
-                />
+              <div className="waitlist-input-stack">
+                <div style={{ flex: 1, minWidth: '0' }}>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    icon={<Mail size={18} />}
+                    required
+                    style={{
+                      paddingTop: '0.7rem',
+                      paddingBottom: '0.7rem',
+                      fontSize: 'var(--font-size-sm)',
+                    }}
+                  />
+                </div>
+                <div className="hero-stagger-5 waitlist-social-proof waitlist-social-proof--hero">
+                  <AvatarGroup />
+                </div>
               </div>
               <Button
                 type="submit"
@@ -120,11 +125,6 @@ export const HeroSection: React.FC = () => {
                 <span className="waitlist-consent__text">I agree to receive an email about the product launch.</span>
               </label>
             </form>
-
-            {/* Social Proof */}
-            <div className="hero-stagger-5 waitlist-social-proof">
-              <AvatarGroup />
-            </div>
             </div>
           </div>
         </div>

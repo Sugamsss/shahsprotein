@@ -102,3 +102,14 @@ src/
 3. **Responsive Glassmorphism**: Cards and headers rely on `backdrop-filter: var(--glass-backdrop)`. Maintain container width limits (`var(--container-max-width)`).
 4. **CSS Variables Only**: All colors, spacing, radii, transitions, and z-indexes come from `src/styles/tokens.css` and theme files. No magic numbers.
 5. **Scroll Reveal**: Use `useScrollReveal()` hook + `.reveal` CSS class for entrance animations. Stagger children with `.delay-100` through `.delay-500`.
+
+## 4. Waitlist Backend
+
+- Supabase remains the source of truth for waitlist members, admin access, CRM data, and analytics.
+- `src/services/waitlistService.ts` stores a new signup through the Supabase RPC, then invokes the non-blocking `sync-waitlist-loops` Edge Function.
+- Loops handles waitlist double opt-in through its Form endpoint and the public `Waitlist` mailing list. Keep `LOOPS_FORM_ENDPOINT` and `LOOPS_WAITLIST_MAILING_LIST_ID` in Supabase secrets only.
+- `loops-webhook` receives signed Loops events and syncs confirmation, unsubscribe, spam, and hard-bounce status back to Supabase. It uses `LOOPS_SIGNING_SECRET` and is deployed with `--no-verify-jwt`.
+- `sync-waitlist-loops` sends the owner alert through Resend. `WAITLIST_OWNER_EMAIL` accepts one address or a comma-separated list.
+- The Loops double opt-in template must retain the `companyName` and `optInUrl` data variables; Loops will reject publishing a system email if either is missing.
+- `send-waitlist-confirmation` and `verify-waitlist-email` are retired. `unsubscribe` remains deployed because the existing admin Resend campaign fallback still generates those links.
+- Supabase setup and deployment details live in `supabase/README.md`. Do not put provider secrets in frontend variables or committed files.

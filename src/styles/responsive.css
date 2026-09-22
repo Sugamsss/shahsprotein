@@ -178,7 +178,7 @@
 }
 
 /* Compact product rows on phones. Desktop keeps the existing image-led card
-   grid; on a narrow screen the three products become quick, scannable rows. */
+   grid; on a narrow screen the products become quick, scannable rows. */
 @media (max-width: 600px) {
   .products-grid {
     display: flex !important;
