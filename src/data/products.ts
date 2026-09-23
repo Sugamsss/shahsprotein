@@ -1,7 +1,8 @@
 import { Product } from '../types/product';
 
-// The English product portfolio is the source for this launch range. It does
-// not publish verified nutrition panels or pack sizes, so those remain blank.
+// The English product portfolio is the source for this launch range. The Raggi
+// Jaggi nutrition panel uses the product-approved figures; the other products
+// do not have supplied nutrition panels yet. Pack sizes remain blank.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 export const productsData: Product[] = [
   {
@@ -15,7 +16,17 @@ export const productsData: Product[] = [
     features: ['Millet-based', 'Organic jaggery sweetened', 'Cashew goodness'],
     ingredients: ['Ragi', 'Organic Jaggery', 'Cashew', 'Ghee', 'Elaichi'],
     ingredientSprite: { image: '/assets/ingredients/raggi-jaggi.webp', rows: 2 },
-    nutritionFacts: [],
+    nutritionFacts: [
+      { label: 'Energy', per100g: '423 kcal', perServing: '127 kcal' },
+      { label: 'Protein', per100g: '6.2 g', perServing: '1.9 g' },
+      { label: 'Carbohydrate', per100g: '68.2 g', perServing: '20.5 g' },
+      { label: 'Total Sugars', per100g: '26.9 g', perServing: '8.1 g', isSubItem: true },
+      { label: 'Added Sugars', per100g: '25.3 g', perServing: '7.6 g', isSubItem: true },
+      { label: 'Total Fat', per100g: '14.7 g', perServing: '4.4 g' },
+      { label: 'Saturated Fat', per100g: '6.1 g', perServing: '1.8 g', isSubItem: true },
+      { label: 'Dietary Fibre', per100g: '2.4 g', perServing: '0.7 g' },
+      { label: 'Sodium', per100g: '4 mg', perServing: '1.2 mg' },
+    ],
     weightOptions: [],
   },
   {
