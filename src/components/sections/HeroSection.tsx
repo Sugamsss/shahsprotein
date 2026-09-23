@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { AvatarGroup } from '../ui/AvatarGroup';
 import { useWaitlist } from '../../context/WaitlistContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { useTheme } from '../../context/ThemeContext';
 import { Mail } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 
@@ -13,6 +14,7 @@ export const HeroSection: React.FC = () => {
   const [email, setEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const { submitEmail, isLoading } = useWaitlist();
+  const { theme } = useTheme();
   const sectionRef = useScrollReveal<HTMLElement>();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,17 +127,21 @@ export const HeroSection: React.FC = () => {
             </form>
             </div>
           </div>
-          <div className="hero-portfolio-visual">
-            <img
-              src="/assets/english-product-portfolio.png"
-              alt="Shah's Nutrition portfolio featuring Raggi Jaggi, Muesli and Date Bites"
-              width={1491}
-              height={1055}
-              loading="eager"
-            />
-          </div>
         </div>
       </Container>
+
+      <div className={`hero-visual-space hero-visual-space--${theme}`} aria-hidden="true">
+        <img
+          src={theme === 'light'
+            ? '/assets/generated-muesli/muesli-hero-current-light.png'
+            : '/assets/generated-muesli/muesli-hero-current-dark.png'}
+          alt=""
+          className="hero-visual-image"
+          width={1672}
+          height={941}
+          loading="eager"
+        />
+      </div>
     </section>
   );
 };

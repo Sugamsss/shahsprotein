@@ -702,23 +702,6 @@ a {
   background: transparent;
 }
 
-/* The current portfolio is shown as supplied, including its packaging artwork.
-   Product cards below reuse focused views of the same source image. */
-.hero-portfolio-visual {
-  min-width: 0;
-  border: 1px solid var(--color-border-card);
-  border-radius: 1.75rem;
-  padding: 0.55rem;
-  background: var(--color-bg-card);
-  box-shadow: var(--shadow-card);
-  transform: rotate(1deg);
-}
-
-.hero-portfolio-visual img {
-  width: 100%;
-  border-radius: 1.25rem;
-}
-
 .products-section {
   padding: calc(var(--header-height) + 2.5rem) 0 5rem;
 }
@@ -854,30 +837,12 @@ a {
 }
 
 @media (max-width: 900px) {
-  .hero-grid .hero-content {
-    margin-top: 0;
-  }
-
-  .hero-portfolio-visual {
-    max-width: 760px;
-    margin: 0 auto;
-  }
-
   .portfolio-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
-  .hero-content {
-    margin-top: 0 !important;
-  }
-
-  .hero-portfolio-visual {
-    margin-top: 1.25rem;
-    transform: none;
-  }
-
   .products-section {
     padding: calc(var(--header-height) + 1.5rem) 0 3.5rem;
   }
@@ -921,6 +886,18 @@ a {
 
   [data-theme="light"] .hero-content {
     background: rgba(255, 255, 255, 0.66);
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .hero-visual-space {
+    top: 0;
+    width: 100%;
+  }
+
+  .hero-content {
+    max-width: 34rem;
+    margin-top: 23rem;
   }
 }
 
