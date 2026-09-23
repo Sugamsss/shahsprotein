@@ -1,7 +1,8 @@
 export interface NutritionFact {
   label: string;
-  value: string;
-  unit?: string;
+  per100g: string;
+  perServing: string;
+  isSubItem?: boolean;
 }
 
 export type IconType = 'leaf' | 'wheat' | 'dumbbell' | 'currency';
@@ -16,6 +17,7 @@ export interface Product {
   image: string;
   features: string[];
   ingredients: string[];
+  ingredientSprite: { image: string; rows: number };
   nutritionFacts: NutritionFact[];
   weightOptions: string[];
   isPopular?: boolean;

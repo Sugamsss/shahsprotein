@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export interface ModalProps {
@@ -86,7 +87,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
   const titleId = title ? `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -156,6 +157,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

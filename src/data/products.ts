@@ -1,7 +1,8 @@
 import { Product } from '../types/product';
 
 // The English product portfolio is the source for this launch range. It does
-// not publish nutrition panels or pack sizes, so those are intentionally blank.
+// not publish verified nutrition panels or pack sizes, so those remain blank.
+// Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 export const productsData: Product[] = [
   {
     id: 'raggi-jaggi',
@@ -13,6 +14,7 @@ export const productsData: Product[] = [
     image: '/assets/english-product-portfolio.png',
     features: ['Millet-based', 'Organic jaggery sweetened', 'Cashew goodness'],
     ingredients: ['Ragi', 'Organic Jaggery', 'Cashew', 'Ghee', 'Elaichi'],
+    ingredientSprite: { image: '/assets/ingredients/raggi-jaggi.webp', rows: 2 },
     nutritionFacts: [],
     weightOptions: [],
   },
@@ -26,6 +28,7 @@ export const productsData: Product[] = [
     image: '/assets/english-product-portfolio.png',
     features: ['Flakes', 'Nuts', 'Seeds', 'Dried fruit'],
     ingredients: ['Oats', 'Wheat Flakes', 'Jowar Flakes', 'Ragi Crisps', 'Almonds', 'Raisins', 'Cranberries', 'Pumpkin Seeds', 'Flax Seeds'],
+    ingredientSprite: { image: '/assets/ingredients/muesli.webp', rows: 3 },
     nutritionFacts: [],
     weightOptions: [],
   },
@@ -39,6 +42,7 @@ export const productsData: Product[] = [
     image: '/assets/english-product-portfolio.png',
     features: ['Dates', 'Nuts', 'Seeds', 'Cranberry'],
     ingredients: ['Dates', 'Almonds', 'Cashew', 'Sunflower Seeds', 'Pumpkin Seeds', 'Haliv', 'Cranberry'],
+    ingredientSprite: { image: '/assets/ingredients/date-bites.webp', rows: 3 },
     nutritionFacts: [],
     weightOptions: [],
   },

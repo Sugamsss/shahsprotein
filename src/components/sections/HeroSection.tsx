@@ -92,7 +92,8 @@ export const HeroSection: React.FC = () => {
                 <div style={{ flex: 1, minWidth: '0' }}>
                   <Input
                     type="email"
-                    placeholder="Enter your email address"
+                    placeholder="Email address"
+                    aria-label="Email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     icon={<Mail size={18} />}
