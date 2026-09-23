@@ -1,8 +1,7 @@
 import { Product } from '../types/product';
 
-// The English product portfolio is the source for this launch range. The Raggi
-// Jaggi nutrition panel uses the product-approved figures; the other products
-// do not have supplied nutrition panels yet. Pack sizes remain blank.
+// The English product portfolio is the source for this launch range. Nutrition
+// is populated only where a product label has been supplied; pack sizes remain blank.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 export const productsData: Product[] = [
   {
