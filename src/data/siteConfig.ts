@@ -2,17 +2,11 @@ import type { TextSegment } from '../types/content';
 
 export const siteConfig = {
   name: "Shah's Nutrition",
-  tagline: "Healthy Food that Tastes Unhealthy 😉",
-  motto: "Complete Nutrition for Every Day and Every One",
+  tagline: "Tasty food. Healthy habits. A brighter you.",
+  motto: "A curated range of wholesome everyday foods made with real ingredients and honest nutrition.",
   heroHeading: [
-    { text: 'To make ' },
-    { text: 'tasty', highlight: true },
-    { text: ' and ' },
-    { text: 'healthy', highlight: true },
-    { text: ' food for ' },
-    { text: 'you', highlight: true },
-    { text: ' and your ' },
-    { text: 'family', highlight: true },
+    { text: 'Simple ingredients. ' },
+    { text: 'Extraordinary benefits.', highlight: true },
   ] satisfies TextSegment[],
   story: {
     heading: "Making healthy food that tastes unhealthy.",
@@ -28,7 +22,7 @@ export const siteConfig = {
       [
         { text: "And now I'm bringing that to everyone with Shah's Nutrition. We make " },
         { text: 'healthy food that tastes unhealthy', highlight: true },
-        { text: ", that's not confusing and is actually affordable. Every recipe is designed to complete the nutrition our Indian diet leaves out, so your body gets what it needs. " },
+        { text: ", that's not confusing and is actually affordable. Our Raggi Jaggi, Muesli and Date Bites start with familiar ingredients you can recognize. " },
         { text: 'This is just the beginning', highlight: true },
         { text: ', more product launches coming soon!' },
       ],

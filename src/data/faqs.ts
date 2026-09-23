@@ -19,6 +19,6 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-5',
     question: 'Will you spam me if I give you my mail id?',
-    answer: "No, I won't. Will just remind you thrice. Once when orders are open for you, once when orders are generally open, once when we launch other two products.",
+    answer: "No. We'll email you about early access, general availability and relevant product updates.",
   },
 ];

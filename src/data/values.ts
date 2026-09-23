@@ -18,7 +18,7 @@ export const valuesData: BrandValue[] = [
   {
     id: 'for-every-day-and-every-one',
     title: 'For Every Day and Every One',
-    description: 'Complete, honest nutrition at a price that works for the whole household, every ordinary day.',
+    description: 'Wholesome everyday food made with real ingredients for the whole household.',
     iconType: 'users-round',
   },
 ];
