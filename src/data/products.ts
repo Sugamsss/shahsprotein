@@ -5,6 +5,7 @@ import { Product } from '../types/product';
 // so weightOptions lists pack sizes only.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 // Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
+// Sprites are exported at 216px per tile (3x the 72px tile) as WebP; see AGENTS.md.
 export const productsData: Product[] = [
   {
     id: 'raggi-jaggi',
@@ -16,7 +17,7 @@ export const productsData: Product[] = [
     image: '/assets/product-cards/raggi-jaggi.webp',
     features: ['Millet-based', 'Organic jaggery sweetened', 'Cashew goodness'],
     ingredients: ['Ragi', 'Organic Jaggery', 'Cashew', 'Ghee', 'Elaichi'],
-    ingredientSprite: { image: '/assets/ingredients/raggi-jaggi.webp', rows: 2 },
+    ingredientSprite: { image: '/assets/ingredients/raggi-jaggi-648w.webp', rows: 2 },
     nutritionFacts: [
       { label: 'Energy', per100g: '423 kcal', perServing: '127 kcal' },
       { label: 'Protein', per100g: '6.2 g', perServing: '1.9 g' },
@@ -48,7 +49,7 @@ export const productsData: Product[] = [
       'Cranberry', 'Tutti Frutti', 'Sugar',
       'Ghee',
     ],
-    ingredientSprite: { image: '/assets/ingredients/muesli-v3.webp', rows: 5 },
+    ingredientSprite: { image: '/assets/ingredients/muesli-v3-648w.webp', rows: 5 },
     nutritionFacts: [
       { label: 'Energy', per100g: '413 kcal', perServing: '124 kcal' },
       { label: 'Protein', per100g: '10.0 g', perServing: '3.0 g' },
@@ -74,7 +75,7 @@ export const productsData: Product[] = [
     image: '/assets/product-cards/bites.webp',
     features: ['Dates', 'Nuts', 'Seeds', 'Cranberry'],
     ingredients: ['Dates', 'Almonds', 'Cashew', 'Sunflower Seeds', 'Pumpkin Seeds', 'Haliv', 'Cranberry', 'Ghee'],
-    ingredientSprite: { image: '/assets/ingredients/date-bites-v2.webp', rows: 3 },
+    ingredientSprite: { image: '/assets/ingredients/date-bites-v2-648w.webp', rows: 3 },
     nutritionFacts: [],
     weightOptions: ['250 g'],
     shelfLife: '15 days',
