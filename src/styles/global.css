@@ -1930,3 +1930,64 @@ img {
     --nutrition-inline-padding: 0.375rem;
   }
 }
+
+/* Phone hero: the art spans the screen width and grows with screen
+   height, and the card starts just below it. */
+@media (max-width: 600px) {
+  :root {
+    --hero-art-height: clamp(13rem, 34svh, 20rem);
+  }
+
+  .hero-visual-space {
+    top: 4rem;
+    left: 0;
+    width: 100%;
+    height: var(--hero-art-height);
+    transform: none;
+  }
+
+  .hero-visual-image {
+    object-position: 88% 40%;
+  }
+
+  .hero-content {
+    margin-top: calc(var(--hero-art-height) - 1rem);
+  }
+}
+
+/* Landscape phone: too short to stack, so the card sits on the left over
+   full-height art. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero-visual-space {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    transform: none;
+  }
+
+  .hero-visual-image {
+    object-fit: cover;
+    object-position: right center;
+  }
+
+  .hero-content {
+    max-width: 26rem;
+    margin: calc(var(--header-height) + 0.75rem) 0 0;
+  }
+
+  /* A two-line headline keeps the Order button on the first screen.
+     !important beats the headline's inline size, as the phone rule does. */
+  .hero-content h1 {
+    font-size: 2rem !important;
+    line-height: 1.1 !important;
+  }
+}
+
+/* Under 600px wide the section's own top padding already clears the header. */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 600px) {
+  .hero-content {
+    margin-top: 0;
+  }
+}

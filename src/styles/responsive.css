@@ -97,21 +97,14 @@
     min-height: 0;
   }
 
-  .hero-visual-space {
-    top: 4rem !important;
-    height: 14rem !important;
-  }
-
   .hero-visual-image {
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
     object-fit: cover !important;
-    object-position: right center !important;
   }
 
   .hero-content {
-    margin-top: 13rem !important;
     padding: 1rem 1.125rem 1rem !important;
     border-radius: 24px !important;
   }
