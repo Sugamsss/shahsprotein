@@ -2386,6 +2386,8 @@ img {
   .portfolio-card__art {
     height: clamp(150px, 100vh - 520px, 290px);
     aspect-ratio: auto;
+    /* Crop from the bottom so the handwritten notes at the top stay whole. */
+    object-position: center top;
   }
 }
 
