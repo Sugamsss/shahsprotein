@@ -19,6 +19,11 @@ export interface Product {
   ingredients: string[];
   ingredientSprite: { image: string; rows: number };
   nutritionFacts: NutritionFact[];
+  /** Pack sizes, e.g. "250 g". Prices are not published yet. */
   weightOptions: string[];
+  /** How long it stays fresh. Kept short on purpose: no preservatives. */
+  shelfLifeDays: number;
+  /** Allergen line shown under "Good to know", e.g. "Tree nuts (cashew), dairy (ghee)". */
+  contains: string;
   isPopular?: boolean;
 }

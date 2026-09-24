@@ -1,8 +1,10 @@
 import { Product } from '../types/product';
 
 // The English product portfolio is the source for this launch range. Nutrition
-// is populated only where a product label has been supplied; pack sizes remain blank.
+// is populated only where a product label has been supplied. Prices come later,
+// so weightOptions lists pack sizes only.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
+// Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
 export const productsData: Product[] = [
   {
     id: 'raggi-jaggi',
@@ -26,34 +28,40 @@ export const productsData: Product[] = [
       { label: 'Dietary Fibre', per100g: '2.4 g', perServing: '0.7 g' },
       { label: 'Sodium', per100g: '4 mg', perServing: '1.2 mg' },
     ],
-    weightOptions: [],
+    weightOptions: ['250 g', '500 g'],
+    shelfLifeDays: 60,
+    contains: 'Tree nuts (cashew), dairy (ghee)',
   },
   {
     id: 'muesli',
     name: 'Muesli',
     tagline: 'A bowl of complete nutrition.',
     shortDescription: 'Crunchy roasted blend with flakes, nuts, seeds and fruit.',
-    fullDescription: 'Made with oats, wheat flakes, jowar flakes, ragi crisps, almonds, raisins, cranberries, pumpkin seeds and flax seeds.',
+    fullDescription: 'Made with oats, wheat flakes, jowar flakes, ragi crisps, almonds, raisins, sweetened cranberries, pumpkin seeds, flax seeds and ghee.',
     iconType: 'wheat',
     image: '/assets/english-product-portfolio.png',
     features: ['Flakes', 'Nuts', 'Seeds', 'Dried fruit'],
-    ingredients: ['Oats', 'Wheat Flakes', 'Jowar Flakes', 'Ragi Crisps', 'Almonds', 'Raisins', 'Cranberries', 'Pumpkin Seeds', 'Flax Seeds'],
-    ingredientSprite: { image: '/assets/ingredients/muesli.webp', rows: 3 },
+    ingredients: ['Oats', 'Wheat Flakes', 'Jowar Flakes', 'Ragi Crisps', 'Almonds', 'Raisins', 'Sweetened Cranberries', 'Pumpkin Seeds', 'Flax Seeds', 'Ghee'],
+    ingredientSprite: { image: '/assets/ingredients/muesli-v2.webp', rows: 4 },
     nutritionFacts: [],
-    weightOptions: [],
+    weightOptions: ['250 g', '500 g'],
+    shelfLifeDays: 60,
+    contains: 'Tree nuts (almonds), dairy (ghee), wheat (gluten)',
   },
   {
     id: 'bites',
     name: 'Date Bites',
     tagline: 'Natural energy in every bite.',
     shortDescription: 'Nut-and-seed date bites for smart snacking.',
-    fullDescription: 'Date bites made with almonds, cashew, sunflower seeds, pumpkin seeds, haliv and cranberry.',
+    fullDescription: 'Date bites made with almonds, cashew, sunflower seeds, pumpkin seeds, haliv, cranberry and ghee.',
     iconType: 'leaf',
     image: '/assets/english-product-portfolio.png',
     features: ['Dates', 'Nuts', 'Seeds', 'Cranberry'],
-    ingredients: ['Dates', 'Almonds', 'Cashew', 'Sunflower Seeds', 'Pumpkin Seeds', 'Haliv', 'Cranberry'],
-    ingredientSprite: { image: '/assets/ingredients/date-bites.webp', rows: 3 },
+    ingredients: ['Dates', 'Almonds', 'Cashew', 'Sunflower Seeds', 'Pumpkin Seeds', 'Haliv', 'Cranberry', 'Ghee'],
+    ingredientSprite: { image: '/assets/ingredients/date-bites-v2.webp', rows: 3 },
     nutritionFacts: [],
-    weightOptions: [],
+    weightOptions: ['250 g'],
+    shelfLifeDays: 15,
+    contains: 'Tree nuts (almonds, cashew), dairy (ghee)',
   },
 ];
