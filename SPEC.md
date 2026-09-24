@@ -74,7 +74,8 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
 - Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
 - `weightOptions` holds pack sizes. Prices are not published yet. When they are, cards and the popup can read them from here.
-- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, then `muesli-v3.webp`, and `date-bites-v2.webp`).
+- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, then `muesli-v3.webp`, and `date-bites-v2.webp`). The site loads a copy exported at 216px per tile (3x the 72px tile), named `-648w.webp` (e.g. `muesli-v3-648w.webp`). Keep the full-size sprite as the master.
+- **Card images** (`image`) are per-product crops in `public/assets/product-cards/`, cut at the card's 1.3 ratio from `english-product-portfolio.png`. Image rules for the whole site are in `AGENTS.md` under "Images, fonts and bundle size".
 
 ```ts
 interface Product {

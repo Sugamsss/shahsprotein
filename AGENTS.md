@@ -33,11 +33,11 @@ src/
 ├── data/                # ALL copy and content: products, faqs, values, siteConfig (phone numbers, wa.me links)
 ├── context/             # ThemeContext, WaitlistContext
 ├── services/            # waitlistService (signup), analyticsService (incl. WhatsApp order clicks)
-├── hooks/               # useScrollReveal, use3DTilt
+├── hooks/               # useScrollReveal
 ├── styles/              # global.css imports tokens → themes → animations → responsive
 └── types/
 supabase/                # migrations, edge functions, README (backend setup and secrets)
-public/assets/           # images used by the site
+public/assets/           # images (WebP) and self-hosted fonts used by the site
 Design/, Assets/         # reference designs and asset prompts, not shipped
 ```
 
@@ -61,6 +61,19 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - **Product popup on phones:** the title and close button form a sticky row (`.modal-head`). The Order button is pinned to the bottom. Test scrolling inside the popup at 320px.
 - **Several sessions may share this folder.** Other agents or people may have uncommitted work here. Don't `checkout`, `stash` or `reset` a tree you didn't start in. For parallel work, use a `git worktree` in a sibling folder, and leave untracked files you don't own alone (for example `public/assets/packaging/`, `public/assets/story-ideas/`, `*.xlsx`).
 - `temp/` is scratch space for working notes. It isn't product docs.
+
+## Images, fonts and bundle size
+
+- **`/assets/*` is cached for a year as `immutable`.** Never overwrite a file there. A changed image or font gets a new name (`-v2`, `-1200w`), and the code points to it.
+- **New images ship as WebP, sized for their slot.** Export at about 3x the largest CSS size the image shows at, or at native size if that's smaller: `cwebp -q 85 -m 6 -sharp_yuv in.png -o out.webp` (`-q 90` for the logo). Transparency is kept, which the sprites and logo need. Keep the PNG master; `og:image` still uses the hero PNG.
+- **How each image is served:**
+  - The hero art is preloaded from the inline theme script in `index.html`. If you rename it, change `HeroSection.tsx` too, or it downloads twice.
+  - Product cards each get their own crop at the card's 1.3 ratio, in `public/assets/product-cards/`.
+  - The story image has an 800/1200/1672w `srcSet` and a fixed `aspectRatio`.
+  - Ingredient sprites use 216px per tile, so they're 648px wide.
+- **Below the fold:** `<img loading="lazy" decoding="async">` with `width` and `height`.
+- **Fonts are self-hosted:** latin variable woff2 in `public/assets/fonts/`, `@font-face` in `tokens.css`, and a preload in `index.html`. Don't add the Google Fonts link back.
+- **Admin routes and Supabase are lazy-loaded.** Landing-page code must not import `supabaseClient` statically; `waitlistService` imports it on submit. The landing entry chunk is about 238 kB (77 kB gzipped). A new 500 kB warning means something heavy leaked back in.
 
 ## Backend (email list and analytics)
 
