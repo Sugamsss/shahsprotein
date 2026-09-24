@@ -67,8 +67,8 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 | Product | Pack sizes | Stays fresh | Contains |
 |---|---|---|---|
-| Raggi Jaggi | 250 g, 500 g | 60 days | Tree nuts (cashew), dairy (ghee) |
-| Muesli | 250 g, 500 g | 60 days | Tree nuts (almonds), dairy (ghee), wheat (gluten) |
+| Raggi Jaggi | 250 g, 500 g | 6 months | Tree nuts (cashew), dairy (ghee) |
+| Muesli | 250 g, 500 g | 6 months | Tree nuts (almonds), dairy (ghee), wheat (gluten) |
 | Date Bites | 250 g | 15 days (on purpose) | Tree nuts (almonds, cashew), dairy (ghee) |
 
 - No preservatives, made fresh in small batches. Muesli's cranberries are sweetened.
@@ -85,7 +85,7 @@ interface Product {
   ingredientSprite: { image: string; rows: number };
   nutritionFacts: { label: string; per100g: string; perServing: string; isSubItem?: boolean }[];
   weightOptions: string[];   // pack sizes, e.g. "250 g"
-  shelfLifeDays: number;
+  shelfLife: string;
   contains: string;          // allergen line for "Good to know"
   isPopular?: boolean;
 }

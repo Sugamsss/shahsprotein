@@ -29,7 +29,7 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '4 mg', perServing: '1.2 mg' },
     ],
     weightOptions: ['250 g', '500 g'],
-    shelfLifeDays: 60,
+    shelfLife: '6 months',
     contains: 'Tree nuts (cashew), dairy (ghee)',
   },
   {
@@ -45,7 +45,7 @@ export const productsData: Product[] = [
     ingredientSprite: { image: '/assets/ingredients/muesli-v2.webp', rows: 4 },
     nutritionFacts: [],
     weightOptions: ['250 g', '500 g'],
-    shelfLifeDays: 60,
+    shelfLife: '6 months',
     contains: 'Tree nuts (almonds), dairy (ghee), wheat (gluten)',
   },
   {
@@ -61,7 +61,7 @@ export const productsData: Product[] = [
     ingredientSprite: { image: '/assets/ingredients/date-bites-v2.webp', rows: 3 },
     nutritionFacts: [],
     weightOptions: ['250 g'],
-    shelfLifeDays: 15,
+    shelfLife: '15 days',
     madeToOrder: true,
     contains: 'Tree nuts (almonds, cashew), dairy (ghee)',
   },

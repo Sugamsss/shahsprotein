@@ -105,7 +105,7 @@ export const ProductsSection: React.FC = () => {
                 <div>
                   <dt>Stays fresh</dt>
                   <dd>
-                    {selectedProduct.shelfLifeDays} days. No preservatives.
+                    {selectedProduct.shelfLife}. No preservatives.
                     {selectedProduct.madeToOrder && ' Made after you order.'}
                   </dd>
                 </div>
