@@ -68,6 +68,7 @@ The function validates the caller is an admin via JWT, accepts up to 100 member 
 | `get_admin_campaigns(p_page, p_per_page)` | List campaigns with delivery stats |
 | `get_admin_campaign_log(p_campaign_id, p_page, p_per_page)` | Campaign delivery log |
 | `get_waitlist_count_stats()` | Consistent count breakdown (active, bounced, etc.) |
+| `get_admin_order_clicks(p_days)` | WhatsApp order clicks by source and device; `p_days = null` for all time |
 
 All admin RPCs check `public.is_admin()` and return 401 for non-admins.
 
@@ -76,3 +77,21 @@ Migration `20260727000006` enables `pg_cron`, restricts
 existing retention cleanup daily at **03:00 UTC** under the
 `purge-waitlist-retention` job name. The migration replaces an existing job
 with that name when rerun; no external scheduler is required.
+
+## WhatsApp order click tracking
+
+Migration `20260924000000` adds `site_events` (anonymous, no PII) and the public
+RPC `track_site_event(p_event, p_source, p_device_type, p_theme)`, which the site
+calls when someone taps "Order on WhatsApp". Anon users can call the RPC but can't
+read, change or delete any rows. The RPC accepts only `whatsapp_order_click` and
+the known button sources, and rate-limits to 60 clicks per IP per hour and 3,000
+per hour overall. It also schedules `purge_site_events()` daily at **03:15 UTC**
+(`purge-site-events` job), which keeps 13 months of events.
+
+After `supabase db push`, check it from the SQL editor:
+
+```sql
+select jobname, schedule from cron.job where jobname = 'purge-site-events';
+select event, source, device_type, created_at from public.site_events order by created_at desc limit 10;
+```
+

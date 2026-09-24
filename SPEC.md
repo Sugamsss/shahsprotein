@@ -43,7 +43,14 @@ Links are built by `src/utils/contact.ts` (the message is URL-encoded):
 
 Every order link renders through `OrderLink` (`src/components/ui/OrderLink.tsx`), which opens in a new tab and fires `whatsapp_order_click` with a `source`. Sources: `header`, `hero`, `product:<id>`, `product-details:<id>`, `nutrition:<id>`, `faq`, `banner`, `footer`. `CustomerCareLinks` renders the care line's Call and WhatsApp actions.
 
-**Analytics caveat:** `AnalyticsService.trackEvent` only logs to the console in development. In production, events (including `whatsapp_order_click`) are not sent anywhere yet. Section dwell time is only stored alongside an email sign-up.
+**Order click tracking:** `trackOrderClick` calls `AnalyticsService.trackSiteEvent`, which posts `{ p_event, p_source, p_device_type, p_theme }` to the Supabase RPC `track_site_event` with `fetch(..., { keepalive: true })`. It is fire and forget: never awaited, errors ignored, so it can't delay opening WhatsApp. Rows go to `site_events` (migration `20260924000000`) and hold no PII: no IP, user agent, session key or link to a member.
+
+- **Only the live site writes.** Events are sent when the build is a production build *and* the host is `shahsnutrition.food` or `www.shahsnutrition.food` (`PRODUCTION_HOSTS` in `analyticsService.ts`). Local dev, `vite preview` and Vercel preview deploys only log to the console, because `.env.local` and previews point at the production Supabase. **If the domain changes, update `PRODUCTION_HOSTS` or clicks stop being recorded.** `VITE_TRACK_EVENTS=true` forces sending, for testing against a local Supabase only.
+- **The source list is enforced in the database.** `track_site_event` rejects unknown events and any source outside the list above (product ids: lowercase letters, digits and dashes). A new button with a new kind of source needs a migration that updates the check in both the function and the `site_events` table.
+- **Rate limits:** 60 clicks per IP per hour (hashed IP, kept about an hour in `site_event_rate_limits`, never joined to events) and 3,000 clicks per hour overall. Over the limit, clicks are dropped quietly.
+- **Retention:** 13 months, purged daily at 03:15 UTC by the `purge-site-events` cron job.
+
+Other events (`waitlist_submission_*`, `render_error`) still only log in development. Section dwell time is only stored alongside an email sign-up.
 
 ## 4. Page sections (top to bottom)
 
@@ -101,6 +108,8 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 ## 7. Owner dashboard
 
 `/admin` (Supabase Auth, `admin_users`) shows members, campaigns and analytics. It still says "waitlist", which is fine because only the founder sees it. Setup is in `supabase/README.md`.
+
+**Analytics** (`/admin/analytics`, `AdminAnalytics.tsx`) opens with **WhatsApp order clicks**: total clicks, a mobile/desktop/tablet split, and clicks per button (e.g. "Product card · Raggi Jaggi") with the last click time, for the last 7 days, last 30 days or all time. It reads through the admin-only RPC `get_admin_order_clicks(p_days)`. Consented sessions are listed below it.
 
 ## 8. Meta
 
