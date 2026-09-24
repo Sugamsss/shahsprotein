@@ -4,7 +4,7 @@ import { siteConfig } from '../../data/siteConfig';
 import { Instagram, Mail, Phone } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { OrderLink } from '../ui/OrderLink';
-import { CustomerCareLinks } from '../ui/CustomerCareLinks';
+import { careCallUrl } from '../../utils/contact';
 
 export const Footer: React.FC = () => {
   const { theme } = useTheme();
@@ -71,15 +71,14 @@ export const Footer: React.FC = () => {
                   {siteConfig.contact.order.display}
                 </OrderLink>
               </li>
-              <li className="footer-contact__care">
-                <span className="footer-contact__row">
+              <li>
+                <a href={careCallUrl()} className="footer-link footer-contact__row">
                   <Phone size={16} aria-hidden="true" />
                   <span>
                     <span className="footer-contact__label">{siteConfig.contact.care.label}</span>{' '}
                     {siteConfig.contact.care.display}
                   </span>
-                </span>
-                <CustomerCareLinks />
+                </a>
               </li>
               <li>
                 <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link footer-contact__row">

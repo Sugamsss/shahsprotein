@@ -61,7 +61,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 5. **Our Story** (`sections/StorySection.tsx`, `#our-story`): founder story from `siteConfig.story`, key phrases highlighted with `.story-highlight`.
 6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). Under the list: "Have another question? Ask us on WhatsApp." (order chat) and "Need help with an order you've placed? Customer care: 9881191999" with Call and WhatsApp.
 7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp**, "Or save our order number: 9850359899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
-8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 9850359899, Customer care 9881191999 (Call, WhatsApp), Instagram, email. **For Business Inquiries:** email.
+8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 9850359899 (WhatsApp), Customer care 9881191999 (tap to call), Instagram, email. Each row is one link. **For Business Inquiries:** email.
 
 ## 5. Products (`src/data/products.ts`, type in `src/types/product.ts`)
 

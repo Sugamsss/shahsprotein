@@ -1459,21 +1459,9 @@ img {
   font-weight: 600;
 }
 
-.footer-contact__care {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.45rem;
-}
-
-.footer-contact__care .footer-contact__row {
-  color: var(--color-text-secondary);
-}
-
 /* The footer centres on small phones (responsive.css); match it here. */
 @media (max-width: 480px) {
-  .footer-contact,
-  .footer-contact__care {
+  .footer-contact {
     align-items: center;
   }
 }
