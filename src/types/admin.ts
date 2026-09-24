@@ -42,6 +42,15 @@ export interface AdminAnalyticsSession {
   utm_campaign: string | null;
 }
 
+/** ─── WhatsApp order clicks (get_admin_order_clicks) ─── */
+export interface AdminOrderClicks {
+  /** Start of the window, or null for all time. */
+  since: string | null;
+  total: number;
+  by_source: { source: string; clicks: number; last_click_at: string }[];
+  by_device: { device_type: string; clicks: number }[];
+}
+
 export interface AdminPage<T> {
   page: number;
   per_page: number;

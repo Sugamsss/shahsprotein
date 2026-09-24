@@ -1,6 +1,7 @@
 import {
   AdminAnalyticsSession,
   AdminEmailPayload,
+  AdminOrderClicks,
   AdminPage,
   AdminSummary,
   AdminWaitlistMember,
@@ -131,6 +132,14 @@ export class AdminService {
       throw new Error(message);
     }
     if (data?.error) throw new Error(data.error);
+  }
+
+  /** "Order on WhatsApp" clicks by source. `days = null` means all time. */
+  static async getOrderClicks(days: number | null): Promise<AdminOrderClicks> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { data, error } = await supabase.rpc('get_admin_order_clicks', { p_days: days });
+    if (error) throw error;
+    return data as AdminOrderClicks;
   }
 
   static async getAnalytics(page = 1, perPage = 50): Promise<AdminPage<AdminAnalyticsSession>> {

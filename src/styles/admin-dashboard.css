@@ -376,6 +376,89 @@
   box-shadow: 0 0 0 3px var(--color-bg-badge);
 }
 
+/* ─── WhatsApp order clicks ─── */
+.admin-clicks-card {
+  margin-bottom: var(--space-8);
+}
+
+.admin-clicks-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.admin-clicks-head h3,
+.admin-subhead {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.admin-clicks-head p {
+  margin: 0;
+}
+
+.admin-clicks-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-clicks-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+.admin-clicks-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.admin-clicks-count {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-clicks-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.admin-clicks-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border-subtle);
+  overflow: hidden;
+}
+
+.admin-clicks-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-accent-gradient);
+  transition: width 0.6s ease;
+}
+
+.admin-clicks-card.is-loading .admin-clicks-list {
+  opacity: 0.55;
+  transition: opacity var(--transition-fast);
+}
+
+/* Heading above a card, e.g. "Consented sessions" on the analytics page. */
+.admin-subhead {
+  margin-bottom: var(--space-3);
+}
+
 /* ─── Drawer / Slide-Over Panel ─── */
 .admin-drawer-overlay {
   position: fixed;
@@ -746,6 +829,11 @@
   }
 
   .admin-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-clicks-head {
     flex-direction: column;
     align-items: stretch;
   }
