@@ -1,8 +1,10 @@
 import React from 'react';
 import { Container } from './Container';
 import { siteConfig } from '../../data/siteConfig';
-import { Instagram, Mail } from 'lucide-react';
+import { Instagram, Mail, Phone } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { OrderLink } from '../ui/OrderLink';
+import { CustomerCareLinks } from '../ui/CustomerCareLinks';
 
 export const Footer: React.FC = () => {
   const { theme } = useTheme();
@@ -50,23 +52,46 @@ export const Footer: React.FC = () => {
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
               <li><a href="#products" className="footer-link">Products</a></li>
               <li><a href="#our-story" className="footer-link">Our Story</a></li>
-              <li><a href="#waitlist" className="footer-link">Join Waitlist</a></li>
+              <li>
+                <OrderLink source="footer" variant="plain" className="footer-link">Order on WhatsApp</OrderLink>
+              </li>
+              <li><a href="#updates" className="footer-link">Get updates</a></li>
             </ul>
           </div>
 
-          {/* Follow Us */}
+          {/* Get in touch: every way to reach us, each labelled by what it's for. */}
           <div>
             <h4 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
-              Follow Us
+              Get in touch
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
-              <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Instagram size={16} /> Instagram
-              </a>
-              <a href={`mailto:${siteConfig.social.email}`} className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Mail size={16} /> {siteConfig.social.email}
-              </a>
-            </div>
+            <ul className="footer-contact">
+              <li>
+                <OrderLink source="footer" variant="plain" size="sm" showIcon className="footer-link footer-contact__row">
+                  <span className="footer-contact__label">{siteConfig.contact.order.label}</span>{' '}
+                  {siteConfig.contact.order.display}
+                </OrderLink>
+              </li>
+              <li className="footer-contact__care">
+                <span className="footer-contact__row">
+                  <Phone size={16} aria-hidden="true" />
+                  <span>
+                    <span className="footer-contact__label">{siteConfig.contact.care.label}</span>{' '}
+                    {siteConfig.contact.care.display}
+                  </span>
+                </span>
+                <CustomerCareLinks />
+              </li>
+              <li>
+                <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link footer-contact__row">
+                  <Instagram size={16} aria-hidden="true" /> Instagram
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${siteConfig.social.email}`} className="footer-link footer-contact__row">
+                  <Mail size={16} aria-hidden="true" /> {siteConfig.social.email}
+                </a>
+              </li>
+            </ul>
           </div>
 
           {/* Business Inquiries */}

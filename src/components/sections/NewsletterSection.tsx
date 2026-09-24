@@ -3,11 +3,18 @@ import { Container } from '../layout/Container';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { AvatarGroup } from '../ui/AvatarGroup';
+import { OrderLink } from '../ui/OrderLink';
+import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { useWaitlist } from '../../context/WaitlistContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { siteConfig } from '../../data/siteConfig';
 import { Mail } from 'lucide-react';
 
+/**
+ * The end of the page: people who've been convinced land here, so ordering comes
+ * first. The email row underneath is for people who aren't ready yet. It still
+ * runs the Supabase + Loops double opt-in flow through useWaitlist.
+ */
 export const NewsletterSection: React.FC = () => {
   const [email, setEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
@@ -23,10 +30,10 @@ export const NewsletterSection: React.FC = () => {
 
   return (
     <section
-      id="waitlist"
+      id="order"
       ref={sectionRef}
       className="reveal newsletter-section"
-      aria-label="Newsletter Subscription"
+      aria-labelledby="order-heading"
       style={{
         position: 'relative',
         overflow: 'visible',
@@ -45,64 +52,43 @@ export const NewsletterSection: React.FC = () => {
         }}
       />
       <Container>
-        <div>
-          <Card
-              style={{
-                textAlign: 'center',
-              padding: 'var(--space-12) var(--space-6)',
-              maxWidth: '840px',
-              margin: '0 auto',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'var(--color-bg-badge)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              <Mail size={24} color="var(--color-text-accent)" />
+        <Card className="order-card">
+          <div className="order-card__order">
+            <div className="order-card__icon" aria-hidden="true">
+              <WhatsAppIcon size={24} />
             </div>
 
-            <h2
-              style={{
-                fontSize: 'var(--font-size-3xl)',
-                color: 'var(--color-text-primary)',
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Be the first to know.
-            </h2>
+            <h2 id="order-heading" className="order-card__title">Ready to give it a try?</h2>
 
-            <p
-              style={{
-                fontSize: 'var(--font-size-md)',
-                color: 'var(--color-text-secondary)',
-                marginBottom: 'var(--space-8)',
-              }}
-            >
-              New products, early access, and exclusive updates.
+            <p className="order-card__lead">
+              Message us on WhatsApp. We’ll help you choose, and tell you the total with delivery.
             </p>
+
+            <OrderLink source="banner" size="lg">Order on WhatsApp</OrderLink>
+
+            <p className="order-card__number">
+              Or save our order number: <strong>{siteConfig.contact.order.display}</strong>
+            </p>
+          </div>
+
+          <div id="updates" className="order-card__updates">
+            <p className="order-card__updates-intro">Not ready yet? Hear about new launches.</p>
 
             <form
               onSubmit={handleSubmit}
               className="hero-form waitlist-form"
+              aria-label="Get email updates"
               style={{
-                 maxWidth: '520px',
-                 margin: '0 auto var(--space-3)',
+                maxWidth: '520px',
+                margin: '0 auto',
               }}
             >
               <div style={{ flex: 1, minWidth: '0' }}>
                 <Input
                   type="email"
-                  placeholder="Enter your email address"
+                  placeholder="Email address"
+                  aria-label="Email address"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   icon={<Mail size={18} />}
@@ -116,27 +102,28 @@ export const NewsletterSection: React.FC = () => {
               </div>
               <Button
                 type="submit"
+                variant="secondary"
                 disabled={isLoading}
                 style={{
                   padding: '0.7rem 1.25rem',
                   fontSize: 'var(--font-size-sm)',
                   whiteSpace: 'nowrap',
+                  // The card border token disappears on the light card; match the input instead.
+                  borderColor: 'var(--color-border-input)',
                 }}
               >
-                {isLoading ? 'Joining...' : 'Join Waitlist \u2192'}
+                {isLoading ? 'Adding you…' : 'Keep me posted'}
               </Button>
               <label className="waitlist-consent">
                 <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} required />
                 <span className="waitlist-checkbox" aria-hidden="true" />
-                <span className="waitlist-consent__text">I agree to receive an email about the product launch.</span>
+                <span className="waitlist-consent__text">
+                  Email me about new products from Shah’s Nutrition. I can unsubscribe anytime.
+                </span>
               </label>
             </form>
-
-            <div className="waitlist-social-proof" style={{ display: 'flex', justifyContent: 'center' }}>
-              <AvatarGroup />
-            </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </Container>
     </section>
   );

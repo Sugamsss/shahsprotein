@@ -6,6 +6,9 @@ import { faqsData } from '../../data/faqs';
 import { ChevronDown } from 'lucide-react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { FAQItem } from '../../types/faqs';
+import { OrderLink } from '../ui/OrderLink';
+import { CustomerCareLinks } from '../ui/CustomerCareLinks';
+import { siteConfig } from '../../data/siteConfig';
 
 const FAQCardItem: React.FC<{
   faq: FAQItem;
@@ -149,6 +152,22 @@ export const FAQSection: React.FC = () => {
               onToggle={() => toggleAccordion(faq.id)}
             />
           ))}
+        </div>
+
+        {/* The FAQ can't cover everything. Questions go to the order chat; problems with
+            an existing order go to customer care, so they don't land in the sales chat. */}
+        <div className="faq-help">
+          <p>
+            Still wondering about something?{' '}
+            <OrderLink source="faq" ask variant="text">Ask us on WhatsApp.</OrderLink>
+          </p>
+          <p className="faq-help__care">
+            <span>
+              Already ordered and need a hand? {siteConfig.contact.care.label}:{' '}
+              <strong>{siteConfig.contact.care.display}</strong>
+            </span>
+            <CustomerCareLinks />
+          </p>
         </div>
       </Container>
     </section>

@@ -28,6 +28,25 @@ export const siteConfig = {
       ],
     ] satisfies TextSegment[][],
   },
+  // Two numbers with two jobs. Always show a number with its label, and keep
+  // customer care out of the header and hero, where it would compete with ordering.
+  contact: {
+    order: {
+      label: 'Order',
+      display: '98503 59899',
+      // Country code + number, digits only, as wa.me and tel: links expect.
+      number: '919850359899',
+    },
+    care: {
+      label: 'Customer care',
+      display: '98811 91999',
+      number: '919881191999',
+    },
+  },
+  orderMessages: {
+    general: "Hi! I'd like to place an order.",
+    product: (productName: string) => `Hi! I'd like to order ${productName}.`,
+  },
   social: {
     instagram: "https://instagram.com/shahsnutrition",
     // Use the founder's confirmed inbox until branded receiving mailboxes are created.
@@ -35,7 +54,7 @@ export const siteConfig = {
     business: "pranjalishah25@gmail.com",
   },
   waitlist: {
-    // Keep the offline fallback truthful. The live count is read from Supabase.
+    // Fallback count when Supabase can't be reached. The public page no longer shows a count.
     initialCount: 0,
   },
   copyright: `© ${new Date().getFullYear()} Shah's Nutrition. All rights reserved.`,

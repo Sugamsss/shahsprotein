@@ -253,6 +253,14 @@ a {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* Small tablets: the centred nav and the right-hand group (now with Order)
+   would touch, so drop the Instagram and email icons here. Both are in the footer. */
+@media (min-width: 769px) and (max-width: 880px) {
+  .header-icon-btn.desktop-nav {
+    display: none !important;
+  }
+}
+
 /* Offset hero so fixed header doesn't clip content */
 .hero-header-offset {
   padding-top: calc(var(--header-height) + var(--space-16));
@@ -294,6 +302,64 @@ a {
   transition: background var(--transition-theme), border-color var(--transition-theme), box-shadow var(--transition-theme);
 }
 
+/* Hero actions: one clear order button, a quiet way to browse first. */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.hero-actions__range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.hero-actions__range:hover {
+  color: var(--color-text-accent);
+}
+
+.hero-actions__range svg {
+  transition: transform var(--transition-fast);
+}
+
+.hero-actions__range:hover svg {
+  transform: translateY(2px);
+}
+
+.hero-note {
+  margin-top: 1rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+/* Kept here rather than in responsive.css: that file is imported first, so the
+   base rules above would override it. */
+@media (max-width: 600px) {
+  /* Order button goes full width; "See the range" sits centred under it. */
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+
+  .hero-actions__range {
+    justify-content: center;
+  }
+
+  .hero-note {
+    margin-top: 0.75rem;
+    text-align: center;
+  }
+}
+
 .waitlist-form {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -306,12 +372,6 @@ a {
   min-width: 0;
   grid-column: 1;
   grid-row: 2;
-}
-
-.waitlist-input-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 .waitlist-form .input,
@@ -392,28 +452,108 @@ a {
   max-width: 34rem;
 }
 
-.waitlist-social-proof {
-  margin-top: 1.125rem;
-}
-
-.waitlist-input-stack .waitlist-social-proof--hero {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-top: 0;
-}
-
-.avatar-group {
-  display: flex;
+/* ─── Ordering on WhatsApp ───────────────────────────────────────────
+   Links, not buttons: they open wa.me. Same material as the primary Button
+   (brand gradient, glow), with a white WhatsApp glyph rather than WhatsApp green. */
+.order-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-gradient);
+  color: var(--color-btn-text);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: var(--shadow-glow);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.avatar-group__label {
-  color: var(--color-text-secondary);
+.order-btn:hover {
+  color: var(--color-btn-text);
+  transform: scale(1.03);
+  box-shadow: 0 0 32px var(--color-accent-primary);
+}
+
+.order-btn:active {
+  transform: scale(0.98);
+}
+
+.order-btn svg {
+  flex: 0 0 auto;
+}
+
+.order-btn--sm {
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.85rem;
+  font-size: 0.8125rem;
+}
+
+.order-btn--md {
+  min-height: 2.75rem;
+  padding: 0 1.35rem;
+  font-size: var(--font-size-sm);
+}
+
+.order-btn--lg {
+  min-height: 3rem;
+  padding: 0 1.6rem;
+  font-size: var(--font-size-base);
+}
+
+.order-text-link {
+  color: var(--color-text-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.order-text-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.care-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.care-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-pill);
+  color: var(--color-text-primary);
   font-size: var(--font-size-xs);
-  font-weight: 500;
-  line-height: 1.35;
+  font-weight: 600;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.care-link:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-accent);
+}
+
+@media (max-width: 600px) {
+  .care-link {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-btn,
+  .order-btn:hover,
+  .order-btn:active {
+    transform: none;
+  }
 }
 
 .waitlist-form--modal {
@@ -717,11 +857,6 @@ a {
     max-width: clamp(390px, calc(50vw - 112px), 500px);
     margin-left: 0;
   }
-
-  .waitlist-input-stack .waitlist-social-proof--hero {
-    justify-content: flex-start;
-    width: max-content;
-  }
 }
 
 .products-section {
@@ -835,18 +970,34 @@ a {
   line-height: 1.5;
 }
 
-.portfolio-card__action {
-  display: inline-flex;
+.portfolio-card__actions {
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
+  gap: 0.75rem;
   margin-top: auto;
   padding-top: 0.85rem;
   border-top: 1px solid var(--color-border-card);
+}
+
+.portfolio-card__action {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 2.25rem;
   color: var(--color-text-accent);
   font-size: 0.8rem;
   font-weight: 700;
   text-align: left;
+}
+
+/* "View details" stretches over the whole card; Order sits above that layer. */
+.portfolio-card__order {
+  position: relative;
+  z-index: 1;
+  min-height: 2.25rem;
 }
 
 .portfolio-card__action::after {
@@ -916,6 +1067,39 @@ a {
   width: 72px;
   height: 72px;
   background-repeat: no-repeat;
+}
+
+.product-detail__facts {
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.product-detail__facts > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.product-detail__facts dt {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.product-detail__facts dd {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.product-detail__order {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border-card);
+}
+
+.product-detail__order-btn {
+  width: 100%;
 }
 
 .product-detail__nutrition {
@@ -1013,6 +1197,27 @@ a {
 
   .portfolio-card__art {
     aspect-ratio: 1.3;
+  }
+
+  .portfolio-card__action,
+  .portfolio-card__order {
+    min-height: 2.75rem;
+  }
+
+  .product-detail__facts > div {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* The popup scrolls on phones; keep the order button in reach. Negative
+     margins cancel the popup's 2rem padding so the bar spans its full width. */
+  .product-detail__order {
+    position: sticky;
+    bottom: -2rem;
+    z-index: 1;
+    margin: 1.5rem -2rem -2rem;
+    padding: 0.875rem 2rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: var(--color-bg-main);
   }
 }
 
@@ -1215,6 +1420,47 @@ img {
   color: var(--color-text-accent);
 }
 
+/* Footer "Get in touch" */
+.footer-contact {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: var(--font-size-xs);
+}
+
+.footer-contact__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.footer-contact__label {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.footer-contact__care {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.footer-contact__care .footer-contact__row {
+  color: var(--color-text-secondary);
+}
+
+/* The footer centres on small phones (responsive.css); match it here. */
+@media (max-width: 480px) {
+  .footer-contact,
+  .footer-contact__care {
+    align-items: center;
+  }
+}
+
 /* Responsive Navigation Breakpoints */
 @media (max-width: 768px) {
   .desktop-nav {
@@ -1223,6 +1469,108 @@ img {
   .mobile-toggle {
     display: flex !important;
   }
+}
+
+/* Bottom banner: order first, a lighter email row underneath. */
+.order-card {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6) var(--space-8) !important;
+  text-align: center;
+}
+
+.order-card__order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.order-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-badge);
+  color: var(--color-text-accent);
+}
+
+.order-card__title {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-3xl);
+}
+
+.order-card__lead {
+  max-width: 30rem;
+  margin-bottom: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+}
+
+.order-card__number {
+  margin-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.order-card__number strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.order-card__updates {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-card);
+}
+
+.order-card__updates-intro {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .order-card {
+    padding: var(--space-8) var(--space-4) var(--space-6) !important;
+  }
+
+  .order-card__order .order-btn {
+    width: 100%;
+  }
+}
+
+/* Under the FAQ list: where to go when the answer isn't there. */
+.faq-help {
+  max-width: 760px;
+  margin: 1.75rem auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.faq-help__care {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.faq-help strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Values Section Theme-Aware Styles */

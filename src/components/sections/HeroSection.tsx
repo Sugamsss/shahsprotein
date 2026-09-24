@@ -1,28 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { ArrowDown } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { AvatarGroup } from '../ui/AvatarGroup';
-import { useWaitlist } from '../../context/WaitlistContext';
+import { OrderLink } from '../ui/OrderLink';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { useTheme } from '../../context/ThemeContext';
-import { Mail } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 
 export const HeroSection: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [marketingConsent, setMarketingConsent] = useState(false);
-  const { submitEmail, isLoading } = useWaitlist();
   const { theme } = useTheme();
   const sectionRef = useScrollReveal<HTMLElement>();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    const res = await submitEmail(email, 'hero_section', undefined, marketingConsent);
-    if (res.success) setEmail('');
-  };
 
   return (
     <section
@@ -47,7 +34,7 @@ export const HeroSection: React.FC = () => {
           <div className="hero-card-entrance">
             <div className="hero-content">
             <div className="hero-stagger-1">
-              <Badge icon={null} className="badge-underline" style={{ marginBottom: 'var(--space-2)' }}>GOOD FOOD. BRIGHTER DAYS.</Badge>
+              <Badge icon={null} className="badge-underline" style={{ marginBottom: 'var(--space-2)' }}>NOW TAKING ORDERS</Badge>
             </div>
 
             <h1
@@ -68,7 +55,7 @@ export const HeroSection: React.FC = () => {
             </h1>
 
             <p
-              className="hero-stagger-3"
+              className="hero-stagger-3 hero-motto"
               style={{
                 fontSize: 'var(--font-size-base)',
                 color: 'var(--color-text-secondary)',
@@ -80,52 +67,15 @@ export const HeroSection: React.FC = () => {
               {siteConfig.motto}
             </p>
 
-            {/* Email Waitlist Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="hero-form waitlist-form hero-stagger-4"
-              style={{
-                 maxWidth: '500px',
-               }}
-            >
-              <div className="waitlist-input-stack">
-                <div style={{ flex: 1, minWidth: '0' }}>
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    aria-label="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    icon={<Mail size={18} />}
-                    required
-                    style={{
-                      paddingTop: '0.7rem',
-                      paddingBottom: '0.7rem',
-                      fontSize: 'var(--font-size-sm)',
-                    }}
-                  />
-                </div>
-                <div className="hero-stagger-5 waitlist-social-proof waitlist-social-proof--hero">
-                  <AvatarGroup />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  padding: '0.7rem 1.25rem',
-                  fontSize: 'var(--font-size-sm)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isLoading ? 'Joining...' : 'Join Waitlist \u2192'}
-              </Button>
-              <label className="waitlist-consent">
-                <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} required />
-                <span className="waitlist-checkbox" aria-hidden="true" />
-                <span className="waitlist-consent__text">I agree to receive an email about the product launch.</span>
-              </label>
-            </form>
+            <div className="hero-actions hero-stagger-4">
+              <OrderLink source="hero" size="lg" className="hero-actions__order">
+                Order on WhatsApp
+              </OrderLink>
+              <a href="#products" className="hero-actions__range">
+                See the range <ArrowDown size={16} aria-hidden="true" />
+              </a>
+            </div>
+            <p className="hero-note hero-stagger-5">Made fresh in small batches. Delivered across India.</p>
             </div>
           </div>
         </div>

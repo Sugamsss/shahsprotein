@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { OrderLink } from '../ui/OrderLink';
 import { Instagram, Mail, Menu, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
@@ -149,6 +150,11 @@ export const Header: React.FC = () => {
           >
             <Mail size={18} />
           </a>
+
+          {/* Stays visible on phones too, where WhatsApp lives. */}
+          <OrderLink source="header" size="sm" className="header-order-btn" aria-label="Order on WhatsApp">
+            Order
+          </OrderLink>
 
           {/* Mobile Menu Toggle */}
           <button

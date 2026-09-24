@@ -123,7 +123,7 @@
     margin-bottom: 0.8rem !important;
   }
 
-  .hero-content p {
+  .hero-content .hero-motto {
     font-size: 0.95rem !important;
     line-height: 1.45 !important;
     margin-bottom: 0.8rem !important;
@@ -162,10 +162,6 @@
     justify-self: center;
   }
 
-  .waitlist-social-proof {
-    margin-top: 0.5rem;
-  }
-
   /* The principles statement is intentionally expressive, but the desktop
      scale becomes tiring to scan on a phone. */
   #values h2 {
@@ -184,7 +180,7 @@
     font-size: 1.75rem !important;
   }
 
-  .hero-content p {
+  .hero-content .hero-motto {
     font-size: 0.875rem !important;
   }
 }
