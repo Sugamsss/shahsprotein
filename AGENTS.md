@@ -18,23 +18,24 @@ npm run build    # tsc + vite build → dist/  (run this before every commit)
 npm run lint     # type check only
 ```
 
-**A push to `main` deploys to production** (https://shahsprotein.vercel.app). There's no staging. Check your work in a browser at phone and desktop sizes, in light and dark, before you push.
+**A push to `main` deploys to production** at **https://www.shahsnutrition.food**, the one canonical address. `shahsprotein.vercel.app` redirects there (308, set in `vercel.json` by host), so share the www link; Vercel preview deploys use other hosts and keep working. There's no staging. Check your work in a browser at phone and desktop sizes, in light and dark, before you push.
 
 ## Where things live
 
 ```
 src/
-├── App.tsx              # Routes: "/" landing page, "/admin/*" admin (Supabase auth)
+├── App.tsx              # Routes: "/" landing page, "/admin/*" admin (Supabase auth, lazy), "*" 404 page
 ├── components/
 │   ├── layout/          # Header (with mobile drawer + Order button), Footer, Container
 │   ├── sections/        # Hero, Products (cards + product popup), Values, Story, FAQ, Newsletter
-│   ├── ui/              # Primitives: Button, Input, Modal, ThemeToggle, Toast, OrderLink, CustomerCareLinks…
+│   ├── ui/              # Primitives: Button, Input, Modal (bottom sheet on phones), ThemeToggle, Toast, OrderLink…
+│   ├── pages/           # NotFound (the 404 page)
 │   └── admin/           # Admin dashboard, waitlist CRM, campaigns, analytics
 ├── data/                # ALL copy and content: products, faqs, values, siteConfig (phone numbers, wa.me links)
 ├── context/             # ThemeContext, WaitlistContext
 ├── services/            # waitlistService (signup), analyticsService (incl. WhatsApp order clicks)
 ├── hooks/               # useScrollReveal
-├── styles/              # global.css imports tokens → themes → animations → responsive
+├── styles/              # global.css imports tokens → themes → animations; admin-dashboard.css is admin-only
 └── types/
 supabase/                # migrations, edge functions, README (backend setup and secrets)
 public/assets/           # images (WebP) and self-hosted fonts used by the site
@@ -44,7 +45,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 ## Rules
 
 - **Copy and data live in `src/data/`, never in JSX.** Phone numbers live only in `siteConfig`. Build WhatsApp links with the helper there.
-- **Colors come from tokens** (`tokens.css`, `light-theme.css`, `dark-theme.css`). No hex in components. The only exception is success/error colors in Toast.
+- **Colors come from tokens** (`tokens.css`, `light-theme.css`, `dark-theme.css`). No hex in components; feedback colours are tokens too (`--color-error`, `--color-success`).
 - **Both themes must look right.** Theme is set with `data-theme` on `<html>`.
 - **Don't change nutrition panels or product facts** without the founder. Some were restored on purpose.
 - **Don't invent facts** such as prices, delivery promises or storage advice. Leave them out until they're confirmed.
@@ -54,18 +55,22 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 
 ## Gotchas
 
-- **Full-screen sections with scroll snap.** On desktop, every section is `min-height: 100vh` with mandatory snap. Snap is **off** at ≤900px wide or ≤600px tall, because phone sections are taller than the screen and snap fights the user. Don't turn it back on for phones.
+- **Full-screen sections with scroll snap.** On desktop, every section is `min-height: 100vh` with **proximity** snap (it settles into a section you stop near, but never traps a trackpad or a section taller than the screen). Snap is **off** at ≤900px wide, ≤600px tall and on any touch screen (`pointer: coarse`), because phone sections are taller than the screen and iPad toolbars make every section a little taller than what's visible. Don't bring back `mandatory` or `scroll-snap-stop: always`, and don't turn snap on for touch.
 - **The reveal animation moves the inner `.container`, not the section.** Moving the section's box breaks anchor links (the heading lands under the fixed header) and makes the page load already scrolled. See the end of `animations.css`.
-- **CSS cascade order:** `responsive.css` is imported *before* the rest of `global.css`, so `global.css` wins every tie. That's why old rules use `!important`. Phone fixes go in the **mobile block at the end of `global.css`**. Don't add more `!important` to `responsive.css`.
-- **Inline styles in components** (Hero, Header drawer) beat CSS. A few mobile rules need `!important` for that reason. Prefer moving a value from inline to a class.
-- **Product popup on phones:** the title and close button form a sticky row (`.modal-head`). The Order button is pinned to the bottom. Test scrolling inside the popup at 320px.
+- **Where the CSS lives.** `tokens.css` holds the fonts, tokens and the token breakpoints (title size and column width at ≤1024/≤768/≤480). `global.css` goes base rules first, then each section's own tablet and desktop rules next to it, then the **phones, tablets and short screens block at the end** ("Phones, tablets and short screens"), then reduced motion last. Phone fixes go in that end block, so they win ties by source order. There is no `responsive.css` any more.
+- **No `!important` and no layout inline styles.** Components use classes; the only inline style left on the landing page is the ingredient sprite position in the product popup. If a rule doesn't apply, fix the order or the selector instead of reaching for `!important`.
+- **Product popup:** at every size the title and close button form a sticky row (`.modal-head`) and the Order button is pinned to the bottom (`.product-detail__order`); on screens ≤480px tall both scroll instead. On phones (≤600px) the popup is a bottom sheet. Closing plays a 240ms exit animation (`EXIT_MS` in `Modal.tsx`, matched in CSS), instant with reduced motion. Test scrolling inside the popup at 320px.
+- **Phone header and menu:** at ≤400px the theme toggle leaves the header and shows as an "Appearance" row in the menu. The section links come from `siteConfig.nav` (header and menu both).
+- **Sign-up feedback is inline.** Validation errors, success and "already on our list" show under the form (copy in `siteConfig.signup`). The toast is only for server or network failures and stays until closed.
 - **Several sessions may share this folder.** Other agents or people may have uncommitted work here. Don't `checkout`, `stash` or `reset` a tree you didn't start in. For parallel work, use a `git worktree` in a sibling folder, and leave untracked files you don't own alone (for example `public/assets/packaging/`, `public/assets/story-ideas/`, `*.xlsx`).
 - `temp/` is scratch space for working notes. It isn't product docs.
 
 ## Images, fonts and bundle size
 
 - **`/assets/*` is cached for a year as `immutable`.** Never overwrite a file there. A changed image or font gets a new name (`-v2`, `-1200w`), and the code points to it.
-- **New images ship as WebP, sized for their slot.** Export at about 3x the largest CSS size the image shows at, or at native size if that's smaller: `cwebp -q 85 -m 6 -sharp_yuv in.png -o out.webp` (`-q 90` for the logo). Transparency is kept, which the sprites and logo need. Keep the PNG master; `og:image` still uses the hero PNG.
+- **New images ship as WebP, sized for their slot.** Export at about 3x the largest CSS size the image shows at, or at native size if that's smaller: `cwebp -q 85 -m 6 -sharp_yuv in.png -o out.webp` (`-q 90` for the logo). Transparency is kept, which the sprites and logo need. Keep the PNG master.
+- **Adding an image:** export it as above, give it a new file name under `public/assets/` (add a width suffix like `-1200w` for `srcSet` sets), reference it with `width`/`height`, and `loading="lazy" decoding="async"` unless it's above the fold. Never reuse an old name.
+- **Share card:** `public/og/shahs-nutrition-v1.jpg`, 1200x630 JPEG under 200 KB, with absolute URLs in `index.html`. WhatsApp caches previews, so a new card needs a new file name (`-v2`) and updated tags.
 - **How each image is served:**
   - The hero art is preloaded from the inline theme script in `index.html`. If you rename it, change `HeroSection.tsx` too, or it downloads twice.
   - Product cards each get their own crop at the card's 1.3 ratio, in `public/assets/product-cards/`.
@@ -73,6 +78,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
   - Ingredient sprites use 216px per tile, so they're 648px wide.
 - **Below the fold:** `<img loading="lazy" decoding="async">` with `width` and `height`.
 - **Fonts are self-hosted:** latin variable woff2 in `public/assets/fonts/`, `@font-face` in `tokens.css`, and a preload in `index.html`. Don't add the Google Fonts link back.
+- **Serif:** `--font-family-serif` is `Georgia, 'Gelasio', …`. Gelasio (metric-matched to Georgia) only downloads where Georgia is missing, which is Android. Don't preload it, or everyone downloads it.
 - **Admin routes and Supabase are lazy-loaded.** Landing-page code must not import `supabaseClient` statically; `waitlistService` imports it on submit. The landing entry chunk is about 238 kB (77 kB gzipped). A new 500 kB warning means something heavy leaked back in.
 
 ## Backend (email list and analytics)
@@ -80,4 +86,6 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - Supabase is the source of truth for sign-ups, admin access, CRM and analytics. Signups go through the Supabase RPC in `waitlistService.ts`, then the `sync-waitlist-loops` edge function.
 - Loops runs double opt-in and the mailing list. `loops-webhook` syncs confirm, unsubscribe and bounce events back.
 - WhatsApp order clicks are recorded through a rate-limited RPC into `site_events`, fire and forget.
+- Page views use **Vercel Web Analytics** (cookieless), loaded by `AnalyticsService.startPageViews()` on the landing page only, on the production hosts only. It's Vercel's own `/_vercel/insights/script.js`, so there's no npm package. It records nothing until Web Analytics is enabled for the project in the Vercel dashboard.
+- `sync-waitlist-loops` only acts for a member who joined in the last 10 minutes, so the public anon key can't be used to re-send Loops emails.
 - Secrets live only in Supabase. Never put them in frontend env vars or commits. Setup and deploy details are in `supabase/README.md`.
