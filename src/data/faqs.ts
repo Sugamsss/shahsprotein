@@ -32,7 +32,7 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-6',
     question: 'Do they have nuts, dairy or gluten?',
-    answer: "All three have nuts and ghee, which is dairy. Raggi Jaggi has cashews, Muesli has almonds, and Date Bites have both. Muesli has oats, so it isn't suitable if you need to avoid gluten. If you have a serious allergy, please message us before you order.",
+    answer: "All three have nuts and ghee, which is dairy. Raggi Jaggi has cashews, Muesli has almonds and may contain traces of cashews, and Date Bites have both. Muesli has oats, so it isn't suitable if you need to avoid gluten. If you have a serious allergy, please message us before you order.",
   },
   {
     id: 'faq-7',
