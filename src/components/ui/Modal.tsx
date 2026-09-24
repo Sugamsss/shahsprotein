@@ -109,51 +109,33 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="glass-card animate-fade-in"
+        className="glass-card animate-fade-in modal-dialog"
         style={{
           position: 'relative',
           width: '100%',
           maxWidth: '600px',
-          maxHeight: '90vh',
           overflowY: 'auto',
           backgroundColor: 'var(--color-bg-main)',
           border: '1px solid var(--color-border-hover)',
           boxShadow: 'var(--shadow-card)',
-          padding: '2rem',
           zIndex: 'var(--z-modal)',
           transform: 'scale(1)',
           outline: 'none',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          aria-label="Close Modal"
-          className="modal-close-btn"
-          style={{
-            position: 'absolute',
-            top: '1.25rem',
-            right: '1.25rem',
-            color: 'var(--color-text-secondary)',
-            padding: '0.25rem',
-            borderRadius: 'var(--radius-full)',
-          }}
-        >
-          <X size={20} />
-        </button>
+        {/* On phones this row sticks to the top, so close stays in reach. */}
+        <div className="modal-head">
+          {title && (
+            <h3 id={titleId} className="modal-title">
+              {title}
+            </h3>
+          )}
 
-        {title && (
-          <h3
-            id={titleId}
-            style={{
-              marginBottom: '1.25rem',
-              fontSize: 'var(--font-size-xl)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {title}
-          </h3>
-        )}
+          <button onClick={onClose} aria-label="Close Modal" className="modal-close-btn">
+            <X size={20} />
+          </button>
+        </div>
 
         {children}
       </div>
