@@ -71,10 +71,10 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 | Muesli | 250 g, 500 g | 6 months | Tree nuts (almonds), dairy (ghee), wheat (gluten) |
 | Date Bites | 250 g | 15 days (on purpose) | Tree nuts (almonds, cashew), dairy (ghee) |
 
-- No preservatives, made fresh in small batches. Muesli's cranberries are sweetened.
-- Nutrition panel: Raggi Jaggi only for now. Muesli and Date Bites show the "still adding" note.
+- No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
+- Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
 - `weightOptions` holds pack sizes. Prices are not published yet. When they are, cards and the popup can read them from here.
-- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, `date-bites-v2.webp`).
+- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, then `muesli-v3.webp`, and `date-bites-v2.webp`).
 
 ```ts
 interface Product {

@@ -27,12 +27,12 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-5',
     question: 'Is there sugar in them?',
-    answer: "Raggi Jaggi and Muesli have added sugar. Raggi Jaggi is sweetened with organic jaggery, which is still sugar, so our label counts it as added sugar. Muesli gets some from sweetened dried cranberries. Date Bites are sweetened by dates. You'll find the full ingredients under \"View details\" on each product.",
+    answer: "Raggi Jaggi and Muesli have added sugar. Raggi Jaggi is sweetened with organic jaggery, which is still sugar, so our label counts it as added sugar. Muesli has some sugar added, plus sweet fruit like tutti frutti and cranberry. Date Bites are sweetened by dates. You'll find the full ingredients under \"View details\" on each product.",
   },
   {
     id: 'faq-6',
     question: 'Do they have nuts, dairy or gluten?',
-    answer: "All three have nuts and ghee, which is dairy. Raggi Jaggi has cashews, Muesli has almonds, and Date Bites have both. Muesli also has wheat flakes, so it isn't gluten-free. If you have a serious allergy, please message us before you order.",
+    answer: "All three have nuts and ghee, which is dairy. Raggi Jaggi has cashews, Muesli has almonds, and Date Bites have both. Muesli also contains gluten, so it isn't gluten-free. If you have a serious allergy, please message us before you order.",
   },
   {
     id: 'faq-7',
