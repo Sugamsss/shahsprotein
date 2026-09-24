@@ -25,10 +25,10 @@ export const NotFound: React.FC = () => {
     <main className="not-found">
       <div className="not-found__card glass-card">
         <img
-          src={theme === 'dark' ? '/assets/logo-dark.webp' : '/assets/logo.webp'}
+          src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
           alt={siteConfig.name}
-          width={507}
-          height={160}
+          width={600}
+          height={200}
           className="not-found__logo"
         />
         <h1 className="not-found__title">{notFound.title}</h1>

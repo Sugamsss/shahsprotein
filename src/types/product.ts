@@ -15,6 +15,7 @@ export interface Product {
   fullDescription: string;
   iconType: IconType;
   image: string;
+  imageDark: string;
   features: string[];
   ingredients: string[];
   ingredientSprite: { image: string; rows: number };

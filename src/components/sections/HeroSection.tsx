@@ -49,11 +49,11 @@ export const HeroSection: React.FC = () => {
       <div className={`hero-visual-space hero-visual-space--${theme}`} aria-hidden="true">
         <img
           // index.html preloads this same srcset for the saved theme. Keep the two in sync.
-          src={`/assets/generated-muesli/muesli-hero-current-${theme}.webp`}
+          src={`/assets/generated-muesli/muesli-hero-accurate-v2-${theme}.webp`}
           srcSet={[
-            `/assets/generated-muesli/muesli-hero-current-${theme}-828w.webp 828w`,
-            `/assets/generated-muesli/muesli-hero-current-${theme}-1242w.webp 1242w`,
-            `/assets/generated-muesli/muesli-hero-current-${theme}.webp 1672w`,
+            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}-828w.webp 828w`,
+            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}-1242w.webp 1242w`,
+            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}.webp 1672w`,
           ].join(', ')}
           sizes="100vw"
           alt=""

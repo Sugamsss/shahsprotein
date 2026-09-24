@@ -16,10 +16,10 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div>
             <img
-              src={theme === 'dark' ? '/assets/logo-dark.webp' : '/assets/logo.webp'}
+              src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
               alt={siteConfig.name}
-              width={507}
-              height={160}
+              width={600}
+              height={200}
               loading="lazy"
               className="footer-logo"
             />

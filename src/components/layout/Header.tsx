@@ -48,10 +48,10 @@ export const Header: React.FC = () => {
       <div className={`header-pill${isScrolled ? ' is-scrolled' : ''}`}>
         <a href="#" className="header-brand" aria-label={siteConfig.name}>
           <img
-            src={theme === 'dark' ? '/assets/logo-dark.webp' : '/assets/logo.webp'}
+            src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
             alt={siteConfig.name}
-            width={507}
-            height={160}
+            width={600}
+            height={200}
             loading="eager"
             className="header-logo"
           />

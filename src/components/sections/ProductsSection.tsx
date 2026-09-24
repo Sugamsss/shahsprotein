@@ -6,20 +6,22 @@ import { Modal } from '../ui/Modal';
 import { OrderLink } from '../ui/OrderLink';
 import { productsData } from '../../data/products';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { useTheme } from '../../context/ThemeContext';
 import type { Product } from '../../types/product';
+import type { Theme } from '../../types/theme';
 
 /** ["250 g", "500 g"] -> "250 g and 500 g" */
 const joinWithAnd = (items: string[]): string =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? '';
 
-const ProductCard: React.FC<{ product: Product; onOpen: (product: Product) => void }> = ({ product, onOpen }) => (
+const ProductCard: React.FC<{ product: Product; theme: Theme; onOpen: (product: Product) => void }> = ({ product, theme, onOpen }) => (
   <article className={`portfolio-card portfolio-card--${product.id}`}>
     <img
       className="portfolio-card__art"
-      src={product.image}
+      src={theme === 'dark' ? product.imageDark : product.image}
       alt={`${product.name} pouch and ingredients from the Shah's Nutrition product portfolio`}
-      width={473}
-      height={364}
+      width={946}
+      height={728}
       loading="lazy"
       decoding="async"
     />
@@ -52,6 +54,7 @@ const ProductCard: React.FC<{ product: Product; onOpen: (product: Product) => vo
 );
 
 export const ProductsSection: React.FC = () => {
+  const { theme } = useTheme();
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const closeDetails = useCallback(() => setSelectedProduct(null), []);
@@ -66,7 +69,7 @@ export const ProductsSection: React.FC = () => {
             <p>Wholesome everyday foods made with real ingredients and honest nutrition.</p>
           </div>
           <div className="portfolio-grid">
-            {productsData.map((product) => <ProductCard key={product.id} product={product} onOpen={setSelectedProduct} />)}
+            {productsData.map((product) => <ProductCard key={product.id} product={product} theme={theme} onOpen={setSelectedProduct} />)}
           </div>
         </Container>
       </section>
