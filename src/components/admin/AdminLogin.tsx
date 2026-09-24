@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Mail, LockKeyhole } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
+import '../../styles/admin-dashboard.css';
 
 export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();

@@ -14,12 +14,7 @@ export const Badge: React.FC<BadgeProps> = ({
   style,
 }) => {
   return (
-    <span
-      className={`badge badge-underline ${className}`}
-      style={{
-        ...style,
-      }}
-    >
+    <span className={`badge ${className}`.trim()} style={style}>
       {icon ? icon : null}
       <span>{children}</span>
     </span>

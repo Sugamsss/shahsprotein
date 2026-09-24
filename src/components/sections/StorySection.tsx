@@ -19,28 +19,13 @@ export const StorySection: React.FC = () => {
         <div className="story-grid">
           {/* Story Text */}
           <div ref={leftRef} className="reveal reveal-left-far reveal-story-slow">
-            <Badge style={{ marginBottom: 'var(--space-4)' }}>OUR STORY</Badge>
+            <Badge className="story-eyebrow">OUR STORY</Badge>
 
-            <h2
-              style={{
-                fontSize: 'var(--font-size-3xl)',
-                color: 'var(--color-text-primary)',
-                marginBottom: 'var(--space-6)',
-              }}
-            >
+            <h2 className="story-title">
               {siteConfig.story.heading}
             </h2>
 
-            <div
-              style={{
-                color: 'var(--color-text-secondary)',
-                fontSize: 'var(--font-size-base)',
-                lineHeight: 1.7,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
-              }}
-            >
+            <div className="story-body">
               {siteConfig.story.paragraphs.map((paragraph, index) => (
                 <p key={index}>
                   {paragraph.map((segment, segmentIndex) => (

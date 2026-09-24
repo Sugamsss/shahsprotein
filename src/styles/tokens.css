@@ -58,8 +58,7 @@
   --font-size-lg: 1.25rem;    /* 20px */
   --font-size-xl: 1.5rem;     /* 24px */
   --font-size-2xl: 2rem;      /* 32px */
-  --font-size-3xl: 2.75rem;   /* 44px */
-  --font-size-4xl: 3.5rem;    /* 56px */
+  --font-size-3xl: 2.75rem;   /* 44px; section titles, smaller on tablets and phones below */
 
   /* Spacing System */
   --space-1: 0.25rem;  /* 4px */
@@ -70,7 +69,6 @@
   --space-8: 2rem;     /* 32px */
   --space-12: 3rem;    /* 48px */
   --space-16: 4rem;    /* 64px */
-  --space-24: 6rem;    /* 96px */
 
   /* Container & Layout */
   --container-max-width: 1200px;
@@ -87,7 +85,6 @@
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-theme: 350ms ease-in-out;
 
   /* Z-Index Scale */
@@ -95,12 +92,25 @@
   --z-modal-overlay: 900;
   --z-modal: 1000;
   --z-toast: 800; /* Below the popup, so a toast never covers its Order bar. */
+}
 
-  /* Section Layout */
-  --section-padding-y: var(--space-16);
-  --container-padding-x: var(--space-6);
+/* Section titles and the content column step down on smaller screens. */
+@media (max-width: 1024px) {
+  :root {
+    --font-size-3xl: 2.25rem;
+    --container-max-width: 960px;
+  }
+}
 
-  /* Card */
-  --card-padding: var(--space-6);
+@media (max-width: 768px) {
+  :root {
+    --font-size-3xl: 1.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --font-size-3xl: 1.625rem;
+  }
 }
 

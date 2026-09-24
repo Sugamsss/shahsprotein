@@ -95,9 +95,8 @@
               transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.is-visible {
-  opacity: 1 !important;
-  transform: none !important;
-  filter: none !important;
+  opacity: 1;
+  transform: none;
   will-change: auto;
 }
 
@@ -124,35 +123,11 @@
 /* Stagger delay */
 .delay-200 { transition-delay: 200ms; }
 
-/* Refined Premium Glass Card Hover Micro-Interactions */
-.glass-card {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+/* Glass cards lift on hover. global.css turns this off for the static ones. */
 @media (hover: hover) {
   .glass-card:hover {
     transform: translateY(-6px) scale(1.01);
     border-color: rgba(59, 130, 246, 0.35);
     box-shadow: 0 20px 40px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.70);
   }
-}
-
-/* Product Card Image Zoom & Badge Rotate */
-.product-card-img {
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.glass-card:hover .product-card-img {
-  transform: scale(1.06);
-}
-
-.product-icon-badge {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
-}
-
-.glass-card:hover .product-icon-badge {
-  transform: rotate(12deg) scale(1.12);
 }

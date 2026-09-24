@@ -13,43 +13,14 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
   subtitle,
   centered = true,
-}) => {
-  return (
-    <div
-      style={{
-        textAlign: centered ? 'center' : 'left',
-        marginBottom: 'var(--space-12)',
-        maxWidth: centered ? '720px' : '100%',
-        marginLeft: centered ? 'auto' : 0,
-        marginRight: centered ? 'auto' : 0,
-      }}
-    >
-      {badge && (
-        <div style={{ marginBottom: 'var(--space-3)' }}>
-          <Badge>{badge}</Badge>
-        </div>
-      )}
-      <h2
-        style={{
-          fontFamily: 'var(--font-family-heading)',
-          fontSize: 'var(--font-size-3xl)',
-          color: 'var(--color-text-primary)',
-          marginBottom: subtitle ? 'var(--space-3)' : 0,
-        }}
-      >
-        {title}
-      </h2>
-      {subtitle && (
-        <p
-          style={{
-            fontSize: 'var(--font-size-md)',
-            color: 'var(--color-text-secondary)',
-            lineHeight: 1.6,
-          }}
-        >
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-};
+}) => (
+  <div className={`section-header${centered ? ' section-header--centered' : ''}`}>
+    {badge && (
+      <div className="section-header__badge">
+        <Badge>{badge}</Badge>
+      </div>
+    )}
+    <h2 className="section-header__title">{title}</h2>
+    {subtitle && <p className="section-header__subtitle">{subtitle}</p>}
+  </div>
+);

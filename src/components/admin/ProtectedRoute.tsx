@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
+import '../../styles/admin-dashboard.css';
 
 export const ProtectedRoute: React.FC = () => {
   const [loading, setLoading] = React.useState(true);

@@ -44,7 +44,6 @@
 
   /* Accent & Buttons */
   --color-accent-primary: #3b82f6;
-  --color-accent-hover: #2563eb;
   --color-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   --color-btn-text: #ffffff;
 
@@ -69,20 +68,14 @@
 
   /* Header Glass */
   --color-border-header: rgba(255, 255, 255, 0.65);
-  --color-bg-icon-group: rgba(255, 255, 255, 0.10);
   --shadow-header: 0 4px 24px rgba(10, 20, 60, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.70);
   --shadow-header-scrolled: 0 8px 32px rgba(10, 20, 60, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.80);
 
   /* Section Backgrounds */
-  --color-bg-section: transparent;
-  --color-bg-newsletter: rgba(255, 255, 255, 0.72);
   --color-bg-faq-active: rgba(59, 130, 246, 0.06);
 
   /* Hero Background Glow & Text Contrast Vignette */
   --color-hero-gradient: radial-gradient(ellipse at 70% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 60%);
-  --color-hero-vignette: rgba(255, 255, 255, 0.72);
-  --hero-vignette-blur: blur(20px) saturate(180%);
-  --hero-vignette-padding: 2rem 2.25rem;
 
   /* Product Name Accent (shown in blue in light mode per reference) */
   --color-product-name: #2563eb;

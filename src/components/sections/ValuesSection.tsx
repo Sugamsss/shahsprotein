@@ -14,17 +14,8 @@ const valueIconMap: Record<ValueIconType, LucideIcon> = {
 export const ValuesSection: React.FC = () => (
   <section
     id="values"
-    className="snap-section"
+    className="snap-section values-section"
     aria-label="Our Principles"
-    style={{
-      minHeight: '100vh',
-      paddingTop: 'calc(var(--header-height) + var(--space-8))',
-      paddingBottom: 'var(--space-12)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      boxSizing: 'border-box',
-    }}
   >
     <Container>
       <div className="values-intro">

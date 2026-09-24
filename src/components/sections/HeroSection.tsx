@@ -17,7 +17,7 @@ export const HeroSection: React.FC = () => {
           <div className="hero-card-entrance">
             <div className="hero-content">
             <div className="hero-stagger-1">
-              <Badge icon={null} className="badge-underline" style={{ marginBottom: 'var(--space-2)' }}>NOW TAKING ORDERS</Badge>
+              <Badge className="hero-eyebrow">NOW TAKING ORDERS</Badge>
             </div>
 
             <h1 className="hero-title hero-stagger-2">

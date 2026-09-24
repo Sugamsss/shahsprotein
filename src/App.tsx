@@ -46,10 +46,10 @@ const LandingPage: React.FC = () => (
     <AnalyticsTracker />
     <WaitlistProvider>
       <>
-        <div className="app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="app-shell">
             <a href="#main-content" className="skip-link">Skip to main content</a>
             <Header />
-            <main id="main-content" style={{ flex: 1 }}>
+            <main id="main-content" className="site-main">
               <ErrorBoundary>
                 <HeroSection />
               </ErrorBoundary>
