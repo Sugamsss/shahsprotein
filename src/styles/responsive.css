@@ -48,26 +48,6 @@
     --font-size-3xl: 1.625rem;
     --container-padding-x: var(--space-4);
   }
-  .hero-form > button {
-    width: 100% !important;
-  }
-  .waitlist-form {
-    grid-template-columns: 1fr;
-  }
-  .waitlist-form > div,
-  .waitlist-form > button,
-  .waitlist-consent {
-    grid-column: 1;
-  }
-  .waitlist-consent {
-    grid-row: 1;
-  }
-  .waitlist-form > div {
-    grid-row: 2;
-  }
-  .waitlist-form > button {
-    grid-row: 3;
-  }
   .footer-grid {
     grid-template-columns: 1fr !important;
     text-align: center;
@@ -87,7 +67,7 @@
    panel read as a compact content block below it. The desktop hero relies on
    a two-column canvas, which is too tall and crowded when simply stacked. */
 @media (max-width: 600px) {
-  .reveal.snap-section[aria-label="Hero"] {
+  .hero-section {
     min-height: auto !important;
     padding-top: calc(var(--header-height) + 1.5rem) !important;
     padding-bottom: 2.5rem !important;
@@ -120,39 +100,6 @@
     font-size: 0.95rem !important;
     line-height: 1.45 !important;
     margin-bottom: 0.8rem !important;
-  }
-
-  .waitlist-form {
-    grid-template-columns: 1fr !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    gap: 0.5rem !important;
-  }
-
-  .waitlist-form .input,
-  .waitlist-form > button {
-    min-height: 2.9rem !important;
-  }
-
-  /* Keep the action sequence natural on a phone: consent, email, CTA. */
-  .waitlist-form .waitlist-consent {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    margin: 0.15rem 0.125rem 0 !important;
-  }
-
-  .waitlist-form > div {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-    width: 100% !important;
-  }
-
-  .waitlist-form > button {
-    grid-column: 1 !important;
-    grid-row: 3 !important;
-    width: auto !important;
-    min-width: 12rem;
-    justify-self: center;
   }
 
   /* The principles statement is intentionally expressive, but the desktop

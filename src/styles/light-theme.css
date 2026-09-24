@@ -38,7 +38,8 @@
   /* Text Colors */
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
-  --color-text-muted: #64748b;
+  /* Darkened from #64748b, which was 4.1–4.3:1 on the page gradient (WCAG AA needs 4.5:1). */
+  --color-text-muted: #56647a;
   --color-text-accent: #2563eb;
 
   /* Accent & Buttons */
@@ -46,6 +47,17 @@
   --color-accent-hover: #2563eb;
   --color-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   --color-btn-text: #ffffff;
+
+  /* Feedback */
+  --color-error: #dc2626;
+  --color-success: #16a34a;
+  --color-bg-toast: #ffffff;
+
+  /* Theme toggle track: a soft grey well, visible on the white header */
+  --color-toggle-track: rgba(15, 23, 42, 0.08);
+  --color-toggle-track-hover: rgba(15, 23, 42, 0.12);
+  --color-toggle-border: rgba(15, 23, 42, 0.14);
+  --shadow-toggle-track: inset 0 1px 2px rgba(15, 23, 42, 0.1);
 
   /* Shadows & Glass */
   --shadow-card: 0 10px 32px rgba(10, 20, 60, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.60);

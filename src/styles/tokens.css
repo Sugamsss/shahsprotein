@@ -72,7 +72,7 @@
   --z-header: 500;
   --z-modal-overlay: 900;
   --z-modal: 1000;
-  --z-toast: 2000;
+  --z-toast: 800; /* Below the popup, so a toast never covers its Order bar. */
 
   /* Section Layout */
   --section-padding-y: var(--space-16);

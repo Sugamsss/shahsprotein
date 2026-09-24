@@ -37,8 +37,8 @@ export const AdminLogin: React.FC = () => {
         <h1>Waitlist dashboard</h1>
         <p className="admin-muted">Sign in to view members and consented engagement data.</p>
         <form onSubmit={handleSubmit} className="admin-form">
-          <Input type="email" placeholder="Owner email" value={email} onChange={(event) => setEmail(event.target.value)} icon={<Mail size={17} />} required />
-          <Input type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} icon={<LockKeyhole size={17} />} required />
+          <Input type="email" autoComplete="email" placeholder="Owner email" value={email} onChange={(event) => setEmail(event.target.value)} icon={<Mail size={17} />} required />
+          <Input type="password" autoComplete="current-password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} icon={<LockKeyhole size={17} />} required />
           {error && <p className="admin-error">{error}</p>}
           <Button type="submit" fullWidth disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
         </form>

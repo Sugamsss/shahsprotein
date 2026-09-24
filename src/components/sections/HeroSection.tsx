@@ -3,31 +3,14 @@ import { ArrowDown } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
 import { OrderLink } from '../ui/OrderLink';
-import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { useTheme } from '../../context/ThemeContext';
 import { siteConfig } from '../../data/siteConfig';
 
 export const HeroSection: React.FC = () => {
   const { theme } = useTheme();
-  const sectionRef = useScrollReveal<HTMLElement>();
 
   return (
-    <section
-      ref={sectionRef}
-      className="reveal snap-section"
-      aria-label="Hero"
-       style={{
-        minHeight: '100vh',
-        paddingTop: 'calc(var(--header-height) + var(--space-10))',
-        paddingBottom: 'var(--space-8)',
-        justifyContent: 'flex-start',
-         // Both themes use a continuous hero canvas. The dark scene is mounted
-         // below; light mode uses its own luminous, full-page scene asset.
-         background: 'transparent',
-         position: 'relative',
-         boxSizing: 'border-box',
-       }}
-    >
+    <section className="snap-section hero-section" aria-label="Hero">
       <Container>
         <div className="hero-grid">
           {/* Hero Content Left (unboxed) */}
@@ -90,6 +73,8 @@ export const HeroSection: React.FC = () => {
           width={1672}
           height={941}
           loading="eager"
+          // The hero art is the LCP element. React 18 has no typed fetchPriority prop.
+          {...{ fetchpriority: 'high' }}
         />
       </div>
     </section>

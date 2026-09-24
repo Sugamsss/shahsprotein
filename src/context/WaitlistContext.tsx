@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { WaitlistContextType, WaitlistResponse } from '../types/waitlist';
 import { WaitlistService } from '../services/waitlistService';
 import { AnalyticsService } from '../services/analyticsService';
@@ -10,16 +10,6 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | null>(null);
-
-  useEffect(() => {
-    // Auto clear toast after 4 seconds
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        clearToast();
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
 
   const clearToast = () => {
     setToastMessage(null);
@@ -45,9 +35,9 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       );
       setWaitlistCount(res.totalCount);
 
+      // Success and "already on the list" show inline under the form. The toast is
+      // only for failures, and it stays until it's closed.
       if (res.success) {
-        setToastMessage(res.message);
-        setToastType('success');
         AnalyticsService.trackEvent('waitlist_submission_success', { source, productId, alreadySubscribed: res.alreadySubscribed });
       } else {
         setToastMessage(res.message);

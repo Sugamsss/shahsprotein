@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Container } from '../layout/Container';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
 import { OrderLink } from '../ui/OrderLink';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { useWaitlist } from '../../context/WaitlistContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { WaitlistService } from '../../services/waitlistService';
 import { siteConfig } from '../../data/siteConfig';
-import { Mail } from 'lucide-react';
+import { CheckCircle2, Info, Mail } from 'lucide-react';
+
+type FieldError = 'email' | 'consent' | null;
+type Outcome = { kind: 'done' | 'already'; email: string } | null;
+
+const { signup } = siteConfig;
 
 /**
  * The end of the page: people who've been convinced land here, so ordering comes
@@ -18,39 +23,45 @@ import { Mail } from 'lucide-react';
 export const NewsletterSection: React.FC = () => {
   const [email, setEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
+  const [fieldError, setFieldError] = useState<FieldError>(null);
+  const [outcome, setOutcome] = useState<Outcome>(null);
+  const outcomeRef = useRef<HTMLDivElement>(null);
   const { submitEmail, isLoading } = useWaitlist();
   const sectionRef = useScrollReveal<HTMLElement>();
 
+  // The form is replaced by the result, so move focus to it rather than losing it.
+  useEffect(() => {
+    if (outcome) outcomeRef.current?.focus();
+  }, [outcome]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (isLoading) return;
+
+    if (!WaitlistService.validateEmail(email)) {
+      setFieldError('email');
+      document.getElementById('waitlist-email')?.focus();
+      return;
+    }
+    if (!marketingConsent) {
+      setFieldError('consent');
+      document.getElementById('waitlist-consent')?.focus();
+      return;
+    }
+
+    setFieldError(null);
     const res = await submitEmail(email, 'footer_newsletter', undefined, marketingConsent);
-    if (res.success) setEmail('');
+    if (res.success) {
+      setOutcome({ kind: res.alreadySubscribed ? 'already' : 'done', email: email.trim() });
+      setEmail('');
+    }
   };
 
+  const errorText = fieldError === 'email' ? signup.emailError : fieldError === 'consent' ? signup.consentError : '';
+
   return (
-    <section
-      id="order"
-      ref={sectionRef}
-      className="reveal newsletter-section"
-      aria-labelledby="order-heading"
-      style={{
-        position: 'relative',
-        overflow: 'visible',
-        paddingTop: 'var(--space-12)',
-        paddingBottom: 'var(--space-16)',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'var(--color-hero-gradient)',
-          filter: 'blur(60px)',
-          zIndex: -1,
-          pointerEvents: 'none',
-        }}
-      />
+    <section id="order" ref={sectionRef} className="reveal newsletter-section" aria-labelledby="order-heading">
+      <div className="newsletter-section__glow" aria-hidden="true" />
       <Container>
         <Card className="order-card">
           <div className="order-card__order">
@@ -74,54 +85,67 @@ export const NewsletterSection: React.FC = () => {
           <div id="updates" className="order-card__updates">
             <p className="order-card__updates-intro">Not ready yet? Hear about new launches.</p>
 
-            <form
-              onSubmit={handleSubmit}
-              className="hero-form waitlist-form"
-              aria-label="Get email updates"
-              style={{
-                maxWidth: '520px',
-                margin: '0 auto',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: '0' }}>
-                <Input
-                  type="email"
-                  placeholder="Email address"
-                  aria-label="Email address"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  icon={<Mail size={18} />}
-                  required
-                  style={{
-                    paddingTop: '0.7rem',
-                    paddingBottom: '0.7rem',
-                    fontSize: 'var(--font-size-sm)',
-                  }}
-                />
+            {outcome ? (
+              <div ref={outcomeRef} tabIndex={-1} className="waitlist-outcome" role="status">
+                {outcome.kind === 'done' ? (
+                  <CheckCircle2 size={20} className="waitlist-outcome__icon" aria-hidden="true" />
+                ) : (
+                  <Info size={20} className="waitlist-outcome__icon" aria-hidden="true" />
+                )}
+                <p>
+                  <strong>{outcome.kind === 'done' ? signup.doneTitle : signup.alreadyTitle}</strong>{' '}
+                  {outcome.kind === 'done' ? signup.doneBody(outcome.email) : signup.alreadyBody}
+                </p>
               </div>
-              <Button
-                type="submit"
-                variant="secondary"
-                disabled={isLoading}
-                style={{
-                  padding: '0.7rem 1.25rem',
-                  fontSize: 'var(--font-size-sm)',
-                  whiteSpace: 'nowrap',
-                  // The card border token disappears on the light card; match the input instead.
-                  borderColor: 'var(--color-border-input)',
-                }}
-              >
-                {isLoading ? 'Adding you…' : 'Keep me posted'}
-              </Button>
-              <label className="waitlist-consent">
-                <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} required />
-                <span className="waitlist-checkbox" aria-hidden="true" />
-                <span className="waitlist-consent__text">
-                  Email me about new products from Shah’s Nutrition. I can unsubscribe anytime.
-                </span>
-              </label>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="waitlist-form" aria-label="Get email updates" noValidate>
+                {/* Consent comes first in the DOM, so the tab order matches what's on screen. */}
+                <label className="waitlist-consent">
+                  <input
+                    id="waitlist-consent"
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={(e) => {
+                      setMarketingConsent(e.target.checked);
+                      if (e.target.checked && fieldError === 'consent') setFieldError(null);
+                    }}
+                    aria-invalid={fieldError === 'consent' || undefined}
+                    aria-describedby={fieldError === 'consent' ? 'waitlist-error' : undefined}
+                  />
+                  <span className="waitlist-checkbox" aria-hidden="true" />
+                  <span className="waitlist-consent__text">
+                    Email me about new products from Shah’s Nutrition. I can unsubscribe anytime.
+                  </span>
+                </label>
+                <div className="waitlist-form__field">
+                  <Input
+                    id="waitlist-email"
+                    type="email"
+                    placeholder="Email address"
+                    aria-label="Email address"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldError === 'email') setFieldError(null);
+                    }}
+                    readOnly={isLoading}
+                    aria-busy={isLoading || undefined}
+                    aria-invalid={fieldError === 'email' || undefined}
+                    aria-describedby={fieldError === 'email' ? 'waitlist-error' : undefined}
+                    icon={<Mail size={18} />}
+                  />
+                </div>
+                <button type="submit" className="waitlist-submit" disabled={isLoading}>
+                  {isLoading ? 'Adding you…' : 'Keep me posted'}
+                </button>
+              </form>
+            )}
+            {!outcome && (
+              <p id="waitlist-error" className="waitlist-error" aria-live="polite">
+                {errorText}
+              </p>
+            )}
           </div>
         </Card>
       </Container>

@@ -46,9 +46,9 @@ export const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
+            <h2 className="footer-heading">
               Quick Links
-            </h4>
+            </h2>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
               <li><a href="#products" className="footer-link">Products</a></li>
               <li><a href="#our-story" className="footer-link">Our Story</a></li>
@@ -61,9 +61,9 @@ export const Footer: React.FC = () => {
 
           {/* Get in touch: every way to reach us, each labelled by what it's for. */}
           <div>
-            <h4 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
+            <h2 className="footer-heading">
               Get in touch
-            </h4>
+            </h2>
             <ul className="footer-contact">
               <li>
                 <OrderLink source="footer" variant="plain" size="sm" showIcon className="footer-link footer-contact__row">
@@ -95,9 +95,9 @@ export const Footer: React.FC = () => {
 
           {/* Business Inquiries */}
           <div>
-            <h4 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
+            <h2 className="footer-heading">
               For Business Inquiries
-            </h4>
+            </h2>
             <p style={{ fontSize: 'var(--font-size-xs)' }}>
               <a href={`mailto:${siteConfig.social.business}`} className="footer-link">
                 {siteConfig.social.business}

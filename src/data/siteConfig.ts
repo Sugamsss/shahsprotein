@@ -57,5 +57,14 @@ export const siteConfig = {
     // Fallback count when Supabase can't be reached. The public page no longer shows a count.
     initialCount: 0,
   },
+  // Email sign-up feedback, shown inline under the form (the toast is only for failures).
+  signup: {
+    emailError: 'That email looks incomplete. Mind checking it?',
+    consentError: 'Tick the box so we can email you.',
+    doneTitle: 'Check your inbox.',
+    doneBody: (email: string) => `We've sent a link to ${email}. Tap it to confirm.`,
+    alreadyTitle: "You're already on our list.",
+    alreadyBody: "If you haven't confirmed yet, look for our email in your inbox (or spam).",
+  },
   copyright: `© ${new Date().getFullYear()} Shah's Nutrition. All rights reserved.`,
 };

@@ -9,7 +9,6 @@ export const Card: React.FC<CardProps> = ({
   children,
   interactive = false,
   className = '',
-  style,
   ...props
 }) => {
   const cardClassName = ['glass-card', interactive ? 'interactive' : '', className]
@@ -17,14 +16,7 @@ export const Card: React.FC<CardProps> = ({
     .join(' ');
 
   return (
-    <div
-      className={cardClassName}
-      style={{
-        padding: 'var(--space-6)',
-        ...style,
-      }}
-      {...props}
-    >
+    <div className={cardClassName} {...props}>
       {children}
     </div>
   );

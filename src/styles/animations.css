@@ -113,11 +113,6 @@
 .reveal.snap-section.is-visible > .container {
   transform: none;
 }
-/* While it slides, keep the hero card above the hero art. */
-.reveal.snap-section[aria-label="Hero"] > .container {
-  position: relative;
-  z-index: 1;
-}
 .reveal-left-far  { transform: translateX(-70px) scale(0.92); filter: blur(6px); }
 .reveal-right-far { transform: translateX(70px) scale(0.92); filter: blur(6px); }
 
@@ -163,5 +158,3 @@
 .glass-card:hover .product-icon-badge {
   transform: rotate(12deg) scale(1.12);
 }
-
-
