@@ -1,6 +1,5 @@
 import { WaitlistAnalytics, WaitlistResponse } from '../types/waitlist';
 import { siteConfig } from '../data/siteConfig';
-import { supabase } from './supabaseClient';
 
 // Sign-ups are double opt-in (Loops), so a new sign-up is pending until the link is tapped.
 const DUPLICATE_MESSAGE = "This email is already on our list. If you haven't confirmed yet, look for our email in your inbox (or spam).";
@@ -29,6 +28,8 @@ export class WaitlistService {
       return { success: false, message: 'Please enter a valid email address.', totalCount: this.getStoredCount() };
     }
 
+    // Loaded on first submit so Supabase stays out of the landing bundle.
+    const { supabase } = await import('./supabaseClient');
     if (!supabase) {
       return { success: false, message: FALLBACK_MESSAGE, totalCount: this.getStoredCount() };
     }
