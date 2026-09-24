@@ -10,7 +10,23 @@ type SignupPayload = {
   source?: unknown;
 };
 
-type WaitlistMember = { id: string; email: string; source: string; signed_up_at: string };
+type WaitlistMember = {
+  id: string;
+  email: string;
+  source: string;
+  signed_up_at: string;
+  verified_at: string | null;
+  unsubscribed_at: string | null;
+  status: string;
+  owner_notification_sent_at: string | null;
+};
+
+// This function is callable with the public anon key, so it only acts for a
+// member who joined (or re-joined) moments ago. Anything else gets the same
+// neutral reply as an unknown email, so callers cannot re-trigger Loops for an
+// existing address or learn whether it is on the list.
+const SYNC_WINDOW_MS = 10 * 60 * 1000;
+const skippedResponse = () => jsonResponse({ accepted: true });
 
 const jsonResponse = (body: Record<string, unknown>, status = 202) =>
   new Response(JSON.stringify(body), {
@@ -40,16 +56,16 @@ Deno.serve(async (request) => {
   );
   const { data: member, error: memberError } = await serviceClient
     .from('waitlist_members')
-    .select('id, email, source, signed_up_at, owner_notification_sent_at')
+    .select('id, email, source, signed_up_at, verified_at, unsubscribed_at, status, owner_notification_sent_at')
     .eq('email', email.toLowerCase())
     .maybeSingle();
   if (memberError) {
     console.error('sync-waitlist-loops: stored signup lookup failed');
     return jsonResponse({ synced: false, stored: false, retryable: true }, 500);
   }
-  if (!member) return jsonResponse({ synced: false, stored: false }, 404);
+  if (!member || !isRecentActiveJoin(member as WaitlistMember)) return skippedResponse();
 
-  const ownerNotification = await notifyOwner(serviceClient, member as WaitlistMember & { owner_notification_sent_at?: string | null });
+  const ownerNotification = await notifyOwner(serviceClient, member as WaitlistMember);
 
   const endpoint = Deno.env.get('LOOPS_FORM_ENDPOINT');
   const mailingListId = Deno.env.get('LOOPS_WAITLIST_MAILING_LIST_ID');
@@ -106,9 +122,21 @@ Deno.serve(async (request) => {
   }
 });
 
+// A new signup has a fresh signed_up_at. A resubscribe keeps the old
+// signed_up_at, but the RPC stamps verified_at with the current time.
+function isRecentActiveJoin(member: WaitlistMember): boolean {
+  if (member.status !== 'active' || member.unsubscribed_at) return false;
+  const joinedAt = Math.max(
+    Date.parse(member.signed_up_at),
+    member.verified_at ? Date.parse(member.verified_at) : 0,
+  );
+  const age = Date.now() - joinedAt;
+  return Number.isFinite(age) && age >= -60_000 && age <= SYNC_WINDOW_MS;
+}
+
 async function notifyOwner(
   serviceClient: ReturnType<typeof createClient>,
-  member: WaitlistMember & { owner_notification_sent_at?: string | null },
+  member: WaitlistMember,
 ): Promise<boolean> {
   if (member.owner_notification_sent_at) return true;
 
