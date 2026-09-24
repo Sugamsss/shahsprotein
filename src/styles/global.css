@@ -16,7 +16,9 @@ html {
   background-color: var(--color-bg-main);
   color: var(--color-text-primary);
   scroll-behavior: smooth;
-  scroll-snap-type: y mandatory;
+  /* Proximity: sections settle into place when you stop near one, but a
+     trackpad or a tall section never gets trapped (D15). */
+  scroll-snap-type: y proximity;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -24,7 +26,6 @@ html {
 /* ─── Scroll Snap Sections ──────────────────────── */
 .snap-section {
   scroll-snap-align: start;
-  scroll-snap-stop: always;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -100,7 +101,6 @@ body {
   justify-content: flex-start;
   padding-top: calc(var(--header-height) + var(--space-4));
   scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 
 .final-page-section > footer {
@@ -2704,9 +2704,10 @@ img {
    Mobile fixes live together here so they're easy to find and merge.
    Nothing in this block matches a 1440×900 desktop, except where noted. */
 
-/* Sections are taller than the screen on phones and short landscape
-   screens, so mandatory snap fights the user. Desktop keeps its snap. */
-@media (max-width: 900px), (max-height: 600px) {
+/* No snap on phones, short landscape screens or any touch screen (iPad
+   toolbars make sections taller than what's visible). Desktop keeps
+   proximity snap. */
+@media (max-width: 900px), (max-height: 600px), (pointer: coarse) {
   html {
     scroll-snap-type: none;
   }
