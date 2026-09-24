@@ -92,7 +92,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
     return () => {
       clearTimeout(timer);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
 
       // Restore focus to previously active element

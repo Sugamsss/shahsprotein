@@ -14,6 +14,7 @@ import { Toast } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AnalyticsService } from './services/analyticsService';
 import { useTheme } from './context/ThemeContext';
+import { useSectionSettle } from './hooks/useSectionSettle';
 import './styles/global.css';
 import { NotFound } from './components/pages/NotFound';
 
@@ -41,9 +42,16 @@ const AnalyticsTracker: React.FC = () => {
   return null;
 };
 
+// Desktop sections settle into place after a scroll (see the hook).
+const SectionSettle: React.FC = () => {
+  useSectionSettle();
+  return null;
+};
+
 const LandingPage: React.FC = () => (
   <>
     <AnalyticsTracker />
+    <SectionSettle />
     <WaitlistProvider>
       <>
         <div className="app-shell">

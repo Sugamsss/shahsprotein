@@ -34,7 +34,7 @@ src/
 ├── data/                # ALL copy and content: products, faqs, values, siteConfig (phone numbers, wa.me links)
 ├── context/             # ThemeContext, WaitlistContext
 ├── services/            # waitlistService (signup), analyticsService (incl. WhatsApp order clicks)
-├── hooks/               # useScrollReveal
+├── hooks/               # useScrollReveal, useSectionSettle (desktop section settle)
 ├── styles/              # global.css imports tokens → themes → animations; admin-dashboard.css is admin-only
 └── types/
 supabase/                # migrations, edge functions, README (backend setup and secrets)
@@ -55,7 +55,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 
 ## Gotchas
 
-- **Full-screen sections with scroll snap.** On desktop, every section is `min-height: 100vh` with **proximity** snap (it settles into a section you stop near, but never traps a trackpad or a section taller than the screen). Snap is **off** at ≤900px wide, ≤600px tall and on any touch screen (`pointer: coarse`), because phone sections are taller than the screen and iPad toolbars make every section a little taller than what's visible. Don't bring back `mandatory` or `scroll-snap-stop: always`, and don't turn snap on for touch.
+- **Full-screen sections settle with JS, not CSS scroll snap.** On desktop, every section is `min-height: 100vh`. When a scroll stops within a quarter of a screen *before* the next section in the direction you're going, `useSectionSettle` glides it to that section's top. It never pulls back against the direction you scrolled, so it can't trap you. It only runs at ≥901px wide, ≥601px tall, with a fine pointer and without reduced motion; phones, short screens and touch screens scroll freely. Don't bring back CSS `scroll-snap-type` in any form. `mandatory` fought trackpad momentum. `proximity` trapped mouse wheels: the browser's snap zone is a third of the screen (Chrome) and pulls both ways, so every ~100px wheel step out of a section was pulled straight back.
 - **The reveal animation moves the inner `.container`, not the section.** Moving the section's box breaks anchor links (the heading lands under the fixed header) and makes the page load already scrolled. See the end of `animations.css`.
 - **Where the CSS lives.** `tokens.css` holds the fonts, tokens and the token breakpoints (title size and column width at ≤1024/≤768/≤480). `global.css` goes base rules first, then each section's own tablet and desktop rules next to it, then the **phones, tablets and short screens block at the end** ("Phones, tablets and short screens"), then reduced motion last. Phone fixes go in that end block, so they win ties by source order. There is no `responsive.css` any more.
 - **No `!important` and no layout inline styles.** Components use classes; the only inline style left on the landing page is the ingredient sprite position in the product popup. If a rule doesn't apply, fix the order or the selector instead of reaching for `!important`.

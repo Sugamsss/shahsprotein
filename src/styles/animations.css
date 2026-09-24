@@ -101,7 +101,7 @@
 }
 
 /* Full-screen sections must keep their real box, because anchor jumps and
-   scroll snap use it. The section only fades; its content does the slide. */
+   the section settle use it. The section only fades; its content does the slide. */
 .reveal.snap-section {
   transform: none;
 }

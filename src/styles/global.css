@@ -15,16 +15,14 @@ html {
   background-color: var(--color-bg-main);
   color: var(--color-text-primary);
   scroll-behavior: smooth;
-  /* Proximity: sections settle into place when you stop near one, but a
-     trackpad or a tall section never gets trapped (D15). */
-  scroll-snap-type: y proximity;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Scroll Snap Sections ──────────────────────── */
+/* ─── Full-screen sections ──────────────────────── */
+/* No CSS scroll snap: on desktop, useSectionSettle glides a scroll that
+   stops just short of a section into place (D15). */
 .snap-section {
-  scroll-snap-align: start;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -109,7 +107,6 @@ body {
   flex-direction: column;
   justify-content: flex-start;
   padding-top: calc(var(--header-height) + var(--space-4));
-  scroll-snap-align: start;
 }
 
 .final-page-section > footer {
@@ -2524,15 +2521,6 @@ img {
 /* ─── Phones, tablets and short screens ─────────────────────────────────
    Mobile fixes live together here so they're easy to find and merge.
    Nothing in this block matches a 1440×900 desktop, except where noted. */
-
-/* No snap on phones, short landscape screens or any touch screen (iPad
-   toolbars make sections taller than what's visible). Desktop keeps
-   proximity snap. */
-@media (max-width: 900px), (max-height: 600px), (pointer: coarse) {
-  html {
-    scroll-snap-type: none;
-  }
-}
 
 /* Phone menu: slides open under the header pill. It scrolls if a short
    landscape screen can't fit it. */
