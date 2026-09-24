@@ -179,7 +179,11 @@ export const Header: React.FC = () => {
       {/* Mobile Dropdown Drawer */}
       <div
         id="mobile-drawer"
+        className="mobile-drawer"
         aria-hidden={!mobileMenuOpen}
+        // Keeps the closed drawer's links out of the tab order. React 18 has no
+        // typed `inert` prop, so it's passed as a plain attribute.
+        {...(!mobileMenuOpen && { inert: '' })}
         style={{
           width: '100%',
           maxWidth: 'var(--container-max-width)',
@@ -187,15 +191,13 @@ export const Header: React.FC = () => {
           opacity: mobileMenuOpen ? 1 : 0,
           overflow: 'hidden',
           borderRadius: mobileMenuOpen ? 'var(--radius-lg)' : '0',
-          backgroundColor: 'var(--color-bg-header)',
           backdropFilter: 'blur(32px) saturate(180%)',
           WebkitBackdropFilter: 'blur(32px) saturate(180%)',
           border: mobileMenuOpen ? '1px solid var(--color-border-header)' : '1px solid transparent',
           marginTop: mobileMenuOpen ? '6px' : '0px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem',
-          padding: mobileMenuOpen ? '0.75rem 1.5rem' : '0 1.5rem',
+          padding: mobileMenuOpen ? '0.25rem 1.25rem' : '0 1.25rem',
           pointerEvents: mobileMenuOpen ? 'auto' : 'none',
           transition:
             'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, padding 0.3s ease, border-color 0.3s ease, margin-top 0.3s ease',

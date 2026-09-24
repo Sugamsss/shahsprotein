@@ -1771,3 +1771,48 @@ img {
     scroll-snap-type: none;
   }
 }
+
+/* Header: 44px targets without moving anything, and a readable drawer. */
+.mobile-drawer {
+  background-color: var(--color-bg-header);
+  background-color: color-mix(in srgb, var(--color-bg-main) 94%, transparent);
+}
+
+@media (max-width: 768px) {
+  /* Negative margins keep the 32px layout footprint, so nothing moves. */
+  .mobile-toggle {
+    width: 44px;
+    height: 44px;
+    margin-inline: -6px;
+  }
+
+  /* Invisible 44px-tall hit areas around the small header controls. */
+  .theme-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -9px -4px;
+  }
+
+  .header-order-btn {
+    position: relative;
+  }
+
+  .header-order-btn::before {
+    content: '';
+    position: absolute;
+    inset: -6px -4px;
+  }
+
+  .header-nav-btn {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .header-nav-btn + .header-nav-btn {
+    border-top: 1px solid var(--color-border-card);
+  }
+}
