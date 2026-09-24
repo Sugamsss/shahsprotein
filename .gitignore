@@ -15,3 +15,6 @@ dist/
 .temp/
 temp/
 .trash/
+
+# Private work files (label drafts, story ideas, unreleased data). Never published.
+Private/
