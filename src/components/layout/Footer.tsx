@@ -10,25 +10,9 @@ export const Footer: React.FC = () => {
   const { theme } = useTheme();
 
   return (
-    <footer
-      style={{
-        backgroundColor: theme === 'dark' ? 'transparent' : 'var(--color-bg-main)',
-        borderTop: '1px solid var(--color-border-subtle)',
-        paddingTop: 'var(--space-16)',
-        paddingBottom: 'var(--space-8)',
-        color: 'var(--color-text-secondary)',
-      }}
-    >
+    <footer className="site-footer">
       <Container>
-        <div
-          className="footer-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 'var(--space-8)',
-            marginBottom: 'var(--space-12)',
-          }}
-        >
+        <div className="footer-grid">
           {/* Brand Info */}
           <div>
             <img
@@ -37,9 +21,9 @@ export const Footer: React.FC = () => {
               width={507}
               height={160}
               loading="lazy"
-              style={{ height: '42px', width: 'auto', marginBottom: 'var(--space-4)' }}
+              className="footer-logo"
             />
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
+            <p className="footer-tagline">
               {siteConfig.tagline}
             </p>
           </div>
@@ -49,7 +33,7 @@ export const Footer: React.FC = () => {
             <h2 className="footer-heading">
               Quick Links
             </h2>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-xs)' }}>
+            <ul className="footer-links">
               <li><a href="#products" className="footer-link">Products</a></li>
               <li><a href="#our-story" className="footer-link">Our Story</a></li>
               <li>
@@ -98,7 +82,7 @@ export const Footer: React.FC = () => {
             <h2 className="footer-heading">
               For Business Inquiries
             </h2>
-            <p style={{ fontSize: 'var(--font-size-xs)' }}>
+            <p className="footer-business">
               <a href={`mailto:${siteConfig.social.business}`} className="footer-link">
                 {siteConfig.social.business}
               </a>
@@ -107,15 +91,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Copyright */}
-        <div
-          style={{
-            borderTop: '1px solid var(--color-border-subtle)',
-            paddingTop: 'var(--space-6)',
-            textAlign: 'center',
-            fontSize: 'var(--font-size-xs)',
-            color: 'var(--color-text-muted)',
-          }}
-        >
+        <div className="footer-copyright">
           {siteConfig.copyright}
         </div>
       </Container>

@@ -12,24 +12,11 @@ export const StorySection: React.FC = () => {
   return (
     <section
       id="our-story"
-      className="snap-section"
+      className="snap-section story-section"
       aria-label="Our Story"
-      style={{
-        minHeight: '100vh',
-        paddingTop: 'calc(var(--header-height) + var(--space-8))',
-        paddingBottom: 'var(--space-12)',
-        boxSizing: 'border-box',
-      }}
     >
       <Container>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
-            gap: 'var(--space-12)',
-            alignItems: 'center',
-          }}
-        >
+        <div className="story-grid">
           {/* Story Text */}
           <div ref={leftRef} className="reveal reveal-left-far reveal-story-slow">
             <Badge style={{ marginBottom: 'var(--space-4)' }}>OUR STORY</Badge>
@@ -69,19 +56,19 @@ export const StorySection: React.FC = () => {
           </div>
 
           {/* Story Visual */}
-          <div ref={rightRef} className="reveal reveal-right-far reveal-story-slow delay-200">
-            <Card style={{ padding: 'var(--space-4)' }}>
+          <div ref={rightRef} className="story-visual reveal reveal-right-far reveal-story-slow delay-200">
+            <Card className="story-photo">
               <img
                 src="/assets/story-family-approved-1200w.webp"
                 srcSet="/assets/story-family-approved-800w.webp 800w, /assets/story-family-approved-1200w.webp 1200w, /assets/story-family-approved-1672w.webp 1672w"
-                sizes="(min-width: 1200px) 526px, (min-width: 740px) 42vw, calc(100vw - 66px)"
+                sizes="(min-width: 1200px) 500px, (min-width: 901px) 40vw, (min-width: 601px) 544px, calc(100vw - 66px)"
                 alt="The Shah family working together on Shah's Nutrition"
                 width={1672}
                 height={941}
                 loading="lazy"
                 decoding="async"
-                // Fixed ratio: the smaller srcset files round to a hair-different ratio, which would nudge the layout.
-                style={{ borderRadius: 'var(--radius-lg)', width: '100%', aspectRatio: '1672 / 941', objectFit: 'cover' }}
+                // Fixed ratio in CSS: the smaller srcset files round to a hair-different ratio, which would nudge the layout.
+                className="story-photo__img"
               />
             </Card>
           </div>

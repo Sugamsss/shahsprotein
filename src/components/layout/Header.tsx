@@ -43,45 +43,9 @@ export const Header: React.FC = () => {
   }, [mobileMenuOpen]);
 
   return (
-    <header
-      ref={headerRef}
-      className="header-entrance"
-      style={{
-        position: 'fixed',
-        top: '16px',
-        left: 0,
-        right: 0,
-        zIndex: 'var(--z-header)' as unknown as number,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '0 20px',
-        paddingBottom: mobileMenuOpen ? '0' : '0',
-        pointerEvents: 'none',
-      }}
-    >
+    <header ref={headerRef} className="site-header header-entrance">
       {/* Floating Glass Pill */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          pointerEvents: 'auto',
-          width: '100%',
-          maxWidth: 'var(--container-max-width)',
-          height: '46px',
-          padding: '0 10px',
-          borderRadius: 'var(--radius-full)',
-          backgroundColor: 'var(--color-bg-header)',
-          backdropFilter: 'blur(32px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-          border: '1px solid var(--color-border-header)',
-          boxShadow: isScrolled
-            ? 'var(--shadow-header-scrolled)'
-            : 'var(--shadow-header)',
-          transition:
-            'box-shadow var(--transition-normal), background-color var(--transition-theme), border-color var(--transition-theme)',
-        }}
-      >
+      <div className={`header-pill${isScrolled ? ' is-scrolled' : ''}`}>
         {/* Brand Logo */}
         <a
           href="#"

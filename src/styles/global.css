@@ -286,6 +286,41 @@ a {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* Header: a fixed, floating glass pill. */
+.site-header {
+  position: fixed;
+  top: 16px;
+  right: 0;
+  left: 0;
+  z-index: var(--z-header);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.header-pill {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: var(--container-max-width);
+  height: 46px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-header);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-header);
+  box-shadow: var(--shadow-header);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  backdrop-filter: blur(32px) saturate(180%);
+  pointer-events: auto;
+  transition: box-shadow var(--transition-normal), background-color var(--transition-theme), border-color var(--transition-theme);
+}
+
+.header-pill.is-scrolled {
+  box-shadow: var(--shadow-header-scrolled);
+}
+
 /* Logo: 24px on phones, 30px from 769px up so the tagline under it reads (D8). */
 .header-logo {
   width: auto;
@@ -1077,6 +1112,54 @@ a {
   }
 }
 
+/* 4:3 landscape screens (1024x768, 1280x1024): the art fills the hero instead
+   of stopping with a hard edge and an empty band (D3). */
+@media (min-width: 901px) and (max-aspect-ratio: 16/10) and (orientation: landscape) {
+  .hero-visual-image {
+    object-fit: cover;
+    object-position: 78% center;
+  }
+}
+
+/* Big portrait tablets (iPad Pro): the stacked tablet hero, not a squeezed
+   desktop one (D3). */
+@media (min-width: 901px) and (max-width: 1199px) and (orientation: portrait) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .hero-visual-space {
+    top: 4rem;
+    bottom: auto;
+    left: 50%;
+    width: 100%;
+    height: 56svh;
+    min-height: 0;
+    transform: translateX(-50%);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 1.5rem);
+    mask-image: linear-gradient(180deg, transparent, #000 1.5rem);
+  }
+
+  .hero-visual-image,
+  [data-theme='light'] .hero-visual-image {
+    object-fit: cover;
+    object-position: 88% center;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, rgba(0, 0, 0, 0.6) 82%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 62%, rgba(0, 0, 0, 0.6) 82%, transparent 100%);
+  }
+
+  .hero-content {
+    max-width: 38rem;
+    margin: calc(56svh - 3.5rem) auto 0;
+    padding: 2rem 2.25rem;
+  }
+
+  .hero-title {
+    font-size: 3rem;
+  }
+}
+
 .products-section {
   padding: calc(var(--header-height) + 1.5rem) 0 2.5rem;
 }
@@ -1547,6 +1630,60 @@ img {
   -webkit-text-fill-color: transparent;
 }
 
+/* Story */
+.story-section {
+  padding-top: calc(var(--header-height) + var(--space-8));
+  padding-bottom: var(--space-12);
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.glass-card.story-photo {
+  padding: var(--space-4);
+}
+
+.story-photo__img {
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
+/* Portrait tablets: one column, picture first and capped, so it isn't
+   squeezed to 300px next to the text (D14). */
+@media (min-width: 601px) and (max-width: 900px) {
+  .story-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  .story-visual {
+    order: -1;
+  }
+}
+
+/* Desktop: the text column gets more room, so its lines run shorter. */
+@media (min-width: 901px) {
+  .story-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+}
+
+/* 4:3 and other short desktops: the last line clears the bottom edge. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .story-section {
+    padding-top: calc(var(--header-height) + 1.25rem);
+    padding-bottom: 1.5rem;
+  }
+}
+
 /* A highlighter stroke, so the emphasis doesn't read as a link (D7). */
 .story-highlight {
   padding: 0 0.08em;
@@ -1678,6 +1815,57 @@ img {
   }
 }
 
+/* Footer */
+.site-footer {
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-8);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .site-footer {
+  background-color: var(--color-bg-main);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.footer-logo {
+  width: auto;
+  height: 42px;
+  margin-bottom: var(--space-4);
+}
+
+.footer-tagline {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  font-size: var(--font-size-xs);
+}
+
+.footer-business {
+  font-size: var(--font-size-xs);
+}
+
+.footer-copyright {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
 /* Footer column titles: h2 for the outline (they follow the page's h2s), sized small. */
 .footer-heading {
   margin-bottom: var(--space-4);
@@ -1716,11 +1904,40 @@ img {
   font-weight: 600;
 }
 
-/* The footer centres on small phones (responsive.css); match it here. */
+/* Small phones: one centred column. */
 @media (max-width: 480px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .footer-grid img {
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .footer-grid div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
   .footer-contact {
     align-items: center;
   }
+}
+
+/* Portrait tablets: three columns, with business under the brand rather than
+   alone on a second row (D19). */
+@media (min-width: 601px) and (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1.2fr 1fr 1fr;
+  }
+
+  .footer-grid > :nth-child(1) { grid-area: 1 / 1; }
+  .footer-grid > :nth-child(2) { grid-area: 1 / 2; }
+  .footer-grid > :nth-child(3) { grid-area: 1 / 3 / span 2; }
+  .footer-grid > :nth-child(4) { grid-area: 2 / 1; }
 }
 
 /* Responsive Navigation Breakpoints */
@@ -2251,6 +2468,81 @@ img {
     height: clamp(150px, 100vh - 520px, 290px);
     aspect-ratio: auto;
   }
+}
+
+/* Portrait tablets: an odd last product card spans both columns as a wide
+   card (art left, text right) instead of sitting alone (D13). */
+@media (min-width: 601px) and (max-width: 900px) {
+  .portfolio-grid > .portfolio-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+  }
+
+  .portfolio-grid > .portfolio-card:last-child:nth-child(odd) .portfolio-card__art {
+    flex: 0 0 calc(50% - 0.625rem);
+    width: calc(50% - 0.625rem);
+    aspect-ratio: 1.3;
+  }
+
+  .portfolio-grid > .portfolio-card:last-child:nth-child(odd) .portfolio-card__body {
+    justify-content: center;
+    padding: 1.5rem 1.75rem;
+  }
+
+  .portfolio-grid > .portfolio-card:last-child:nth-child(odd) .portfolio-card__actions {
+    margin-top: 1.25rem;
+  }
+}
+
+/* Touch tablets: header controls get 44px targets (D18). */
+@media (pointer: coarse) and (min-width: 601px) {
+  .header-icon-btn,
+  .header-order-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The toggle keeps its look; an invisible 44px hit area goes around it. */
+  .theme-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -9px -4px;
+  }
+
+  .header-pill {
+    height: 56px;
+  }
+
+  :root {
+    --header-height: 69px;
+  }
+}
+
+/* Very large screens: a wider column, so content isn't a narrow strip (D21). */
+@media (min-width: 1800px) {
+  :root {
+    --container-max-width: 1320px;
+  }
+}
+
+/* Portrait tablets: pull the hero card closer to the art (D22). */
+@media (min-width: 601px) and (max-width: 900px) and (orientation: portrait) {
+  .hero-content {
+    margin-top: max(calc(clamp(23rem, 40svh, 30rem) - 1.5rem), calc(50svh - 7rem));
+  }
+}
+
+/* Values cards on tablets and short desktops: no tall empty space under the text. */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .values-card {
+    min-height: 0;
+  }
+}
+
+/* Dark mode: a hairline edge calms the bright product art on the dark page (D25). */
+[data-theme='dark'] .portfolio-card__art {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  filter: brightness(0.94);
 }
 
 /* Only things you click lift on hover: the product cards. The order card holds
