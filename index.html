@@ -20,6 +20,14 @@
         document.getElementById('theme-favicon-ico').setAttribute('href', '/favicon-' + prefix + '.ico' + version);
         document.getElementById('theme-favicon-32').setAttribute('href', '/favicon-' + prefix + '-32x32.png' + version);
         document.getElementById('theme-apple-touch-icon').setAttribute('href', '/apple-touch-icon-' + prefix + '.png' + version);
+        // The hero art is the LCP. Start it now instead of after the JS bundle runs.
+        // Must match the src in HeroSection.tsx, or it downloads twice.
+        const hero = document.createElement('link');
+        hero.rel = 'preload';
+        hero.as = 'image';
+        hero.setAttribute('fetchpriority', 'high');
+        hero.href = '/assets/generated-muesli/muesli-hero-current-' + prefix + '.webp';
+        document.head.appendChild(hero);
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
