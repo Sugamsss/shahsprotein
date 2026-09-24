@@ -12,16 +12,6 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [toastType, setToastType] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
-    let active = true;
-    WaitlistService.getCount().then((count) => {
-      if (active) setWaitlistCount(count);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     // Auto clear toast after 4 seconds
     if (toastMessage) {
       const timer = setTimeout(() => {

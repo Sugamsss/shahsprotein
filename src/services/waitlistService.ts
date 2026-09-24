@@ -2,9 +2,14 @@ import { WaitlistAnalytics, WaitlistResponse } from '../types/waitlist';
 import { siteConfig } from '../data/siteConfig';
 import { supabase } from './supabaseClient';
 
-const DUPLICATE_MESSAGE = "Love your enthusiasm! You've signed up already. We'll make sure you're the first one to get the updates as we launch.";
-const CONFIRMATION_MESSAGE = 'Welcome aboard! Check your inbox to confirm your email and save your spot for launch updates.';
-const FALLBACK_MESSAGE = 'The waitlist is temporarily unavailable. Please try again in a moment.';
+// Sign-ups are double opt-in (Loops), so a new sign-up is pending until the link is tapped.
+const DUPLICATE_MESSAGE = "This email is already on our list. If you haven't confirmed yet, look for our email in your inbox (or spam).";
+const CONFIRMATION_MESSAGE = "Almost there. We've sent you an email. Tap the link inside to confirm.";
+const FALLBACK_MESSAGE = "Sorry, that didn't go through. Please try again in a moment.";
+// Stored with each consenting sign-up so the record shows what the person agreed to.
+// waitlist-v1: "I agree to receive an email about the product launch." (pre-launch)
+// updates-v1: "Email me about new products from Shah's Nutrition. I can unsubscribe anytime."
+const CONSENT_VERSION = 'updates-v1';
 
 export class WaitlistService {
   static validateEmail(email: string): boolean {
@@ -34,7 +39,7 @@ export class WaitlistService {
       p_product_id: productId || null,
       p_theme: analytics?.theme || null,
       p_marketing_consent: marketingConsent,
-      p_consent_version: marketingConsent ? 'waitlist-v1' : null,
+      p_consent_version: marketingConsent ? CONSENT_VERSION : null,
       p_session_key: analytics?.sessionKey || null,
       p_session_started_at: analytics?.startedAt || null,
       p_session_ended_at: analytics?.endedAt || null,
@@ -79,12 +84,5 @@ export class WaitlistService {
 
   static getStoredCount(): number {
     return siteConfig.waitlist.initialCount;
-  }
-
-  static async getCount(): Promise<number> {
-    if (!supabase) return this.getStoredCount();
-    const { data, error } = await supabase.rpc('get_waitlist_count');
-    if (error) return this.getStoredCount();
-    return Number(data) || this.getStoredCount();
   }
 }
