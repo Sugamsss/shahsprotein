@@ -80,7 +80,8 @@ export const StorySection: React.FC = () => {
                 height={941}
                 loading="lazy"
                 decoding="async"
-                style={{ borderRadius: 'var(--radius-lg)', width: '100%', objectFit: 'cover' }}
+                // Fixed ratio: the smaller srcset files round to a hair-different ratio, which would nudge the layout.
+                style={{ borderRadius: 'var(--radius-lg)', width: '100%', aspectRatio: '1672 / 941', objectFit: 'cover' }}
               />
             </Card>
           </div>
