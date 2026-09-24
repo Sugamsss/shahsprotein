@@ -2,6 +2,8 @@
 <html lang="en-IN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- Before the theme script: the hero preload picks its srcset size from the viewport. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Static light-mode links ensure T3 and browsers always detect a favicon. -->
     <link id="theme-favicon" rel="icon" type="image/png" sizes="512x512" href="/favicon-light.png?v=5" />
     <link id="theme-favicon-ico" rel="icon" type="image/x-icon" href="/favicon-light.ico?v=5" />
@@ -26,18 +28,20 @@
         document.getElementById('theme-favicon-32').setAttribute('href', '/favicon-' + prefix + '-32x32.png' + version);
         document.getElementById('theme-apple-touch-icon').setAttribute('href', '/apple-touch-icon-' + prefix + '.png' + version);
         // The hero art is the LCP. Start it now instead of after the JS bundle runs.
-        // Must match the src in HeroSection.tsx, or it downloads twice.
+        // Must match the srcSet/sizes in HeroSection.tsx, or it downloads twice.
         const hero = document.createElement('link');
         hero.rel = 'preload';
         hero.as = 'image';
         hero.setAttribute('fetchpriority', 'high');
-        hero.href = '/assets/generated-muesli/muesli-hero-current-' + prefix + '.webp';
+        const heroBase = '/assets/generated-muesli/muesli-hero-current-' + prefix;
+        hero.href = heroBase + '.webp';
+        hero.setAttribute('imagesrcset', heroBase + '-828w.webp 828w, ' + heroBase + '-1242w.webp 1242w, ' + heroBase + '.webp 1672w');
+        hero.setAttribute('imagesizes', '100vw');
         document.head.appendChild(hero);
         const toolbar = theme === 'light' ? '#eef4fc' : '#1f1f1f';
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) { meta.setAttribute('content', toolbar); });
       })();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shah's Nutrition — Simple Ingredients, Extraordinary Benefits</title>
     <link rel="canonical" href="https://www.shahsnutrition.food/" />
     <meta

@@ -72,7 +72,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - **Adding an image:** export it as above, give it a new file name under `public/assets/` (add a width suffix like `-1200w` for `srcSet` sets), reference it with `width`/`height`, and `loading="lazy" decoding="async"` unless it's above the fold. Never reuse an old name.
 - **Share card:** `public/og/shahs-nutrition-v1.jpg`, 1200x630 JPEG under 200 KB, with absolute URLs in `index.html`. WhatsApp caches previews, so a new card needs a new file name (`-v2`) and updated tags.
 - **How each image is served:**
-  - The hero art is preloaded from the inline theme script in `index.html`. If you rename it, change `HeroSection.tsx` too, or it downloads twice.
+  - The hero art has 828/1242/1672w files per theme and is preloaded (same `imagesrcset`) from the inline theme script in `index.html`. If you rename or resize it, change `HeroSection.tsx` too, or it downloads twice. The viewport `<meta>` must stay above that script, or the preload picks the 1672w file on phones.
   - Product cards each get their own crop at the card's 1.3 ratio, in `public/assets/product-cards/`.
   - The story image has an 800/1200/1672w `srcSet` and a fixed `aspectRatio`.
   - Ingredient sprites use 216px per tile, so they're 648px wide.
