@@ -148,6 +148,24 @@
   filter: none !important;
   will-change: auto;
 }
+
+/* Full-screen sections must keep their real box, because anchor jumps and
+   scroll snap use it. The section only fades; its content does the slide. */
+.reveal.snap-section {
+  transform: none;
+}
+.reveal.snap-section > .container {
+  transform: translateY(36px) scale(0.97);
+  transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.snap-section.is-visible > .container {
+  transform: none;
+}
+/* While it slides, keep the hero card above the hero art. */
+.reveal.snap-section[aria-label="Hero"] > .container {
+  position: relative;
+  z-index: 1;
+}
 .reveal-left  { transform: translateX(-28px); }
 .reveal-right { transform: translateX(28px); }
 .reveal-left-far  { transform: translateX(-70px) scale(0.92); filter: blur(6px); }

@@ -1759,3 +1759,15 @@ img {
 [data-theme="dark"] .values-card-title {
   color: var(--color-text-accent);
 }
+
+/* ─── Phones, tablets and short screens ─────────────────────────────────
+   Mobile fixes live together here so they're easy to find and merge.
+   Nothing in this block matches a 1440×900 desktop, except where noted. */
+
+/* Sections are taller than the screen on phones and short landscape
+   screens, so mandatory snap fights the user. Desktop keeps its snap. */
+@media (max-width: 900px), (max-height: 600px) {
+  html {
+    scroll-snap-type: none;
+  }
+}
