@@ -103,10 +103,16 @@ body {
   scroll-snap-stop: always;
 }
 
+.final-page-section > footer {
+  margin-top: auto;
+}
+
+/* The order card takes the spare height on tall screens, so the page ends on
+   the footer rather than on a band of background. */
 .newsletter-section {
   position: relative;
   display: flex;
-  flex: 0 0 auto;
+  flex: 1 0 auto;
   align-items: center;
   min-height: 0;
   padding-top: var(--space-12);
@@ -1249,9 +1255,13 @@ a {
 }
 
 .product-detail__order {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  position: sticky;
+  bottom: -2rem;
+  z-index: 1;
+  margin: 1.5rem -2rem -2rem;
+  padding: 1rem 2rem 1.5rem;
   border-top: 1px solid var(--color-border-card);
+  background: var(--color-bg-main);
 }
 
 .product-detail__order-btn {
@@ -1359,17 +1369,6 @@ a {
   .product-detail__facts > div {
     grid-template-columns: 6.5rem minmax(0, 1fr);
     gap: 0.75rem;
-  }
-
-  /* The popup scrolls on phones; keep the order button in reach. Negative
-     margins cancel the popup's 2rem padding so the bar spans its full width. */
-  .product-detail__order {
-    position: sticky;
-    bottom: -2rem;
-    z-index: 1;
-    margin: 1.5rem -2rem -2rem;
-    padding: 0.875rem 2rem calc(1rem + env(safe-area-inset-bottom, 0px));
-    background: var(--color-bg-main);
   }
 }
 
@@ -1546,24 +1545,42 @@ img {
   overscroll-behavior: contain;
 }
 
+/* The title row and the Order bar stick to the popup's edges at every size, so
+   close and Order stay in reach while the details scroll. Negative margins
+   cancel the popup's padding so both span its full width. */
+.modal-head {
+  position: sticky;
+  top: -2rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -2rem -2rem 0;
+  padding: 1.25rem 2rem 1rem;
+  background: var(--color-bg-main);
+}
+
 .modal-title {
-  margin-bottom: 1.25rem;
+  margin: 0;
   color: var(--color-text-primary);
   font-size: var(--font-size-xl);
 }
 
 .modal-close-btn {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
-  padding: 0.25rem;
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-card);
   border-radius: var(--radius-full);
   color: var(--color-text-secondary);
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .modal-close-btn:hover {
-  color: var(--color-text-primary) !important;
+  color: var(--color-text-primary);
 }
 
 .badge {
@@ -2125,6 +2142,21 @@ img {
   }
 }
 
+/* Only things you click lift on hover: the product cards. The order card holds
+   a form, and FAQ items, values cards and the popup stay put. */
+.order-card:hover,
+.modal-dialog:hover,
+.values-card:hover,
+.glass-card.faq-item:hover {
+  transform: none;
+}
+
+.order-card:hover,
+.modal-dialog:hover,
+.glass-card.faq-item:not(.is-open):hover {
+  box-shadow: var(--shadow-card);
+}
+
 /* Theme-aware card surfaces */
 [data-theme="light"] .values-card {
   background: var(--color-bg-card);
@@ -2228,31 +2260,29 @@ img {
   }
 
   .modal-head {
-    position: sticky;
     top: -1.25rem;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
     margin: -1.25rem -1.25rem 0;
     padding: 1rem 1.25rem 0.75rem;
-    background: var(--color-bg-main);
   }
 
   .modal-title {
-    margin: 0;
     font-size: 1.375rem;
   }
 
-  .modal-close-btn {
+  /* The pinned order bar's offsets follow the smaller popup padding. */
+  .product-detail__order {
+    bottom: -1.5rem;
+    margin: 1.25rem -1.25rem -1.5rem;
+    padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Very short screens (landscape phones, 200% zoom): pinning both bars would
+   leave room for about one line of details, so they scroll with the rest. */
+@media (max-height: 480px) {
+  .modal-head,
+  .product-detail__order {
     position: static;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border: 1px solid var(--color-border-card);
   }
 }
 
@@ -2262,12 +2292,6 @@ img {
     padding-top: 1rem;
   }
 
-  /* The pinned order bar's offsets follow the smaller popup padding. */
-  .product-detail__order {
-    bottom: -1.5rem;
-    margin: 1.25rem -1.25rem -1.5rem;
-    padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom, 0px));
-  }
 
   /* "Order Raggi Jaggi on WhatsApp" ran past the button at 320px. */
   .product-detail__order-btn {
