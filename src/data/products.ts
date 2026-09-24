@@ -62,7 +62,7 @@ export const productsData: Product[] = [
     ],
     weightOptions: ['250 g', '500 g'],
     shelfLife: '6 months',
-    contains: 'Tree nuts (almonds), dairy (ghee), wheat (gluten)',
+    contains: 'Tree nuts (almonds and others), dairy (ghee)',
   },
   {
     id: 'bites',
