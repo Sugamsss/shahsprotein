@@ -1,141 +1,107 @@
-# Shah's Nutrition Landing Page — Technical Specification (SPEC.md)
+# Shah's Nutrition website: technical spec
 
-This specification document outlines the complete technical blueprint, visual details, component contracts, data schemas, and styling specifications for building the **Shah's Nutrition** website.
+The public site for Shah's Nutrition, a small healthy-food brand from Satara. The brand launched on **2026-09-23**. The site's job is to **help people order on WhatsApp**, and to answer the questions of people holding a pack (the URL is printed on every pack). Email sign-up is a smaller, secondary choice for people who aren't ready to order yet.
 
----
-
-## 1. Product Requirements & Design Analysis
-
-### Brand Identity
-- **Brand Name**: Shah's Nutrition
-- **Tagline**: *Healthy Food that Tastes Unhealthy 😉*
-- **Core Value Proposition**: *Complete, everyday nutrition made normal — tasty enough that kids eat it, honest enough that you know what's inside, affordable for the whole household.*
-- **Goal**: Make complete, everyday nutrition normal again — one familiar food at a time.
-- **Voice**: First-person founder (Pranjali). Warm, playful, honest, everyday-Indian. Not corporate, not gym-coded.
-
-### Color Palettes & Aesthetics
-
-#### Dark Theme (`data-theme="dark"`)
-- Background Base: `#0e1114` to `#161a1e` smooth subtle radial gradient
-- Section Containers: `#1c2127` with `1px solid rgba(255, 255, 255, 0.08)` border
-- Accent Colors: Warm Gold `#d4af37` / `#e5c158`
-- Primary Button: Warm Gold `#d4af37` gradient to `#b89327` with dark text (`#0e1114`)
-- Text Primary: `#ffffff`
-- Text Secondary: `#9ca3af`
-- Glassmorphism: `background: rgba(28, 33, 39, 0.75)`, `backdrop-filter: blur(16px)`
-
-#### Light Theme (`data-theme="light"`)
-- Background Base: Luminous soft indigo/sky gradient background (`#e0f2fe` -> `#dbeafe` -> `#f1f5f9`)
-- Section Containers: Frosted glass white `rgba(255, 255, 255, 0.7)` with `1px solid rgba(255, 255, 255, 0.8)`
-- Accent Colors: Electric Blue `#3b82f6` & Emerald Aqua `#0ea5e9`
-- Primary Button: Radiant Blue `#3b82f6` gradient to `#2563eb` with white text
-- Text Primary: `#0f172a`
-- Text Secondary: `#475569`
-- Glassmorphism: `background: rgba(255, 255, 255, 0.65)`, `backdrop-filter: blur(16px)`
+Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Supabase stores email sign-ups and runs the owner dashboard (`/admin`). Loops sends the double opt-in email.
 
 ---
 
-## 2. Component Blueprint & Data Contracts
+## 1. Brand and voice
 
-### A. Data Schemas (`src/types/`)
+- **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
+- **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
+- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". No prices are shown yet.
 
-#### Product Schema (`src/types/product.ts`)
-```typescript
-export interface NutritionFact {
-  label: string; // e.g. "Protein", "Calories"
-  value: string; // e.g. "15g", "180 kcal"
-}
+## 2. Themes and design tokens
 
-export interface Product {
-  id: string;
-  name: string; // "Protein Chivda", "Muesli", "Protein Bars"
-  tagline: string;
-  shortDescription: string;
-  fullDescription: string;
-  badgeIcon: 'leaf' | 'wheat' | 'dumbbell';
-  image: string;
-  features: string[];
-  ingredients: string[];
-  nutritionFacts: NutritionFact[];
-  weightOptions: string[]; // ["250g", "500g", "Pack of 3"]
+Tokens live in `src/styles/tokens.css` (type, spacing, radii, z-index) and per theme in `src/styles/light-theme.css` and `src/styles/dark-theme.css`. The theme is stored in `localStorage` (`shahsnutrition_theme`), falling back to the system setting. `index.html` applies it before first paint.
+
+- **Dark:** obsidian surface (`#1f1f1f`), warm gold accent (`#d4af37` to `#b89327`) with dark button text.
+- **Light:** soft sky-to-blush canvas (`#eef4fc` base), blue accent (`#3b82f6` to `#2563eb`) with white button text.
+- Surfaces are frosted glass cards (`.glass-card`, `--color-bg-card`, `--glass-backdrop`).
+- **Order buttons** use the brand accent gradient with a white or dark WhatsApp glyph, not WhatsApp green (`.order-btn` in `global.css`).
+
+CSS order gotcha: `responsive.css` is `@import`ed at the top of `global.css`, so base rules added later in `global.css` override it. Put new breakpoint rules next to their base rules in `global.css`.
+
+## 3. Ordering and contact
+
+All contact details live in one place, `siteConfig.contact` (`src/data/siteConfig.ts`):
+
+| Line | Number | Links | Where it shows |
+|---|---|---|---|
+| **Order** | 98503 59899 | `https://wa.me/919850359899` | Header, hero, product cards, product popup, FAQ, bottom banner, footer |
+| **Customer care** | 98811 91999 | `tel:+919881191999`, `https://wa.me/919881191999` | Under the FAQ list and in the footer only |
+
+Rules:
+- A phone number is **always shown with its label** ("Order" or "Customer care").
+- Customer care **never** appears in the header or hero, where it would compete with ordering.
+
+Links are built by `src/utils/contact.ts` (the message is URL-encoded):
+- General order buttons prefill `Hi! I'd like to place an order.`
+- Product buttons prefill `Hi! I'd like to order <Product>.`
+- "Ask us on WhatsApp" links (FAQ, missing-nutrition note) open the order chat with nothing prefilled, since they're questions, not orders.
+
+Every order link renders through `OrderLink` (`src/components/ui/OrderLink.tsx`), which opens in a new tab and fires `whatsapp_order_click` with a `source`. Sources: `header`, `hero`, `product:<id>`, `product-details:<id>`, `nutrition:<id>`, `faq`, `banner`, `footer`. `CustomerCareLinks` renders the care line's Call and WhatsApp actions.
+
+**Analytics caveat:** `AnalyticsService.trackEvent` only logs to the console in development. In production, events (including `whatsapp_order_click`) are not sent anywhere yet. Section dwell time is only stored alongside an email sign-up.
+
+## 4. Page sections (top to bottom)
+
+1. **Header** (`layout/Header.tsx`): floating glass pill. Logo, centred links (Products, Our Principles, Our Story), theme toggle, Instagram and email icons, and an **Order** button (WhatsApp glyph, 32px). On phones the Order button stays visible next to the menu button. Between 769px and 880px the Instagram and email icons are hidden so the nav doesn't collide.
+2. **Hero** (`sections/HeroSection.tsx`): badge "NOW TAKING ORDERS" (swap back to "GOOD FOOD. BRIGHTER DAYS." after the first month or so), heading from `siteConfig.heroHeading`, motto, **Order on WhatsApp** (48px, full width on phones), a quiet "See the range" link to `#products`, and the line "Made fresh in small batches. Delivered across India." No email form or avatars.
+3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **Order** button. The popup shows tagline, description, ingredients (sprite art), **Good to know** (shelf life, contains, pack sizes), nutrition, and an **Order <Product> on WhatsApp** button, pinned to the bottom of the popup on phones. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
+4. **Values** (`sections/ValuesSection.tsx`, `#values`): "What we believe", three cards from `src/data/values.ts`.
+5. **Our Story** (`sections/StorySection.tsx`, `#our-story`): founder story from `siteConfig.story`, key phrases highlighted with `.story-highlight`.
+6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). Under the list: "Still wondering about something? Ask us on WhatsApp." (order chat) and "Already ordered and need a hand? Customer care: 98811 91999" with Call and WhatsApp.
+7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp**, "Or save our order number: 98503 59899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
+8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 98503 59899, Customer care 98811 91999 (Call, WhatsApp), Instagram, email. **For Business Inquiries:** email.
+
+## 5. Products (`src/data/products.ts`, type in `src/types/product.ts`)
+
+| Product | Pack sizes | Stays fresh | Contains |
+|---|---|---|---|
+| Raggi Jaggi | 250 g, 500 g | 60 days | Tree nuts (cashew), dairy (ghee) |
+| Muesli | 250 g, 500 g | 60 days | Tree nuts (almonds), dairy (ghee), wheat (gluten) |
+| Date Bites | 250 g | 15 days (on purpose) | Tree nuts (almonds, cashew), dairy (ghee) |
+
+- No preservatives, made fresh in small batches. Muesli's cranberries are sweetened.
+- Nutrition panel: Raggi Jaggi only for now. Muesli and Date Bites show the "still adding" note.
+- `weightOptions` holds pack sizes. Prices are not published yet. When they are, cards and the popup can read them from here.
+- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, `date-bites-v2.webp`).
+
+```ts
+interface Product {
+  id: string; name: string; tagline: string;
+  shortDescription: string; fullDescription: string;
+  iconType: 'leaf' | 'wheat' | 'dumbbell' | 'currency';
+  image: string; features: string[]; ingredients: string[];
+  ingredientSprite: { image: string; rows: number };
+  nutritionFacts: { label: string; per100g: string; perServing: string; isSubItem?: boolean }[];
+  weightOptions: string[];   // pack sizes, e.g. "250 g"
+  shelfLifeDays: number;
+  contains: string;          // allergen line for "Good to know"
   isPopular?: boolean;
 }
 ```
 
-#### Value Schema (`src/types/values.ts`)
-```typescript
-export type ValueIconType = 'utensils' | 'scan-search' | 'users-round';
+## 6. Email sign-up (updates list)
 
-export interface BrandValue {
-  id: string;
-  title: string;
-  description: string;
-  iconType: ValueIconType;
-}
-```
+The email row still runs the original waitlist plumbing (code names like `useWaitlist` and `waitlistService` are kept on purpose):
 
-#### FAQ Schema (`src/types/faqs.ts`)
-```typescript
-export interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-  category?: string;
-}
-```
+1. `WaitlistService.submitEmail` calls the Supabase RPC `submit_waitlist_member` with the email, `source` (`footer_newsletter`), consent flag, and `p_consent_version = 'updates-v1'`.
+2. On a new sign-up, it calls the `sync-waitlist-loops` Edge Function, which adds the contact to the Loops list. Loops sends the double opt-in email; the member is pending until they tap the link.
+3. Messages: success "Almost there. We've sent you an email. Tap the link inside to confirm."; duplicate "This email is already on our list. If you haven't confirmed yet, look for our email in your inbox (or spam)."; error "Sorry, that didn't go through. Please try again in a moment."
 
----
+Consent versions stored per member:
+- `waitlist-v1`: "I agree to receive an email about the product launch." (pre-launch)
+- `updates-v1`: "Email me about new products from Shah's Nutrition. I can unsubscribe anytime."
 
-## 3. UI Section Breakdown & Requirements
+The public page no longer fetches or shows a sign-up count. The confirmation email's wording lives in Loops, not in this repo.
 
-### 1. Sticky Navigation Header (`Header.tsx`)
-- Left: Shah's Nutrition logo image & brand name text.
-- Center: Quick navigation links (`Products`, `Our Story`). Smooth scroll to `#products` and `#our-story`.
-- Right:
-  - Theme Toggle Switch (Sun / Moon icon with smooth slider transition).
-  - Social Icon Links (Instagram `@shahsnutrition`, Email `pranjalishah25@gmail.com` until a branded inbox is configured).
-  - `Join Waitlist →` button trigger opening `WaitlistModal`.
+## 7. Owner dashboard
 
-### 2. Hero Section (`HeroSection.tsx`)
-- Badge: `OUR GOAL` pill badge.
-- Main Heading: `To make tasty and healthy food for you and your family` with gradient accent on **"tasty"**, **"healthy"**, **"you"**, and **"family"**. The heading lives in `siteConfig.heroHeading` as an array of `TextSegment`s (`src/types/content.ts`); highlighted segments render with the `text-gradient` class.
-- Subtitle: `Complete Nutrition for Every Day and Every One` (from `siteConfig.motto`).
-- Waitlist Form: Email text input + `Join Waitlist →` submit button.
-- Live Social Proof Stack: 4 overlapping avatar thumbnails + `500+ people have already joined!` counter text.
-- Hero Visual: Composition of product pouch, natural ingredients bowl, and floating spices.
+`/admin` (Supabase Auth, `admin_users`) shows members, campaigns and analytics. It still says "waitlist", which is fine because only the founder sees it. Setup is in `supabase/README.md`.
 
-### 3. Product Showcase (`ProductsSection.tsx`)
-- Section Header: `OUR FIRST PRODUCTS` — `We're starting with Protein Chivda, Muesli, and Protein Bars.`
-- Grid of 3 Product Cards:
-  - Product image showcase.
-  - Icon badge.
-  - Title & short description.
-  - `Learn more →` button opening `ProductDetailModal`.
+## 8. Meta
 
-### 4. Brand Values (`ValuesSection.tsx`)
-- Section Header: `What we believe` (from `valuesHeading` in `src/data/values.ts`).
-- 3 Glass Cards (data-driven from `valuesData`), 3-column grid on desktop, stacked on mobile:
-  - **Good Tastes Only** (icon: `Utensils`): "Healthy should never taste like a downgrade."
-  - **Know What's Inside** (icon: `ScanSearch`): "I'll always keep the ingredients clear, so you know what you're eating."
-  - **For Every Day and Every One** (icon: `UsersRound`): "Complete, honest nutrition at a price that works for the whole household, every ordinary day."
-- Each card: restrained single-color icon in a circle, title, supporting line, subtle hover lift/glow. Theme-aware via `--color-bg-card`, `--glass-backdrop`, `--color-text-accent`.
-
-### 5. Our Story Section (`StorySection.tsx`)
-- Section Header: `OUR STORY` — `Making healthy food that tastes unhealthy.`
-- Story Paragraphs (first-person founder voice, from `siteConfig.story`): pain → belief → decision arc. Opens with the modern Indian diet failing nutrition and healthy food feeling like a downgrade; the belief that healthy shouldn't mean a downgrade (the son's "betrayal"); and the decision to build Shah's Nutrition so complete everyday nutrition feels normal again.
-- Selective highlights: paragraphs are arrays of `TextSegment`s; the key phrases render with the `.story-highlight` class (gradient text + 2px underline). Highlighted phrases: "It tastes...healthy.", "Healthy food shouldn't feel like a downgrade.", "healthy food that tastes unhealthy", "This is just the beginning". No whole-paragraph bolding.
-- Image: High quality founders kitchen / preparation photograph.
-
-### 6. Interactive FAQ Accordion (`FAQSection.tsx`)
-- Common customer questions regarding launch dates, pre-orders, ingredient sourcing, shipping, and dietary suitability.
-
-### 7. Newsletter CTA Banner (`NewsletterSection.tsx`)
-- Mail icon badge.
-- Heading: `Be the first to know.`
-- Subtitle: `New products, early access, and exclusive updates.`
-- Reusable Waitlist Form & Avatar Stack.
-
-### 8. Footer (`Footer.tsx`)
-- Left: Logo + Tagline (`Healthy Food that Tastes Unhealthy 😉` from `siteConfig.tagline`).
-- Columns: Quick Links, Follow Us, For Business Inquiries (`pranjalishah25@gmail.com` until branded inboxes are configured).
-- Copyright statement.
+`index.html` description: "Raggi Jaggi, Muesli and Date Bites from Shah's Nutrition: wholesome everyday foods made with real ingredients and honest nutrition. Order on WhatsApp." Open Graph and Twitter descriptions also end with "Order on WhatsApp."
