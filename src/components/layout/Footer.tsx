@@ -32,7 +32,7 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div>
             <img
-              src={theme === 'dark' ? '/assets/logo-dark.png' : '/assets/logo.png'}
+              src={theme === 'dark' ? '/assets/logo-dark.webp' : '/assets/logo.webp'}
               alt={siteConfig.name}
               width={507}
               height={160}

@@ -83,9 +83,8 @@ export const HeroSection: React.FC = () => {
 
       <div className={`hero-visual-space hero-visual-space--${theme}`} aria-hidden="true">
         <img
-          src={theme === 'light'
-            ? '/assets/generated-muesli/muesli-hero-current-light.png'
-            : '/assets/generated-muesli/muesli-hero-current-dark.png'}
+          // index.html preloads this same URL for the saved theme. Keep the two in sync.
+          src={`/assets/generated-muesli/muesli-hero-current-${theme}.webp`}
           alt=""
           className="hero-visual-image"
           width={1672}

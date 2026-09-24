@@ -72,11 +72,14 @@ export const StorySection: React.FC = () => {
           <div ref={rightRef} className="reveal reveal-right-far reveal-story-slow delay-200">
             <Card style={{ padding: 'var(--space-4)' }}>
               <img
-                src="/assets/story-family-approved.png"
+                src="/assets/story-family-approved-1200w.webp"
+                srcSet="/assets/story-family-approved-800w.webp 800w, /assets/story-family-approved-1200w.webp 1200w, /assets/story-family-approved-1672w.webp 1672w"
+                sizes="(min-width: 1200px) 526px, (min-width: 740px) 42vw, calc(100vw - 66px)"
                 alt="The Shah family working together on Shah's Nutrition"
                 width={1672}
                 height={941}
                 loading="lazy"
+                decoding="async"
                 style={{ borderRadius: 'var(--radius-lg)', width: '100%', objectFit: 'cover' }}
               />
             </Card>
