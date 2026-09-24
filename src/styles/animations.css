@@ -13,26 +13,6 @@
   }
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
-  }
-}
-
-@keyframes floatSlow {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
 /* Header & Hero Load Entrance Animations */
 @keyframes headerDropDown {
   0% {
@@ -104,40 +84,12 @@
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-float {
-  animation: floatSlow 4s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 3s ease-in-out infinite;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-28px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(28px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
 /* Reveal utility — elements start hidden, become visible when .is-visible is added by JS */
 .reveal {
   opacity: 0;
   transform: translateY(36px) scale(0.97);
   filter: blur(8px);
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
   transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
               filter 0.85s cubic-bezier(0.16, 1, 0.3, 1);
@@ -166,11 +118,8 @@
   position: relative;
   z-index: 1;
 }
-.reveal-left  { transform: translateX(-28px); }
-.reveal-right { transform: translateX(28px); }
 .reveal-left-far  { transform: translateX(-70px) scale(0.92); filter: blur(6px); }
 .reveal-right-far { transform: translateX(70px) scale(0.92); filter: blur(6px); }
-.reveal-scale { transform: scale(0.95); }
 
 /* Slow Luxurious Story Reveal */
 .reveal-story-slow {
@@ -179,50 +128,8 @@
               filter 1.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* Stagger delays */
-.delay-100 { transition-delay: 100ms; }
+/* Stagger delay */
 .delay-200 { transition-delay: 200ms; }
-.delay-300 { transition-delay: 300ms; }
-.delay-400 { transition-delay: 400ms; }
-.delay-500 { transition-delay: 500ms; }
-
-/* Typewriter Cursor */
-@keyframes cursorBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-/* Ultra-Smooth Liquid Word Reveal Animation */
-@keyframes liquidWordFade {
-  0% {
-    opacity: 0;
-    filter: blur(16px);
-    transform: translateY(16px) scale(0.94);
-  }
-  100% {
-    opacity: 1;
-    filter: blur(0px);
-    transform: translateY(0) scale(1);
-  }
-}
-
-.liquid-word {
-  display: inline-block;
-  opacity: 0;
-  will-change: transform, opacity, filter;
-}
-
-.liquid-word.is-revealed {
-  animation: liquidWordFade 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.typewriter-cursor {
-  display: inline-block;
-  color: var(--color-accent-primary);
-  font-weight: 400;
-  margin-left: 3px;
-  animation: cursorBlink 0.7s infinite;
-}
 
 /* Refined Premium Glass Card Hover Micro-Interactions */
 .glass-card {

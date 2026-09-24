@@ -143,8 +143,4 @@ export class AnalyticsService {
   static trackEvent(eventName: string, properties?: Record<string, unknown>): void {
     if (import.meta.env.DEV) console.log(`[Analytics] Event: ${eventName}`, properties || '');
   }
-
-  static trackPageView(path: string): void {
-    if (import.meta.env.DEV) console.log(`[Analytics] PageView: ${path}`);
-  }
 }
