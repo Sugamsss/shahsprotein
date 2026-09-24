@@ -29,8 +29,8 @@ All contact details live in one place, `siteConfig.contact` (`src/data/siteConfi
 
 | Line | Number | Links | Where it shows |
 |---|---|---|---|
-| **Order** | 98503 59899 | `https://wa.me/919850359899` | Header, hero, product cards, product popup, FAQ, bottom banner, footer |
-| **Customer care** | 98811 91999 | `tel:+919881191999`, `https://wa.me/919881191999` | Under the FAQ list and in the footer only |
+| **Order** | 9850359899 | `https://wa.me/919850359899` | Header, hero, product cards, product popup, FAQ, bottom banner, footer |
+| **Customer care** | 9881191999 | `tel:+919881191999`, `https://wa.me/919881191999` | Under the FAQ list and in the footer only |
 
 Rules:
 - A phone number is **always shown with its label** ("Order" or "Customer care").
@@ -59,9 +59,9 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **Order** button. The popup shows tagline, description, ingredients (sprite art), **Good to know** (shelf life, contains, pack sizes), nutrition, and an **Order <Product> on WhatsApp** button, pinned to the bottom of the popup on phones. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
 4. **Values** (`sections/ValuesSection.tsx`, `#values`): "What we believe", three cards from `src/data/values.ts`.
 5. **Our Story** (`sections/StorySection.tsx`, `#our-story`): founder story from `siteConfig.story`, key phrases highlighted with `.story-highlight`.
-6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). Under the list: "Have another question? Ask us on WhatsApp." (order chat) and "Need help with an order you've placed? Customer care: 98811 91999" with Call and WhatsApp.
-7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp**, "Or save our order number: 98503 59899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
-8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 98503 59899, Customer care 98811 91999 (Call, WhatsApp), Instagram, email. **For Business Inquiries:** email.
+6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). Under the list: "Have another question? Ask us on WhatsApp." (order chat) and "Need help with an order you've placed? Customer care: 9881191999" with Call and WhatsApp.
+7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp**, "Or save our order number: 9850359899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
+8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 9850359899, Customer care 9881191999 (Call, WhatsApp), Instagram, email. **For Business Inquiries:** email.
 
 ## 5. Products (`src/data/products.ts`, type in `src/types/product.ts`)
 

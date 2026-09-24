@@ -33,13 +33,13 @@ export const siteConfig = {
   contact: {
     order: {
       label: 'Order',
-      display: '98503 59899',
+      display: '9850359899',
       // Country code + number, digits only, as wa.me and tel: links expect.
       number: '919850359899',
     },
     care: {
       label: 'Customer care',
-      display: '98811 91999',
+      display: '9881191999',
       number: '919881191999',
     },
   },

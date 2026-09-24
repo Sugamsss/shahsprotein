@@ -7,7 +7,7 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-1',
     question: 'How do I order?',
-    answer: "On WhatsApp. Tap any \"Order on WhatsApp\" button, or message us on 98503 59899. Tell us what you'd like, and we'll reply with the total, delivery included, and how to pay. We take all online payments, but not cash on delivery.",
+    answer: "On WhatsApp. Tap any \"Order on WhatsApp\" button, or message us on 9850359899. Tell us what you'd like, and we'll reply with the total, delivery included, and how to pay. We take all online payments, but not cash on delivery.",
   },
   {
     id: 'faq-2',
@@ -37,7 +37,7 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-7',
     question: 'I need help with an order. Who do I talk to?',
-    answer: 'Call or WhatsApp our customer care team on 98811 91999. They can help with a late parcel, a problem with your order, or a question about something you bought. For a new order, message us on 98503 59899.',
+    answer: 'Call or WhatsApp our customer care team on 9881191999. They can help with a late parcel, a problem with your order, or a question about something you bought. For a new order, message us on 9850359899.',
   },
   {
     id: 'faq-8',
