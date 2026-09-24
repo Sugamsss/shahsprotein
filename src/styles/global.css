@@ -861,13 +861,32 @@ a {
   mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 85%);
 }
 
-/* Light mode is the same food composition, recast as a bright studio scene.
-   The pale wash deliberately removes the dark-mode charcoal atmosphere while
-   keeping the product and ingredients tactile and legible. */
+/* Light mode is the same food composition, recast as a bright studio scene,
+   so it drops the dark-mode charcoal wash. The fade into the page is the
+   hero's own veil below. */
 [data-theme="light"] .hero-visual-space::after {
-  background: linear-gradient(180deg, transparent 0%, transparent 70%, rgba(238, 244, 252, 0.42) 88%, var(--color-bg-main) 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 85%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 85%);
+  content: none;
+}
+
+/* Light hero fade: one veil from the lower hero down past the seam into the
+   top of Products. It carries the warm photo through a pale haze into the
+   sky-blue page, so there's no grey band and no line at the section edge.
+   Products sits above it (position: relative there). */
+[data-theme="light"] .hero-section {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+[data-theme="light"] .hero-section::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 60%;
+  right: 0;
+  bottom: -30vh;
+  left: 0;
+  background: var(--hero-fade-veil);
+  pointer-events: none;
 }
 
 .hero-visual-image {
@@ -887,8 +906,8 @@ a {
 [data-theme="light"] .hero-visual-image {
   opacity: 1;
   filter: none;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 85%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 85%);
+  -webkit-mask-image: var(--hero-fade-photo-mask);
+  mask-image: var(--hero-fade-photo-mask);
 }
 
 [data-theme="light"] .hero-visual-space {
@@ -989,6 +1008,8 @@ a {
 }
 
 .products-section {
+  /* Paints Products above the tail of the light hero fade. */
+  position: relative;
   padding: calc(var(--header-height) + 1.5rem) 0 2.5rem;
 }
 
@@ -1387,6 +1408,22 @@ a {
   .hero-content {
     max-width: 34rem;
     margin: max(clamp(23rem, 40svh, 30rem), calc(50svh - 1rem)) auto 0;
+  }
+}
+
+/* Light hero fade on the stacked layouts (phones, tablets, portrait iPad
+   Pro), where the art is a box above the card: a lighter warm-to-cool veil
+   kept inside the box. The photo keeps each layout's own fade. */
+@media (max-width: 900px), (max-width: 1199px) and (orientation: portrait) {
+  [data-theme="light"] .hero-section::after {
+    content: none;
+  }
+
+  [data-theme="light"] .hero-visual-space::after {
+    content: '';
+    background: var(--hero-fade-veil-box);
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
@@ -2891,6 +2928,20 @@ img {
   .hero-visual-image {
     object-fit: cover;
     object-position: right center;
+  }
+
+  /* The art is full-bleed again, so it takes the desktop light fade. */
+  [data-theme="light"] .hero-section::after {
+    content: '';
+  }
+
+  [data-theme="light"] .hero-visual-space::after {
+    content: none;
+  }
+
+  [data-theme="light"] .hero-visual-image {
+    -webkit-mask-image: var(--hero-fade-photo-mask);
+    mask-image: var(--hero-fade-photo-mask);
   }
 
   .hero-content {
