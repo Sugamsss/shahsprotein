@@ -13,11 +13,14 @@ const joinWithAnd = (items: string[]): string =>
 
 const ProductCard: React.FC<{ product: Product; onOpen: (product: Product) => void }> = ({ product, onOpen }) => (
   <article className={`portfolio-card portfolio-card--${product.id}`}>
-    <div
+    <img
       className="portfolio-card__art"
-      role="img"
-      aria-label={`${product.name} pouch and ingredients from the Shah's Nutrition product portfolio`}
-      style={{ backgroundImage: `url(${product.image})` }}
+      src={product.image}
+      alt={`${product.name} pouch and ingredients from the Shah's Nutrition product portfolio`}
+      width={473}
+      height={364}
+      loading="lazy"
+      decoding="async"
     />
     <div className="portfolio-card__body">
       <h3>{product.name}</h3>

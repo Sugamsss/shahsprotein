@@ -927,22 +927,19 @@ a {
   outline-offset: 3px;
 }
 
+/* Each card image is its own crop of the product portfolio, cut at the card's 1.3 ratio. */
 .portfolio-card__art {
+  width: 100%;
   aspect-ratio: 1.3;
-  background-repeat: no-repeat;
-  background-size: 315% auto;
-  background-position: 3% 30%;
+  object-fit: cover;
   background-color: #fff2dc;
 }
 
 .portfolio-card--muesli .portfolio-card__art {
-  background-size: 350% auto;
-  background-position: 50% 30%;
   background-color: #eaf5ff;
 }
 
 .portfolio-card--bites .portfolio-card__art {
-  background-position: 97% 30%;
   background-color: #ffe9e9;
 }
 
@@ -1198,10 +1195,6 @@ a {
   .portfolio-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
-  }
-
-  .portfolio-card__art {
-    aspect-ratio: 1.3;
   }
 
   .portfolio-card__action,
