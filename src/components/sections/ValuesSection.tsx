@@ -14,7 +14,7 @@ export const ValuesSection: React.FC = () => (
   <section
     id="values"
     className="snap-section"
-    aria-label="Core Values"
+    aria-label="Our Principles"
     style={{
       minHeight: '100vh',
       paddingTop: 'calc(var(--header-height) + var(--space-8))',

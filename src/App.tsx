@@ -15,6 +15,7 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AnalyticsService } from './services/analyticsService';
 import { useTheme } from './context/ThemeContext';
 import './styles/global.css';
+import { NotFound } from './components/pages/NotFound';
 
 // Admin is loaded on demand, so landing visitors never download it or Supabase.
 const AdminLogin = React.lazy(() => import('./components/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })));
@@ -34,6 +35,8 @@ const AnalyticsTracker: React.FC = () => {
   }, [theme]);
 
   React.useEffect(() => AnalyticsService.startSession(theme), []);
+
+  React.useEffect(() => AnalyticsService.startPageViews(), []);
 
   return null;
 };
@@ -94,6 +97,7 @@ export const App: React.FC = () => (
               <Route path="settings" element={<AccountSettings />} />
             </Route>
           </Route>
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </React.Suspense>
     </BrowserRouter>

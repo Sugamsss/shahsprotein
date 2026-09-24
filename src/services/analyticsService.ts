@@ -140,6 +140,23 @@ export class AnalyticsService {
     }
   }
 
+  /**
+   * Vercel Web Analytics (page views, cookieless) for the landing page only.
+   * This is the script `@vercel/analytics` injects, loaded without the package.
+   * Same host rule as `trackSiteEvent`, so local, preview and admin visits stay out.
+   * The project needs Web Analytics enabled in the Vercel dashboard, or the script 404s.
+   */
+  static startPageViews(): void {
+    if (!shouldSendEvents() || document.querySelector('script[data-vercel-analytics]')) return;
+    const w = window as Window & { va?: (...args: unknown[]) => void; vaq?: unknown[][] };
+    w.va = w.va || ((...args: unknown[]) => { (w.vaq = w.vaq || []).push(args); });
+    const script = document.createElement('script');
+    script.src = '/_vercel/insights/script.js';
+    script.defer = true;
+    script.dataset.vercelAnalytics = '';
+    document.head.appendChild(script);
+  }
+
   static trackEvent(eventName: string, properties?: Record<string, unknown>): void {
     if (import.meta.env.DEV) console.log(`[Analytics] Event: ${eventName}`, properties || '');
   }

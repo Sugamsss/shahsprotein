@@ -66,5 +66,11 @@ export const siteConfig = {
     alreadyTitle: "You're already on our list.",
     alreadyBody: "If you haven't confirmed yet, look for our email in your inbox (or spam).",
   },
+  // Shown for any URL that isn't a page.
+  notFound: {
+    title: 'This page wandered off.',
+    body: "Let's get you back to the good stuff.",
+    home: "Back to Shah's Nutrition",
+  },
   copyright: `© ${new Date().getFullYear()} Shah's Nutrition. All rights reserved.`,
 };

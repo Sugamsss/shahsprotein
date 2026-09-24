@@ -22,6 +22,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.getElementById('theme-favicon-ico')?.setAttribute('href', `/favicon-${prefix}.ico${version}`);
     document.getElementById('theme-favicon-32')?.setAttribute('href', `/favicon-${prefix}-32x32.png${version}`);
     document.getElementById('theme-apple-touch-icon')?.setAttribute('href', `/apple-touch-icon-${prefix}.png${version}`);
+
+    // The browser toolbar follows the chosen theme, even when it differs from the OS.
+    const toolbar = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-main').trim();
+    if (toolbar) {
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', toolbar));
+    }
   }, [theme]);
 
   const toggleTheme = () => {

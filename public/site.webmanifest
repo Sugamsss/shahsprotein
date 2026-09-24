@@ -1,0 +1,15 @@
+{
+  "name": "Shah's Nutrition",
+  "short_name": "Shah's",
+  "description": "Raggi Jaggi, Muesli and Date Bites. Real ingredients, honest nutrition. Order on WhatsApp.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "lang": "en-IN",
+  "background_color": "#eef4fc",
+  "theme_color": "#eef4fc",
+  "icons": [
+    { "src": "/favicon-light.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon-light.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
