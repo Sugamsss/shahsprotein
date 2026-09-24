@@ -27,5 +27,5 @@ export const careWhatsappUrl = (): string => whatsappUrl(care.number);
  * `source` says which button it was, e.g. "hero", "product:muesli", "faq".
  */
 export const trackOrderClick = (source: string): void => {
-  AnalyticsService.trackEvent('whatsapp_order_click', { source });
+  AnalyticsService.trackSiteEvent('whatsapp_order_click', source);
 };
