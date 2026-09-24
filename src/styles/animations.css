@@ -26,7 +26,7 @@
 }
 
 .header-entrance {
-  animation: headerDropDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: headerDropDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes heroCardEntrance {
@@ -85,14 +85,14 @@
 }
 
 /* Reveal utility — elements start hidden, become visible when .is-visible is added by JS */
+/* Quick and clean: a short rise with no blur or scale, so content is never
+   shown blurred after a nav jump (D10). */
 .reveal {
   opacity: 0;
-  transform: translateY(36px) scale(0.97);
-  filter: blur(8px);
+  transform: translateY(16px);
   will-change: opacity, transform;
-  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-              filter 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.is-visible {
   opacity: 1 !important;
@@ -107,20 +107,18 @@
   transform: none;
 }
 .reveal.snap-section > .container {
-  transform: translateY(36px) scale(0.97);
-  transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(16px);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.snap-section.is-visible > .container {
   transform: none;
 }
-.reveal-left-far  { transform: translateX(-70px) scale(0.92); filter: blur(6px); }
-.reveal-right-far { transform: translateX(70px) scale(0.92); filter: blur(6px); }
+.reveal-left-far  { transform: translateX(-24px); }
+.reveal-right-far { transform: translateX(24px); }
 
-/* Slow Luxurious Story Reveal */
+/* Story: a touch slower than the other sections. */
 .reveal-story-slow {
-  transition: opacity 1.25s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 1.25s cubic-bezier(0.16, 1, 0.3, 1),
-              filter 1.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition-duration: 0.6s;
 }
 
 /* Stagger delay */

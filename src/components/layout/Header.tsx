@@ -94,7 +94,7 @@ export const Header: React.FC = () => {
             width={507}
             height={160}
             loading="eager"
-            style={{ height: '24px', width: 'auto', objectFit: 'contain' }}
+            className="header-logo"
           />
         </a>
 

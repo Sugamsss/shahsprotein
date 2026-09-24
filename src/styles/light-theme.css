@@ -48,6 +48,9 @@
   --color-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   --color-btn-text: #ffffff;
 
+  /* Story highlighter stroke */
+  --color-highlight: rgba(59, 130, 246, 0.28);
+
   /* Feedback */
   --color-error: #dc2626;
   --color-success: #16a34a;

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { Container } from '../layout/Container';
+import { Badge } from '../ui/Badge';
 import { Modal } from '../ui/Modal';
 import { OrderLink } from '../ui/OrderLink';
 import { productsData } from '../../data/products';
@@ -60,7 +61,7 @@ export const ProductsSection: React.FC = () => {
       <section id="products" ref={sectionRef} className="reveal products-section snap-section" aria-label="Our Products">
         <Container>
           <div className="portfolio-intro">
-            <p className="portfolio-intro__eyebrow">Meet the range</p>
+            <p className="portfolio-intro__eyebrow"><Badge>Meet the range</Badge></p>
             <h2>Simple ingredients. <em>Extraordinary benefits.</em></h2>
             <p>Wholesome everyday foods made with real ingredients and honest nutrition.</p>
           </div>

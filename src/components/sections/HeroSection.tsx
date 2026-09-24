@@ -20,16 +20,7 @@ export const HeroSection: React.FC = () => {
               <Badge icon={null} className="badge-underline" style={{ marginBottom: 'var(--space-2)' }}>NOW TAKING ORDERS</Badge>
             </div>
 
-            <h1
-              className="hero-stagger-2"
-              style={{
-                fontSize: '2.4rem',
-                color: 'var(--color-text-primary)',
-                lineHeight: 1.2,
-                marginBottom: 'var(--space-3)',
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <h1 className="hero-title hero-stagger-2">
               {siteConfig.heroHeading.map((segment, index) => (
                 segment.highlight ? (
                   <span key={`${segment.text}-${index}`} className="text-gradient">{segment.text}</span>
@@ -37,16 +28,7 @@ export const HeroSection: React.FC = () => {
               ))}
             </h1>
 
-            <p
-              className="hero-stagger-3 hero-motto"
-              style={{
-                fontSize: 'var(--font-size-base)',
-                color: 'var(--color-text-secondary)',
-                marginBottom: '1.25rem',
-                maxWidth: '450px',
-                lineHeight: 1.5,
-              }}
-            >
+            <p className="hero-motto hero-stagger-3">
               {siteConfig.motto}
             </p>
 

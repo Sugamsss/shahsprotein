@@ -1,7 +1,8 @@
 import React from 'react';
 import { ScanSearch, UsersRound, Utensils, type LucideIcon } from 'lucide-react';
 import { Container } from '../layout/Container';
-import { valuesData, valuesHeading } from '../../data/values';
+import { Badge } from '../ui/Badge';
+import { valuesData, valuesEyebrow, valuesHeading } from '../../data/values';
 import type { ValueIconType } from '../../types/values';
 
 const valueIconMap: Record<ValueIconType, LucideIcon> = {
@@ -27,6 +28,9 @@ export const ValuesSection: React.FC = () => (
   >
     <Container>
       <div className="values-intro">
+        <div className="values-eyebrow">
+          <Badge>{valuesEyebrow}</Badge>
+        </div>
         <h2 className="values-heading">{valuesHeading}</h2>
         <div className="values-grid">
           {valuesData.map((value) => {

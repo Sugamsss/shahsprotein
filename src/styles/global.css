@@ -286,6 +286,19 @@ a {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* Logo: 24px on phones, 30px from 769px up so the tagline under it reads (D8). */
+.header-logo {
+  width: auto;
+  height: 24px;
+  object-fit: contain;
+}
+
+@media (min-width: 769px) {
+  .header-logo {
+    height: 30px;
+  }
+}
+
 /* Theme toggle. The light track has its own tokens so it shows on the white header. */
 .theme-toggle {
   position: relative;
@@ -372,6 +385,22 @@ a {
   border: 1px solid var(--color-border-card);
   box-shadow: var(--shadow-card);
   transition: background var(--transition-theme), border-color var(--transition-theme), box-shadow var(--transition-theme);
+}
+
+.hero-title {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+  font-size: 2.4rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.hero-motto {
+  max-width: 450px;
+  margin-bottom: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
 }
 
 /* Hero actions: one clear order button, a quiet way to browse first. */
@@ -1019,6 +1048,35 @@ a {
   }
 }
 
+/* Desktop: the hero headline leads the page, larger than the section titles,
+   and the card lines up with the content grid. Below 1100 the wider card
+   would cover the bowl, so the split stays as it was (D2). */
+@media (min-width: 1100px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-left: 0;
+    padding: clamp(1.75rem, 2.2vw, 2.25rem);
+  }
+
+  .hero-title {
+    margin-bottom: 1rem;
+    font-size: clamp(2.25rem, 0.9rem + 2.8vw, 3.25rem);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .hero-motto {
+    max-width: 42ch;
+    margin-bottom: 1.5rem;
+    font-size: clamp(1rem, 0.92rem + 0.2vw, 1.125rem);
+  }
+}
+
 .products-section {
   padding: calc(var(--header-height) + 1.5rem) 0 2.5rem;
 }
@@ -1030,20 +1088,19 @@ a {
 }
 
 .portfolio-intro__eyebrow {
-  color: var(--color-text-accent);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  margin-bottom: 0.25rem;
 }
 
 .portfolio-intro h2 {
   margin: 0.5rem 0 0.65rem;
   font-size: clamp(2.1rem, 4vw, 3.4rem);
   line-height: 1.08;
+  text-wrap: balance;
 }
 
+/* The serif line keeps to its own line, so "benefits." never sits alone. */
 .portfolio-intro h2 em {
+  display: block;
   color: var(--color-product-name);
   font-family: var(--font-family-serif);
   font-weight: 500;
@@ -1490,15 +1547,14 @@ img {
   -webkit-text-fill-color: transparent;
 }
 
+/* A highlighter stroke, so the emphasis doesn't read as a link (D7). */
 .story-highlight {
-  background: var(--color-accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.18em;
-  text-decoration-skip-ink: auto;
-  text-decoration-color: var(--color-accent-primary);
+  padding: 0 0.08em;
+  background: linear-gradient(transparent 58%, var(--color-highlight) 58%);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .glass-card {
@@ -1848,11 +1904,34 @@ img {
 
 .faq-item__answer p {
   margin-top: 0.5rem;
+  /* Padding, not max-width, keeps the divider full width while the text
+     stays near 64 characters a line (D9). */
   padding-top: 0.85rem;
+  padding-right: max(0px, calc(100% - 64ch));
   border-top: 1px solid var(--color-border-subtle);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: 1.65;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+@media (min-width: 901px) {
+  .faq-item__answer p {
+    font-size: 1rem;
+  }
+}
+
+/* The keyboard focus ring goes around the whole card, not a square inside it.
+   Browsers without :has() keep the ring on the button. */
+@supports selector(:has(*)) {
+  .faq-item:has(.faq-item__toggle:focus-visible) {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+
+  .faq-item__toggle:focus-visible {
+    outline: none;
+  }
 }
 
 /* Under the FAQ list: where to go when the answer isn't there. */
@@ -1994,6 +2073,11 @@ img {
 .values-intro {
   width: 100%;
   margin: 0 auto;
+}
+
+.values-eyebrow {
+  margin-bottom: var(--space-3);
+  text-align: center;
 }
 
 .values-heading {
@@ -2139,6 +2223,33 @@ img {
   .values-card-desc {
     font-size: 0.9375rem;
     line-height: 1.5;
+  }
+}
+
+/* Desktop: every section title shares one size, below the hero headline (D6). */
+@media (min-width: 901px) {
+  .portfolio-intro h2,
+  .values-heading {
+    font-size: var(--font-size-3xl);
+    line-height: 1.1;
+  }
+}
+
+/* Laptop-height screens (1280x720, 1366x768): shorter card art keeps the
+   cards' Order buttons above the fold (D4). */
+@media (min-width: 901px) and (max-height: 860px) {
+  .products-section {
+    padding-top: calc(var(--header-height) + 1rem);
+    padding-bottom: 1.5rem;
+  }
+
+  .portfolio-intro {
+    margin-bottom: 1rem;
+  }
+
+  .portfolio-card__art {
+    height: clamp(150px, 100vh - 520px, 290px);
+    aspect-ratio: auto;
   }
 }
 
