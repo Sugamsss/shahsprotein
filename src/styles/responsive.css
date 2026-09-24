@@ -20,9 +20,6 @@
   .mobile-toggle {
     display: flex !important;
   }
-  .values-grid {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 /* Products section centering */
@@ -172,7 +169,7 @@
   /* The principles statement is intentionally expressive, but the desktop
      scale becomes tiring to scan on a phone. */
   #values h2 {
-    font-size: clamp(1.8rem, 7.8vw, 2.15rem) !important;
+    font-size: clamp(1.9rem, 8.4vw, 2.25rem) !important;
     line-height: 1.28 !important;
     letter-spacing: -0.025em !important;
   }

@@ -35,7 +35,7 @@ export const ValuesSection: React.FC = () => (
             return (
               <article className="glass-card values-card" key={value.id}>
                 <div className="values-icon-circle" aria-hidden="true">
-                  <Icon size={24} strokeWidth={1.8} />
+                  <Icon />
                 </div>
                 <div className="values-card-content">
                   <h3 className="values-card-title">{value.title}</h3>
