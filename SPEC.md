@@ -68,7 +68,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 | Product | Pack sizes | Stays fresh | Contains |
 |---|---|---|---|
 | Raggi Jaggi | 250 g, 500 g | 6 months | Tree nuts (cashew), dairy (ghee) |
-| Muesli | 250 g, 500 g | 6 months | Tree nuts (almonds and others), dairy (ghee) |
+| Muesli | 250 g, 500 g | 6 months | Tree nuts (almonds and others), dairy (ghee), gluten (oats) |
 | Date Bites | 250 g | 15 days (on purpose) | Tree nuts (almonds, cashew), dairy (ghee) |
 
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
