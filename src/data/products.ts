@@ -62,6 +62,7 @@ export const productsData: Product[] = [
     nutritionFacts: [],
     weightOptions: ['250 g'],
     shelfLifeDays: 15,
+    madeToOrder: true,
     contains: 'Tree nuts (almonds, cashew), dairy (ghee)',
   },
 ];

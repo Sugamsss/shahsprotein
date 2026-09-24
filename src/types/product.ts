@@ -23,6 +23,8 @@ export interface Product {
   weightOptions: string[];
   /** How long it stays fresh. Kept short on purpose: no preservatives. */
   shelfLifeDays: number;
+  /** Made after the order comes in, so it ships fresh. */
+  madeToOrder?: boolean;
   /** Allergen line shown under "Good to know", e.g. "Tree nuts (cashew), dairy (ghee)". */
   contains: string;
   isPopular?: boolean;

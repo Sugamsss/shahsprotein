@@ -140,7 +140,7 @@ export const FAQSection: React.FC = () => {
       aria-label="Frequently Asked Questions"
     >
       <Container>
-        <SectionHeader badge="FREQUENTLY ASKED QUESTIONS" title="Got questions? We've got answers." />
+        <SectionHeader badge="FREQUENTLY ASKED QUESTIONS" title="Questions you might have" />
 
         <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {faqsData.map((faq, index) => (
@@ -158,12 +158,12 @@ export const FAQSection: React.FC = () => {
             an existing order go to customer care, so they don't land in the sales chat. */}
         <div className="faq-help">
           <p>
-            Still wondering about something?{' '}
+            Have another question?{' '}
             <OrderLink source="faq" ask variant="text">Ask us on WhatsApp.</OrderLink>
           </p>
           <p className="faq-help__care">
             <span>
-              Already ordered and need a hand? {siteConfig.contact.care.label}:{' '}
+              Need help with an order you've placed? {siteConfig.contact.care.label}:{' '}
               <strong>{siteConfig.contact.care.display}</strong>
             </span>
             <CustomerCareLinks />
