@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -9,9 +9,28 @@ export interface ModalProps {
   children: React.ReactNode;
 }
 
+// Matches the exit animation in global.css (sheet slides down, dialog fades).
+const EXIT_MS = 240;
+
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Play the exit animation, then close. Instant for people who ask for less motion.
+  const requestClose = useCallback(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onClose();
+      return;
+    }
+    setIsClosing(true);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isClosing) return;
+    const timer = setTimeout(onClose, EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [isClosing, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,7 +57,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        requestClose();
         return;
       }
 
@@ -81,47 +100,21 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         previousActiveElement.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, requestClose]);
 
   if (!isOpen) return null;
 
   const titleId = title ? `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined;
 
   return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 'var(--z-modal-overlay)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        backgroundColor: 'rgba(0, 0, 0, 0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
-      onClick={onClose}
-    >
+    <div className={`modal-overlay${isClosing ? ' is-closing' : ''}`} onClick={requestClose}>
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="glass-card animate-fade-in modal-dialog"
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '600px',
-          overflowY: 'auto',
-          backgroundColor: 'var(--color-bg-main)',
-          border: '1px solid var(--color-border-hover)',
-          boxShadow: 'var(--shadow-card)',
-          zIndex: 'var(--z-modal)',
-          transform: 'scale(1)',
-          outline: 'none',
-        }}
+        className="modal-dialog"
         onClick={(e) => e.stopPropagation()}
       >
         {/* On phones this row sticks to the top, so close stays in reach. */}
@@ -132,7 +125,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             </h3>
           )}
 
-          <button onClick={onClose} aria-label="Close Modal" className="modal-close-btn">
+          <button type="button" onClick={requestClose} aria-label="Close Modal" className="modal-close-btn">
             <X size={20} />
           </button>
         </div>

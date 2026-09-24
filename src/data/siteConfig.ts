@@ -28,6 +28,15 @@ export const siteConfig = {
       ],
     ] satisfies TextSegment[][],
   },
+  // Section links in the header and the phone menu, in page order.
+  nav: [
+    { href: '#products', label: 'Products' },
+    { href: '#values', label: 'Our Principles' },
+    { href: '#our-story', label: 'Our Story' },
+    { href: '#faq', label: 'FAQ' },
+  ],
+  // Under the Order button in the order card at the end of the page.
+  replyTime: 'We usually reply the same day.',
   // Two numbers with two jobs. Always show a number with its label, and keep
   // customer care out of the header and hero, where it would compete with ordering.
   contact: {

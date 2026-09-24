@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { OrderLink } from '../ui/OrderLink';
-import { Instagram, Mail, Menu, X } from 'lucide-react';
+import { Instagram, Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
 
 export const Header: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -46,12 +46,7 @@ export const Header: React.FC = () => {
     <header ref={headerRef} className="site-header header-entrance">
       {/* Floating Glass Pill */}
       <div className={`header-pill${isScrolled ? ' is-scrolled' : ''}`}>
-        {/* Brand Logo */}
-        <a
-          href="#"
-          style={{ display: 'flex', alignItems: 'center', flex: '1', justifyContent: 'flex-start' }}
-          aria-label={siteConfig.name}
-        >
+        <a href="#" className="header-brand" aria-label={siteConfig.name}>
           <img
             src={theme === 'dark' ? '/assets/logo-dark.webp' : '/assets/logo.webp'}
             alt={siteConfig.name}
@@ -62,40 +57,20 @@ export const Header: React.FC = () => {
           />
         </a>
 
-        {/* Desktop Nav Links — centered */}
-        <nav
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1.5rem',
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-          }}
-          className="desktop-nav"
-        >
-          <a href="#products" className="header-nav-link">
-            Products
-          </a>
-          <a href="#values" className="header-nav-link">
-            Our Principles
-          </a>
-          <a href="#our-story" className="header-nav-link">
-            Our Story
-          </a>
+        {/* Section links, centred. On phones they live in the menu below. */}
+        <nav className="header-nav desktop-nav" aria-label="Main">
+          {siteConfig.nav.map((item) => (
+            <a key={item.href} href={item.href} className="header-nav-link">
+              {item.label}
+            </a>
+          ))}
         </nav>
 
-        {/* Right: Actions */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '8px',
-            flex: '1',
-          }}
-        >
-          <ThemeToggle />
+        <div className="header-actions">
+          {/* On the smallest phones the toggle moves into the menu ("Appearance"). */}
+          <span className="header-theme-toggle">
+            <ThemeToggle />
+          </span>
 
           <a
             href={siteConfig.social.instagram}
@@ -120,74 +95,60 @@ export const Header: React.FC = () => {
             Order
           </OrderLink>
 
-          {/* Mobile Menu Toggle */}
           <button
+            type="button"
             className="mobile-toggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-drawer"
-            style={{
-              color: 'var(--color-text-primary)',
-              padding: '0.25rem',
-              display: 'none',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Dropdown Drawer */}
+      {/* Phone menu */}
       <div
         id="mobile-drawer"
-        className="mobile-drawer"
+        className={`mobile-drawer${mobileMenuOpen ? ' is-open' : ''}`}
         aria-hidden={!mobileMenuOpen}
         // Keeps the closed drawer's links out of the tab order. React 18 has no
         // typed `inert` prop, so it's passed as a plain attribute.
         {...(!mobileMenuOpen && { inert: '' })}
-        style={{
-          width: '100%',
-          maxWidth: 'var(--container-max-width)',
-          maxHeight: mobileMenuOpen ? '300px' : '0px',
-          opacity: mobileMenuOpen ? 1 : 0,
-          overflow: 'hidden',
-          borderRadius: mobileMenuOpen ? 'var(--radius-lg)' : '0',
-          backdropFilter: 'blur(32px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-          border: mobileMenuOpen ? '1px solid var(--color-border-header)' : '1px solid transparent',
-          marginTop: mobileMenuOpen ? '6px' : '0px',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: mobileMenuOpen ? '0.25rem 1.25rem' : '0 1.25rem',
-          pointerEvents: mobileMenuOpen ? 'auto' : 'none',
-          transition:
-            'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, padding 0.3s ease, border-color 0.3s ease, margin-top 0.3s ease',
-        }}
       >
-        <a
-          href="#products"
-          onClick={() => setMobileMenuOpen(false)}
-          className="header-nav-btn"
-        >
-          Products
-        </a>
-        <a
-          href="#values"
-          onClick={() => setMobileMenuOpen(false)}
-          className="header-nav-btn"
-        >
-          Our Principles
-        </a>
-        <a
-          href="#our-story"
-          onClick={() => setMobileMenuOpen(false)}
-          className="header-nav-btn"
-        >
-          Our Story
-        </a>
+        <nav className="drawer-nav" aria-label="Menu">
+          {siteConfig.nav.map((item) => (
+            <a key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className="header-nav-btn">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="drawer-social">
+          <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="drawer-pill">
+            <Instagram size={18} aria-hidden="true" />
+            Instagram
+          </a>
+          <a href={`mailto:${siteConfig.social.email}`} className="drawer-pill">
+            <Mail size={18} aria-hidden="true" />
+            Email us
+          </a>
+        </div>
+
+        <div className="drawer-appearance">
+          <span id="drawer-appearance-label">Appearance</span>
+          <div className="segmented" role="group" aria-labelledby="drawer-appearance-label">
+            <button type="button" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>
+              <Sun size={16} aria-hidden="true" />
+              Light
+            </button>
+            <button type="button" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>
+              <Moon size={16} aria-hidden="true" />
+              Dark
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

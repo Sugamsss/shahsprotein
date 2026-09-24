@@ -77,6 +77,8 @@ export const NewsletterSection: React.FC = () => {
 
             <OrderLink source="banner" size="lg">Order on WhatsApp</OrderLink>
 
+            <p className="order-card__reply">{siteConfig.replyTime}</p>
+
             <p className="order-card__number">
               Or save our order number: <strong>{siteConfig.contact.order.display}</strong>
             </p>

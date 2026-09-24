@@ -14,12 +14,6 @@
     --font-size-3xl: 1.875rem;
     --section-padding-y: var(--space-12);
   }
-  .desktop-nav {
-    display: none !important;
-  }
-  .mobile-toggle {
-    display: flex !important;
-  }
 }
 
 /* Products section centering */
