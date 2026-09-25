@@ -57,6 +57,8 @@ export const adminCopy = {
     submit: 'Sign in',
     busy: 'Signing in…',
     wrong: "That username and password don't match.",
+    // Shown under the error only after a failed sign-in. Sugam resets passwords with the script.
+    forgot: 'Forgot your password? Ask Sugam.',
     missing: 'Type your username and password.',
     back: 'Back to the website',
     sessionEnded: 'You were signed out. Sign in again to carry on.',

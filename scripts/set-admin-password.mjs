@@ -26,7 +26,8 @@ const fail = (message) => {
 const args = process.argv.slice(2);
 const localAt = args.indexOf('--local');
 const localDir = localAt >= 0 ? args[localAt + 1] : null;
-const username = args.filter((a, i) => i !== localAt && i !== localAt + 1)[0]?.trim().toLowerCase();
+const rest = localAt >= 0 ? args.filter((_, i) => i !== localAt && i !== localAt + 1) : args;
+const username = rest[0]?.trim().toLowerCase();
 
 if (!username || !/^[a-z0-9._-]{2,40}$/.test(username)) {
   fail('Usage: node scripts/set-admin-password.mjs <username>   (e.g. sunit)');
