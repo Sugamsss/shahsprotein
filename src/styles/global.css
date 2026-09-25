@@ -1078,15 +1078,15 @@ a {
   width: 100%;
   aspect-ratio: 1.3;
   object-fit: cover;
-  background-color: #fff2dc;
+  background-color: var(--color-art-raggi-jaggi);
 }
 
 .portfolio-card--muesli .portfolio-card__art {
-  background-color: #eaf5ff;
+  background-color: var(--color-art-muesli);
 }
 
 .portfolio-card--bites .portfolio-card__art {
-  background-color: #ffe9e9;
+  background-color: var(--color-art-bites);
 }
 
 .portfolio-card__body {
@@ -1176,13 +1176,15 @@ a {
   line-height: 1.6;
 }
 
-.product-detail__section {
+.product-detail__section,
+.popup-section {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--color-border-card);
 }
 
-.product-detail__section h4 {
+.product-detail__section h4,
+.popup-section h4 {
   margin-bottom: 0.75rem;
   color: var(--color-text-primary);
   font-family: var(--font-family-body);
@@ -1240,7 +1242,9 @@ a {
   font-weight: 600;
 }
 
-.product-detail__order {
+/* A popup's pinned bottom bar (the product popup's Add, "Your order"'s Send).
+   Negative margins cancel the popup's padding so it spans the full width. */
+.popup-bar {
   position: sticky;
   bottom: -2rem;
   z-index: 1;
@@ -1250,8 +1254,16 @@ a {
   background: var(--color-bg-main);
 }
 
-.product-detail__order-btn {
-  width: 100%;
+/* Pack size, then "Add to order" taking the rest of the row. */
+.product-detail__order {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.product-detail__add {
+  flex: 1;
+  min-width: 0;
 }
 
 .product-detail__nutrition {
@@ -1318,6 +1330,937 @@ a {
 .product-detail__nutrition tbody .product-detail__nutrition-subitem {
   padding-left: calc(var(--nutrition-inline-padding) + 0.5rem);
   font-weight: 400;
+}
+
+/* ─── "Your order" popup ──────────────────────────────────────────────
+   Reuses Modal, .popup-section and .popup-bar. Desktop and shared rules are
+   here; phone rules are in the end block, reduced motion in the last one. */
+
+/* A focused field never sits under the sticky title row or the Send bar. */
+.order-dialog {
+  scroll-padding-block: 5.5rem 8rem;
+}
+
+/* The product popup turning into "Your order": only the content fades in. */
+.order-panel--switched {
+  animation: order-fade-in 160ms ease both;
+}
+
+.order-intro {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.order-intro + * {
+  margin-top: 1rem;
+}
+
+.order-notice {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-pill);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.order-notice svg,
+.order-line__note svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: var(--color-text-accent);
+}
+
+/* Lines: compact rows between hairlines. `isolation` keeps each row's tint
+   behind its content but above the popup. */
+.order-lines {
+  position: relative;
+  isolation: isolate;
+  list-style: none;
+  border-top: 1px solid var(--color-border-divider);
+}
+
+.order-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'thumb name qty'
+    'thumb size qty'
+    'note note note';
+  align-items: center;
+  column-gap: 0.875rem;
+  row-gap: 0.375rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border-divider);
+  transition: opacity 150ms ease;
+}
+
+.order-line.is-leaving {
+  opacity: 0;
+}
+
+/* Just added: the tint is fully on for 250ms, then fades over 650ms. */
+.order-line__flash {
+  position: absolute;
+  inset: 0 -0.625rem;
+  z-index: -1;
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--color-accent-primary) 14%, var(--color-bg-main));
+  opacity: 0;
+  pointer-events: none;
+  animation: order-flash 900ms both;
+}
+
+/* A row that has just appeared also rises into place. */
+.order-line.is-rising {
+  animation: order-rise 200ms ease-out backwards;
+}
+
+.order-thumb {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.order-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The product's art colour shows while the thumbnail loads. */
+.order-thumb--raggi-jaggi {
+  background-color: var(--color-art-raggi-jaggi);
+}
+
+.order-thumb--muesli {
+  background-color: var(--color-art-muesli);
+}
+
+.order-thumb--bites {
+  background-color: var(--color-art-bites);
+}
+
+.order-line__thumb {
+  grid-area: thumb;
+  align-self: start;
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+}
+
+/* An inset hairline, drawn over the image so it isn't hidden by it. */
+.order-line__thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--color-border-divider);
+}
+
+.order-line__name {
+  grid-area: name;
+  min-width: 0;
+  color: var(--color-product-name);
+  font-family: var(--font-family-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.order-line__size {
+  grid-area: size;
+  min-width: 0;
+}
+
+.order-line .qty-stepper {
+  grid-area: qty;
+}
+
+.order-line__note {
+  display: grid;
+  grid-area: note;
+  gap: 0.25rem;
+  margin: 0.125rem 0 0 calc(48px + 0.875rem);
+}
+
+.order-line__note p {
+  display: flex;
+  gap: 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.order-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding-left: 0.125rem;
+  border-bottom: 1px solid var(--color-border-divider);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  animation: order-fade-in 150ms ease both;
+}
+
+/* The last line removed: the undo row sits above the empty state. */
+.order-panel > .order-undo {
+  margin-bottom: 1rem;
+}
+
+.order-undo button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-full);
+  color: var(--color-text-accent);
+  font-weight: 600;
+}
+
+/* Pack size: native radios in a pill, so arrow keys work. */
+.size-choice {
+  display: inline-flex;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--color-toggle-border);
+  border-radius: var(--radius-full);
+  background: var(--color-toggle-track);
+}
+
+.size-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.size-choice label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  min-height: 32px;
+  padding: 0 0.7rem;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.size-choice input:checked + label {
+  background: var(--color-choice-selected-bg);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14), inset 0 0 0 1px var(--color-border-hover);
+}
+
+[data-theme='dark'] .size-choice input:checked + label {
+  color: var(--color-text-accent);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.45);
+}
+
+/* The radio is hidden, so its focus ring goes on its label. */
+.size-choice input:focus-visible + label {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+.size-choice--lg label {
+  min-width: 4rem;
+  min-height: 40px;
+  padding: 0 0.8rem;
+  font-size: 0.9375rem;
+}
+
+/* One pack size: plain text, never a one-option switch. */
+.size-fixed {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.size-fixed--lg {
+  min-height: 48px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--color-toggle-border);
+  border-radius: var(--radius-full);
+  background: var(--color-toggle-track);
+  font-size: 0.9375rem;
+  white-space: nowrap;
+}
+
+/* Quantity: 44px tall, the number never animates. */
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-input);
+}
+
+.qty-stepper__btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-accent);
+  transition: background-color 150ms ease;
+}
+
+.qty-stepper__btn.is-remove {
+  color: var(--color-text-secondary);
+}
+
+.qty-stepper__btn[aria-disabled='true'] {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-stepper__value {
+  min-width: 1.75rem;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* "Add something else": three small tiles. */
+.order-shelf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+  list-style: none;
+}
+
+.order-shelf__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.4rem 0.625rem 0.4rem 0.4rem;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  text-align: left;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.order-shelf__art {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.625rem;
+}
+
+.order-shelf__name {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.order-shelf__name small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text-accent);
+  font-size: 0.8125rem;
+}
+
+.order-shelf__plus {
+  display: none;
+}
+
+/* Empty: a row per product. */
+.order-empty__title {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.order-empty__body {
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.order-picks {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+  list-style: none;
+}
+
+.order-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem 0.625rem 0.625rem;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  text-align: left;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+@media (hover: hover) {
+  .order-shelf__item:hover,
+  .order-pick:hover {
+    border-color: var(--color-border-hover);
+    transform: translateY(-2px);
+  }
+
+  .qty-stepper__btn:not([aria-disabled='true']):hover {
+    background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+  }
+}
+
+.order-pick__thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 0.75rem;
+}
+
+.order-pick__name {
+  display: block;
+  color: var(--color-product-name);
+  font-family: var(--font-family-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.order-pick__tagline {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.order-pick__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0 0.9rem 0 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-gradient);
+  color: var(--color-btn-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-glow);
+}
+
+.order-chat {
+  margin-top: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Your details */
+.order-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12rem;
+  align-items: start;
+  gap: 1rem;
+}
+
+.order-field__label {
+  display: block;
+  margin: 0 0 0.375rem 0.75rem;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-field__hint,
+.order-field__error {
+  margin: 0.375rem 0.75rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.order-field__hint {
+  color: var(--color-text-muted);
+}
+
+.order-field__error {
+  display: flex;
+  gap: 0.375rem;
+  color: var(--color-error-text);
+  font-weight: 500;
+}
+
+.order-field__error svg,
+.order-coupon__result svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.order-fields .input,
+.order-coupon__row .input {
+  min-height: 2.75rem;
+}
+
+/* Coupon */
+.order-coupon {
+  margin-top: 1rem;
+}
+
+.order-coupon__toggle,
+.order-preview__toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: 0.5rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-coupon__toggle {
+  gap: 0.5rem;
+}
+
+.order-coupon__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.order-coupon__row .input {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.order-coupon__row .input::placeholder {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.order-coupon__row .input[readonly] {
+  color: var(--color-text-secondary);
+}
+
+.order-coupon__apply {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 6.25rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  transition: border-color var(--transition-fast);
+}
+
+.order-coupon__apply[aria-disabled='true'] {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .order-coupon__apply:not([aria-disabled='true']):hover {
+    border-color: var(--color-border-hover);
+  }
+}
+
+.order-coupon__spinner {
+  animation: order-spin 0.8s linear infinite;
+}
+
+.order-coupon__result {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.5rem 0.75rem 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.45;
+  animation: order-fade-in 150ms ease both;
+}
+
+.order-coupon__result--invalid {
+  color: var(--color-error-text);
+}
+
+.order-coupon__applied {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.375rem 0.625rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-success) 45%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-success) 9%, var(--color-bg-main));
+  animation: order-fade-in 150ms ease both;
+}
+
+.order-coupon__applied > svg {
+  flex: 0 0 auto;
+  color: var(--color-success-text);
+}
+
+/* Couldn't check it: neutral, dashed, and it still goes in the message. */
+.order-coupon__applied--unchecked {
+  border: 1px dashed var(--color-border-input);
+  background: transparent;
+}
+
+.order-coupon__applied--unchecked > svg {
+  color: var(--color-text-secondary);
+}
+
+.order-coupon__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.order-coupon__text strong {
+  display: block;
+  color: var(--color-text-primary);
+  letter-spacing: 0.04em;
+}
+
+.order-coupon__ok {
+  color: var(--color-success-text);
+  font-weight: 600;
+}
+
+.order-coupon__remove {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-full);
+  color: var(--color-text-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* See your message */
+.order-preview {
+  margin-top: 0.5rem;
+}
+
+.order-preview__toggle {
+  gap: 0.4rem;
+}
+
+.order-preview__chevron {
+  transition: transform 200ms ease;
+}
+
+.order-preview__toggle[aria-expanded='true'] .order-preview__chevron {
+  transform: rotate(180deg);
+}
+
+.order-preview__panel {
+  --order-rise: 4px;
+  margin-top: 0.375rem;
+  padding: 0.875rem;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-pill);
+  animation: order-rise 180ms ease-out both;
+}
+
+.order-preview__panel[hidden] {
+  display: none;
+}
+
+[data-theme='dark'] .order-preview__panel {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.order-preview__who {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+.order-preview__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-gradient);
+  color: var(--color-btn-text);
+}
+
+.order-preview__who strong {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+}
+
+.order-preview__who small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.order-bubble {
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  padding: 0.75rem 0.875rem;
+  border-radius: 16px 16px 4px 16px;
+  background: color-mix(in srgb, var(--color-accent-primary) 13%, var(--color-bg-input-focus));
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 1px 2px rgba(10, 20, 60, 0.06);
+}
+
+[data-theme='dark'] .order-bubble {
+  background: color-mix(in srgb, var(--color-accent-primary) 20%, var(--color-bg-main));
+}
+
+/* A blank where the name or pincode will go. */
+.order-bubble mark {
+  padding: 0 0.15em;
+  background: transparent;
+  color: var(--color-text-accent);
+  font-weight: 600;
+  box-shadow: inset 0 -1.5px 0 currentColor;
+}
+
+/* Send */
+.order-send__btn {
+  width: 100%;
+}
+
+.order-send__note {
+  margin-top: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Sent */
+.order-sent {
+  padding-top: 0.5rem;
+  text-align: center;
+  animation: order-rise 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.order-sent__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent-primary) 14%, transparent);
+  color: var(--color-text-accent);
+}
+
+.order-sent__title {
+  margin-top: 0.875rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-heading);
+  font-size: 1.375rem;
+  text-wrap: balance;
+}
+
+.order-sent__body {
+  max-width: 26rem;
+  margin: 0.5rem auto 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.order-recap {
+  margin-top: 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  text-align: left;
+}
+
+.order-recap ul {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+}
+
+.order-recap li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.order-recap li span {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-recap__meta {
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-border-divider);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.order-sent__retry {
+  margin-top: 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.order-sent__forgot {
+  margin-top: 0.375rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.order-sent__bar {
+  display: flex;
+  gap: 0.625rem;
+}
+
+.pill-btn {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border-radius: var(--radius-full);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pill-btn--secondary {
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+.pill-btn--primary {
+  background: var(--color-accent-gradient);
+  color: var(--color-btn-text);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Entry points */
+.portfolio-card__add {
+  gap: 0.35rem;
+  padding-left: 0.8rem;
+}
+
+/* Count of packs in the header's Order button, where the WhatsApp glyph was. */
+.header-order-btn__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-right: -0.3rem;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-btn-text);
+  color: var(--color-text-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-order-btn__count.is-pop {
+  animation: order-chip-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* The footer's "Order on WhatsApp" is a button now; it keeps the link look. */
+button.footer-link {
+  padding: 0;
+  text-align: inherit;
+}
+
+@keyframes order-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes order-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--order-rise, 6px));
+  }
+}
+
+@keyframes order-flash {
+  0%,
+  27.8% {
+    opacity: 1;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes order-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes order-chip-pop {
+  50% { transform: scale(1.22); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1486,6 +2429,18 @@ img {
 }
 
 /* Utility Classes */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .text-gradient {
   background: var(--color-accent-gradient);
   -webkit-background-clip: text;
@@ -2704,24 +3659,11 @@ img {
     font-size: 1.375rem;
   }
 
-  /* The pinned order bar's offsets follow the smaller popup padding. */
-  .product-detail__order {
+  /* The pinned bar's offsets follow the smaller popup padding. */
+  .popup-bar {
     bottom: -1.5rem;
     margin: 1.25rem -1.25rem -1.5rem;
     padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom, 0px));
-  }
-}
-
-@media (max-width: 400px) {
-  .product-detail__order-btn {
-    gap: 0.4rem;
-    padding-inline: 0.75rem;
-    font-size: 0.9375rem;
-  }
-
-  .product-detail__order-btn svg {
-    width: 16px;
-    height: 16px;
   }
 }
 
@@ -2776,25 +3718,16 @@ img {
    leave room for about one line of details, so they scroll with the rest. */
 @media (max-height: 480px) {
   .modal-head,
-  .product-detail__order {
+  .popup-bar {
     position: static;
   }
 }
 
 @media (max-width: 600px) {
-  .product-detail__section {
+  .product-detail__section,
+  .popup-section {
     margin-top: 1.25rem;
     padding-top: 1rem;
-  }
-
-
-  /* "Order Raggi Jaggi on WhatsApp" stays on one line from 360px; at 320 it
-     wraps to two balanced, centred lines. */
-  .product-detail__order-btn {
-    padding-inline: 1rem;
-    white-space: normal;
-    text-align: center;
-    text-wrap: balance;
   }
 
   .product-detail__ingredients {
@@ -2830,6 +3763,147 @@ img {
 @media (max-width: 340px) {
   .product-detail__nutrition {
     --nutrition-inline-padding: 0.375rem;
+  }
+}
+
+/* "Your order" on phones: bigger touch targets, tiles with the picture on
+   top, and fields stacked. */
+@media (max-width: 600px) {
+  .order-line {
+    column-gap: 0.75rem;
+  }
+
+  .order-line__note {
+    margin-left: calc(48px + 0.75rem);
+  }
+
+  /* 36px segments in a 44px track; each label's hit area reaches 44px. */
+  .order-line__size .size-choice label {
+    min-height: 36px;
+  }
+
+  .size-choice label::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .order-shelf__item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .order-shelf__art {
+    width: auto;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+  }
+
+  .order-shelf__name {
+    display: block;
+    padding: 0.375rem 0.25rem 0.45rem;
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+
+  .order-shelf__name small {
+    display: none;
+  }
+
+  .order-shelf__plus {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-accent-gradient);
+    color: var(--color-btn-text);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  }
+
+  .order-pick__thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .order-pick__add {
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .order-pick__add span {
+    display: none;
+  }
+
+  .order-fields {
+    grid-template-columns: 1fr;
+    gap: 0.875rem;
+  }
+
+  .order-fields .input,
+  .order-coupon__row .input,
+  .order-coupon__apply {
+    min-height: 3rem;
+  }
+}
+
+/* Narrowest phones: the size switch gets the row under the name. */
+@media (max-width: 359px) {
+  .order-line {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'thumb name name'
+      'size size qty'
+      'note note note';
+    column-gap: 0.625rem;
+    row-gap: 0.5rem;
+  }
+
+  .order-line__thumb {
+    align-self: center;
+    width: 40px;
+    height: 40px;
+  }
+
+  .order-line__note {
+    margin-left: 0;
+  }
+
+  .order-line__size .size-choice label {
+    min-width: 3.1rem;
+    padding: 0 0.5rem;
+  }
+
+  /* The product popup's bar stacks: the switch full width, Add under it. */
+  .product-detail__order {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .product-detail__order .size-choice {
+    display: flex;
+  }
+
+  .product-detail__order .size-choice label {
+    flex: 1;
+  }
+}
+
+/* Short screens: the note under Send goes, so more of the order shows. */
+@media (max-height: 640px) {
+  .order-send__note {
+    display: none;
   }
 }
 
@@ -3011,6 +4085,34 @@ img {
   .modal-dialog {
     animation: none;
     opacity: 1;
+    transform: none;
+  }
+
+  /* "Your order": nothing moves. The just-added tint still fades (colour
+     only), and the spinner is a still icon next to "Checking". */
+  .order-panel--switched,
+  .order-line.is-rising,
+  .order-undo,
+  .order-coupon__result,
+  .order-coupon__applied,
+  .order-coupon__spinner,
+  .order-preview__panel,
+  .order-sent,
+  .header-order-btn__count.is-pop {
+    animation: none;
+  }
+
+  .order-line,
+  .order-preview__chevron,
+  .size-choice label,
+  .qty-stepper__btn,
+  .order-shelf__item,
+  .order-pick {
+    transition: none;
+  }
+
+  .order-shelf__item:hover,
+  .order-pick:hover {
     transform: none;
   }
 

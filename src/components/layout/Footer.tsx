@@ -4,6 +4,7 @@ import { siteConfig } from '../../data/siteConfig';
 import { Instagram, Mail, Phone } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { OrderLink } from '../ui/OrderLink';
+import { OrderButton } from '../order/OrderButton';
 import { careCallUrl } from '../../utils/contact';
 
 export const Footer: React.FC = () => {
@@ -37,7 +38,7 @@ export const Footer: React.FC = () => {
               <li><a href="#products" className="footer-link">Products</a></li>
               <li><a href="#our-story" className="footer-link">Our Story</a></li>
               <li>
-                <OrderLink source="footer" variant="plain" className="footer-link">Order on WhatsApp</OrderLink>
+                <OrderButton from="footer" variant="plain" className="footer-link">Order on WhatsApp</OrderButton>
               </li>
               <li><a href="#updates" className="footer-link">Get updates</a></li>
             </ul>

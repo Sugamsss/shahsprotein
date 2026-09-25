@@ -1,10 +1,15 @@
-import React, { useCallback, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import React, { useCallback, useRef, useState } from 'react';
+import { ArrowUpRight, Plus } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
 import { Modal } from '../ui/Modal';
 import { OrderLink } from '../ui/OrderLink';
+import { SizeChoice } from '../order/SizeChoice';
+import { preloadOrderHandlers } from '../order/OrderButton';
+import { LazyOrderPanel } from '../order/orderPanelLoader';
 import { productsData } from '../../data/products';
+import { siteConfig } from '../../data/siteConfig';
+import { useOrder } from '../../context/OrderContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { useTheme } from '../../context/ThemeContext';
 import type { Product } from '../../types/product';
@@ -14,7 +19,14 @@ import type { Theme } from '../../types/theme';
 const joinWithAnd = (items: string[]): string =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? '';
 
-const ProductCard: React.FC<{ product: Product; theme: Theme; onOpen: (product: Product) => void }> = ({ product, theme, onOpen }) => (
+const copy = siteConfig.order;
+
+const ProductCard: React.FC<{
+  product: Product;
+  theme: Theme;
+  onOpen: (product: Product) => void;
+  onAdd: (product: Product) => void;
+}> = ({ product, theme, onOpen, onAdd }) => (
   <article className={`portfolio-card portfolio-card--${product.id}`}>
     <img
       className="portfolio-card__art"
@@ -39,25 +51,78 @@ const ProductCard: React.FC<{ product: Product; theme: Theme; onOpen: (product: 
         >
           View details <ArrowUpRight size={18} aria-hidden="true" />
         </button>
-        <OrderLink
-          source={`product:${product.id}`}
-          productName={product.name}
-          size="sm"
-          className="portfolio-card__order"
-          aria-label={`Order ${product.name} on WhatsApp`}
+        {/* Adds the smallest pack (or one more of it) and opens "Your order". */}
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          className="order-btn order-btn--sm portfolio-card__order portfolio-card__add"
+          aria-label={copy.cardAddLabel(product.name)}
+          onClick={() => onAdd(product)}
+          {...preloadOrderHandlers}
         >
-          Order
-        </OrderLink>
+          <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+          <span>{copy.cardAdd}</span>
+        </button>
       </div>
     </div>
   </article>
 );
 
+/** The product popup's pinned bar: pick a pack size, then add it to the order. */
+const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => void }> = ({ product, onAdd }) => {
+  const [size, setSize] = useState(product.weightOptions[0]);
+
+  return (
+    <div className="popup-bar product-detail__order">
+      <SizeChoice
+        large
+        sizes={product.weightOptions}
+        value={size}
+        onChange={setSize}
+        legend={copy.sizeLegendProduct}
+        single={copy.singleSize(size)}
+      />
+      <button
+        type="button"
+        className="order-btn order-btn--lg product-detail__add"
+        onClick={() => onAdd(size)}
+        {...preloadOrderHandlers}
+      >
+        <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
+        <span>{copy.addToOrder}</span>
+      </button>
+    </div>
+  );
+};
+
 export const ProductsSection: React.FC = () => {
   const { theme } = useTheme();
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const closeDetails = useCallback(() => setSelectedProduct(null), []);
+  const { addItem, openOrder, closeOrder, isOpen, openedFrom } = useOrder();
+
+  // "Add to order" turns this popup into "Your order" in place: the overlay
+  // stays, and the title and content change. The shared OrderDialog stays shut
+  // for this opener (see OrderDialog).
+  const showingOrder = selectedProduct !== null && isOpen && openedFrom === 'product-details';
+
+  const showingOrderRef = useRef(showingOrder);
+  showingOrderRef.current = showingOrder;
+
+  const closeDetails = useCallback(() => {
+    setSelectedProduct(null);
+    if (showingOrderRef.current) closeOrder();
+  }, [closeOrder]);
+
+  const addFromCard = useCallback((product: Product) => {
+    addItem(product.id);
+    openOrder('product');
+  }, [addItem, openOrder]);
+
+  const addFromDetails = (product: Product, size: string) => {
+    addItem(product.id, size);
+    openOrder('product-details');
+  };
 
   return (
     <>
@@ -69,111 +134,117 @@ export const ProductsSection: React.FC = () => {
             <p>Wholesome everyday foods made with real ingredients and honest nutrition.</p>
           </div>
           <div className="portfolio-grid">
-            {productsData.map((product) => <ProductCard key={product.id} product={product} theme={theme} onOpen={setSelectedProduct} />)}
+            {productsData.map((product) => <ProductCard key={product.id} product={product} theme={theme} onOpen={setSelectedProduct} onAdd={addFromCard} />)}
           </div>
         </Container>
       </section>
 
       {selectedProduct && (
-        <Modal isOpen onClose={closeDetails} title={selectedProduct.name}>
-          <div className="product-detail">
-            <p className="product-detail__tagline">{selectedProduct.tagline}</p>
-            <p className="product-detail__description">{selectedProduct.fullDescription}</p>
+        <Modal
+          isOpen
+          onClose={closeDetails}
+          title={showingOrder ? copy.title : selectedProduct.name}
+          className={showingOrder ? 'order-dialog' : undefined}
+        >
+          {showingOrder ? (
+            <React.Suspense fallback={null}>
+              <LazyOrderPanel switched />
+            </React.Suspense>
+          ) : (
+            <div className="product-detail">
+              <p className="product-detail__tagline">{selectedProduct.tagline}</p>
+              <p className="product-detail__description">{selectedProduct.fullDescription}</p>
 
-            <section className="product-detail__section" aria-label="Ingredients">
-              <h4>Ingredients</h4>
-              <ul className="product-detail__ingredients">
-                {selectedProduct.ingredients.map((ingredient, index) => {
-                  const { image, rows } = selectedProduct.ingredientSprite;
-                  const column = index % 3;
-                  const row = Math.floor(index / 3);
+              <section className="product-detail__section" aria-label="Ingredients">
+                <h4>Ingredients</h4>
+                <ul className="product-detail__ingredients">
+                  {selectedProduct.ingredients.map((ingredient, index) => {
+                    const { image, rows } = selectedProduct.ingredientSprite;
+                    const column = index % 3;
+                    const row = Math.floor(index / 3);
 
-                  return (
-                    <li key={ingredient}>
-                      <span
-                        className="product-detail__ingredient-art"
-                        aria-hidden="true"
-                        style={{
-                          backgroundImage: `url(${image})`,
-                          backgroundSize: `300% ${rows * 100}%`,
-                          backgroundPosition: `${column * 50}% ${(row / (rows - 1)) * 100}%`,
-                        }}
-                      />
-                      <span>{ingredient}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+                    return (
+                      <li key={ingredient}>
+                        <span
+                          className="product-detail__ingredient-art"
+                          aria-hidden="true"
+                          style={{
+                            backgroundImage: `url(${image})`,
+                            backgroundSize: `300% ${rows * 100}%`,
+                            backgroundPosition: `${column * 50}% ${(row / (rows - 1)) * 100}%`,
+                          }}
+                        />
+                        <span>{ingredient}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
 
-            <section className="product-detail__section" aria-label="Good to know">
-              <h4>Good to know</h4>
-              <dl className="product-detail__facts">
-                <div>
-                  <dt>Stays fresh</dt>
-                  <dd>
-                    {selectedProduct.shelfLife}. No preservatives.
-                    {selectedProduct.madeToOrder && ' Made after you order.'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Contains</dt>
-                  <dd>{selectedProduct.contains}</dd>
-                </div>
-                {selectedProduct.weightOptions.length > 0 && (
+              <section className="product-detail__section" aria-label="Good to know">
+                <h4>Good to know</h4>
+                <dl className="product-detail__facts">
                   <div>
-                    <dt>{selectedProduct.weightOptions.length > 1 ? 'Pack sizes' : 'Pack size'}</dt>
-                    <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
+                    <dt>Stays fresh</dt>
+                    <dd>
+                      {selectedProduct.shelfLife}. No preservatives.
+                      {selectedProduct.madeToOrder && ' Made after you order.'}
+                    </dd>
                   </div>
-                )}
-              </dl>
-            </section>
+                  <div>
+                    <dt>Contains</dt>
+                    <dd>{selectedProduct.contains}</dd>
+                  </div>
+                  {selectedProduct.weightOptions.length > 0 && (
+                    <div>
+                      <dt>{selectedProduct.weightOptions.length > 1 ? 'Pack sizes' : 'Pack size'}</dt>
+                      <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
 
-            <section className="product-detail__section" aria-label="Nutrition information">
-              <h4>Nutrition information</h4>
-              {selectedProduct.nutritionFacts.length > 0 ? (
-                <table className="product-detail__nutrition">
-                  <thead>
-                    <tr>
-                      <th scope="col">Nutrient</th>
-                      <th scope="col">Per 100 g</th>
-                      <th scope="col">Per 30 g <span>(serving)</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedProduct.nutritionFacts.map((fact) => (
-                      <tr key={fact.label}>
-                        <th scope="row" className={fact.isSubItem ? 'product-detail__nutrition-subitem' : undefined}>{fact.label}</th>
-                        <td>{fact.per100g}</td>
-                        <td>{fact.perServing}</td>
+              <section className="product-detail__section" aria-label="Nutrition information">
+                <h4>Nutrition information</h4>
+                {selectedProduct.nutritionFacts.length > 0 ? (
+                  <table className="product-detail__nutrition">
+                    <thead>
+                      <tr>
+                        <th scope="col">Nutrient</th>
+                        <th scope="col">Per 100 g</th>
+                        <th scope="col">Per 30 g <span>(serving)</span></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="product-detail__note">
-                  We’re still adding the full nutrition panel for {selectedProduct.name}. Want the numbers before you
-                  order?{' '}
-                  <OrderLink source={`nutrition:${selectedProduct.id}`} ask variant="text">
-                    Ask us on WhatsApp
-                  </OrderLink>{' '}
-                  and we’ll share what we have.
-                </p>
-              )}
-            </section>
+                    </thead>
+                    <tbody>
+                      {selectedProduct.nutritionFacts.map((fact) => (
+                        <tr key={fact.label}>
+                          <th scope="row" className={fact.isSubItem ? 'product-detail__nutrition-subitem' : undefined}>{fact.label}</th>
+                          <td>{fact.per100g}</td>
+                          <td>{fact.perServing}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="product-detail__note">
+                    We’re still adding the full nutrition panel for {selectedProduct.name}. Want the numbers before you
+                    order?{' '}
+                    <OrderLink source={`nutrition:${selectedProduct.id}`} ask variant="text">
+                      Ask us on WhatsApp
+                    </OrderLink>{' '}
+                    and we’ll share what we have.
+                  </p>
+                )}
+              </section>
 
-            {/* Pinned to the bottom of the popup on phones, so it never hides below the nutrition table. */}
-            <div className="product-detail__order">
-              <OrderLink
-                source={`product-details:${selectedProduct.id}`}
-                productName={selectedProduct.name}
-                size="lg"
-                className="product-detail__order-btn"
-              >
-                Order {selectedProduct.name} on WhatsApp
-              </OrderLink>
+              {/* Pinned to the bottom of the popup, so it never hides below the nutrition table. */}
+              <ProductOrderBar
+                key={selectedProduct.id}
+                product={selectedProduct}
+                onAdd={(size) => addFromDetails(selectedProduct, size)}
+              />
             </div>
-          </div>
+          )}
         </Modal>
       )}
     </>

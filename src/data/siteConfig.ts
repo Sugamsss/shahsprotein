@@ -138,6 +138,8 @@ export const siteConfig = {
     sentBody: "Your order is written out and waiting there. Once you send it, I'll reply with the total, delivery and how to pay. I usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
+    recapQty: (qty: number) => `× ${qty}`,
+    recapCoupon: (code: string) => `Coupon ${code}`,
     forgot: 'Forgot something? Just add it in the chat.',
     newOrder: 'Start a new order',
     done: 'Done',

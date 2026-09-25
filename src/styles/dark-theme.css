@@ -50,6 +50,8 @@
   /* Feedback */
   --color-error: #f87171;
   --color-success: #4ade80;
+  --color-error-text: #f87171;
+  --color-success-text: #4ade80;
   --color-bg-toast: #1a2029;
 
   /* Theme toggle track */
@@ -57,6 +59,10 @@
   --color-toggle-track-hover: rgba(255, 255, 255, 0.08);
   --color-toggle-border: rgba(255, 255, 255, 0.08);
   --shadow-toggle-track: none;
+
+  /* Popup row hairlines, and the picked segment of a size switch. */
+  --color-border-divider: rgba(255, 255, 255, 0.12);
+  --color-choice-selected-bg: rgba(212, 175, 55, 0.16);
 
   /* Shadows & Glass */
   --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.4);

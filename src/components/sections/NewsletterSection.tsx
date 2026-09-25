@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Container } from '../layout/Container';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
-import { OrderLink } from '../ui/OrderLink';
+import { OrderButton } from '../order/OrderButton';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { useWaitlist } from '../../context/WaitlistContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
@@ -75,7 +75,7 @@ export const NewsletterSection: React.FC = () => {
               Message us on WhatsApp. We’ll help you choose, and tell you the total with delivery.
             </p>
 
-            <OrderLink source="banner" size="lg">Order on WhatsApp</OrderLink>
+            <OrderButton from="banner" size="lg">Order on WhatsApp</OrderButton>
 
             <p className="order-card__reply">{siteConfig.replyTime}</p>
 

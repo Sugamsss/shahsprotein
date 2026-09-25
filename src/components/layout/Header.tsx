@@ -1,9 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ThemeToggle } from '../ui/ThemeToggle';
-import { OrderLink } from '../ui/OrderLink';
+import { WhatsAppIcon } from '../ui/WhatsAppIcon';
+import { preloadOrderHandlers } from '../order/OrderButton';
 import { Instagram, Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
+import { useOrder } from '../../context/OrderContext';
+
+const copy = siteConfig.order;
+
+/**
+ * Opens "Your order". Empty, it shows the WhatsApp glyph; with packs in the
+ * order, a count takes the glyph's place, so the width barely changes at 320px.
+ */
+const HeaderOrderButton: React.FC = () => {
+  const { itemCount, openOrder } = useOrder();
+  // A new key replays the chip's little pop whenever the count changes (not on load).
+  const [pop, setPop] = useState(0);
+  const lastCount = useRef(itemCount);
+  useEffect(() => {
+    if (lastCount.current === itemCount) return;
+    lastCount.current = itemCount;
+    setPop((n) => n + 1);
+  }, [itemCount]);
+
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      className="order-btn order-btn--sm header-order-btn"
+      aria-label={itemCount > 0 ? copy.headerCountLabel(itemCount) : copy.headerEmptyLabel}
+      onClick={() => openOrder('header')}
+      {...preloadOrderHandlers}
+    >
+      {itemCount === 0 && <WhatsAppIcon size={15} />}
+      <span>{copy.headerOrder}</span>
+      {itemCount > 0 && (
+        <span key={pop} className={`header-order-btn__count${pop > 0 ? ' is-pop' : ''}`} aria-hidden="true">
+          {itemCount > 9 ? '9+' : itemCount}
+        </span>
+      )}
+    </button>
+  );
+};
 
 export const Header: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -91,9 +130,7 @@ export const Header: React.FC = () => {
           </a>
 
           {/* Stays visible on phones too, where WhatsApp lives. */}
-          <OrderLink source="header" size="sm" className="header-order-btn" aria-label="Order on WhatsApp">
-            Order
-          </OrderLink>
+          <HeaderOrderButton />
 
           <button
             type="button"

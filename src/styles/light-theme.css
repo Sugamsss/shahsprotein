@@ -53,6 +53,10 @@
   /* Feedback */
   --color-error: #dc2626;
   --color-success: #16a34a;
+  /* Text versions of the feedback colours: the ones above are for borders and
+     tints, and fall under 4.5:1 as small text on the popup. */
+  --color-error-text: #b91c1c;
+  --color-success-text: #137537; /* 4.77:1 on the green coupon chip, 5.2:1 on the popup */
   --color-bg-toast: #ffffff;
 
   /* Theme toggle track: a soft grey well, visible on the white header */
@@ -60,6 +64,11 @@
   --color-toggle-track-hover: rgba(15, 23, 42, 0.12);
   --color-toggle-border: rgba(15, 23, 42, 0.14);
   --shadow-toggle-track: inset 0 1px 2px rgba(15, 23, 42, 0.1);
+
+  /* Hairlines between rows inside the popup (border-card is white here, so it
+     disappears on the light popup), and the picked segment of a size switch. */
+  --color-border-divider: rgba(15, 23, 42, 0.08);
+  --color-choice-selected-bg: #ffffff;
 
   /* Shadows & Glass */
   --shadow-card: 0 10px 32px rgba(10, 20, 60, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.60);

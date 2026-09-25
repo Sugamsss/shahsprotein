@@ -12,6 +12,7 @@ import { FAQSection } from './components/sections/FAQSection';
 import { NewsletterSection } from './components/sections/NewsletterSection';
 import { Footer } from './components/layout/Footer';
 import { Toast } from './components/ui/Toast';
+import { OrderDialog } from './components/order/OrderDialog';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AnalyticsService } from './services/analyticsService';
 import { useTheme } from './context/ThemeContext';
@@ -84,6 +85,7 @@ const LandingPage: React.FC = () => (
             </main>
 
             <Toast />
+            <OrderDialog />
         </div>
       </OrderProvider>
     </WaitlistProvider>

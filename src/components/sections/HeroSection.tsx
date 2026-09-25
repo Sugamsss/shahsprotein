@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowDown } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
-import { OrderLink } from '../ui/OrderLink';
+import { OrderButton } from '../order/OrderButton';
 import { useTheme } from '../../context/ThemeContext';
 import { siteConfig } from '../../data/siteConfig';
 
@@ -33,9 +33,9 @@ export const HeroSection: React.FC = () => {
             </p>
 
             <div className="hero-actions hero-stagger-4">
-              <OrderLink source="hero" size="lg" className="hero-actions__order">
+              <OrderButton from="hero" size="lg" className="hero-actions__order">
                 Order on WhatsApp
-              </OrderLink>
+              </OrderButton>
               <a href="#products" className="hero-actions__range">
                 See the range <ArrowDown size={16} aria-hidden="true" />
               </a>
