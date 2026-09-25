@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ChevronRight, Mail, Pencil, User } from 'lucide-react';
+import { AtSign, ChevronRight, Pencil, User } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { adminCopy } from '../../data/adminCopy';
 import type { ThemeMode } from '../../types/theme';
@@ -9,6 +9,7 @@ import { firstName, formatDay } from '../format';
 import { Field, LoadError, Segmented, SheetForm, Skeleton } from '../parts';
 import { useToast } from '../toast';
 import { useRpc } from '../useRpc';
+import { emailToUsername } from '../username';
 
 const copy = adminCopy.settings;
 const THEMES = (['light', 'dark', 'system'] as const).map((value) => ({ value, label: copy.themes[value] }));
@@ -22,7 +23,7 @@ const PasswordSheet: React.FC<{ onClose: () => void; onDone: () => void }> = ({ 
   const firstRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
-    if (password.length < 8) return setProblem({ field: 'password', text: copy.tooShort });
+    if (password.length < 10) return setProblem({ field: 'password', text: copy.tooShort });
     if (again !== password) return setProblem({ field: 'again', text: copy.mismatch });
     setProblem(null);
     await changePassword(password);
@@ -62,10 +63,10 @@ const SettingsPage: React.FC = () => {
               <User size={22} strokeWidth={1.75} aria-hidden="true" />
               <span className="adm-list__main">
                 <span className="adm-list__title">
-                  {firstName(user.display_name) || user.email}
+                  {firstName(user.display_name) || emailToUsername(user.email)}
                   {user.is_me && <span className="adm-pill adm-pill--accent">{copy.you}</span>}
                 </span>
-                <span className="adm-list__sub">{copy.since(formatDay(user.created_at))}</span>
+                <span className="adm-list__sub">{copy.since(emailToUsername(user.email), formatDay(user.created_at))}</span>
               </span>
             </li>
           ))}
@@ -87,10 +88,10 @@ const SettingsPage: React.FC = () => {
         <h2 id="adm-you" className="adm-settings__title">{copy.youTitle}</h2>
         <div className="adm-list">
           <div className="adm-settings__row">
-            <Mail size={22} strokeWidth={1.75} aria-hidden="true" />
+            <AtSign size={22} strokeWidth={1.75} aria-hidden="true" />
             <span className="adm-list__main">
               <span className="adm-list__sub">{copy.signedInAs}</span>
-              <span className="adm-settings__email">{me.email}</span>
+              <span className="adm-settings__email">{emailToUsername(me.email)}</span>
             </span>
           </div>
           <button type="button" className="adm-settings__row" onClick={() => setSheet(true)}>

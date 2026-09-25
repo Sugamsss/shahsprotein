@@ -4,6 +4,7 @@ import { adminCopy as copy } from '../../data/adminCopy';
 import { client } from '../api';
 import { forgetSessionEnded, sessionEnded as endedBefore } from '../auth';
 import { Splash } from '../Splash';
+import { usernameToEmail } from '../username';
 
 const messageFor = (status: number): string => {
   if (status === 429) return copy.errors.rate;
@@ -11,10 +12,11 @@ const messageFor = (status: number): string => {
   return status === 0 ? copy.errors.network : copy.errors.unknown;
 };
 
-// No sign-up: admins are added by hand. On success the auth listener in
-// AdminApp takes over and goes back to where they were heading.
+// No sign-up and no reset email: admins are added by hand, and sign in with a
+// username (see username.ts). On success the auth listener in AdminApp takes
+// over and goes back to where they were heading.
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -24,7 +26,7 @@ const LoginPage: React.FC = () => {
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email.trim() || !password) {
+    if (!username.trim() || !password) {
       setError(copy.login.missing);
       return;
     }
@@ -33,7 +35,7 @@ const LoginPage: React.FC = () => {
     try {
       const supabase = await client;
       if (!supabase) return;
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: usernameToEmail(username), password });
       if (signInError) setError(messageFor(signInError.status ?? 0));
     } catch {
       setError(copy.errors.network);
@@ -53,9 +55,10 @@ const LoginPage: React.FC = () => {
           <p className="adm-login__note" role="status"><Info size={18} aria-hidden="true" />{copy.login.sessionEnded}</p>
         )}
         <label className="adm-field">
-          <span className="adm-field__label">{copy.login.email}</span>
-          <input className="adm-input" type="email" autoComplete="username" inputMode="email"
-            value={email} onChange={(e) => setEmail(e.target.value)} {...errorProps} />
+          <span className="adm-field__label">{copy.login.username}</span>
+          <input className="adm-input" type="text" autoComplete="username" autoCapitalize="none"
+            autoCorrect="off" spellCheck={false} value={username}
+            onChange={(e) => setUsername(e.target.value)} {...errorProps} />
         </label>
         <label className="adm-field">
           <span className="adm-field__label">{copy.login.password}</span>

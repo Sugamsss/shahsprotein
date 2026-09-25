@@ -155,7 +155,7 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 
 ## 7. The admin (order book)
 
-`/admin` is the order book for Pranjali and Sunit, on phone and laptop. Sign-in is Supabase Auth, and only people in `admin_users` get in. It's its own lazy chunk, so the landing page never downloads it. Setup and RPCs are in `supabase/README.md`; code is in `src/admin/`, copy in `src/data/adminCopy.ts`.
+`/admin` is the order book for Pranjali and Sunit, on phone and laptop. Sign-in is a username and password (Supabase Auth underneath), set by the site owner with `scripts/set-admin-password.mjs`; only people in `admin_users` get in, and there's no reset email. It's its own lazy chunk, so the landing page never downloads it. Setup and RPCs are in `supabase/README.md`; code is in `src/admin/`, copy in `src/data/adminCopy.ts`.
 
 - **Home.** What's waiting (to confirm, to send, money to collect, on the way, didn't come through), this week, what's selling (30 days), stock that's off, and coupons used.
 - **Orders.** Lanes on the phone and a board on the laptop: To confirm, To send, On the way, To collect. Each card has its next step as one tap, with Undo. Statuses are New → Confirmed → Sent → Delivered, plus Cancelled; **Paid** is a separate yes/no (some pay on delivery). A New order untouched for 48 hours shows under "Didn't come through?" with **Still waiting** (off the list for 2 more days) and **Cancel**. One order opens as a page on the phone and a popup over the board on the laptop, with its history. Search by code, name or phone. **Done** is a table on the laptop. Orders export to CSV.

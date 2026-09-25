@@ -8,25 +8,46 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-**Adding someone to the admin.** Invite them in the dashboard (**Authentication → Users → Invite user**) so they set their own password, then add them to `public.admin_users` from the SQL editor. The `display_name` is what the admin greets them with. Type the real email only in the live project, never in this repo:
+## Admin sign-in (usernames)
 
-```sql
-insert into public.admin_users (id, email, display_name)
-select id, email, 'Owner'
-from auth.users
-where email = 'owner@example.com'
-on conflict (id) do nothing;
+The admin at `/admin` signs in with a **username and password**, set by the site owner and handed to each person. There's no sign-up and no email of any kind: no invites, no password-reset emails.
+
+- Supabase Auth only knows emails, so each admin's auth email is **`<username>@admin.shahsnutrition.food`** (e.g. `sunit@admin.shahsnutrition.food`). The sign-in page turns a username with no `@` into that address (`src/admin/username.ts`); a full email still works.
+- `admin.shahsnutrition.food` has **no MX or A record**, so nothing can ever be delivered there. Keep it that way (check with `dig +short MX admin.shahsnutrition.food`).
+- Who's an admin is `public.admin_users`, linked to `auth.users` **by user id**. `display_name` is how the admin greets them.
+- Sessions stay signed in on each device (supabase-js keeps and refreshes them). Signing out signs out that device only.
+
+**Setting or resetting a password** (the only way; there's no self-service reset). From the repo, logged in to the Supabase CLI (`supabase login`):
+
+```bash
+node scripts/set-admin-password.mjs sunit
 ```
 
-If the invite email doesn't arrive (Supabase's built-in mailer only sends to the project's team unless custom SMTP is set up), create the user with **Add user** (auto-confirm) and a temporary password they change in the admin's Settings.
+It asks for the new password twice (hidden), needs at least 10 characters, fetches the service key from the CLI at run time, and never prints the key or the password. Each person can later change their own password in the admin under Settings → Change password.
+
+**Adding someone.** Pick a username (lowercase letters, digits, `.`, `_` or `-`), then:
+
+1. Create the auth user with the synthetic email and `email_confirm: true`, so no email is sent. Use the Auth admin API with the service key, or **Authentication → Users → Add user → Create new user** in the dashboard with "Auto Confirm User" ticked. Either way, leave the password to step 3.
+2. Add them to `admin_users` in the SQL editor:
+
+   ```sql
+   insert into public.admin_users (id, email, display_name)
+   select id, email, 'Owner'
+   from auth.users
+   where email = 'owner@admin.shahsnutrition.food'
+   on conflict (id) do nothing;
+   ```
+3. Set their password: `node scripts/set-admin-password.mjs owner`.
+
+Removing someone: delete their `admin_users` row (they can no longer open the admin), or the auth user as well.
 
 The admin is at `/admin` once `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in the deployment environment. Signed in but not in `admin_users` shows "This account can't open the admin".
 
 ## Required production configuration
 
-- Enable email/password Auth and configure a production SMTP provider.
+- Enable email/password Auth. No SMTP is needed for the admin (it never sends email).
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only.
-- Keep public sign-ups off in Supabase Auth. Only invited people have accounts.
+- **Turn public sign-ups off** in the dashboard (**Authentication → Sign In / Providers → Email → Allow new users to sign up**). They're on today; nobody can see data through them, but there's no reason to allow them.
 - The public RPCs are `submit_waitlist_member`, `track_site_event`, `check_coupon`, `submit_order` and `get_product_stock`. Each write is rate-limited in SQL; add a CAPTCHA (e.g. Turnstile on `submit_order`) if junk shows up.
 - Configure Loops for waitlist double opt-in. Supabase remains the source of truth for members and admin data.
 
