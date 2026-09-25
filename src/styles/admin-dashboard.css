@@ -1107,3 +1107,292 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Coupons ─── */
+.admin-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.admin-view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-view h2:focus {
+  outline: none;
+}
+
+.admin-coupons-help {
+  max-width: 60ch;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-6);
+}
+
+.admin-coupons-message {
+  margin-bottom: var(--space-3);
+}
+
+/* The table card holds buttons, so it stays put instead of lifting on hover. */
+.admin-coupons-card.glass-card {
+  padding: 0;
+}
+
+.admin-coupons-card.glass-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-coupons-table td {
+  vertical-align: middle;
+}
+
+.admin-coupons-table td.admin-coupon-code {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.admin-coupons-table tbody tr {
+  transition: background 600ms ease-out;
+}
+
+/* A brief highlight on a row that was just added or saved. */
+.admin-coupons-table tbody tr.is-flash {
+  background: var(--color-bg-badge);
+  transition: none;
+}
+
+.admin-table-muted {
+  color: var(--color-text-muted);
+}
+
+.admin-coupon-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.admin-coupon-actions .btn {
+  min-width: 4.75rem;
+}
+
+/* Saving: aria-disabled (not disabled) keeps keyboard focus on the button. */
+.admin-coupon-actions .btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.admin-empty-state__icon {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.admin-empty-state .admin-empty-state__title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.admin-empty-state__action {
+  margin-top: var(--space-4);
+}
+
+/* Drawer form: the body scrolls, the error and footer stay at the bottom. */
+
+.admin-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.admin-drawer-close:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.admin-coupon-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-coupon-fields {
+  gap: 1.25rem;
+  margin-top: 0;
+}
+
+.admin-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-field__label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin-field__label {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.admin-field__optional {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.admin-field__counter {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-field__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.admin-coupon-code-input {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.admin-coupon-date-input {
+  max-width: 14rem;
+  color-scheme: light;
+}
+
+[data-theme='dark'] .admin-coupon-date-input {
+  color-scheme: dark;
+}
+
+.admin-coupon-preview {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.admin-coupon-preview__label {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+/* A copy of the popup's green "applied" chip (.order-coupon__applied). */
+.admin-coupon-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-success) 9%, var(--color-bg-main));
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-coupon-chip__icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: var(--color-success-text, var(--color-success));
+}
+
+.admin-coupon-chip__code {
+  letter-spacing: 0.04em;
+}
+
+.admin-coupon-chip__description {
+  color: var(--color-success-text, var(--color-success));
+}
+
+.admin-coupon-chip__placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.admin-coupon-active {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-coupon-active .admin-checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.admin-coupon-form__error {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-6) 0;
+  line-height: 1.5;
+}
+
+.admin-coupon-form .admin-drawer-footer {
+  justify-content: flex-end;
+}
+
+@media (max-width: 700px) {
+  /* The fixed menu button would sit on top of the drawer's close button. */
+  .admin-shell:has(.admin-drawer) .admin-mobile-toggle {
+    display: none;
+  }
+
+  .admin-coupon-actions .btn,
+  .admin-coupon-form .admin-drawer-footer .btn,
+  .admin-view-actions .btn {
+    min-height: 2.75rem;
+  }
+
+  .admin-drawer-close {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .admin-coupon-drawer .admin-drawer-header {
+    padding: var(--space-4);
+  }
+
+  .admin-coupon-form__error {
+    padding-inline: var(--space-4);
+  }
+
+  .admin-coupon-form .admin-drawer-footer {
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-coupons-table tbody tr {
+    transition: none;
+  }
+}

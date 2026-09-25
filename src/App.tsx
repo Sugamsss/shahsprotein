@@ -26,6 +26,7 @@ const AdminWaitlist = React.lazy(() => import('./components/admin/AdminWaitlist'
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard'));
 const Campaigns = React.lazy(() => import('./components/admin/Campaigns'));
 const DashboardLayout = React.lazy(() => import('./components/admin/DashboardLayout').then((m) => ({ default: m.DashboardLayout })));
+const Coupons = React.lazy(() => import('./components/admin/Coupons'));
 const ProtectedRoute = React.lazy(() => import('./components/admin/ProtectedRoute').then((m) => ({ default: m.ProtectedRoute })));
 const AccountSettings = React.lazy(() => import('./components/admin/AccountSettings').then((m) => ({ default: m.AccountSettings })));
 
@@ -104,6 +105,7 @@ export const App: React.FC = () => (
               <Route path="campaigns" element={<Campaigns />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="settings" element={<AccountSettings />} />
+              <Route path="coupons" element={<Coupons />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

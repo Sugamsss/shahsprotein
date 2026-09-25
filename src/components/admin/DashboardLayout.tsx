@@ -7,6 +7,7 @@ import {
   Mail,
   Menu,
   Settings,
+  TicketPercent,
   Users,
   X,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ export const DashboardLayout: React.FC = () => {
     { to: '/admin/dashboard', icon: <LayoutDashboard size={17} />, label: 'Dashboard' },
     { to: '/admin/waitlist', icon: <Users size={17} />, label: 'Members' },
     { to: '/admin/campaigns', icon: <Mail size={17} />, label: 'Campaigns' },
+    { to: '/admin/coupons', icon: <TicketPercent size={17} />, label: 'Coupons' },
     { to: '/admin/analytics', icon: <BarChart3 size={17} />, label: 'Analytics' },
     { to: '/admin/settings', icon: <Settings size={17} />, label: 'Settings' },
   ];
