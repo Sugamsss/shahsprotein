@@ -92,8 +92,12 @@
 .adm-ocard__note { display: flex; gap: 6px; overflow: hidden; color: var(--color-text-secondary); font-size: 0.8125rem; font-style: italic;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .adm-ocard__note svg { flex: 0 0 auto; margin: 1px 6px 0 0; vertical-align: -2px; }
-.adm-ocard__foot { grid-area: foot; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
-.adm-ocard__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); font-size: 0.8125rem; }
+.adm-ocard__foot { grid-area: foot; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+/* The code is what Sunit matches to the chat: never cut. The pincode gives way
+   first; if the code and the buttons still don't fit, the buttons wrap under it. */
+.adm-ocard__meta { display: flex; flex: 1 1 0; min-width: min-content; color: var(--color-text-muted); font-size: 0.8125rem; }
+.adm-ocard__meta .adm-code { flex-shrink: 0; }
+.adm-ocard__place { flex: 1 1 0; width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .adm-ocard__pair { display: flex; gap: 6px; margin-left: auto; }
 .adm-ocard__word { display: inline-flex; align-items: center; gap: 4px; color: var(--color-success-text); font-size: 0.8125rem; font-weight: 600; }
 .adm-ocard__word.is-cancelled { color: var(--color-error-text); }
@@ -228,7 +232,6 @@
 }
 .adm-od-bar:empty { display: none; }
 .adm-od-go { flex: 1; }
-.adm-od-go kbd { margin-left: 4px; background: color-mix(in srgb, var(--color-btn-text) 16%, transparent); border-color: transparent; color: inherit; }
 .adm-od-alldone { padding: 12px; color: var(--color-text-muted); }
 
 .adm-omenu { position: relative; }

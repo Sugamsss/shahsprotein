@@ -75,9 +75,12 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
       <OrderBody order={order} change={change} show={show} />
-      <div className="adm-od-bar">
-        <PrimaryAction order={order} onNext={() => next && change(order, next.changes)} />
-      </div>
+      {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
+      {next && (
+        <div className="adm-od-bar">
+          <PrimaryAction order={order} onNext={() => change(order, next.changes)} />
+        </div>
+      )}
     </div>
   );
 };
@@ -111,6 +114,16 @@ export const OrderPopup: React.FC<{
   const lane = order ? laneOf(order) : 'done';
   const inLane = sequence.filter((o) => laneOf(o) === lane);
   const next = order && nextOf(order);
+
+  // A deep link can open the popup before the order has loaded, so focus lands
+  // on ×. Once the order is there, move it to the name (or the phone, for Confirm).
+  const placed = useRef(false);
+  useEffect(() => {
+    if (placed.current || !order) return;
+    placed.current = true;
+    const target = (focusPhone ? phoneRef : nameRef).current;
+    if (target && !isTyping(document.activeElement)) target.focus();
+  });
 
   // Latest values for the key handler, which is set up once.
   const keys = useRef({ go, order, next, change });
@@ -154,7 +167,7 @@ export const OrderPopup: React.FC<{
           <span className="adm-od-keys" aria-hidden="true">
             <kbd>Esc</kbd> {copy.keys[0]} <kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}
           </span>
-          <PrimaryAction order={order} keyHint onNext={() => next && change(order, next.changes)} />
+          <PrimaryAction order={order} onNext={() => next && change(order, next.changes)} />
         </>
       )}
     >

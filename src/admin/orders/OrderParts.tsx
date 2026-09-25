@@ -271,14 +271,14 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
   ) : null;
 
 /** The pinned button: the order's next step, or "All done." */
-export const PrimaryAction: React.FC<{ order: Order; onNext: () => void; keyHint?: boolean }> = ({ order, onNext, keyHint }) => {
+export const PrimaryAction: React.FC<{ order: Order; onNext: () => void }> = ({ order, onNext }) => {
   const next = nextOf(order);
   if (!next) {
     return laneOf(order) === 'stale' ? null : <span className="adm-od-alldone">{adminCopy.orders.allDone}</span>;
   }
   return (
     <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={onNext}>
-      <Check size={20} aria-hidden="true" />{next.labels[1]}{keyHint && <kbd aria-hidden="true">↵</kbd>}
+      <Check size={20} aria-hidden="true" />{next.labels[1]}
     </button>
   );
 };
