@@ -4,11 +4,12 @@ import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { createCoupon, getCoupons, setCouponActive, updateCoupon, type AdminError } from '../api';
 import { endOfDayIst, formatDay, formatDayInSentence, istDateValue } from '../format';
-import { LoadError, Skeleton } from '../parts';
+import { Field, LoadError, Skeleton } from '../parts';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Coupon } from '../types';
 import { useRpc } from '../useRpc';
+import { useUndoable } from '../useUndoable';
 
 const copy = adminCopy.coupons;
 const CODE = /^[A-Z0-9-]{3,24}$/;
@@ -91,11 +92,7 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
     }
   };
 
-  const hint = (field: 'code' | 'gives', text: string) => (
-    <span id={`${id}-${field}-hint`} className={problem?.field === field ? 'adm-field__error' : 'adm-field__hint'}>
-      {problem?.field === field ? problem.text : text}
-    </span>
-  );
+  const errorFor = (field: 'code' | 'gives') => (problem?.field === field ? problem.text : null);
 
   return (
     <AdminSheet
@@ -112,8 +109,7 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
     >
       <form id={`${id}-form`} className="adm-form" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
         {problem && !problem.field && <p className="adm-form__error" role="alert">{problem.text}</p>}
-        <label className="adm-field">
-          <span className="adm-field__label">{copy.code}</span>
+        <Field label={copy.code} hint={copy.codeHint} error={errorFor('code')}>
           <input
             ref={codeRef}
             className="adm-input adm-input--mono"
@@ -123,34 +119,19 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
             autoComplete="off"
             spellCheck={false}
             maxLength={24}
-            aria-invalid={problem?.field === 'code' || undefined}
-            aria-describedby={`${id}-code-hint`}
             onChange={(event) => setCode(event.target.value.toUpperCase().replace(/\s/g, ''))}
           />
-          {hint('code', copy.codeHint)}
-        </label>
-        <label className="adm-field">
-          <span className="adm-field__label">{copy.gives}</span>
-          <input
-            ref={givesRef}
-            className="adm-input"
-            value={gives}
-            maxLength={120}
-            aria-invalid={problem?.field === 'gives' || undefined}
-            aria-describedby={`${id}-gives-hint`}
-            onChange={(event) => setGives(event.target.value)}
-          />
-          {hint('gives', copy.givesHint)}
-        </label>
+        </Field>
+        <Field label={copy.gives} hint={copy.givesHint} error={errorFor('gives')}>
+          <input ref={givesRef} className="adm-input" value={gives} maxLength={120} onChange={(event) => setGives(event.target.value)} />
+        </Field>
         <div className="adm-form__pair">
-          <label className="adm-field">
-            <span className="adm-field__label">{copy.endsOn} <small>{copy.optional}</small></span>
+          <Field label={copy.endsOn} optional={copy.optional}>
             <input className="adm-input" type="date" value={ends} min={istDateValue()} onChange={(event) => setEnds(event.target.value)} />
-          </label>
-          <label className="adm-field">
-            <span className="adm-field__label">{copy.note} <small>{copy.noteOnlyYou}</small></span>
+          </Field>
+          <Field label={copy.note} optional={copy.noteOnlyYou}>
             <input className="adm-input" value={note} placeholder={copy.notePlaceholder} onChange={(event) => setNote(event.target.value)} />
-          </label>
+          </Field>
         </div>
       </form>
     </AdminSheet>
@@ -160,30 +141,25 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
 const CouponsPage: React.FC = () => {
   const { data: coupons, error, loading, reload, setData } = useRpc(getCoupons, []);
   const toast = useToast();
+  const run = useUndoable();
   // The sheet: null is closed; `coupon` null is a new one. `key` gives each opening fresh fields.
   const [sheet, setSheet] = useState<{ coupon: Coupon | null; key: number } | null>(null);
   const couponsRef = useRef(coupons);
   couponsRef.current = coupons;
+  const show = (list: Coupon[]) => { couponsRef.current = list; setData(list); };
 
-  const setActive = (coupon: Coupon, active: boolean, withUndo = true) => {
-    const before = couponsRef.current ?? [];
-    const withActive = (list: Coupon[]) => list.map((c) => (c.id === coupon.id ? { ...c, active } : c));
-    couponsRef.current = withActive(before);
-    setData(couponsRef.current);
-    setCouponActive(coupon.id, active).then(
-      () => {
-        if (!withUndo) return;
-        toast.show({
-          text: active ? copy.turnedOn(coupon.code) : copy.turnedOff(coupon.code),
-          action: { label: adminCopy.undo, onAction: () => setActive(coupon, !active, false) },
-        });
+  const setActive = (coupon: Coupon, active: boolean, quiet = false) => {
+    void run({
+      apply: () => {
+        const before = couponsRef.current ?? [];
+        show(before.map((c) => (c.id === coupon.id ? { ...c, active } : c)));
+        return () => show(before);
       },
-      () => {
-        couponsRef.current = before;
-        setData(before);
-        toast.error(() => setActive(coupon, active, withUndo));
-      },
-    );
+      save: () => setCouponActive(coupon.id, active),
+      text: active ? copy.turnedOn(coupon.code) : copy.turnedOff(coupon.code),
+      undo: () => setActive(coupon, !active, true),
+      quiet,
+    });
   };
 
   let body: React.ReactNode;

@@ -1,118 +1,36 @@
-/* Shared parts (parts.tsx): the switch, the load-error card, skeletons. */
+/* Shared parts (Switch.tsx, parts.tsx): the switch, the load-error card, skeletons, the intro line. */
 
 /* ---- Switch: 52×32, off is --adm-track-off, on is --color-success ---------- */
 .adm-switch {
-  position: relative;
-  flex: 0 0 auto;
-  width: 52px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  background: var(--adm-track-off);
-  transition: background-color 220ms ease;
-  touch-action: manipulation;
+  position: relative; flex: 0 0 auto; width: 52px; height: 32px; border-radius: var(--radius-full);
+  background: var(--adm-track-off); transition: background-color 220ms ease; touch-action: manipulation;
 }
-
-/* The knob. */
-.adm-switch::before {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--adm-knob);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
-  transition: transform 220ms var(--ease-glide);
+.adm-switch::before { /* the knob */
+  content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--adm-knob); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25); transition: transform 220ms var(--ease-glide);
 }
+.adm-switch::after { content: ''; position: absolute; inset: -6px -2px; } /* 44px to the finger */
+.adm-switch[aria-checked='true'] { background: var(--color-success); }
+.adm-switch[aria-checked='true']::before { transform: translateX(20px); }
+.adm-switch:active::before { width: 30px; }
+.adm-switch[aria-checked='true']:active::before { transform: translateX(16px); }
+.adm-switch:disabled { opacity: 0.5; cursor: default; }
 
-/* 44px to the finger. */
-.adm-switch::after {
-  content: '';
-  position: absolute;
-  inset: -6px -2px;
-}
-
-.adm-switch[aria-checked='true'] {
-  background: var(--color-success);
-}
-
-.adm-switch[aria-checked='true']::before {
-  transform: translateX(20px);
-}
-
-.adm-switch:active::before {
-  width: 30px;
-}
-
-.adm-switch[aria-checked='true']:active::before {
-  transform: translateX(16px);
-}
-
-.adm-switch:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* ---- A screen that couldn't load --------------------------------------------- */
-.adm-load-error {
-  display: grid;
-  justify-items: start;
-  gap: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-}
-
-/* ---- Loading placeholders ------------------------------------------------------ */
-.adm-skeleton {
-  display: grid;
-  gap: 10px;
-}
-
-.adm-skeleton span {
-  display: block;
-  height: 14px;
-  border-radius: 7px;
-  background: var(--adm-well);
-  animation: adm-pulse 1.2s ease-in-out infinite;
-}
-
-.adm-skeleton span:first-child {
-  width: 45%;
-  height: 18px;
-}
-
-.adm-skeleton span:nth-child(2) {
-  width: 75%;
-}
-
-@keyframes adm-pulse {
-  50% { opacity: 0.45; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .adm-switch,
-  .adm-switch::before {
-    transition: none;
-  }
-
-  .adm-skeleton span {
-    animation: none;
-  }
-}
+/* ---- A screen that couldn't load, and loading placeholders ------------------- */
+.adm-load-error { display: grid; justify-items: start; gap: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+.adm-skeleton { display: grid; gap: 10px; }
+.adm-skeleton span { display: block; height: 14px; border-radius: 7px; background: var(--adm-well); animation: adm-pulse 1.2s ease-in-out infinite; }
+.adm-skeleton span:first-child { width: 45%; height: 18px; }
+.adm-skeleton span:nth-child(2) { width: 75%; }
+@keyframes adm-pulse { 50% { opacity: 0.45; } }
 
 /* ---- The sentence under a page title ------------------------------------------ */
-.adm-intro {
-  margin-top: -8px;
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  line-height: 1.5;
-  text-wrap: pretty;
-}
+.adm-intro { margin-top: -8px; color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; text-wrap: pretty; }
+.adm-intro strong { color: var(--color-text-primary); font-weight: 600; }
 
-.adm-intro strong {
-  color: var(--color-text-primary);
-  font-weight: 600;
+@media (prefers-reduced-motion: reduce) {
+  .adm-switch, .adm-switch::before { transition: none; }
+  .adm-skeleton span { animation: none; }
 }
 
 /* ---- Shared page, form and list bits (lane A screens; B may use them) ------- */
@@ -135,6 +53,10 @@
 .adm-form { display: grid; gap: 18px; }
 .adm-form__pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .adm-form__error { color: var(--color-error-text); font-size: 0.9375rem; line-height: 1.45; }
+.adm-field__control { position: relative; display: flex; align-items: center; gap: 8px; }
+.adm-field__control > :is(input, textarea, select) { flex: 1; min-width: 0; }
+.adm-field__prefix { position: absolute; left: 16px; color: var(--color-text-muted); pointer-events: none; }
+.adm-field--prefix .adm-input { padding-left: 34px; }
 .adm-field__label small { margin-left: 4px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
 .adm-field__hint, .adm-field__error { color: var(--color-text-muted); font-size: 0.875rem; line-height: 1.45; }
 .adm-field__error { color: var(--color-error-text); }

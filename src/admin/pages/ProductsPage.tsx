@@ -5,49 +5,40 @@ import { adminCopy } from '../../data/adminCopy';
 import { getStock, setStock } from '../api';
 import { LoadError, Skeleton } from '../parts';
 import { Switch } from '../Switch';
-import { useToast } from '../toast';
 import type { OutOfStock } from '../types';
 import { useRpc } from '../useRpc';
+import { useUndoable } from '../useUndoable';
 
 const copy = adminCopy.products;
 
 // Stock (spec 2.9): a switch per product and size. Off means the site shows
-// "Back soon". A flip shows at once and saves in the background; if the save
-// fails it goes back and the error toast offers Try again.
+// "Back soon". Flips go through useUndoable (at once, Undo, back on failure).
 
 const isOut = (stock: OutOfStock, productId: string, size: string) =>
   stock.some((row) => row.product_id === productId && row.size === size);
 
 const ProductsPage: React.FC = () => {
   const { data: stock, error, loading, reload, setData } = useRpc(getStock, []);
-  const toast = useToast();
+  const run = useUndoable();
   // The latest list, so a flip that lands after another starts from it.
   const stockRef = useRef<OutOfStock | null>(stock);
   stockRef.current = stock;
+  const show = (list: OutOfStock) => { stockRef.current = list; setData(list); };
 
-  const flip = (productId: string, size: string, name: string, inStock: boolean, withUndo = true) => {
-    const before = stockRef.current ?? [];
-    const others = before.filter((row) => !(row.product_id === productId && row.size === size));
-    const optimistic = inStock ? others : [...others, { product_id: productId, size, since: new Date().toISOString() }];
-    stockRef.current = optimistic;
-    setData(optimistic);
+  const flip = (productId: string, size: string, name: string, inStock: boolean, quiet = false) => {
     const item = `${name} ${size}`;
-    setStock(productId, size, inStock).then(
-      (next) => {
-        stockRef.current = next;
-        setData(next);
-        if (!withUndo) return;
-        toast.show({
-          text: inStock ? copy.turnedOn(item) : copy.turnedOff(item),
-          action: { label: adminCopy.undo, onAction: () => flip(productId, size, name, !inStock, false) },
-        });
+    void run({
+      apply: () => {
+        const before = stockRef.current ?? [];
+        const others = before.filter((row) => !(row.product_id === productId && row.size === size));
+        show(inStock ? others : [...others, { product_id: productId, size, since: new Date().toISOString() }]);
+        return () => show(before);
       },
-      () => {
-        stockRef.current = before;
-        setData(before);
-        toast.error(() => flip(productId, size, name, inStock, withUndo));
-      },
-    );
+      save: async () => show(await setStock(productId, size, inStock)),
+      text: inStock ? copy.turnedOn(item) : copy.turnedOff(item),
+      undo: () => flip(productId, size, name, !inStock, true),
+      quiet,
+    });
   };
 
   let body: React.ReactNode;
