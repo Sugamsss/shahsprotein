@@ -60,6 +60,8 @@ const FAQCardItem: React.FC<{
   );
 };
 
+const { faq: text } = siteConfig;
+
 export const FAQSection: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(faqsData[0].id);
   const sectionRef = useScrollReveal<HTMLElement>();
@@ -73,10 +75,10 @@ export const FAQSection: React.FC = () => {
       id="faq"
       ref={sectionRef}
       className="reveal snap-section faq-section"
-      aria-label="Frequently Asked Questions"
+      aria-label={text.label}
     >
       <Container>
-        <SectionHeader badge="FREQUENTLY ASKED QUESTIONS" title="Questions you might have" />
+        <SectionHeader badge={text.eyebrow} title={text.heading} />
 
         <div className="faq-list">
           {faqsData.map((faq) => (
@@ -93,12 +95,12 @@ export const FAQSection: React.FC = () => {
             an existing order go to customer care, so they don't land in the sales chat. */}
         <div className="faq-help">
           <p>
-            Have another question?{' '}
-            <OrderLink source="faq" ask variant="text">Ask us on WhatsApp.</OrderLink>
+            {text.moreLead}{' '}
+            <OrderLink source="faq" ask variant="text">{text.moreLink}</OrderLink>
           </p>
           <p className="faq-help__care">
             <span>
-              Need help with an order you've placed?{' '}
+              {text.careLead}{' '}
               {/* Kept on one line, so the number never splits from its label. */}
               <span className="faq-help__care-line">
                 {siteConfig.contact.care.label}: <strong>{siteConfig.contact.care.display}</strong>

@@ -1,12 +1,14 @@
 import React from 'react';
 import { Container } from './Container';
 import { siteConfig } from '../../data/siteConfig';
-import { Instagram, Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { OrderLink } from '../ui/OrderLink';
 import { OrderButton } from '../order/OrderButton';
 import { careCallUrl } from '../../utils/contact';
 import { logoSrc } from '../../utils/themeAssets';
+
+const { footer: text } = siteConfig;
 
 export const Footer: React.FC = () => {
   const { theme } = useTheme();
@@ -32,24 +34,20 @@ export const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div>
-            <h2 className="footer-heading">
-              Quick Links
-            </h2>
+            <h2 className="footer-heading">{text.linksHeading}</h2>
             <ul className="footer-links">
-              <li><a href="#products" className="footer-link">Products</a></li>
-              <li><a href="#our-story" className="footer-link">Our Story</a></li>
+              <li><a href="#products" className="footer-link">{text.products}</a></li>
+              <li><a href="#our-story" className="footer-link">{text.story}</a></li>
               <li>
-                <OrderButton from="footer" variant="plain" className="footer-link">Order on WhatsApp</OrderButton>
+                <OrderButton from="footer" variant="plain" className="footer-link">{siteConfig.orderCta}</OrderButton>
               </li>
-              <li><a href="#updates" className="footer-link">Get updates</a></li>
+              <li><a href="#updates" className="footer-link">{text.updates}</a></li>
             </ul>
           </div>
 
           {/* Get in touch: every way to reach us, each labelled by what it's for. */}
           <div>
-            <h2 className="footer-heading">
-              Get in touch
-            </h2>
+            <h2 className="footer-heading">{text.contactHeading}</h2>
             <ul className="footer-contact">
               <li>
                 <OrderLink source="footer" variant="plain" showIcon className="footer-link footer-contact__row">
@@ -64,11 +62,6 @@ export const Footer: React.FC = () => {
                     <span className="footer-contact__label">{siteConfig.contact.care.label}</span>{' '}
                     {siteConfig.contact.care.display}
                   </span>
-                </a>
-              </li>
-              <li>
-                <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link footer-contact__row">
-                  <Instagram size={16} aria-hidden="true" /> Instagram
                 </a>
               </li>
               <li>

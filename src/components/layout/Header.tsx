@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { preloadOrderHandlers } from '../order/OrderButton';
-import { Instagram, Mail, Menu, Moon, Sun, X } from 'lucide-react';
+import { Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
 import { logoSrc, warmTheme } from '../../utils/themeAssets';
 import { useOrder } from '../../context/OrderContext';
 
 const copy = siteConfig.order;
+const text = siteConfig.header;
 
 /**
  * Opens "Your order". Empty, it shows the WhatsApp glyph; with packs in the
@@ -98,7 +99,7 @@ export const Header: React.FC = () => {
         </a>
 
         {/* Section links, centred. On phones they live in the menu below. */}
-        <nav className="header-nav desktop-nav" aria-label="Main">
+        <nav className="header-nav desktop-nav" aria-label={text.navLabel}>
           {siteConfig.nav.map((item) => (
             <a key={item.href} href={item.href} className="header-nav-link">
               {item.label}
@@ -113,18 +114,8 @@ export const Header: React.FC = () => {
           </span>
 
           <a
-            href={siteConfig.social.instagram}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Instagram"
-            className="icon-link header-icon-btn desktop-nav"
-          >
-            <Instagram size={18} />
-          </a>
-
-          <a
             href={`mailto:${siteConfig.social.email}`}
-            aria-label="Email Us"
+            aria-label={text.emailLabel}
             className="icon-link header-icon-btn desktop-nav"
           >
             <Mail size={18} />
@@ -137,7 +128,7 @@ export const Header: React.FC = () => {
             type="button"
             className="mobile-toggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileMenuOpen ? text.closeMenu : text.openMenu}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-drawer"
           >
@@ -168,7 +159,7 @@ export const Header: React.FC = () => {
         // typed `inert` prop, so it's passed as a plain attribute.
         {...(!mobileMenuOpen && { inert: '' })}
       >
-        <nav className="drawer-nav" aria-label="Menu">
+        <nav className="drawer-nav" aria-label={text.menuLabel}>
           {siteConfig.nav.map((item) => (
             <a key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className="header-nav-btn">
               {item.label}
@@ -176,19 +167,15 @@ export const Header: React.FC = () => {
           ))}
         </nav>
 
-        <div className="drawer-social">
-          <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="drawer-pill">
-            <Instagram size={18} aria-hidden="true" />
-            Instagram
-          </a>
+        <div className="drawer-contact">
           <a href={`mailto:${siteConfig.social.email}`} className="drawer-pill">
             <Mail size={18} aria-hidden="true" />
-            Email us
+            {text.emailPill}
           </a>
         </div>
 
         <div className="drawer-appearance">
-          <span id="drawer-appearance-label">Appearance</span>
+          <span id="drawer-appearance-label">{text.appearance}</span>
           <div
             className="segmented"
             role="group"
@@ -198,11 +185,11 @@ export const Header: React.FC = () => {
           >
             <button type="button" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>
               <Sun size={16} aria-hidden="true" />
-              Light
+              {text.light}
             </button>
             <button type="button" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>
               <Moon size={16} aria-hidden="true" />
-              Dark
+              {text.dark}
             </button>
           </div>
         </div>

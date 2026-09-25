@@ -2,6 +2,7 @@ import React from 'react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
+import { HighlightedText } from '../ui/HighlightedText';
 import { siteConfig } from '../../data/siteConfig';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 
@@ -13,13 +14,13 @@ export const StorySection: React.FC = () => {
     <section
       id="our-story"
       className="snap-section story-section"
-      aria-label="Our Story"
+      aria-label={siteConfig.story.label}
     >
       <Container>
         <div className="story-grid">
           {/* Story Text */}
           <div ref={leftRef} className="reveal reveal-left-far reveal-story-slow">
-            <Badge className="story-eyebrow">OUR STORY</Badge>
+            <Badge className="story-eyebrow">{siteConfig.story.eyebrow}</Badge>
 
             <h2 className="story-title">
               {siteConfig.story.heading}
@@ -28,13 +29,7 @@ export const StorySection: React.FC = () => {
             <div className="story-body">
               {siteConfig.story.paragraphs.map((paragraph, index) => (
                 <p key={index}>
-                  {paragraph.map((segment, segmentIndex) => (
-                    segment.highlight ? (
-                      <span key={`${segment.text}-${segmentIndex}`} className="story-highlight">
-                        {segment.text}
-                      </span>
-                    ) : segment.text
-                  ))}
+                  <HighlightedText segments={paragraph} className="story-highlight" />
                 </p>
               ))}
             </div>
@@ -47,7 +42,7 @@ export const StorySection: React.FC = () => {
                 src="/assets/story-family-approved-1200w.webp"
                 srcSet="/assets/story-family-approved-800w.webp 800w, /assets/story-family-approved-1200w.webp 1200w, /assets/story-family-approved-1672w.webp 1672w"
                 sizes="(min-width: 1200px) 500px, (min-width: 901px) 40vw, (min-width: 601px) 544px, calc(100vw - 66px)"
-                alt="The Shah family working together on Shah's Nutrition"
+                alt={siteConfig.story.imageAlt}
                 width={1672}
                 height={941}
                 loading="lazy"

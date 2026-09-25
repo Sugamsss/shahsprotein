@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnalyticsService } from '../../services/analyticsService';
+import { siteConfig } from '../../data/siteConfig';
 
 interface State {
   hasError: boolean;
@@ -23,7 +24,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     if (this.state.hasError) {
       return (
         <div className="section-error">
-          <p>Something went wrong loading this section.</p>
+          <p>{siteConfig.ui.sectionError}</p>
         </div>
       );
     }

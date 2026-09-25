@@ -2,32 +2,31 @@ import React from 'react';
 import { ArrowDown } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
+import { HighlightedText } from '../ui/HighlightedText';
 import { OrderButton } from '../order/OrderButton';
 import { useTheme } from '../../context/ThemeContext';
 import { siteConfig } from '../../data/siteConfig';
 import { heroArt } from '../../utils/themeAssets';
+
+const { hero } = siteConfig;
 
 export const HeroSection: React.FC = () => {
   const { theme } = useTheme();
   const art = heroArt(theme);
 
   return (
-    <section className="snap-section hero-section" aria-label="Hero">
+    <section className="snap-section hero-section" aria-label={hero.label}>
       <Container>
         <div className="hero-grid">
           {/* Hero Content Left (unboxed) */}
           <div className="hero-card-entrance">
             <div className="hero-content">
             <div className="hero-stagger-1">
-              <Badge className="hero-eyebrow">NOW TAKING ORDERS</Badge>
+              <Badge className="hero-eyebrow">{hero.eyebrow}</Badge>
             </div>
 
             <h1 className="hero-title hero-stagger-2">
-              {siteConfig.heroHeading.map((segment, index) => (
-                segment.highlight ? (
-                  <span key={`${segment.text}-${index}`} className="text-gradient">{segment.text}</span>
-                ) : segment.text
-              ))}
+              <HighlightedText segments={siteConfig.heroHeading} className="text-gradient" />
             </h1>
 
             <p className="hero-motto hero-stagger-3">
@@ -36,13 +35,13 @@ export const HeroSection: React.FC = () => {
 
             <div className="hero-actions hero-stagger-4">
               <OrderButton from="hero" size="lg" className="hero-actions__order">
-                Order on WhatsApp
+                {siteConfig.orderCta}
               </OrderButton>
               <a href="#products" className="hero-actions__range">
-                See the range <ArrowDown size={16} aria-hidden="true" />
+                {hero.rangeLink} <ArrowDown size={16} aria-hidden="true" />
               </a>
             </div>
-            <p className="hero-note hero-stagger-5">Made fresh in small batches. Delivered across India.</p>
+            <p className="hero-note hero-stagger-5">{hero.note}</p>
             </div>
           </div>
         </div>

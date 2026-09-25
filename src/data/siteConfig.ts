@@ -8,7 +8,48 @@ export const siteConfig = {
     { text: 'Healthy food that ' },
     { text: 'tastes unhealthy.', highlight: true },
   ] satisfies TextSegment[],
+  hero: {
+    label: 'Hero',
+    eyebrow: 'NOW TAKING ORDERS',
+    rangeLink: 'See the range',
+    note: 'Made fresh in small batches. Delivered across India.',
+  },
+  // Every "Order on WhatsApp" button: hero, the order card and the footer. They all open "Your order".
+  orderCta: 'Order on WhatsApp',
+  products: {
+    label: 'Our Products',
+    eyebrow: 'Meet the range',
+    heading: [
+      { text: 'Simple ingredients. ' },
+      { text: 'Extraordinary benefits.', highlight: true },
+    ] satisfies TextSegment[],
+    intro: 'Wholesome everyday foods made with real ingredients and honest nutrition.',
+    cardImageAlt: (name: string) => `${name} pouch and ingredients from the Shah's Nutrition product portfolio`,
+    viewDetails: 'View details',
+    viewDetailsLabel: (name: string) => `View details for ${name}`,
+    // The product popup. The facts themselves live in products.ts.
+    ingredients: 'Ingredients',
+    goodToKnow: 'Good to know',
+    staysFresh: 'Stays fresh',
+    freshness: (shelfLife: string, madeToOrder?: boolean) =>
+      `${shelfLife}. No preservatives.${madeToOrder ? ' Made after you order.' : ''}`,
+    contains: 'Contains',
+    packSizes: (count: number) => (count > 1 ? 'Pack sizes' : 'Pack size'),
+    nutrition: 'Nutrition information',
+    nutrient: 'Nutrient',
+    per100g: 'Per 100 g',
+    perServing: 'Per 30 g',
+    serving: '(serving)',
+    // For a product without a nutrition panel yet: lead, WhatsApp link, then the rest.
+    nutritionMissing: (name: string) =>
+      `We’re still adding the full nutrition panel for ${name}. Want the numbers before you order?`,
+    nutritionAsk: 'Ask us on WhatsApp',
+    nutritionAskAfter: 'and we’ll share what we have.',
+  },
   story: {
+    label: 'Our Story',
+    eyebrow: 'OUR STORY',
+    imageAlt: "The Shah family working together on Shah's Nutrition",
     heading: "Making healthy food that tastes unhealthy.",
     paragraphs: [
       [
@@ -35,6 +76,34 @@ export const siteConfig = {
     { href: '#our-story', label: 'Our Story' },
     { href: '#faq', label: 'FAQ' },
   ],
+  faq: {
+    label: 'Frequently Asked Questions',
+    eyebrow: 'FREQUENTLY ASKED QUESTIONS',
+    heading: 'Questions you might have',
+    // Under the questions: more questions go to the order chat, problems with an order to customer care.
+    moreLead: 'Have another question?',
+    moreLink: 'Ask us on WhatsApp.',
+    careLead: "Need help with an order you've placed?",
+  },
+  // The header pill and the phone menu.
+  header: {
+    navLabel: 'Main',
+    menuLabel: 'Menu',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    emailLabel: 'Email Us',
+    emailPill: 'Email us',
+    appearance: 'Appearance',
+    light: 'Light',
+    dark: 'Dark',
+    themeSwitchLabel: (to: 'light' | 'dark') => `Switch to ${to} mode`,
+  },
+  // The order card at the end of the page.
+  orderCard: {
+    title: 'Ready to give it a try?',
+    lead: 'Message us on WhatsApp. We’ll help you choose, and tell you the total with delivery.',
+    numberLead: 'Or save our order number:',
+  },
   // Under the Order button in the order card at the end of the page.
   replyTime: 'We usually reply the same day.',
   // Two numbers with two jobs. Always show a number with its label, and keep
@@ -50,6 +119,10 @@ export const siteConfig = {
       label: 'Customer care',
       display: '9881191999',
       number: '919881191999',
+      call: 'Call',
+      callLabel: (display: string) => `Call customer care on ${display}`,
+      whatsapp: 'WhatsApp',
+      whatsappLabel: (display: string) => `WhatsApp customer care on ${display}`,
     },
   },
   orderMessages: {
@@ -189,7 +262,6 @@ export const siteConfig = {
     },
   },
   social: {
-    instagram: "https://instagram.com/shahsnutrition",
     // Use the founder's confirmed inbox until branded receiving mailboxes are created.
     email: "pranjalishah25@gmail.com",
   },
@@ -197,8 +269,15 @@ export const siteConfig = {
     // Fallback count when Supabase can't be reached. The public page no longer shows a count.
     initialCount: 0,
   },
-  // Email sign-up feedback, shown inline under the form (the toast is only for failures).
+  // The email sign-up under the order card. Feedback shows inline under the form
+  // (the toast is only for failures).
   signup: {
+    intro: 'Not ready yet? Hear about new launches.',
+    formLabel: 'Get email updates',
+    consent: 'Email me about new products from Shah’s Nutrition. I can unsubscribe anytime.',
+    emailLabel: 'Email address',
+    submit: 'Keep me posted',
+    submitting: 'Adding you…',
     emailError: 'That email looks incomplete. Mind checking it?',
     consentError: 'Tick the box so we can email you.',
     doneTitle: 'Check your inbox.',
@@ -208,9 +287,24 @@ export const siteConfig = {
   },
   // Shown for any URL that isn't a page.
   notFound: {
+    pageTitle: 'Page not found',
     title: 'This page wandered off.',
     body: "Let's get you back to the good stuff.",
     home: "Back to Shah's Nutrition",
+  },
+  footer: {
+    linksHeading: 'Quick Links',
+    products: 'Products',
+    story: 'Our Story',
+    updates: 'Get updates',
+    contactHeading: 'Get in touch',
+  },
+  // Small shared bits: the skip link, close buttons and the section error.
+  ui: {
+    skipLink: 'Skip to main content',
+    close: 'Close',
+    closeNotification: 'Close notification',
+    sectionError: 'Something went wrong loading this section.',
   },
   copyright: `© ${new Date().getFullYear()} Shah's Nutrition. All rights reserved.`,
 };

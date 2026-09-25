@@ -6,23 +6,23 @@ import { careCallUrl, careWhatsappUrl } from '../../utils/contact';
 
 /** Call and WhatsApp actions for the customer care line. The caller shows the "Customer care" label. */
 export const CustomerCareLinks: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const { display } = siteConfig.contact.care;
+  const care = siteConfig.contact.care;
 
   return (
     <span className={`care-links ${className}`}>
-      <a href={careCallUrl()} className="care-link" aria-label={`Call customer care on ${display}`}>
+      <a href={careCallUrl()} className="care-link" aria-label={care.callLabel(care.display)}>
         <Phone size={14} aria-hidden="true" />
-        Call
+        {care.call}
       </a>
       <a
         href={careWhatsappUrl()}
         target="_blank"
         rel="noopener noreferrer"
         className="care-link"
-        aria-label={`WhatsApp customer care on ${display}`}
+        aria-label={care.whatsappLabel(care.display)}
       >
         <WhatsAppIcon size={14} />
-        WhatsApp
+        {care.whatsapp}
       </a>
     </span>
   );

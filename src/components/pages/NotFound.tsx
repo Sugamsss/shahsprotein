@@ -11,7 +11,7 @@ export const NotFound: React.FC = () => {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = `Page not found · ${siteConfig.name}`;
+    document.title = `${notFound.pageTitle} · ${siteConfig.name}`;
     const robots = document.createElement('meta');
     robots.name = 'robots';
     robots.content = 'noindex';
