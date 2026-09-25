@@ -87,3 +87,11 @@ export const setCouponActive = (id: string, active: boolean) =>
   rpc<Coupon>('set_admin_coupon_active', { id, active });
 
 export const getEmailList = () => rpc<EmailList>('get_admin_email_list');
+
+/** Changes the signed-in admin's password (Settings). */
+export const changePassword = async (password: string): Promise<void> => {
+  const supabase = await client;
+  if (!supabase) throw new AdminError('unknown', copy.gate.notSetUp);
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error.message ? new AdminError('message', error.message) : toAdminError(error, error.status ?? 0);
+};

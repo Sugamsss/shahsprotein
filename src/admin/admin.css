@@ -12,6 +12,7 @@
 @import './pages/products.css';
 @import './pages/coupons.css';
 @import './pages/email-list.css';
+@import './pages/settings.css';
 @import './orders/orders.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */

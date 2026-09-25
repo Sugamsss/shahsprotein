@@ -315,4 +315,27 @@ export const adminCopy = {
     csvConsent: (yes: boolean) => (yes ? 'Yes' : 'No'),
     csvFile: (day: string) => `shahs-email-list-${day}.csv`,
   },
+
+  moreCounts: {
+    couponsOn: (n: number) => `${n} on`,
+  },
+
+  settings: {
+    title: 'Settings',
+    access: 'Who can open the admin',
+    since: (day: string) => `Since ${day}`,
+    you: 'You',
+    accessHint: 'Adding someone new takes a quick setup step. Ask whoever looks after the website.',
+    appearance: 'Appearance',
+    themes: { light: 'Light', dark: 'Dark', system: 'Like my phone' },
+    youTitle: 'You',
+    signedInAs: 'Signed in as',
+    changePassword: 'Change password',
+    newPassword: 'New password',
+    again: 'Type it again',
+    tooShort: 'At least 8 characters.',
+    mismatch: "The two don't match.",
+    changing: 'Changing…',
+    changed: 'Password changed.',
+  },
 };
