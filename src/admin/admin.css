@@ -18,6 +18,7 @@
 @import './pages/home.css';
 @import './orders/orders.css';
 @import './pages/customers.css';
+@import './pages/done.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {
@@ -70,7 +71,7 @@
 /* ---- Page ------------------------------------------------------------------ */
 .adm {
   min-height: 100vh;
-  padding: 0 16px calc(112px + env(safe-area-inset-bottom));
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) calc(112px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: var(--adm-page-glow), var(--adm-page);
   background-repeat: no-repeat;
   background-size: 100% 520px, auto;
@@ -172,6 +173,11 @@
   box-shadow: 0 0 0 2px var(--adm-surface-solid);
 }
 @media (max-width: 359px) { .adm-tabbar a { font-size: 0.625rem; } }
+/* Phones and tablets: while the keyboard is up (a text field has focus), the
+   tab bar steps aside so the field and its pinned bar have the room. */
+@media (hover: none) and (pointer: coarse) {
+  :root:has(:is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='button'], [type='submit']), textarea):focus) .adm-tabbar { display: none; }
+}
 
 /* ---- Laptop: the glass pill header ------------------------------------------------ */
 .adm-header { display: none; }
@@ -192,9 +198,11 @@
   display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px;
   border-radius: 12px; color: var(--color-text-primary); font-size: 0.9375rem; font-weight: 500; text-align: left;
 }
-.adm-menu__item:hover { background: var(--adm-well); }
 .adm-menu__item--static { justify-content: space-between; }
-.adm-menu__item--static:hover { background: none; }
+@media (hover: hover) {
+  .adm-menu__item:hover { background: var(--adm-well); }
+  .adm-menu__item--static:hover { background: none; }
+}
 .adm-menu__item:active { background: var(--adm-well-press); }
 
 /* ---- More (phone): a list of links ------------------------------------------------ */
@@ -205,21 +213,23 @@
 }
 .adm-list > * + * { border-top: 1px solid var(--adm-hairline); }
 .adm-list > a:active, .adm-list > button:active { background: var(--adm-well-press); }
+/* The card clips anything outside a row, so a row's focus ring sits inside it. */
+.adm-list > a:focus-visible, .adm-list > button:focus-visible { outline-offset: -3px; border-radius: var(--radius-lg); }
 .adm-list__icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--adm-well); }
 .adm-list__main { display: grid; gap: 2px; min-width: 0; }
 .adm-list__title { font-weight: 600; }
 .adm-list__sub { color: var(--color-text-muted); font-size: 0.875rem; }
 .adm-list__end { color: var(--color-text-muted); }
 
-@media (min-width: 375px) { .adm { padding-inline: 20px; } }
+@media (min-width: 375px) { .adm { padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right)); } }
 
 @media (min-width: 960px) {
-  .adm { padding: 0 32px 48px; }
+  .adm { padding: env(safe-area-inset-top) max(32px, env(safe-area-inset-right)) 48px max(32px, env(safe-area-inset-left)); }
   .adm-main { max-width: 1280px; }
   .adm-tabbar { display: none; }
 
   .adm-header {
-    position: sticky; top: 16px; z-index: var(--z-header);
+    position: sticky; top: calc(16px + env(safe-area-inset-top)); z-index: var(--z-header);
     display: flex; align-items: center; gap: 24px;
     max-width: 1280px; height: 64px; margin: 16px auto 12px; padding: 0 12px 0 24px;
     border: 1px solid var(--color-border-header); border-radius: var(--radius-full);
@@ -234,7 +244,6 @@
     border-radius: var(--radius-full); color: var(--color-text-secondary);
     font-size: 0.9375rem; font-weight: 600; white-space: nowrap;
   }
-  .adm-header__nav a:hover { color: var(--color-text-primary); background: var(--adm-well); }
   .adm-header__nav a[aria-current] { color: var(--color-text-accent); background: var(--adm-accent-tint); }
 
   .adm-search { position: relative; display: flex; align-items: center; flex: 0 1 260px; min-width: 150px; }
@@ -252,8 +261,14 @@
     display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
     background: var(--adm-well); color: var(--color-text-primary); font-weight: 700;
   }
-  .adm-avatar:hover, .adm-avatar[aria-expanded='true'] { background: var(--adm-well-press); }
+  .adm-avatar[aria-expanded='true'] { background: var(--adm-well-press); }
   .adm-page { padding-top: 16px; }
+}
+
+/* Hover only where there's a real pointer: on a tablet a tapped :hover sticks. */
+@media (min-width: 960px) and (hover: hover) {
+  .adm-header__nav a:hover { color: var(--color-text-primary); background: var(--adm-well); }
+  .adm-avatar:hover { background: var(--adm-well-press); }
 }
 
 /* Smaller laptops: the pill is too short for everything, so the logo goes and

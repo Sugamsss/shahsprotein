@@ -11,6 +11,7 @@ import { getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
 import { formatPhone, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
+import { initials } from './CustomersPage';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderInput, OrderSource } from '../types';
@@ -204,7 +205,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         </Field>
         {match && (
           <div className="adm-of__match">
-            <span className="adm-of__initials" aria-hidden="true">{(match.name ?? '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
+            <span className="adm-of__initials" aria-hidden="true">{initials(match.name)}</span>
             <span className="adm-list__main">
               <b>{match.name}</b>
               <small>{[copy.ordersBefore(match.customer?.orders ?? 1), match.pincode].filter(Boolean).join(' · ')}</small>

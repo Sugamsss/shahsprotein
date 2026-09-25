@@ -38,6 +38,8 @@
 .adm-segmented input:checked + span { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
 .adm-segmented input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-segmented label:active span { transform: scale(0.97); }
+/* The narrowest phones: four choices (Done's filter) fit 288px without scrolling sideways. */
+@media (max-width: 374px) { .adm-segmented span { padding: 0 6px; font-size: 0.875rem; } }
 
 /* ---- The sentence under a page title ------------------------------------------ */
 .adm-intro { margin-top: -8px; color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; text-wrap: pretty; }

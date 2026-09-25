@@ -17,9 +17,9 @@ const lastWhen = (iso: string) => {
   return when === adminCopy.dates.yesterday ? copy.yesterday : when;
 };
 
-/** "AK" for Anjali Kulkarni. */
+/** "AK" for Anjali Kulkarni, "AS" for "Aai (Sunita Shah)": the first letter of each word, skipping brackets and the like. */
 export const initials = (name: string | null) =>
-  (name ?? '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
+  (name ?? '').trim().split(/\s+/).map((w) => w.match(/\p{L}/u)?.[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
 
 /** Customers (spec 2.10): people grouped by phone, latest order first. */
 const CustomersPage: React.FC = () => {

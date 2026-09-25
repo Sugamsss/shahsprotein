@@ -40,6 +40,8 @@
 .adm-of__bar .adm-btn { flex: 1; max-width: 340px; }
 .adm-of__leave { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .adm-of-page .adm-title-row { align-items: flex-start; }
+/* Name and Pincode side by side: an error under one mustn't push the other down. */
+.adm-of .adm-form__pair { align-items: start; }
 
 /* Phone page: the bar sticks to the bottom and the tab bar steps aside. */
 .adm:has(.adm-of-page) .adm-tabbar { display: none; }
