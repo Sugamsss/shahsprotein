@@ -77,26 +77,9 @@ export const adminCopy = {
     unknown: 'Something went wrong. Please try again.',
   },
 
-  stub: 'Coming next.',
-  home: {
-    greeting: (name: string) => `Hello, ${name}`,
-    waiting: (n: number) => (n === 0 ? 'Nothing waiting to confirm.' : `${n} ${n === 1 ? 'order' : 'orders'} to confirm.`),
-  },
-  pages: {
-    orders: 'Orders',
-    newOrder: 'Add an order',
-    products: 'Products',
-    customers: 'Customers',
-    customer: 'Customer',
-    coupons: 'Coupons',
-    emailList: 'Email list',
-    settings: 'Settings',
-  },
-
   // ---- Lane A: shared states and screens (spec 2.3, 2.9) ----
   loading: 'Loading',
   loadError: "Couldn't load this. Check your connection, then try again.",
-  undo: 'Undo',
   dates: { today: 'today', yesterday: 'Yesterday' },
 
   products: {
