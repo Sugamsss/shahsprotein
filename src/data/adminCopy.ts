@@ -290,4 +290,29 @@ export const adminCopy = {
     save: 'Save coupon',
     saving: 'Saving…',
   },
+
+  emailList: {
+    title: 'Email list',
+    csv: 'CSV',
+    csvLabel: 'Download the email list as CSV',
+    people: (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`,
+    // After the bold "4 people": the rest of the sentence.
+    summary: (confirmed: number, waiting: number, left: number) =>
+      [
+        confirmed ? `${confirmed} confirmed` : '',
+        waiting ? `${waiting} still to tap the link in our email` : '',
+        left ? `${left} left the list` : '',
+      ].filter(Boolean).join(', '),
+    loops: 'Loops sends the emails; this is just the list.',
+    filterLabel: 'Show',
+    filters: { all: 'All', confirmed: 'Confirmed', waiting: 'Waiting', left: 'Left' },
+    signedUp: (day: string) => `Signed up ${day}`,
+    status: { confirmed: 'Confirmed', waiting: 'Not yet', left: 'Left' },
+    empty: 'No one on the list yet. Sign-ups from the site show up here.',
+    emptyFilter: 'No one here right now.',
+    csvHeaders: ['Email', 'Status', 'Signed up', 'Confirmed', 'Left', 'Consent'],
+    csvStatus: { confirmed: 'Confirmed', waiting: 'Waiting', left: 'Left' },
+    csvConsent: (yes: boolean) => (yes ? 'Yes' : 'No'),
+    csvFile: (day: string) => `shahs-email-list-${day}.csv`,
+  },
 };

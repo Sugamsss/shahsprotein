@@ -1,8 +1,8 @@
 import React, { useId } from 'react';
 import { adminCopy as copy } from '../data/adminCopy';
 
-// Small shared parts for the admin screens (spec 2.3): a form field, the load
-// error, skeletons. Styles: parts.css.
+// Small shared parts for the admin screens (spec 2.3): a form field, a segmented
+// switch, the load error, skeletons. Styles: parts.css.
 
 /**
  * A labelled field. Pass one input (or textarea, select) as the child: Field
@@ -41,6 +41,30 @@ export const Field: React.FC<{
     </div>
   );
 };
+
+/**
+ * A few choices in one pill (Email list's filter, Customers, Appearance): native
+ * radios, so arrow keys move between them. The picked one gets the site's white thumb.
+ */
+export function Segmented<T extends string>({ label, options, value, onChange }: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const name = useId();
+  return (
+    <fieldset className="adm-segmented">
+      <legend className="visually-hidden">{label}</legend>
+      {options.map((option) => (
+        <label key={option.value}>
+          <input type="radio" name={name} checked={option.value === value} onChange={() => onChange(option.value)} />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 /** A screen that couldn't load: the spec's card with Try again. */
 export const LoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (

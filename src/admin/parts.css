@@ -24,6 +24,21 @@
 .adm-skeleton span:nth-child(2) { width: 75%; }
 @keyframes adm-pulse { 50% { opacity: 0.45; } }
 
+/* ---- Segmented switch: the site's size switch, with n equal segments ------------- */
+.adm-segmented {
+  display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; margin: 0; padding: 4px;
+  border: 1px solid var(--color-choice-track-border); border-radius: var(--radius-full); background: var(--color-toggle-track);
+}
+.adm-segmented label { position: relative; display: grid; }
+.adm-segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-segmented span {
+  display: grid; place-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--radius-full);
+  color: var(--color-text-secondary); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.adm-segmented input:checked + span { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
+.adm-segmented input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-segmented label:active span { transform: scale(0.97); }
+
 /* ---- The sentence under a page title ------------------------------------------ */
 .adm-intro { margin-top: -8px; color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; text-wrap: pretty; }
 .adm-intro strong { color: var(--color-text-primary); font-weight: 600; }
