@@ -9,12 +9,8 @@ export const whatsappUrl = (number: string, message?: string): string =>
 
 export const telUrl = (number: string): string => `tel:+${number}`;
 
-/** The order chat, prefilled for a product or with the general order message. */
-export const orderUrl = (productName?: string): string =>
-  whatsappUrl(
-    order.number,
-    productName ? siteConfig.orderMessages.product(productName) : siteConfig.orderMessages.general,
-  );
+/** The order chat with the general order message, for links that skip the "Your order" popup. */
+export const orderUrl = (): string => whatsappUrl(order.number, siteConfig.orderMessages.general);
 
 /** The order chat with nothing prefilled, for questions rather than orders. */
 export const askUrl = (): string => whatsappUrl(order.number);

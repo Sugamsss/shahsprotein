@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
             </h2>
             <ul className="footer-contact">
               <li>
-                <OrderLink source="footer" variant="plain" size="sm" showIcon className="footer-link footer-contact__row">
+                <OrderLink source="footer" variant="plain" showIcon className="footer-link footer-contact__row">
                   <span className="footer-contact__label">{siteConfig.contact.order.label}</span>{' '}
                   {siteConfig.contact.order.display}
                 </OrderLink>

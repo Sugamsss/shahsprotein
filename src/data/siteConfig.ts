@@ -54,7 +54,6 @@ export const siteConfig = {
   },
   orderMessages: {
     general: "Hi! I'd like to place an order.",
-    product: (productName: string) => `Hi! I'd like to order ${productName}.`,
   },
   // The "Your order" popup, in Pranjali's voice. No prices, totals or delivery
   // costs anywhere: she replies with them on WhatsApp. Items read "Muesli, 250 g"
@@ -138,9 +137,9 @@ export const siteConfig = {
     sentBody: "Your order is written out and waiting there. Once you send it, I'll reply with the total, delivery and how to pay. I usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
+    forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapCoupon: (code: string) => `Coupon ${code}`,
-    forgot: 'Forgot something? Just add it in the chat.',
     newOrder: 'Start a new order',
     done: 'Done',
 
