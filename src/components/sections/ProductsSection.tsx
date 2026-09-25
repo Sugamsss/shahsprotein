@@ -144,6 +144,7 @@ export const ProductsSection: React.FC = () => {
           isOpen
           onClose={closeDetails}
           title={showingOrder ? copy.title : selectedProduct.name}
+          titleClassName={showingOrder ? undefined : 'modal-title--product'}
           className={showingOrder ? 'order-dialog' : undefined}
         >
           {showingOrder ? (

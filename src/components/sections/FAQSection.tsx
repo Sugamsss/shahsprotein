@@ -19,8 +19,9 @@ const FAQCardItem: React.FC<{
   const answerId = `faq-answer-${faq.id}`;
 
   return (
-    // The whole card toggles on click; the button inside the heading is what
-    // keyboards and screen readers use.
+    // The card toggles on click, except inside the open answer (people tap it to
+    // read or copy). The button inside the heading is what keyboards and
+    // screen readers use.
     <Card interactive onClick={onToggle} className={`faq-item${isOpen ? ' is-open' : ''}`}>
       <h3 className="faq-item__question">
         <button
@@ -47,6 +48,7 @@ const FAQCardItem: React.FC<{
         role="region"
         aria-labelledby={questionId}
         className="faq-item__answer"
+        onClick={(e) => e.stopPropagation()}
         aria-hidden={!isOpen}
         {...(!isOpen && { inert: '' })}
       >
@@ -96,8 +98,11 @@ export const FAQSection: React.FC = () => {
           </p>
           <p className="faq-help__care">
             <span>
-              Need help with an order you've placed? {siteConfig.contact.care.label}:{' '}
-              <strong>{siteConfig.contact.care.display}</strong>
+              Need help with an order you've placed?{' '}
+              {/* Kept on one line, so the number never splits from its label. */}
+              <span className="faq-help__care-line">
+                {siteConfig.contact.care.label}: <strong>{siteConfig.contact.care.display}</strong>
+              </span>
             </span>
             <CustomerCareLinks />
           </p>

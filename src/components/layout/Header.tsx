@@ -141,10 +141,23 @@ export const Header: React.FC = () => {
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-drawer"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {/* Both icons stay in the DOM, so they can crossfade as the menu glides. */}
+            <span className="mobile-toggle__icon" aria-hidden="true">
+              <Menu size={24} />
+              <X size={24} />
+            </span>
           </button>
         </div>
       </div>
+
+      {/* A light layer over the page while the menu is open. A tap on it only
+          closes the menu, so it never opens whatever was under the finger. It
+          sits inside the header, so the outside-click handler ignores it. */}
+      <div
+        className={`mobile-drawer-scrim${mobileMenuOpen ? ' is-open' : ''}`}
+        aria-hidden="true"
+        onClick={() => setMobileMenuOpen(false)}
+      />
 
       {/* Phone menu */}
       <div
