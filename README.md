@@ -17,6 +17,8 @@ The site does two jobs:
 
 The admin also has a home screen ("waiting on you", this week, what's selling), a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.
 
+Pranjali and Sunit sign in with a username (`pranjali`, `sunit`) and a password. There's no email reset: Sugam sets or resets a password with `node scripts/set-admin-password.mjs <username>` (needs `supabase login`). How to add someone is in [supabase/README.md](supabase/README.md).
+
 ## Getting started
 
 ```bash
