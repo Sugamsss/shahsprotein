@@ -1,18 +1,7 @@
 /* AdminSheet (spec 2.3): a bottom sheet under 960px, a centred popup from 960px.
    Reuses the site's overlay-in/out and sheet-up/down keyframes (global.css).
-   Portalled to <body>, so nothing here depends on the admin page wrapper. */
-
-/* Tokens the sheet needs from design's admin set (shared/admin-base.css).
-   They belong with the other admin tokens in admin.css; move them there when it lands. */
-[data-theme='light'] {
-  --adm-scrim: rgba(15, 23, 42, 0.32);
-  --adm-track-off: rgba(15, 23, 42, 0.12);
-}
-
-[data-theme='dark'] {
-  --adm-scrim: rgba(0, 0, 0, 0.55);
-  --adm-track-off: rgba(255, 255, 255, 0.14);
-}
+   Portalled to <body>, so nothing here depends on the admin page wrapper.
+   @imported by admin.css (the admin's CSS ships inlined in its JS). */
 
 /* ---- Phone: bottom sheet --------------------------------------------------- */
 .adm-sheet-layer {

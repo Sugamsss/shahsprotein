@@ -1,0 +1,251 @@
+/* The admin's shell. Imported only by AdminApp, so it ships in the admin chunk.
+   Loads after the site's tokens, themes and global.css, which it builds on.
+   Every class is prefixed `adm-` so nothing collides with the site.
+   It ships inlined in the admin's JS (see AdminApp.tsx), so screens don't
+   import CSS themselves: a page's styles go in src/admin/pages/<page>.css and
+   get one @import line below, at the top of this file.
+   Phones first; the laptop layout starts at 960px (the mockups' breakpoint). */
+
+@import './AdminSheet.css';
+
+/* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
+[data-theme='light'] {
+  --adm-page: #eef4fc;
+  --adm-page-glow: radial-gradient(ellipse 90% 40% at 100% 0%, rgba(255, 226, 208, 0.55), transparent 70%),
+                   radial-gradient(ellipse 70% 35% at 0% 0%, rgba(147, 197, 253, 0.35), transparent 70%);
+  --adm-surface: rgba(255, 255, 255, 0.82);
+  --adm-surface-solid: #ffffff;
+  --adm-well: rgba(15, 23, 42, 0.045);
+  --adm-well-press: rgba(15, 23, 42, 0.09);
+  --adm-hairline: rgba(15, 23, 42, 0.08);
+  --adm-edge: rgba(15, 23, 42, 0.07);
+  --adm-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(10, 20, 60, 0.06);
+  --adm-shadow-lift: 0 12px 40px rgba(10, 20, 60, 0.16);
+  --adm-accent-tint: rgba(59, 130, 246, 0.1);
+  --adm-accent-tint-press: rgba(59, 130, 246, 0.18);
+  --adm-frost: rgba(238, 244, 252, 0.45);
+  --adm-scrim: rgba(15, 23, 42, 0.32);
+  --adm-track-off: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme='dark'] {
+  --adm-page: #1f1f1f;
+  --adm-page-glow: radial-gradient(ellipse 90% 40% at 100% 0%, rgba(255, 255, 255, 0.07), transparent 70%);
+  --adm-surface: rgba(255, 255, 255, 0.045);
+  --adm-surface-solid: #262626;
+  --adm-well: rgba(255, 255, 255, 0.06);
+  --adm-well-press: rgba(255, 255, 255, 0.11);
+  --adm-hairline: rgba(255, 255, 255, 0.09);
+  --adm-edge: rgba(255, 255, 255, 0.08);
+  --adm-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.25);
+  --adm-shadow-lift: 0 16px 48px rgba(0, 0, 0, 0.55);
+  --adm-accent-tint: rgba(212, 175, 55, 0.12);
+  --adm-accent-tint-press: rgba(212, 175, 55, 0.2);
+  --adm-frost: rgba(20, 20, 20, 0.5);
+  --adm-scrim: rgba(0, 0, 0, 0.55);
+  --adm-track-off: rgba(255, 255, 255, 0.14);
+}
+
+/* ---- Page ------------------------------------------------------------------ */
+.adm {
+  min-height: 100vh;
+  padding: 0 16px calc(112px + env(safe-area-inset-bottom));
+  background: var(--adm-page-glow), var(--adm-page);
+  background-repeat: no-repeat;
+  background-size: 100% 520px, auto;
+  font-variant-numeric: tabular-nums;
+}
+.adm-main { max-width: 640px; margin: 0 auto; }
+.adm-page { display: grid; gap: 16px; padding-top: 20px; }
+.adm-title { font-size: 1.875rem; line-height: 1.1; }
+.adm-muted { color: var(--color-text-muted); font-size: 0.9375rem; }
+.adm-center { text-align: center; }
+.adm-stack { display: grid; gap: 12px; }
+.adm-card {
+  padding: 20px;
+  border: 1px solid var(--adm-edge);
+  border-radius: 24px;
+  background: var(--adm-surface);
+  box-shadow: var(--adm-shadow);
+}
+.adm kbd {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border: 1px solid var(--adm-hairline); border-radius: 6px; background: var(--adm-well);
+  color: var(--color-text-muted); font: 600 0.6875rem/1 var(--font-family-body);
+}
+/* The site's theme switch: a 44px hit area around it everywhere in the admin. */
+.adm .theme-toggle::before { content: ''; position: absolute; inset: -9px -4px; }
+
+/* ---- Buttons and fields ------------------------------------------------------ */
+.adm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 22px; border-radius: var(--radius-full);
+  font-size: 1rem; font-weight: 600; white-space: nowrap; touch-action: manipulation;
+  transition: transform 120ms ease, background-color var(--transition-fast), opacity var(--transition-fast);
+}
+.adm-btn:active { transform: scale(0.97); }
+.adm-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+.adm-btn--primary {
+  background: var(--color-accent-gradient); color: var(--color-btn-text);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-accent-primary) 28%, transparent);
+}
+.adm-btn--quiet { background: var(--adm-well); color: var(--color-text-primary); }
+.adm-btn--quiet:active { background: var(--adm-well-press); }
+.adm-btn--sm { position: relative; min-height: 40px; padding: 0 16px 0 12px; font-size: 0.875rem; }
+.adm-btn--sm::after { content: ''; position: absolute; inset: -2px; } /* 44px to the finger */
+.adm-btn--block { width: 100%; }
+
+.adm-field { display: grid; gap: 6px; }
+.adm-field__label { font-size: 0.875rem; font-weight: 600; }
+.adm-input {
+  width: 100%; min-height: 48px; padding: 0 16px;
+  border: 1px solid var(--color-border-input); border-radius: 14px;
+  background: var(--color-bg-input); color: var(--color-text-primary); font-size: 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.adm-input::placeholder { color: var(--color-text-muted); opacity: 1; }
+.adm-input:focus { outline: none; border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px var(--adm-accent-tint); background: var(--color-bg-input-focus); }
+.adm-input[aria-invalid='true'] { border-color: var(--color-error); }
+
+/* ---- Splash and sign in -------------------------------------------------------- */
+.adm-splash { display: grid; justify-items: center; align-content: start; gap: 24px; padding-top: 12vh; }
+.adm-splash__logo { width: 150px; height: auto; }
+.adm-splash__card { display: grid; gap: 16px; width: 100%; max-width: 400px; }
+.adm-splash__text { max-width: 400px; color: var(--color-text-secondary); line-height: 1.5; text-align: center; }
+.adm-login { display: grid; gap: 16px; }
+.adm-login__title { font-size: 1.5rem; }
+.adm-login__sub { margin-top: -12px; color: var(--color-text-muted); font-size: 0.9375rem; }
+.adm-login__error { color: var(--color-error-text); font-size: 0.875rem; line-height: 1.4; }
+.adm-back {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px;
+  color: var(--color-text-secondary); font-size: 0.9375rem; font-weight: 600;
+}
+
+/* ---- Orders badge ---------------------------------------------------------------- */
+.adm-badge {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  background: var(--color-accent-gradient); color: var(--color-btn-text);
+  font-size: 0.75rem; font-weight: 700; line-height: 20px; text-align: center;
+}
+
+/* ---- Phone: the floating glass tab bar ------------------------------------------ */
+.adm-tabbar {
+  position: fixed; z-index: var(--z-header); left: 12px; right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex; max-width: 480px; margin: 0 auto; padding: 4px;
+  border: 1px solid var(--color-border-header); border-radius: 26px;
+  background: var(--color-bg-header); box-shadow: var(--shadow-header);
+  -webkit-backdrop-filter: var(--glass-backdrop); backdrop-filter: var(--glass-backdrop);
+}
+.adm-tabbar a {
+  position: relative; flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 2px;
+  min-height: 56px; border-radius: 22px; color: var(--color-text-secondary);
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.01em;
+}
+.adm-tabbar a:active { background: var(--adm-well-press); }
+.adm-tabbar a[aria-current] { color: var(--color-text-accent); background: var(--adm-accent-tint); }
+.adm-tabbar .adm-badge {
+  position: absolute; top: 5px; left: calc(50% + 5px);
+  min-width: 18px; height: 18px; padding: 0 5px; font-size: 0.6875rem; line-height: 18px;
+  box-shadow: 0 0 0 2px var(--adm-surface-solid);
+}
+@media (max-width: 359px) { .adm-tabbar a { font-size: 0.625rem; } }
+
+/* ---- Laptop: the glass pill header ------------------------------------------------ */
+.adm-header { display: none; }
+
+/* ---- More (phone): a list of links ------------------------------------------------ */
+.adm-list { display: grid; padding: 0; overflow: hidden; }
+.adm-list > a, .adm-list > button, .adm-list__static {
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 14px;
+  min-height: 72px; padding: 12px 16px; text-align: left; color: var(--color-text-primary);
+}
+.adm-list > * + * { border-top: 1px solid var(--adm-hairline); }
+.adm-list > a:active, .adm-list > button:active { background: var(--adm-well-press); }
+.adm-list__static { grid-template-columns: 1fr auto; min-height: 60px; }
+.adm-list__icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--adm-well); }
+.adm-list__main { display: grid; gap: 2px; min-width: 0; }
+.adm-list__title { font-weight: 600; }
+.adm-list__sub { color: var(--color-text-muted); font-size: 0.875rem; }
+.adm-list__end { color: var(--color-text-muted); }
+
+@media (min-width: 375px) { .adm { padding-inline: 20px; } }
+
+@media (min-width: 960px) {
+  .adm { padding: 0 32px 48px; }
+  .adm-main { max-width: 1280px; }
+  .adm-tabbar { display: none; }
+
+  .adm-header {
+    position: sticky; top: 16px; z-index: var(--z-header);
+    display: flex; align-items: center; gap: 24px;
+    max-width: 1280px; height: 64px; margin: 16px auto 12px; padding: 0 12px 0 24px;
+    border: 1px solid var(--color-border-header); border-radius: var(--radius-full);
+    background: var(--color-bg-header); box-shadow: var(--shadow-header);
+    -webkit-backdrop-filter: var(--glass-backdrop); backdrop-filter: var(--glass-backdrop);
+  }
+  .adm-header__logo { display: flex; flex: 0 0 auto; border-radius: var(--radius-sm); }
+  .adm-header__logo img { width: 114px; height: auto; }
+  .adm-header__nav { display: flex; gap: 2px; margin-right: auto; }
+  .adm-header__nav a {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px;
+    border-radius: var(--radius-full); color: var(--color-text-secondary);
+    font-size: 0.9375rem; font-weight: 600; white-space: nowrap;
+  }
+  .adm-header__nav a:hover { color: var(--color-text-primary); background: var(--adm-well); }
+  .adm-header__nav a[aria-current] { color: var(--color-text-accent); background: var(--adm-accent-tint); }
+
+  .adm-search { position: relative; display: flex; align-items: center; flex: 0 1 260px; min-width: 150px; }
+  .adm-search svg { position: absolute; left: 14px; color: var(--color-text-muted); pointer-events: none; }
+  .adm-search .adm-input {
+    min-height: 40px; padding: 0 40px; border-color: transparent; border-radius: var(--radius-full);
+    background: var(--adm-well); font-size: 0.9375rem;
+  }
+  .adm-search .adm-input::-webkit-search-cancel-button { display: none; }
+  .adm-search kbd { position: absolute; right: 10px; }
+  .adm-search:focus-within kbd { display: none; }
+
+  .adm-account { position: relative; flex: 0 0 auto; }
+  .adm-avatar {
+    display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--adm-well); color: var(--color-text-primary); font-weight: 700;
+  }
+  .adm-avatar:hover, .adm-avatar[aria-expanded='true'] { background: var(--adm-well-press); }
+  .adm-menu {
+    position: absolute; top: calc(100% + 12px); right: 0; width: 280px; padding: 8px;
+    border: 1px solid var(--adm-edge); border-radius: 20px;
+    background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
+  }
+  .adm-menu[hidden] { display: none; }
+  .adm-menu__who {
+    display: grid; gap: 2px; padding: 8px 12px 12px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--adm-hairline); color: var(--color-text-muted); font-size: 0.8125rem;
+  }
+  .adm-menu__who strong { overflow: hidden; color: var(--color-text-primary); font-size: 0.9375rem; text-overflow: ellipsis; }
+  .adm-menu__item {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px;
+    border-radius: 12px; color: var(--color-text-primary); font-size: 0.9375rem; font-weight: 500; text-align: left;
+  }
+  .adm-menu__item:hover { background: var(--adm-well); }
+  .adm-menu__item--static { justify-content: space-between; }
+  .adm-menu__item--static:hover { background: none; }
+  .adm-page { padding-top: 16px; }
+}
+
+/* Smaller laptops: the pill is too short for everything, so the logo goes and
+   "Add order" keeps only its plus (its name stays for screen readers). */
+@media (min-width: 960px) and (max-width: 1239px) {
+  .adm-header { gap: 8px; padding-left: 8px; }
+  .adm-header__logo { display: none; }
+  .adm-header__nav a { padding: 0 12px; }
+  .adm-header .adm-btn--sm { width: 44px; padding: 0; }
+  .adm-header .adm-btn--sm .adm-btn__text {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-btn, .adm-input { transition: none; }
+  .adm-btn:active { transform: none; }
+}

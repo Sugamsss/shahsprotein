@@ -2,7 +2,6 @@ import React, { useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { DialogCloseContext, useDialog } from '../components/ui/useDialog';
-import './AdminSheet.css';
 
 // Every admin sheet and popup (spec 2.3): a bottom sheet under 960px, a centred
 // popup from 960px over the frosted page. Head, a body that scrolls on its own,
