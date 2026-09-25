@@ -66,6 +66,7 @@ const LoginPage: React.FC = () => {
             value={password} onChange={(e) => setPassword(e.target.value)} {...errorProps} />
         </label>
         {error && <p id="adm-login-error" className="adm-login__error" role="alert"><X size={18} aria-hidden="true" />{error}</p>}
+        {error === copy.login.wrong && <p className="adm-login__hint">{copy.login.forgot}</p>}
         <button type="submit" className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
           {busy ? copy.login.busy : copy.login.submit}
         </button>
