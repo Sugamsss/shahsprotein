@@ -86,7 +86,7 @@ with that name when rerun; no external scheduler is required.
 
 Migration `20260924000000` adds `site_events` (anonymous, no PII) and the public
 RPC `track_site_event(p_event, p_source, p_device_type, p_theme)`, which the site
-calls when someone taps "Order on WhatsApp". Anon users can call the RPC but can't
+calls when something opens WhatsApp to order. Anon users can call the RPC but can't
 read, change or delete any rows. The RPC accepts only `whatsapp_order_click` and
 the known button sources, and rate-limits to 60 clicks per IP per hour and 3,000
 per hour overall. It also schedules `purge_site_events()` daily at **03:15 UTC**
@@ -99,10 +99,12 @@ select jobname, schedule from cron.job where jobname = 'purge-site-events';
 select event, source, device_type, created_at from public.site_events order by created_at desc limit 10;
 ```
 
-Migration `20260925000001` widens the allowed sources so the "Your order" popup
-can record its Send as `order-popup`, or `order-popup:<place>` for the button
-that opened it (header, hero, banner, footer, product, product-details). It
-must be applied before the popup ships, or those clicks are rejected.
+Migrations `20260925000001` and `20260925000003` widen the allowed sources for
+the "Your order" popup: its Send is `order-popup`, or `order-popup:<place>` for
+the button that opened it (header, hero, banner, footer, product,
+product-details), and its "Message me on WhatsApp" link is `order-popup:chat`.
+Buttons that only open the popup record nothing. The older sources stay allowed
+so past rows still count.
 
 
 ## Coupons

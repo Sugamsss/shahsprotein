@@ -21,7 +21,7 @@ Tokens live in `src/styles/tokens.css` (type, spacing, radii, z-index) and per t
 - Surfaces are frosted glass cards (`.glass-card`, `--color-bg-card`, `--glass-backdrop`).
 - **Order buttons** use the brand accent gradient with a white or dark WhatsApp glyph, not WhatsApp green (`.order-btn` in `global.css`).
 
-CSS order gotcha: `responsive.css` is `@import`ed at the top of `global.css`, so base rules added later in `global.css` override it. Put new breakpoint rules next to their base rules in `global.css`.
+CSS order: `global.css` imports tokens, then themes, then animations. Each section's tablet and desktop rules sit next to its base rules, and phone fixes go in the "Phones, tablets and short screens" block at the end (see `AGENTS.md`).
 
 ## 3. Ordering and contact
 
@@ -29,24 +29,50 @@ All contact details live in one place, `siteConfig.contact` (`src/data/siteConfi
 
 | Line | Number | Links | Where it shows |
 |---|---|---|---|
-| **Order** | 9850359899 | `https://wa.me/919850359899` | Header, hero, product cards, product popup, FAQ, bottom banner, footer |
+| **Order** | 9850359899 | `https://wa.me/919850359899` | The "Your order" popup's Send, FAQ, bottom banner ("save our order number"), footer |
 | **Customer care** | 9881191999 | `tel:+919881191999`, `https://wa.me/919881191999` | Under the FAQ list and in the footer only |
 
 Rules:
 - A phone number is **always shown with its label** ("Order" or "Customer care").
 - Customer care **never** appears in the header or hero, where it would compete with ordering.
 
-Links are built by `src/utils/contact.ts` (the message is URL-encoded):
-- General order buttons prefill `Hi! I'd like to place an order.`
-- Product buttons prefill `Hi! I'd like to order <Product>.`
-- "Ask us on WhatsApp" links (FAQ, missing-nutrition note) open the order chat with nothing prefilled, since they're questions, not orders.
+### The "Your order" popup
 
-Every order link renders through `OrderLink` (`src/components/ui/OrderLink.tsx`), which opens in a new tab and fires `whatsapp_order_click` with a `source`. Sources: `header`, `hero`, `product:<id>`, `product-details:<id>`, `nutrition:<id>`, `faq`, `banner`, `footer`. `CustomerCareLinks` renders the care line's Call and WhatsApp actions.
+People build their order on the site and send Pranjali one tidy WhatsApp message. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): she replies on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no accounts and no order database.
 
-**Order click tracking:** `trackOrderClick` calls `AnalyticsService.trackSiteEvent`, which posts `{ p_event, p_source, p_device_type, p_theme }` to the Supabase RPC `track_site_event` with `fetch(..., { keepalive: true })`. It is fire and forget: never awaited, errors ignored, so it can't delay opening WhatsApp. Rows go to `site_events` (migration `20260924000000`) and hold no PII: no IP, user agent, session key or link to a member.
+- **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
+- **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so she can quote delivery), an optional coupon, and "See your message", which shows the exact text. **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message me on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
+- **Order of lines.** Always product order (Raggi Jaggi, Muesli, Date Bites), smaller pack first, in the popup and in the message (`sortLines`).
+- **What's kept.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, pincode and the coupon stay in memory for the visit and are never saved. At Send the cart is cleared, and a snapshot stays in memory so the "Now press send in WhatsApp" panel can offer **Try again**. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
+- **The message** comes from `buildOrderMessage` (`src/utils/orderMessage.ts`), with its words in `siteConfig.order.message`:
+
+  ```
+  Hi! I'm Anjali, and I'd like to place an order:
+
+  • Raggi Jaggi 250 g × 1
+  • Muesli 250 g × 2
+
+  Coupon: EXAMPLE10
+  Pincode: 415001
+
+  Could you send me the total?
+  ```
+
+  A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out.
+- **State** lives in `OrderContext` (`src/context/OrderContext.tsx`). All popup copy is in `siteConfig.order`. The popup body is lazy-loaded.
+
+### Coupons
+
+Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; Pranjali works out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes at `/admin/coupons` (see §7).
+
+### Direct WhatsApp links
+
+"Ask us on WhatsApp" (FAQ, missing-nutrition note) and the footer's "Order 9850359899" open the order chat directly through `OrderLink` (`src/components/ui/OrderLink.tsx`), with nothing prefilled for questions. `CustomerCareLinks` renders the care line's Call and WhatsApp actions. Links are built by `src/utils/contact.ts` (the message is URL-encoded).
+
+**Order click tracking.** A `whatsapp_order_click` is recorded only when something actually opens WhatsApp to order: the popup's Send (`trackOrderSend`, source `order-popup:<place that opened it>`, or `order-popup`), the empty popup's chat link (`order-popup:chat`), and the direct links (`faq`, `nutrition:<id>`, `footer`). Buttons that only open the popup record nothing. The name, pincode and coupon are never recorded. `trackOrderClick` calls `AnalyticsService.trackSiteEvent`, which posts `{ p_event, p_source, p_device_type, p_theme }` to the Supabase RPC `track_site_event` with `fetch(..., { keepalive: true })`. It is fire and forget: never awaited, errors ignored, so it can't delay opening WhatsApp. Rows go to `site_events` (migration `20260924000000`) and hold no PII: no IP, user agent, session key or link to a member.
 
 - **Only the live site writes.** Events are sent when the build is a production build *and* the host is `shahsnutrition.food` or `www.shahsnutrition.food` (`PRODUCTION_HOSTS` in `analyticsService.ts`). Local dev, `vite preview` and Vercel preview deploys only log to the console, because `.env.local` and previews point at the production Supabase. **If the domain changes, update `PRODUCTION_HOSTS` or clicks stop being recorded.** `VITE_TRACK_EVENTS=true` forces sending, for testing against a local Supabase only.
-- **The source list is enforced in the database.** `track_site_event` rejects unknown events and any source outside the list above (product ids: lowercase letters, digits and dashes). A new button with a new kind of source needs a migration that updates the check in both the function and the `site_events` table.
+- **The source list is enforced in the database.** `track_site_event` rejects unknown events and any source outside the allowed list: `header`, `hero`, `faq`, `banner`, `footer`, `product:<id>`, `product-details:<id>`, `nutrition:<id>`, `order-popup`, and `order-popup:` + `header`, `hero`, `banner`, `footer`, `product`, `product-details` or `chat` (product ids: lowercase letters, digits and dashes). The older sources stay allowed so past rows still count (migrations `20260925000001` and `000003`). A new button with a new kind of source needs a migration that updates the check in both the function and the `site_events` table.
 - **Rate limits:** 60 clicks per IP per hour (hashed IP, kept about an hour in `site_event_rate_limits`, never joined to events) and 3,000 clicks per hour overall. Over the limit, clicks are dropped quietly.
 - **Retention:** 13 months, purged daily at 03:15 UTC by the `purge-site-events` cron job.
 
@@ -54,14 +80,14 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 ## 4. Page sections (top to bottom)
 
-1. **Header** (`layout/Header.tsx`): floating glass pill. Logo, centred links (Products, Our Principles, Our Story), theme toggle, Instagram and email icons, and an **Order** button (WhatsApp glyph, 32px). On phones the Order button stays visible next to the menu button. Between 769px and 880px the Instagram and email icons are hidden so the nav doesn't collide.
-2. **Hero** (`sections/HeroSection.tsx`): badge "NOW TAKING ORDERS" (swap back to "GOOD FOOD. BRIGHTER DAYS." after the first month or so), heading from `siteConfig.heroHeading`, motto, **Order on WhatsApp** (48px, full width on phones), a quiet "See the range" link to `#products`, and the line "Made fresh in small batches. Delivered across India." No email form or avatars.
-3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **Order** button. The popup shows tagline, description, ingredients (sprite art), **Good to know** (shelf life, contains, pack sizes), nutrition, and an **Order <Product> on WhatsApp** button, pinned to the bottom of the popup on phones. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
+1. **Header** (`layout/Header.tsx`): floating glass pill. Logo, centred links (Products, Our Principles, Our Story), theme toggle, Instagram and email icons, and an **Order** button (WhatsApp glyph, 32px) that opens "Your order". When the order has packs in it, the glyph becomes a count chip ("9+" above 9). On phones the Order button stays visible next to the menu button. Between 769px and 880px the Instagram and email icons are hidden so the nav doesn't collide.
+2. **Hero** (`sections/HeroSection.tsx`): badge "NOW TAKING ORDERS" (swap back to "GOOD FOOD. BRIGHTER DAYS." after the first month or so), heading from `siteConfig.heroHeading`, motto, **Order on WhatsApp** (48px, full width on phones, opens "Your order"), a quiet "See the range" link to `#products`, and the line "Made fresh in small batches. Delivered across India." No email form or avatars.
+3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **+ Add** button (adds one 250 g pack and opens "Your order"). The popup shows tagline, description, ingredients (sprite art), **Good to know** (shelf life, contains, pack sizes), nutrition, and a pinned bar with the pack size and **Add to order**, which switches the popup to "Your order". Date Bites comes in one size, so it shows "250 g pack" instead of a switch. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
 4. **Values** (`sections/ValuesSection.tsx`, `#values`): "What we believe", three cards from `src/data/values.ts`.
 5. **Our Story** (`sections/StorySection.tsx`, `#our-story`): founder story from `siteConfig.story`, key phrases highlighted with `.story-highlight`.
 6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). Under the list: "Have another question? Ask us on WhatsApp." (order chat) and "Need help with an order you've placed? Customer care: 9881191999" with Call and WhatsApp.
-7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp**, "Or save our order number: 9850359899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
-8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp, Get updates (`#updates`). **Get in touch:** Order 9850359899 (WhatsApp), Customer care 9881191999 (tap to call), Instagram, email. Each row is one link. **For Business Inquiries:** email.
+7. **Bottom banner** (`sections/NewsletterSection.tsx`, `#order`): "Ready to give it a try?", **Order on WhatsApp** (opens "Your order"), "Or save our order number: 9850359899". Underneath, the email row (`#updates`): "Not ready yet? Hear about new launches.", email field, consent checkbox, "Keep me posted".
+8. **Footer** (`layout/Footer.tsx`): logo and tagline. **Quick Links:** Products, Our Story, Order on WhatsApp (opens "Your order"), Get updates (`#updates`). **Get in touch:** Order 9850359899 (WhatsApp), Customer care 9881191999 (tap to call), Instagram, email. Each row is one link. **For Business Inquiries:** email.
 
 ## 5. Products (`src/data/products.ts`, type in `src/types/product.ts`)
 
@@ -108,9 +134,11 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 
 ## 7. Owner dashboard
 
-`/admin` (Supabase Auth, `admin_users`) shows members, campaigns and analytics. It still says "waitlist", which is fine because only the founder sees it. Setup is in `supabase/README.md`.
+`/admin` (Supabase Auth, `admin_users`) shows members, campaigns, coupons and analytics. It still says "waitlist", which is fine because only the founder sees it. Setup is in `supabase/README.md`.
 
-**Analytics** (`/admin/analytics`, `AdminAnalytics.tsx`) opens with **WhatsApp order clicks**: total clicks, a mobile/desktop/tablet split, and clicks per button (e.g. "Product card · Raggi Jaggi") with the last click time, for the last 7 days, last 30 days or all time. It reads through the admin-only RPC `get_admin_order_clicks(p_days)`. Consented sessions are listed below it.
+**Analytics** (`/admin/analytics`, `AdminAnalytics.tsx`) opens with **WhatsApp order clicks**: total clicks, a mobile/desktop/tablet split, and clicks per button (e.g. "Product card · Raggi Jaggi") with the last click time, for the last 7 days, last 30 days or all time. It reads through the admin-only RPC `get_admin_order_clicks(p_days)`. Popup sends show as "Order popup, sent · <button that opened it>". Consented sessions are listed below it.
+
+**Coupons** (`/admin/coupons`, `AdminCoupons.tsx`) lists every code with its public description, status (On, Off, or Ended once its end date has passed), end date and private minimum note. Pranjali can add a code, edit it, or turn it on and off. There's no delete: turning a code off retires it and keeps its history, and a code can't be renamed. The end date is stored as the end of that day in India time. It uses admin-only RPCs (`get_admin_coupons`, `create_admin_coupon`, `update_admin_coupon`, `set_admin_coupon_active`), and server errors are written for her and shown as they come.
 
 ## 8. Meta
 

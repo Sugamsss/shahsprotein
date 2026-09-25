@@ -4,7 +4,7 @@ The one-page guide for anyone (agent or person) working in this repo. Read it be
 
 ## What this is
 
-Shah's Nutrition is a small Indian food brand (Raggi Jaggi, Muesli, Date Bites) from Satara. This repo is its website: a single landing page plus a small admin area. The brand launched on 2026-09-23. People **order on WhatsApp** (there's no cart or checkout), and they can join an email list for news.
+Shah's Nutrition is a small Indian food brand (Raggi Jaggi, Muesli, Date Bites) from Satara. This repo is its website: a single landing page plus a small admin area. The brand launched on 2026-09-23. People build an order in the **"Your order" popup** and send it on **WhatsApp**. There's no checkout, no payment and no prices on the site: Pranjali replies in the chat with the total, delivery and how to pay. People can also join an email list for news.
 
 The voice is first-person founder (Pranjali): warm, honest, everyday Indian. Not corporate, not gym talk. `SPEC.md` has the full brand, color and component spec. It's the source of truth for the product.
 
@@ -30,11 +30,13 @@ src/
 │   ├── layout/          # Header (with mobile drawer + Order button), Footer, Container
 │   ├── sections/        # Hero, Products (cards + product popup), Values, Story, FAQ, Newsletter
 │   ├── ui/              # Primitives: Button, Input, Modal (bottom sheet on phones), ThemeToggle, Toast, OrderLink…
+│   ├── order/           # The "Your order" popup (lazy-loaded): lines, tiles, details, coupon, message preview, sent panel
 │   ├── pages/           # NotFound (the 404 page)
-│   └── admin/           # Admin dashboard, waitlist CRM, campaigns, analytics
+│   └── admin/           # Admin dashboard, waitlist CRM, campaigns, coupons, analytics
 ├── data/                # ALL copy and content: products, faqs, values, siteConfig (phone numbers, wa.me links)
-├── context/             # ThemeContext, WaitlistContext
-├── services/            # waitlistService (signup), analyticsService (incl. WhatsApp order clicks)
+├── context/             # ThemeContext, WaitlistContext, OrderContext (cart, details, coupon, popup state)
+├── services/            # waitlistService (signup), couponService (coupon check), analyticsService (incl. WhatsApp order clicks)
+├── utils/               # contact (wa.me links, click tracking), orderCart and orderMessage (pure, tested)
 ├── hooks/               # useScrollReveal, useSectionSettle (desktop section settle)
 ├── styles/              # global.css imports tokens → themes → animations; admin-dashboard.css is admin-only
 └── types/
@@ -50,6 +52,8 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - **Both themes must look right.** Theme is set with `data-theme` on `<html>`.
 - **Don't change nutrition panels or product facts** without the founder. Some were restored on purpose.
 - **Don't invent facts** such as prices, delivery promises or storage advice. Leave them out until they're confirmed.
+- **No prices on the site.** No ₹, totals, delivery costs or payment anywhere, including the order popup and the WhatsApp message. That's the founder's call. Coupon descriptions never show an amount either (the database rejects ₹, Rs and INR).
+- **Coupon codes live only in Supabase.** Never put a real code in the code, tests, seeds, docs or commit messages: the repo is public. Use `EXAMPLE10`-style placeholders.
 - **Section order is fixed:** Hero → Products → Values → Story → FAQ → Newsletter → Footer. No "building in public" section, even though the reference designs show one.
 - The email list code is still named "waitlist" (`useWaitlist`, `waitlistService`, admin screens). That's intentional. Don't rename it.
 - Accessibility basics stay: `aria-label` on each section, focus trap and restore in Modal, 44px touch targets on phones, and `:focus-visible` rings.
@@ -62,6 +66,8 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - **No `!important` and no layout inline styles.** Components use classes; the only inline style left on the landing page is the ingredient sprite position in the product popup. If a rule doesn't apply, fix the order or the selector instead of reaching for `!important`.
 - **Product popup:** at every size the title and close button form a sticky row (`.modal-head`) and the Order button is pinned to the bottom (`.product-detail__order`); on screens ≤480px tall both scroll instead. On phones (≤600px) the popup is a bottom sheet. Closing plays a 240ms exit animation (`EXIT_MS` in `Modal.tsx`, matched in CSS), instant with reduced motion. Test scrolling inside the popup at 320px.
 - **Phone header and menu:** at ≤400px the theme toggle leaves the header and shows as an "Appearance" row in the menu. The section links come from `siteConfig.nav` (header and menu both).
+- **The order popup.** State is in `OrderContext`; only the cart is saved (localStorage `shahs-order-v1`, every access guarded). Name, pincode and the coupon stay in memory and must never be saved. Lines always show in product order, then pack size (`sortLines`), in the popup and the message. The quantity limit is 10 per line (`siteConfig.order.maxQuantity`). The message is built only by `buildOrderMessage`, and the preview uses the same parts (`orderMessageParts`), so they can't drift apart; `npm test` checks the exact text. If you change the wording in `siteConfig.order.message`, update the tests with it.
+- **What counts as an order click.** Only things that open WhatsApp to order: the popup's Send (`trackOrderSend`), its "Message me on WhatsApp" (`trackOrderChat`) and the direct `OrderLink`s. A button that only opens the popup must not call `trackOrderClick`. A new source needs a migration, because `site_events` and `track_site_event` both check it.
 - **Sign-up feedback is inline.** Validation errors, success and "already on our list" show under the form (copy in `siteConfig.signup`). The toast is only for server or network failures and stays until closed.
 - **Several sessions may share this folder.** Other agents or people may have uncommitted work here. Don't `checkout`, `stash` or `reset` a tree you didn't start in. For parallel work, use a `git worktree` in a sibling folder, and leave untracked files you don't own alone.
 - **`Private/` is git-ignored and never published.** It holds pack label drafts, story illustration ideas and unreleased product data. The repo is public, and everything in `public/` is served on the site, so work files, drafts and print artwork go in `Private/`, not in `public/`. Only add a final, compressed image to `public/assets/` when the site actually uses it.
@@ -87,7 +93,8 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 
 - Supabase is the source of truth for sign-ups, admin access, CRM and analytics. Signups go through the Supabase RPC in `waitlistService.ts`, then the `sync-waitlist-loops` edge function.
 - Loops runs double opt-in and the mailing list. `loops-webhook` syncs confirm, unsubscribe and bounce events back.
-- WhatsApp order clicks are recorded through a rate-limited RPC into `site_events`, fire and forget.
+- WhatsApp order clicks are recorded through a rate-limited RPC into `site_events`, fire and forget. No names, pincodes or codes.
+- Coupons: the popup calls `check_coupon` (rate-limited, answers only valid + description). The founder manages codes at `/admin/coupons` through admin-only RPCs. `couponService` lazy-imports Supabase, like `waitlistService`.
 - Page views use **Vercel Web Analytics** (cookieless), loaded by `AnalyticsService.startPageViews()` on the landing page only, on the production hosts only. It's Vercel's own `/_vercel/insights/script.js`, so there's no npm package. It records nothing until Web Analytics is enabled for the project in the Vercel dashboard.
 - `sync-waitlist-loops` only acts for a member who joined in the last 10 minutes, so the public anon key can't be used to re-send Loops emails.
 - Secrets live only in Supabase. Never put them in frontend env vars or commits. Setup and deploy details are in `supabase/README.md`.
