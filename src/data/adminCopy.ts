@@ -60,6 +60,7 @@ export const adminCopy = {
     wrong: "That email and password don't match. Try again, or ask Pranjali to reset it.",
     missing: 'Type your email and password.',
     back: 'Back to the website',
+    sessionEnded: 'You were signed out. Sign in again to carry on.',
   },
 
   gate: {
