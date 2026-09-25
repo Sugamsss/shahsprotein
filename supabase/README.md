@@ -69,8 +69,12 @@ The function validates the caller is an admin via JWT, accepts up to 100 member 
 | `get_admin_campaign_log(p_campaign_id, p_page, p_per_page)` | Campaign delivery log |
 | `get_waitlist_count_stats()` | Consistent count breakdown (active, bounced, etc.) |
 | `get_admin_order_clicks(p_days)` | WhatsApp order clicks by source and device; `p_days = null` for all time |
+| `get_admin_coupons()` | All coupon codes with private notes, newest first |
+| `create_admin_coupon(p_code, p_description, p_expires_at, p_minimum_note, p_internal_note)` | Add a code (starts on; expiry must be in the future) |
+| `update_admin_coupon(p_id, p_description, p_active, p_expires_at, p_minimum_note, p_internal_note)` | Replace a code's editable fields; the code itself is fixed |
+| `set_admin_coupon_active(p_id, p_active)` | Turn a code on or off |
 
-All admin RPCs check `public.is_admin()` and return 401 for non-admins.
+All admin RPCs check `public.is_admin()`. A non-admin gets an `Unauthorized` error (HTTP 400 from PostgREST); anon has no execute grant on the newer ones and gets a 401.
 
 Migration `20260727000006` enables `pg_cron`, restricts
 `purge_waitlist_retention()` execution to `service_role`, and schedules the
@@ -115,7 +119,26 @@ Codes are matched ignoring case and spaces around them (`example10` finds
 `EXAMPLE10`), and must be unique ignoring case. A code is 3 to 24 letters,
 digits or hyphens.
 
-Add a code from the SQL editor:
+### From the admin area
+
+Migration `20260925000002` adds admin-only RPCs (listed in the table above) for
+the coupon screen in the admin area. There you can list every code, add one,
+turn it on or off, set or clear its expiry, and keep a private minimum note and
+internal note. Codes are saved in capitals. A few rules:
+
+- **No delete.** Turn a code off to retire it. That keeps its history, and the
+  same code can't come back later meaning something else.
+- **The code can't be changed** after it's added. For a different code, add a
+  new one.
+- A new code's expiry must be in the future. When editing, a past date is
+  allowed, which ends the code straight away.
+- Problems (a code that already exists, a rupee amount in the description, a
+  bad code) come back as plain messages (errcode `22023`) that the screen shows
+  as-is.
+
+### From the SQL editor (fallback)
+
+Add a code:
 
 ```sql
 insert into public.coupons (code, description, expires_at, minimum_note)

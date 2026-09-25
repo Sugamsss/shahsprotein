@@ -1,5 +1,7 @@
 import {
   AdminAnalyticsSession,
+  AdminCoupon,
+  AdminCouponInput,
   AdminEmailPayload,
   AdminOrderClicks,
   AdminPage,
@@ -9,6 +11,16 @@ import {
   MemberDetail,
 } from '../types/admin';
 import { supabase } from './supabaseClient';
+
+/**
+ * Coupon RPCs raise errcode 22023 with a plain message meant for the founder
+ * ("That code already exists…"), so show that as-is. Anything else gets a
+ * generic message.
+ */
+function couponSaveError(error: { code?: string; message?: string }): Error {
+  if (error.code === '22023' && error.message) return new Error(error.message);
+  return new Error("Couldn't save the code. Please try again.");
+}
 
 export class AdminService {
   static async getWaitlist(
@@ -140,6 +152,54 @@ export class AdminService {
     const { data, error } = await supabase.rpc('get_admin_order_clicks', { p_days: days });
     if (error) throw error;
     return data as AdminOrderClicks;
+  }
+
+  /** All coupon codes, newest first. Work out "expired" from `expires_at`. */
+  static async getCoupons(): Promise<AdminCoupon[]> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { data, error } = await supabase.rpc('get_admin_coupons');
+    if (error) throw error;
+    return (data ?? []) as AdminCoupon[];
+  }
+
+  /** Adds a code. It starts on; the code can't be changed afterwards. */
+  static async createCoupon(input: AdminCouponInput): Promise<AdminCoupon> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { data, error } = await supabase.rpc('create_admin_coupon', {
+      p_code: input.code ?? '',
+      p_description: input.description,
+      p_expires_at: input.expires_at,
+      p_minimum_note: input.minimum_note,
+      p_internal_note: input.internal_note,
+    });
+    if (error) throw couponSaveError(error);
+    return data as AdminCoupon;
+  }
+
+  /** Replaces every editable field. `expires_at: null` removes the expiry. */
+  static async updateCoupon(id: string, input: AdminCouponInput): Promise<AdminCoupon> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { data, error } = await supabase.rpc('update_admin_coupon', {
+      p_id: id,
+      p_description: input.description,
+      // Required on update; a missing value is rejected rather than guessed.
+      p_active: input.active ?? null,
+      p_expires_at: input.expires_at,
+      p_minimum_note: input.minimum_note,
+      p_internal_note: input.internal_note,
+    });
+    if (error) throw couponSaveError(error);
+    return data as AdminCoupon;
+  }
+
+  static async setCouponActive(id: string, active: boolean): Promise<AdminCoupon> {
+    if (!supabase) throw new Error('Supabase is not configured.');
+    const { data, error } = await supabase.rpc('set_admin_coupon_active', {
+      p_id: id,
+      p_active: active,
+    });
+    if (error) throw couponSaveError(error);
+    return data as AdminCoupon;
   }
 
   static async getAnalytics(page = 1, perPage = 50): Promise<AdminPage<AdminAnalyticsSession>> {

@@ -51,6 +51,35 @@ export interface AdminOrderClicks {
   by_device: { device_type: string; clicks: number }[];
 }
 
+/** ─── Coupon codes (get_admin_coupons and friends) ─── */
+export interface AdminCoupon {
+  id: string;
+  /** Stored upper case. Fixed after creation. */
+  code: string;
+  /** Shown to customers. Never mentions an amount in rupees. */
+  description: string;
+  active: boolean;
+  /** Null means no expiry. The code stops working once this has passed. */
+  expires_at: string | null;
+  /** Private reminder, never shown to customers. */
+  minimum_note: string | null;
+  /** Private reminder, never shown to customers. */
+  internal_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** The editable fields. `code` is used on create only; `active` on update only. */
+export interface AdminCouponInput {
+  code?: string;
+  description: string;
+  active?: boolean;
+  /** ISO timestamp, or null for no expiry. */
+  expires_at: string | null;
+  minimum_note: string | null;
+  internal_note: string | null;
+}
+
 export interface AdminPage<T> {
   page: number;
   per_page: number;
