@@ -28,6 +28,21 @@ export const endOfDayIst = (dateValue: string): string => `${dateValue}T23:59:59
 const daysAgo = (iso: string, now: number): number =>
   Math.round((Date.parse(istDateValue(now)) - Date.parse(istDateValue(iso))) / 86_400_000);
 
+/**
+ * How long ago, in whole India days, as a length: "1 day", "5 days", "a week",
+ * "2 weeks", "a month", "3 months". Never less than a day.
+ */
+export const formatAge = (iso: string, now = Date.now()): string => {
+  const days = Math.max(1, daysAgo(iso, now));
+  const a = adminCopy.dates.age;
+  if (days < 7) return a.days(days);
+  if (days < 30) return a.weeks(Math.floor(days / 7));
+  return a.months(Math.floor(days / 30));
+};
+
+/** "2 days ago", "a week ago", "3 weeks ago": formatAge, as a time in the past. */
+export const formatAgo = (iso: string, now = Date.now()): string => adminCopy.dates.age.ago(formatAge(iso, now));
+
 /** "10:42 am" */
 export const formatTime = (iso: string): string => {
   const { hour, minute } = partsOf(new Date(iso));
