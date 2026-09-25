@@ -44,7 +44,8 @@ const connection = () => {
       return { url: status.API_URL, key: status.SERVICE_ROLE_KEY ?? status.SECRET_KEY };
     }
     const keys = JSON.parse(execFileSync('supabase', ['projects', 'api-keys', '--project-ref', PROJECT_REF, '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }));
-    const service = keys.find((k) => k.name === 'service_role');
+    // The legacy service_role key, or the newer secret key if legacy keys are ever turned off.
+    const service = keys.find((k) => k.name === 'service_role' && k.api_key) ?? keys.find((k) => k.type === 'secret' && k.api_key);
     return { url: `https://${PROJECT_REF}.supabase.co`, key: service?.api_key };
   } catch {
     return { url: null, key: null };
@@ -104,7 +105,8 @@ if (!url || !key) {
 
 const api = (path, init = {}) => fetch(`${url}/auth/v1${path}`, {
   ...init,
-  headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+  // A new-style secret key (sb_secret_…) isn't a JWT, so it only goes in apikey.
+  headers: { apikey: key, ...(key.startsWith('sb_') ? {} : { Authorization: `Bearer ${key}` }), 'Content-Type': 'application/json' },
 });
 
 // Few users, so one page is enough; match the email exactly.

@@ -29,6 +29,8 @@ npm run lint     # type check only
 npm test         # Vitest: order message, cart, order code, formats, CSV, Undo
 ```
 
+The landing page runs without any settings. The admin, coupons, stock and order saves need `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` (`vercel env pull` fills them in). They point at production: local dev never saves orders or clicks, but the admin run locally works on the real order book.
+
 Database tests use pgTAP and need a local Supabase: `supabase test db`. Backend setup is in [supabase/README.md](supabase/README.md).
 
 ## Stack
@@ -38,7 +40,7 @@ React 18, TypeScript, Vite, plain CSS and Lucide icons. Supabase handles the dat
 ## Deploys
 
 - **A push to `main` deploys to production.** There's no staging.
-- Vercel previews talk to the production database, so they **don't save orders or record clicks** unless `VITE_TRACK_EVENTS=true` is set for that preview.
+- Vercel previews talk to the production database, so they **don't save orders or record clicks**. Never set `VITE_TRACK_EVENTS` on a preview: it would write test orders into the real order book. It's for a local Supabase only (see `.env.example`).
 - Database changes go out with `supabase db push`. Always dry-run first.
 
 ## Where to look next
