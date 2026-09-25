@@ -10,6 +10,7 @@
 @import './toast/toast.css';
 @import './parts.css';
 @import './pages/products.css';
+@import './pages/coupons.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {

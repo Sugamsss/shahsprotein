@@ -54,6 +54,14 @@ export const formatWhen = (iso: string, now = Date.now()): string => {
   return year === partsOf(new Date(now)).year ? `${day} ${month}` : `${day} ${month} ${year}`;
 };
 
+/** A day inside a sentence: "today", "yesterday", else "Wed 23 Sep" ("last used yesterday"). */
+export const formatDayInSentence = (iso: string, now = Date.now()): string => {
+  const ago = daysAgo(iso, now);
+  if (ago <= 0) return adminCopy.dates.today;
+  if (ago === 1) return adminCopy.dates.yesterday.toLowerCase();
+  return formatDay(iso, now);
+};
+
 /** "₹1,240": whole rupees, Indian grouping. */
 export const formatMoney = (amount: number): string => `₹${Math.round(amount).toLocaleString('en-IN')}`;
 

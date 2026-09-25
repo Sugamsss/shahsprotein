@@ -1,0 +1,10 @@
+/* Coupons (spec 2.11) */
+.adm-coupon { display: grid; gap: 6px; }
+.adm-coupon__head { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.adm-coupon__code { min-width: 0; overflow-wrap: anywhere; font: 700 1.125rem/1.2 var(--font-family-mono); letter-spacing: 0.06em; }
+.adm-coupon__head .adm-switch { margin-left: auto; }
+.adm-coupon__gives { margin-top: 4px; font-size: 1.0625rem; }
+.adm-coupon__meta { display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: 0.9375rem; }
+.adm-coupon__meta svg { flex: 0 0 auto; color: var(--color-text-muted); }
+.adm-coupon .adm-text-btn { margin-top: 4px; }
+.adm-coupon.is-off .adm-coupon__code, .adm-coupon.is-off .adm-coupon__gives { color: var(--color-text-secondary); }

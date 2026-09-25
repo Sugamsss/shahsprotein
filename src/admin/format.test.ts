@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endOfDayIst, firstName, formatDay, formatMoney, formatPhone, formatWhen, istDateValue } from './format';
+import { endOfDayIst, firstName, formatDay, formatDayInSentence, formatMoney, formatPhone, formatWhen, istDateValue } from './format';
 
 // Spec 2.1 "Formats". Every date is India time, so these hold whatever
 // timezone the machine running them is in. "Now" is Fri 25 Sep 2026, 2:00 pm IST.
@@ -48,6 +48,14 @@ describe('formatDay', () => {
   it('adds the year only when it is not this year', () => {
     expect(formatDay('2026-11-30T23:59:59+05:30', now)).toBe('Mon 30 Nov');
     expect(formatDay('2027-01-04T10:00:00+05:30', now)).toBe('Mon 4 Jan 2027');
+  });
+});
+
+describe('formatDayInSentence', () => {
+  it('reads inside a sentence', () => {
+    expect(formatDayInSentence('2026-09-25T08:00:00+05:30', now)).toBe('today');
+    expect(formatDayInSentence('2026-09-24T08:00:00+05:30', now)).toBe('yesterday');
+    expect(formatDayInSentence('2026-09-21T08:00:00+05:30', now)).toBe('Mon 21 Sep');
   });
 });
 
