@@ -132,6 +132,8 @@ export const siteConfig = {
     // Send
     send: 'Send order on WhatsApp',
     sendNote: 'Opens WhatsApp with your message ready to send.',
+    // In place of sendNote when every line is out and Send is off.
+    allOutNote: 'Everything in your order is out of stock right now.',
     // The last thing in "Your details", above Send. What's saved with the order on
     // our server (not browser storage, not analytics). Revisit if reorder nudges happen.
     privacyNote: 'We keep your name, pincode and what you ordered, so we can look after your order.',

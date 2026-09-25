@@ -158,8 +158,9 @@ export const OrderCheckout: React.FC = () => {
 
       <div className="popup-bar order-send">
         {nothingToSend ? (
-          // Everything left is out: the reason shows above the lines (allBackSoon).
-          <button type="button" className="order-btn order-btn--lg order-send__btn" disabled>
+          // Everything left is out: the reason shows above the lines (allBackSoon),
+          // and the note below says why Send is off.
+          <button type="button" className="order-btn order-btn--lg order-send__btn" disabled aria-describedby={`${id}-send-note`}>
             <WhatsAppIcon size={18} />
             <span>{copy.send}</span>
           </button>
@@ -176,7 +177,7 @@ export const OrderCheckout: React.FC = () => {
             <span>{copy.send}</span>
           </a>
         )}
-        <p className="order-send__note">{copy.sendNote}</p>
+        <p id={`${id}-send-note`} className="order-send__note">{nothingToSend ? copy.allOutNote : copy.sendNote}</p>
       </div>
     </>
   );
