@@ -177,7 +177,10 @@ export const OrderCheckout: React.FC = () => {
             <span>{copy.send}</span>
           </a>
         )}
-        <p id={`${id}-send-note`} className="order-send__note">{nothingToSend ? copy.allOutNote : copy.sendNote}</p>
+        {/* The "why Send is off" note stays on short screens; the plain hint doesn't. */}
+        <p id={`${id}-send-note`} className={`order-send__note${nothingToSend ? ' order-send__note--reason' : ''}`}>
+          {nothingToSend ? copy.allOutNote : copy.sendNote}
+        </p>
       </div>
     </>
   );
