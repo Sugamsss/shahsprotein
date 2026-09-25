@@ -81,6 +81,15 @@ export const searchFor = (text: string): string => {
   return code ? code.toUpperCase() : text;
 };
 
+/**
+ * A search that names one order: a whole code, or a whole phone number. With
+ * one hit, the board opens it. A name opens nothing, so typing never jumps away.
+ */
+export const namesOneOrder = (q: string): boolean => {
+  const t = q.trim();
+  return CODE_IN_TEXT.exec(t)?.[1].length === t.length || (/^[\d\s+()-]+$/.test(t) && normalisePhone(t) !== null);
+};
+
 /** Digits as the server stores them, or null if it can't be a phone (same rule as the contract). */
 export const normalisePhone = (raw: string): string | null => {
   let d = raw.replace(/\D/g, '').replace(/^00/, '');

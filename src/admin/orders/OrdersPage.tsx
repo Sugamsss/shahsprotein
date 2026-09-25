@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Download, Plus, Search } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
@@ -12,7 +12,7 @@ import { useOverview } from '../AdminLayout';
 import { useRpc, useSettled } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
-import { type Lane, LANES, NEXT, laneOf, searchFor } from './model';
+import { type Lane, LANES, NEXT, laneOf, namesOneOrder, searchFor } from './model';
 import { type CardAction, OrderCard } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { useOrderChange } from './useOrderChange';
@@ -141,8 +141,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   // Search also looks through Done, and an empty board asks whether anything was ever done.
   const settledQ = useSettled(q.trim());
   const empty = list.data?.orders.length === 0;
+  // Which search Done's answer is for, so a new search never reads the last one's hits.
+  const doneFor = useRef<string | null>(null);
   const done = useRpc(
-    () => (settledQ || empty ? getOrders({ view: 'done', search: settledQ || undefined, limit: settledQ ? 20 : 1 }) : Promise.resolve(null)),
+    () => (settledQ || empty
+      ? getOrders({ view: 'done', search: settledQ || undefined, limit: settledQ ? 20 : 1 }).then((page) => { doneFor.current = settledQ; return page; })
+      : Promise.resolve(null)),
     [settledQ, empty],
   );
 
@@ -154,6 +158,19 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const sequence = [...by.confirm, ...by.stale, ...by.send, ...by.way, ...by.collect, ...by.done];
 
   const [findText, setFindText] = useQueryText('/admin/orders');
+
+  // A search for a whole code or phone with exactly one hit (board or Done)
+  // opens that order. Once per search, so closing it leaves you on the results.
+  const opened = useRef('');
+  const oneHit = settledQ && settledQ === q.trim() && list.data && !done.loading && doneFor.current === settledQ && namesOneOrder(settledQ)
+    ? [...shown, ...(done.data?.orders ?? [])] : [];
+  const only = oneHit.length === 1 && !code ? oneHit[0].code : '';
+  useEffect(() => {
+    if (!settledQ) opened.current = ''; // a cleared search can open the same order again
+    if (!only || opened.current === settledQ) return;
+    opened.current = settledQ;
+    navigate(`/admin/orders/${only}${location.search}`);
+  }, [only, settledQ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onAction = (o: Order, action: CardAction) => {
     const lane = laneOf(o);

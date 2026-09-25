@@ -6,7 +6,7 @@ import { getOverview } from './api';
 import { signOut, useAdminMe } from './auth';
 import { adminCopy as copy } from '../data/adminCopy';
 import { AdminLink, useQueryText } from './router';
-import { searchFor } from './orders/model';
+import { namesOneOrder, searchFor } from './orders/model';
 import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
@@ -98,6 +98,16 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
     return () => document.removeEventListener('keydown', onKey);
   }, [navigate]);
 
+  // A pasted message (or a whole code) away from the board goes straight there, to its order.
+  const onChange = (raw: string) => {
+    const text = searchFor(raw);
+    if (onBoard) setBoardQuery(text);
+    else if (text !== raw && namesOneOrder(text)) {
+      navigate(`/admin/orders?q=${encodeURIComponent(text)}`);
+      setQuery('');
+    } else setQuery(text);
+  };
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onBoard || !query.trim()) return;
@@ -125,7 +135,7 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
         <Search size={18} aria-hidden="true" />
         <input ref={search} className="adm-input" type="search" placeholder={copy.header.find}
           aria-label={copy.header.findLabel} value={value}
-          onChange={(e) => (onBoard ? setBoardQuery : setQuery)(searchFor(e.target.value))}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Escape' && value && (onBoard ? setBoardQuery : setQuery)('')} />
         <kbd aria-hidden="true">/</kbd>
       </form>
