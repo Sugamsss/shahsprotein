@@ -5,6 +5,7 @@ import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
 import { firstName, formatDay, formatPhone, formatTime } from '../format';
 import { AdminLink } from '../router';
+import { Field } from '../parts';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
@@ -95,7 +96,7 @@ export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
   <section className="adm-card">
     <div className="adm-card__h">
       <h2>{copy.packs(o.packs)}</h2>
-      <AdminLink className="adm-link" to={`/admin/orders/${o.code}/edit`}><Pencil size={15} aria-hidden="true" />{copy.edit}</AdminLink>
+      <AdminLink className="adm-text-btn" to={`/admin/orders/${o.code}/edit`}><Pencil size={15} aria-hidden="true" />{copy.edit}</AdminLink>
     </div>
     <ul className="adm-items">
       {sortLines(o.lines).map((l) => (
@@ -118,7 +119,7 @@ const canPaste = typeof navigator !== 'undefined' && !!navigator.clipboard?.read
 
 export const PasteButton: React.FC<{ onPaste: (text: string) => void }> = ({ onPaste }) =>
   canPaste ? (
-    <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs adm-field__action"
+    <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs"
       onClick={() => navigator.clipboard.readText().then(onPaste, () => {})}>
       <ClipboardPaste size={16} aria-hidden="true" />{copy.paste}
     </button>
@@ -150,7 +151,6 @@ const AutoField: React.FC<{
   const latest = useRef(order);
   latest.current = order;
   const timer = useRef<number>();
-  const id = `adm-od-${field}`;
   const input = useRef<HTMLElement | null>(null);
 
   // A change from elsewhere ("Use 98231…", Undo) shows unless you're typing here.
@@ -183,29 +183,26 @@ const AutoField: React.FC<{
   };
   const isError = status !== '' && status !== copy.saved;
   const common = {
-    id, value, className: 'adm-input', 'aria-invalid': isError || undefined, 'aria-describedby': `${id}-status`,
+    value, className: 'adm-input',
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
     onBlur: () => void save(value),
     onFocus: (e: React.FocusEvent<HTMLElement>) => { input.current = e.currentTarget; },
   };
-  const label = { phone: copy.phone, amount: copy.total, note: copy.note }[field];
 
   return (
-    <div className="adm-field">
-      <label className="adm-field__label" htmlFor={id}>
-        {label}{field !== 'phone' && <span className="adm-opt">{copy.optional}</span>}
-      </label>
-      <div className="adm-field__wrap">
-        {field === 'amount' && <span className="adm-field__prefix" aria-hidden="true">₹</span>}
-        {field === 'note'
-          ? <textarea {...common} rows={3} placeholder={copy.notePlaceholder} />
-          : <input {...common} ref={inputRef} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
-              placeholder={field === 'phone' ? copy.phonePlaceholder : copy.totalPlaceholder} />}
-        {field === 'phone' && <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />}
-      </div>
-      {field === 'amount' && <small className="adm-field__hint">{copy.totalHint}</small>}
-      <small id={`${id}-status`} className={`adm-field__status${isError ? ' is-error' : ''}`} role={isError ? 'alert' : undefined}>{status}</small>
-    </div>
+    <Field
+      label={{ phone: copy.phone, amount: copy.total, note: copy.note }[field]}
+      optional={field === 'phone' ? undefined : copy.optional}
+      prefix={field === 'amount' ? '₹' : undefined}
+      error={isError ? status : null}
+      hint={status || (field === 'amount' ? copy.totalHint : undefined)}
+      action={field === 'phone' && <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />}
+    >
+      {field === 'note'
+        ? <textarea {...common} rows={3} placeholder={copy.notePlaceholder} />
+        : <input {...common} ref={inputRef} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
+            placeholder={field === 'phone' ? copy.phonePlaceholder : copy.totalPlaceholder} />}
+    </Field>
   );
 };
 
@@ -227,7 +224,7 @@ export const DetailsCard: React.FC<{
     <section className="adm-card adm-stack" key={o.id}>
       <AutoField key={`p${o.id}`} order={o} field="phone" onSaved={onSaved} inputRef={phoneRef} />
       {suggestion && (
-        <button type="button" className="adm-link adm-od-suggest" disabled={busy} onClick={useSuggestion}>
+        <button type="button" className="adm-text-btn" disabled={busy} onClick={useSuggestion}>
           {copy.useSuggestion(formatPhone(suggestion.phone), formatDay(suggestion.created_at))}
         </button>
       )}
@@ -319,10 +316,10 @@ export const OrderMenu: React.FC<{ order: Order; change: Change; onDeleted: () =
         <button type="button" className="adm-menu__item is-danger" onClick={() => { setOpen(false); setConfirming(true); }}>{copy.menu.delete}</button>
       </div>
       <AdminSheet isOpen={confirming} onClose={() => setConfirming(false)} title={copy.deleteTitle} closeLabel={adminCopy.close}
-        bar={<>
+        bar={<div className="adm-row">
           <button type="button" className="adm-btn adm-btn--quiet" onClick={() => setConfirming(false)}>{copy.keep}</button>
           <button type="button" className="adm-btn adm-btn--danger" disabled={busy} onClick={remove}>{copy.menu.delete}</button>
-        </>}>
+        </div>}>
         <p>{copy.deleteBody}</p>
       </AdminSheet>
     </div>

@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ChevronLeft } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { getOrders } from '../api';
 import { formatDay, formatMoney, formatPhone, formatTime } from '../format';
-import { LoadError, Skeleton } from '../parts';
+import { LoadError, Segmented, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import type { Order, OrderFilters } from '../types';
 import { useRpc } from '../useRpc';
@@ -63,13 +63,8 @@ const DonePage: React.FC = () => {
     <div className="adm-page adm-done">
       <AdminLink className="adm-back adm-back--start adm-phone-only" to="/admin/orders"><ChevronLeft size={20} aria-hidden="true" />{adminCopy.order.back}</AdminLink>
       <h1 className="adm-title">{copy.title}</h1>
-      <div className="adm-filters" role="group" aria-label={copy.filterLabel}>
-        {(Object.keys(FILTERS) as Filter[]).map((f) => (
-          <button key={f} type="button" className="adm-filter" aria-pressed={f === filter} onClick={() => setFilter(f)}>
-            {copy.filters[f]}
-          </button>
-        ))}
-      </div>
+      <Segmented label={copy.filterLabel} value={filter} onChange={setFilter}
+        options={(Object.keys(FILTERS) as Filter[]).map((f) => ({ value: f, label: copy.filters[f] }))} />
 
       {list.error && !list.data && <LoadError onRetry={list.reload} />}
       {list.loading && !list.data && <Skeleton />}

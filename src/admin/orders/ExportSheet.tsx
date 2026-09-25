@@ -6,6 +6,7 @@ import { getOrders, toAdminError } from '../api';
 import { downloadCsv, toCsv } from '../csv';
 import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
+import { Segmented } from '../parts';
 import { itemsText } from './model';
 
 const copy = adminCopy.exportOrders;
@@ -59,15 +60,9 @@ export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void }> = (
           <Download size={18} aria-hidden="true" />{busy ? copy.busy : copy.download}
         </button>
       }>
-      <fieldset className="adm-choices">
-        <legend className="adm-field__label">{copy.range}</legend>
-        {(Object.keys(copy.ranges) as Range[]).map((r) => (
-          <label key={r} className="adm-choice">
-            <input type="radio" name="adm-export-range" checked={range === r} onChange={() => setRange(r)} />
-            {copy.ranges[r]}
-          </label>
-        ))}
-      </fieldset>
+      <p className="adm-field__label" aria-hidden="true">{copy.range}</p>
+      <Segmented label={copy.range} value={range} onChange={setRange}
+        options={(Object.keys(copy.ranges) as Range[]).map((r) => ({ value: r, label: copy.ranges[r] }))} />
       <p className="adm-muted" role="status">{note}</p>
     </AdminSheet>
   );

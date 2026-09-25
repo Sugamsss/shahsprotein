@@ -6,7 +6,7 @@ import { productsData } from '../../data/products';
 import { getOrders } from '../api';
 import { formatMoney } from '../format';
 import { LoadError, Skeleton } from '../parts';
-import { AdminLink, usePathPart } from '../router';
+import { AdminLink, usePathPart, useQueryText } from '../router';
 import type { Order } from '../types';
 import { useRpc } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
@@ -82,7 +82,7 @@ const LaneJump: React.FC<{ counts: Record<Lane, number>; money: number }> = ({ c
     return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
   }, []);
   return (
-    <nav className="adm-jump" aria-label={copy.jumpLabel}>
+    <nav className="adm-jump adm-phone-only" aria-label={copy.jumpLabel}>
       {LANES.map((l) => (
         <a key={l} href={`#lane-${l}`} aria-current={l === current || undefined}
           className={`${counts[l] ? '' : 'is-zero'}${l === 'collect' && money ? ' is-money' : ''}`}>
@@ -141,7 +141,7 @@ const OrdersPage: React.FC = () => {
   const money = by.collect.reduce((sum, o) => sum + (o.amount ?? 0), 0);
   const sequence = [...by.confirm, ...by.stale, ...by.send, ...by.way, ...by.collect, ...by.done];
 
-  const setQuery = (value: string) => navigate(value ? `/admin/orders?q=${encodeURIComponent(value)}` : '/admin/orders', { replace: true });
+  const [findText, setFindText] = useQueryText('/admin/orders');
 
   const onAction = (o: Order, action: CardAction) => {
     const lane = laneOf(o);
@@ -204,9 +204,9 @@ const OrdersPage: React.FC = () => {
 
       {(searching || q) && (
         <div className="adm-orders__find adm-phone-only" role="search">
-          <input className="adm-input" type="search" autoFocus value={q} placeholder={copy.findPlaceholder}
-            aria-label={copy.find} onChange={(e) => setQuery(e.target.value)} />
-          <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm" onClick={() => { setQuery(''); setSearching(false); }}>{copy.cancelFind}</button>
+          <input className="adm-input" type="search" autoFocus value={findText} placeholder={copy.findPlaceholder}
+            aria-label={copy.find} onChange={(e) => setFindText(e.target.value)} />
+          <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm" onClick={() => { setFindText(''); setSearching(false); }}>{copy.cancelFind}</button>
         </div>
       )}
 
@@ -252,7 +252,11 @@ const OrdersPage: React.FC = () => {
       {laptop && code && (
         <OrderPopup key="popup" code={code} sequence={sequence} putInList={put} onDeleted={drop}
           focusPhone={(location.state as { focus?: string } | null)?.focus === 'phone'}
-          onClose={() => navigate(`/admin/orders${location.search}`)} />
+          onClose={() => {
+            navigate(`/admin/orders${location.search}`);
+            // The card may have moved lanes while the popup was open, so find it again.
+            requestAnimationFrame(() => document.querySelector<HTMLElement>(`.adm-ocard__open[href="/admin/orders/${code}"]`)?.focus());
+          }} />
       )}
       <ConfirmSheet order={confirming} onClose={() => setConfirming(null)} onConfirm={(o, c) => void change(o, c)} />
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} />

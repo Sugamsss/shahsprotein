@@ -1,11 +1,15 @@
 /* Orders (spec 2.3, 2.5 to 2.7): the order card, lanes and board, one order,
    the Done table. Phone first; the board and popup start at 960px. */
 
-/* ---- Small shared bits ---------------------------------------------------- */
-.adm-laptop-only { display: none; }
+/* ---- Small shared bits ------------------------------------------------------
+   This file is @imported before admin.css's own rules, so anything that
+   changes a shell class (.adm-btn) carries one more class to win. */
+@media (max-width: 959px) { .adm .adm-laptop-only { display: none; } }
+@media (min-width: 960px) { .adm .adm-phone-only { display: none; } }
 .adm-grow { flex: 1; }
-.adm-btn--xs { position: relative; min-height: 36px; padding: 0 14px; gap: 6px; font-size: 0.875rem; }
-.adm-btn--xs::after { content: ''; position: absolute; inset: -4px -2px; }
+.adm-row { display: flex; justify-content: flex-end; gap: 8px; }
+.adm-btn.adm-btn--xs { position: relative; min-height: 36px; padding: 0 14px; gap: 6px; font-size: 0.875rem; }
+.adm-btn.adm-btn--xs::after { content: ''; position: absolute; inset: -4px -2px; }
 .adm-btn--danger { background: var(--color-error); color: var(--color-btn-text); }
 .adm-iconbtn {
   display: inline-grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto;
@@ -13,11 +17,6 @@
 }
 .adm-iconbtn:active { background: var(--adm-well-press); }
 .adm-iconbtn:disabled { opacity: 0.35; cursor: default; }
-.adm-link {
-  position: relative; display: inline-flex; align-items: center; gap: 5px;
-  color: var(--color-text-accent); font-size: 0.875rem; font-weight: 600; text-align: left;
-}
-.adm-link::after { content: ''; position: absolute; inset: -12px -8px; }
 .adm-count {
   display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px;
   background: var(--adm-well); color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 700;
@@ -207,18 +206,8 @@
 .adm-od-coupon svg { color: var(--color-text-accent); }
 .adm-od-coupon b { color: var(--color-text-primary); letter-spacing: 0.02em; }
 
-.adm-opt { margin-left: 6px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 500; }
-.adm-field__wrap { position: relative; display: flex; align-items: center; }
-.adm-field__wrap textarea.adm-input { min-height: 96px; padding: 12px 16px; resize: vertical; }
-.adm-field__prefix { position: absolute; left: 16px; color: var(--color-text-secondary); pointer-events: none; }
-.adm-field__prefix + .adm-input { padding-left: 34px; }
-.adm-field__wrap:has(.adm-field__action) .adm-input { padding-right: 104px; }
-.adm-field__action { position: absolute; right: 6px; }
-.adm-field__status, .adm-field__match { min-height: 1.2em; color: var(--color-text-muted); font-size: 0.8125rem; }
-.adm-field__status.is-error { color: var(--color-error-text); }
-.adm-field__match { color: var(--color-text-accent); font-weight: 600; }
-.adm-od-suggest { justify-self: start; }
 .adm-od-cols { display: grid; gap: 12px; }
+.adm-field__control textarea.adm-input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 .adm-od-fact { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
 .adm-od-fact span { color: var(--color-text-muted); }
 .adm-od-reach { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -241,23 +230,8 @@
 .adm-omenu--up .adm-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; }
 .adm-menu__item.is-danger { color: var(--color-error-text); }
 
-/* ---- Confirm and Export sheets ---------------------------------------------------- */
-.adm-choices { display: grid; gap: 8px; border: 0; }
-.adm-choice {
-  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px;
-  border: 1px solid var(--adm-edge); border-radius: 14px; cursor: pointer;
-}
-.adm-choice:has(:checked) { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); }
-.adm-choice input { accent-color: var(--color-accent-primary); width: 18px; height: 18px; }
-
 /* ---- Done ---------------------------------------------------------------------- */
-.adm-filters { display: flex; flex-wrap: wrap; gap: 8px; }
-.adm-filter {
-  position: relative; min-height: 36px; padding: 0 14px; border-radius: var(--radius-full);
-  background: var(--adm-well); color: var(--color-text-secondary); font-size: 0.875rem; font-weight: 600;
-}
-.adm-filter::after { content: ''; position: absolute; inset: -4px 0; }
-.adm-filter[aria-pressed='true'] { background: var(--color-text-primary); color: var(--adm-page); }
+.adm-done .adm-segmented { max-width: 560px; }
 .adm-done__day { margin-top: 8px; font-size: 1rem; font-weight: 600; }
 .adm-done__more { justify-self: center; }
 .adm-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -273,9 +247,6 @@
    Laptop: the board, the popup, the table
    ============================================================================ */
 @media (min-width: 960px) {
-  .adm-phone-only { display: none; }
-  .adm-laptop-only { display: revert; }
-  .adm-lane__stale.adm-laptop-only { display: grid; }
   .adm-orders { max-width: 1480px; margin: 0 auto; }
   .adm-done { max-width: 1120px; margin: 0 auto; }
   .adm-orders__top { align-items: flex-end; }
@@ -303,7 +274,7 @@
   .adm-od-keys kbd + kbd { margin-left: 0; }
   .adm-od-popup .adm-od-go { flex: 0 0 auto; min-width: 240px; }
   .adm-od-popup .adm-od-alldone { margin-left: auto; }
-  .adm-od-popup .adm-sheet__bar { align-items: center; }
+  .adm-od-popup .adm-sheet__bar { display: flex; align-items: center; gap: 12px; }
   @media (max-height: 760px) { .adm-od-popup .adm-od-name { font-size: 1.375rem; } }
 }
 @media (prefers-reduced-motion: reduce) { .adm-steps__fill { transition: none; } .adm-ocard:has(.adm-ocard__open:active) { transform: none; } }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDialogClose } from '../../components/ui/useDialog';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
+import { Field } from '../parts';
 import { getOrders } from '../api';
 import { firstName, formatDay, formatPhone } from '../format';
 import type { Order, OrderChanges } from '../types';
@@ -83,33 +84,14 @@ export const ConfirmSheet: React.FC<{
       {order && (
         <form className="adm-stack" onSubmit={(e) => e.preventDefault()} noValidate>
           <p className="adm-muted">{[order.code, copy.packs(order.packs), order.pincode].filter(Boolean).join(' · ')}</p>
-          <div className="adm-field">
-            <label className="adm-field__label" htmlFor="adm-confirm-phone">{copy.phone}</label>
-            <div className="adm-field__wrap">
-              <input id="adm-confirm-phone" className="adm-input" inputMode="tel" autoComplete="off" value={phone}
-                placeholder={copy.phonePlaceholder} aria-invalid={!!errors.phone || undefined}
-                aria-describedby="adm-confirm-phone-note"
-                onChange={(e) => setPhone(e.target.value)}
-                onBlur={() => digits && setPhone(formatPhone(digits))} />
-              <PasteButton onPaste={setPhone} />
-            </div>
-            <small id="adm-confirm-phone-note" className={errors.phone ? 'adm-field__status is-error' : 'adm-field__match'}>
-              {errors.phone ?? match}
-            </small>
-          </div>
-          <div className="adm-field">
-            <label className="adm-field__label" htmlFor="adm-confirm-total">{copy.total}<span className="adm-opt">{copy.optional}</span></label>
-            <div className="adm-field__wrap">
-              <span className="adm-field__prefix" aria-hidden="true">₹</span>
-              <input id="adm-confirm-total" className="adm-input" inputMode="numeric" autoComplete="off" value={amount}
-                placeholder={copy.totalPlaceholder} aria-invalid={!!errors.amount || undefined}
-                aria-describedby="adm-confirm-total-note"
-                onChange={(e) => setAmount(e.target.value)} />
-            </div>
-            <small id="adm-confirm-total-note" className={errors.amount ? 'adm-field__status is-error' : 'adm-field__hint'}>
-              {errors.amount ?? copy.totalHint}
-            </small>
-          </div>
+          <Field label={copy.phone} error={errors.phone} hint={match || undefined} action={<PasteButton onPaste={setPhone} />}>
+            <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={copy.phonePlaceholder}
+              onChange={(e) => { setPhone(e.target.value); setErrors((x) => ({ ...x, phone: undefined })); }} onBlur={() => digits && setPhone(formatPhone(digits))} />
+          </Field>
+          <Field label={copy.total} optional={copy.optional} prefix="₹" error={errors.amount} hint={copy.totalHint}>
+            <input className="adm-input" inputMode="numeric" autoComplete="off" value={amount} placeholder={copy.totalPlaceholder}
+              onChange={(e) => { setAmount(e.target.value); setErrors((x) => ({ ...x, amount: undefined })); }} />
+          </Field>
         </form>
       )}
     </AdminSheet>

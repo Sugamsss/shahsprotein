@@ -5,7 +5,7 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getOverview } from './api';
 import { signOut, useAdminMe } from './auth';
 import { adminCopy as copy } from '../data/adminCopy';
-import { AdminLink } from './router';
+import { AdminLink, useQueryText } from './router';
 import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
@@ -76,13 +76,13 @@ const AccountMenu: React.FC = () => {
 
 const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
   const navigate = useNavigate();
-  const { pathname, search: params } = useLocation();
+  const { pathname } = useLocation();
   const search = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
+  const [boardQuery, setBoardQuery] = useQueryText('/admin/orders');
   // On the board the field filters it live, through ?q=. Elsewhere Enter takes you there.
   const onBoard = /^\/admin\/orders\/?$/.test(pathname);
-  const value = onBoard ? new URLSearchParams(params).get('q') ?? '' : query;
-  const find = (q: string) => navigate(q ? `/admin/orders?q=${encodeURIComponent(q)}` : '/admin/orders', { replace: onBoard });
+  const value = onBoard ? boardQuery : query;
 
   // "/" finds, N adds an order: not while typing, and not over a popup.
   useEffect(() => {
@@ -100,7 +100,7 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onBoard || !query.trim()) return;
-    find(query.trim());
+    navigate(`/admin/orders?q=${encodeURIComponent(query.trim())}`);
     setQuery('');
   };
 
@@ -124,8 +124,8 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
         <Search size={18} aria-hidden="true" />
         <input ref={search} className="adm-input" type="search" placeholder={copy.header.find}
           aria-label={copy.header.findLabel} value={value}
-          onChange={(e) => (onBoard ? find(e.target.value) : setQuery(e.target.value))}
-          onKeyDown={(e) => e.key === 'Escape' && value && (e.stopPropagation(), onBoard ? find('') : setQuery(''))} />
+          onChange={(e) => (onBoard ? setBoardQuery : setQuery)(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && value && (onBoard ? setBoardQuery : setQuery)('')} />
         <kbd aria-hidden="true">/</kbd>
       </form>
       <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--primary adm-btn--sm">

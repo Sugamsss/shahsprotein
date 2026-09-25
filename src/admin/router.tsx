@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // The landing page only uses BrowserRouter, Routes and Route, and
@@ -38,4 +38,25 @@ export const Redirect: React.FC<{ to: string; state?: unknown }> = ({ to, state 
 export const usePathPart = (index: number): string => {
   const parts = useLocation().pathname.split('/').filter(Boolean).slice(1);
   return decodeURIComponent(parts[index] ?? '');
+};
+
+/**
+ * A search field tied to ?q= on `path`: the text is kept here so typing stays
+ * smooth (router updates land a beat later), and the URL follows each keystroke.
+ */
+export const useQueryText = (path: string): [string, (text: string) => void] => {
+  const navigate = useNavigate();
+  const q = new URLSearchParams(useLocation().search).get('q') ?? '';
+  const [text, setText] = useState(q);
+  const sent = useRef<string | null>(null);
+  useEffect(() => {
+    if (sent.current === null) setText(q); // changed from elsewhere
+    else if (sent.current === q) sent.current = null; // our own update arrived
+  }, [q]);
+  const update = (next: string) => {
+    setText(next);
+    sent.current = next.trim();
+    navigate(next.trim() ? `${path}?q=${encodeURIComponent(next.trim())}` : path, { replace: true });
+  };
+  return [text, update];
 };
