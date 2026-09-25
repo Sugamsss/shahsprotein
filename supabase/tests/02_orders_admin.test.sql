@@ -7,7 +7,16 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(87);
+select plan(88);
+
+-- The shared local stack may hold other people's test data. Start from
+-- empty tables; the rollback at the end puts everything back.
+delete from public.orders;
+delete from public.order_rate_limits;
+delete from public.product_stock;
+delete from public.coupons;
+delete from public.waitlist_members;
+delete from public.admin_users;
 
 -- ─── Fixtures ───────────────────────────────────────────
 
@@ -165,7 +174,7 @@ select is(
   current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
   '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","paid":true,"kept":false,
     "stale":false,"name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
-    "coupon":{"code":"EXAMPLE10","valid":true,"known":true},
+    "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
     "lines":[{"product_id":"date-bites","size":"250 g","quantity":2}],"packs":2}'::jsonb,
   'create: the typed code is used as is, the coupon is matched'
 );
@@ -413,6 +422,7 @@ select set_config(
 -- D, E: delivered, not paid, long ago → money to collect.
 -- F: New for days → stale (created long before last week).
 -- G: delivered, not paid, same person as D by name (no phone).
+-- H: delivered and paid, long ago → done.
 insert into public.orders (id, code, source, status, name, phone, amount, coupon_code, coupon_id, created_at, paid_at) values
   ('00000000-0000-4000-a000-00000000000a', 'SN-AAAAA', 'call', 'new', 'Week A', '919800000011', null, null, null,
     current_setting('test.week_start')::timestamptz + interval '30 minutes', null),
@@ -428,7 +438,9 @@ insert into public.orders (id, code, source, status, name, phone, amount, coupon
   ('00000000-0000-4000-a000-00000000000f', 'SN-FFFFF', 'call', 'new', 'Week F', null, null, null, null,
     current_setting('test.week_start')::timestamptz - interval '10 days', null),
   ('00000000-0000-4000-a000-000000000009', 'SN-GGGGG', 'call', 'delivered', 'WEEK D', null, null, null, null,
-    current_setting('test.week_start')::timestamptz - interval '19 days', null);
+    current_setting('test.week_start')::timestamptz - interval '19 days', null),
+  ('00000000-0000-4000-a000-000000000008', 'SN-HHHHH', 'call', 'delivered', 'Week H', null, null, null, null,
+    current_setting('test.week_start')::timestamptz - interval '30 days', now());
 
 update public.orders set pincode = '411038' where code = 'SN-BBBBB';
 update public.orders set status_changed_at = now() - interval '3 days' where code = 'SN-FFFFF';
@@ -475,6 +487,11 @@ select is(
     "on_the_way":{"count":0,"not_paid":0},"stale":1}'::jsonb,
   'queue: the five groups; money to collect from 2 people (by phone, else by name)'
 );
+select is(
+  current_setting('test.overview')::jsonb -> 'done',
+  '{"delivered_paid":1,"cancelled":1}'::jsonb,
+  'done: all-time delivered and paid, and cancelled, as in the done view'
+);
 select ok(
   (current_setting('test.overview')::jsonb #>> '{queue,to_confirm_oldest}')::timestamptz
     = current_setting('test.week_start')::timestamptz + interval '30 minutes',
@@ -496,7 +513,7 @@ select is(
 );
 select is(
   public.get_admin_customers()::jsonb -> 'without_phone',
-  '4'::jsonb,
+  '5'::jsonb,
   'customers: orders without a phone are counted apart'
 );
 select is(

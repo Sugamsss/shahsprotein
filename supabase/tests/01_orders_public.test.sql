@@ -6,7 +6,16 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(57);
+select plan(59);
+
+-- The shared local stack may hold other people's test data. Start from
+-- empty tables; the rollback at the end puts everything back.
+delete from public.orders;
+delete from public.order_rate_limits;
+delete from public.product_stock;
+delete from public.coupons;
+delete from public.waitlist_members;
+delete from public.admin_users;
 
 -- ─── Fixtures ───────────────────────────────────────────
 
@@ -225,6 +234,17 @@ select results_eq(
   $$select coupon_code, coupon_valid, coupon_id is null from public.orders where code in ('SN-7KQ4M-3', 'SN-9XWZT') order by code$$,
   $$values ('EXAMPLEOFF'::text, false, false), ('NOSUCHCODE', false, true)$$,
   'an inactive coupon is kept but not valid; an unknown one is kept, not valid, not linked'
+);
+
+select is(
+  (select public.admin_order_json(o)::jsonb -> 'coupon' from public.orders o where code = 'SN-9XWZT'),
+  '{"code":"NOSUCHCODE","valid":false,"known":false,"description":null}'::jsonb,
+  'order JSON: an unknown coupon has no description'
+);
+select is(
+  (select public.admin_order_json(o)::jsonb -> 'coupon' from public.orders o where code = 'SN-7KQ4M'),
+  '{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"}'::jsonb,
+  'order JSON: a matched coupon carries its description'
 );
 
 select is(
