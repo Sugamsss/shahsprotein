@@ -1,0 +1,16 @@
+{
+  "id": "/admin",
+  "name": "Shah's Orders",
+  "short_name": "Shah's Orders",
+  "description": "The Shah's Nutrition order book.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "lang": "en-IN",
+  "background_color": "#1f1f1f",
+  "theme_color": "#1f1f1f",
+  "icons": [
+    { "src": "/assets/admin-app/shahs-orders-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/admin-app/shahs-orders-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
