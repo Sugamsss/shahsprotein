@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
@@ -42,6 +43,32 @@ interface OrderSentProps {
 export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
   const close = useModalClose();
   const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
+  const [codeCopied, setCodeCopied] = useState<'ok' | 'failed' | null>(null);
+  const codeRef = useRef<HTMLSpanElement>(null);
+
+  // "Copied" goes back to "Copy" after a moment, so it can be copied again.
+  useEffect(() => {
+    if (codeCopied !== 'ok') return undefined;
+    const timer = window.setTimeout(() => setCodeCopied(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [codeCopied]);
+
+  const onCopyCode = () => {
+    void copyText(sent.code).then((ok) => {
+      setCodeCopied(ok ? 'ok' : 'failed');
+      if (ok || !codeRef.current) return;
+      // Couldn't copy: select the code, so a long-press or Ctrl+C gets all of it.
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(codeRef.current);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } catch {
+        // Nothing more to do: the code is still there to read.
+      }
+    });
+  };
 
   // The same text WhatsApp gets (buildOrderMessage), so the two can't drift apart.
   const onCopy = () => {
@@ -69,12 +96,31 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
               );
             })}
           </ul>
-          <p className="order-recap__code">{copy.sentCode(sent.code)}</p>
+          <div className="order-recap__code">
+            <p>
+              <span className="order-recap__code-label">{copy.sentCode}</span>
+              <span ref={codeRef} className="order-code">{sent.code}</span>
+            </p>
+            <button
+              type="button"
+              className={`order-recap__copy${codeCopied === 'ok' ? ' is-copied' : ''}`}
+              aria-label={copy.copyCodeLabel(sent.code)}
+              onClick={onCopyCode}
+            >
+              {codeCopied === 'ok'
+                ? <Check size={15} strokeWidth={2.5} aria-hidden="true" />
+                : <Copy size={15} strokeWidth={2.25} aria-hidden="true" />}
+              <span>{codeCopied === 'ok' ? copy.codeCopied : copy.copyCode}</span>
+            </button>
+            <span className="visually-hidden" role="status">
+              {codeCopied && (codeCopied === 'ok' ? copy.codeCopied : copy.codeCopyFailed)}
+            </span>
+          </div>
           {meta && <p className="order-recap__meta">{meta}</p>}
         </div>
 
         <p className="order-sent__retry">
-          {copy.retryLead}{' '}
+          <span>{copy.retryLead}</span>
           {/* Opens the same message again, and saves the same order again in case the
               first save didn't make it (the server ignores a repeat). Not counted again
               as a click: it's the same order. */}
@@ -86,8 +132,8 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
             onClick={() => saveOrder(sent)}
           >
             {copy.retry}
-          </a>{' '}
-          {copy.copyLead}{' '}
+          </a>
+          <span>{copy.copyLead}</span>
           <button type="button" className="order-text-link" onClick={onCopy}>
             {copy.copyMessage}
           </button>

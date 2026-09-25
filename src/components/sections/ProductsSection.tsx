@@ -85,11 +85,16 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
   // then the first size in stock. Undefined when every size is out.
   const size = picked && !stock.isOut(product.id, picked) ? picked : firstInStockSize(product, stock);
 
-  // Every size out: one full-width label in place of the switch and the button.
+  // Every size out: a calm line in place of the switch and the button, never a
+  // button itself, with a way to ask in the order chat (counted as an order click
+  // from this product's popup, a source site_events already accepts).
   if (!size) {
     return (
-      <div className="popup-bar product-detail__order">
-        <span className="back-soon back-soon--lg" role="status">{copy.backSoon}</span>
+      <div className="popup-bar product-detail__order product-detail__order--out">
+        <p className="product-detail__back-soon">
+          <span role="status">{copy.backSoon}</span>
+          <OrderLink source={`product-details:${product.id}`}>{copy.backSoonAsk}</OrderLink>
+        </p>
       </div>
     );
   }

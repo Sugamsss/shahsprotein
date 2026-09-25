@@ -16,7 +16,7 @@ const text = siteConfig.header;
  * order, a count takes the glyph's place, so the width barely changes at 320px.
  */
 const HeaderOrderButton: React.FC = () => {
-  const { itemCount, openOrder } = useOrder();
+  const { itemCount, lines, openOrder } = useOrder();
   // A new key replays the chip's little pop whenever the count changes (not on load).
   const [pop, setPop] = useState(0);
   const lastCount = useRef(itemCount);
@@ -31,7 +31,11 @@ const HeaderOrderButton: React.FC = () => {
       type="button"
       aria-haspopup="dialog"
       className="order-btn order-btn--sm header-order-btn"
-      aria-label={itemCount > 0 ? copy.headerCountLabel(itemCount) : copy.headerEmptyLabel}
+      aria-label={
+        itemCount > 0 ? copy.headerCountLabel(itemCount)
+          : lines.length > 0 ? copy.headerBackSoonLabel
+            : copy.headerEmptyLabel
+      }
       onClick={() => openOrder('header')}
       {...preloadOrderHandlers}
     >
