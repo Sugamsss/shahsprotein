@@ -16,7 +16,9 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
     <script>
       (function () {
-        const savedTheme = localStorage.getItem('shahsnutrition_theme');
+        // Blocked site storage throws here. Fall back to the OS setting instead of stopping.
+        let savedTheme = null;
+        try { savedTheme = localStorage.getItem('shahsnutrition_theme'); } catch (e) {}
         const theme = savedTheme === 'light' || savedTheme === 'dark'
           ? savedTheme
           : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
