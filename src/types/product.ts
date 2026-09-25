@@ -19,6 +19,9 @@ export interface Product {
   features: string[];
   ingredients: string[];
   ingredientSprite: { image: string; rows: number };
+  /** 192px square thumbnails for the "Your order" popup, per theme. */
+  orderThumb: string;
+  orderThumbDark: string;
   nutritionFacts: NutritionFact[];
   /** Pack sizes, e.g. "250 g". Prices are not published yet. */
   weightOptions: string[];

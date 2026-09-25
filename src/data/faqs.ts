@@ -7,7 +7,7 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-1',
     question: 'How do I order?',
-    answer: "On WhatsApp. Tap any \"Order on WhatsApp\" button, or message us on 9850359899. Tell us what you'd like, and we'll reply with the total, delivery included, and how to pay. We take all online payments, but not cash on delivery.",
+    answer: "On WhatsApp. Tap any \"Order\" button, pick what you'd like, and add your name and pincode. WhatsApp opens with your order written out, so you just press send. Or message us on 9850359899. We'll reply with the total, delivery included, and how to pay. We take all online payments, but not cash on delivery.",
   },
   {
     id: 'faq-2',

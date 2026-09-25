@@ -19,6 +19,8 @@ export const productsData: Product[] = [
     features: ['Millet-based', 'Organic jaggery sweetened', 'Cashew goodness'],
     ingredients: ['Ragi', 'Organic Jaggery', 'Cashew', 'Ghee', 'Elaichi'],
     ingredientSprite: { image: '/assets/ingredients/raggi-jaggi-648w.webp', rows: 2 },
+    orderThumb: '/assets/order-thumbs/raggi-jaggi-light-192w-v1.webp',
+    orderThumbDark: '/assets/order-thumbs/raggi-jaggi-dark-192w-v1.webp',
     nutritionFacts: [
       { label: 'Energy', per100g: '423 kcal', perServing: '127 kcal' },
       { label: 'Protein', per100g: '6.2 g', perServing: '1.9 g' },
@@ -52,6 +54,8 @@ export const productsData: Product[] = [
       'Ghee',
     ],
     ingredientSprite: { image: '/assets/ingredients/muesli-v3-648w.webp', rows: 5 },
+    orderThumb: '/assets/order-thumbs/muesli-light-192w-v1.webp',
+    orderThumbDark: '/assets/order-thumbs/muesli-dark-192w-v1.webp',
     nutritionFacts: [
       { label: 'Energy', per100g: '413 kcal', perServing: '124 kcal' },
       { label: 'Protein', per100g: '10.0 g', perServing: '3.0 g' },
@@ -79,6 +83,8 @@ export const productsData: Product[] = [
     features: ['Dates', 'Nuts', 'Seeds', 'Cranberry'],
     ingredients: ['Dates', 'Almonds', 'Cashew', 'Sunflower Seeds', 'Pumpkin Seeds', 'Haliv', 'Cranberry', 'Ghee'],
     ingredientSprite: { image: '/assets/ingredients/date-bites-v2-648w.webp', rows: 3 },
+    orderThumb: '/assets/order-thumbs/bites-light-192w-v1.webp',
+    orderThumbDark: '/assets/order-thumbs/bites-dark-192w-v1.webp',
     nutritionFacts: [],
     weightOptions: ['250 g'],
     shelfLife: '15 days',
