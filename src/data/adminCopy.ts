@@ -36,7 +36,6 @@ export const adminCopy = {
     emailList: ['Email list', 'Sign-ups and a CSV'],
     exportOrders: ['Export orders', 'CSV for a sheet'],
     settings: ['Settings', 'Access, appearance, sign out'],
-    exportSoon: 'The orders CSV comes with the Orders screen.',
     footer: "Shah's Nutrition admin",
   },
 
@@ -131,7 +130,8 @@ export const adminCopy = {
     toConfirm: 'to confirm',
     toCollect: (money: string) => `${money} to collect`,
     doneLink: 'Done',
-    doneSub: 'Delivered and paid, and cancelled',
+    doneCount: (n: number) => `Done · ${n}`,
+    doneSub: (paid: number, cancelled: number) => `${paid} delivered and paid, ${cancelled} cancelled`,
     exportCsv: 'Export CSV',
     // Card buttons, then the detail's pinned button.
     next: {
@@ -203,6 +203,7 @@ export const adminCopy = {
     phone: 'Their phone',
     phonePlaceholder: 'From the WhatsApp chat',
     paste: 'Paste',
+    copy: 'Copy',
     phoneError: "That doesn't look like a phone number. It needs 10 digits.",
     total: 'Total you quoted',
     totalPlaceholder: 'What you told them',

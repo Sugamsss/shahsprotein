@@ -70,7 +70,9 @@ export const OrderCard: React.FC<{
   dateTitle?: boolean;
   selected?: boolean;
   mark?: string;
-}> = ({ order: o, onAction, dateTitle, selected, mark }) => {
+  /** It just landed in this lane: the site's order-flash tint. */
+  flash?: boolean;
+}> = ({ order: o, onAction, dateTitle, selected, mark, flash }) => {
   const lane = laneOf(o);
   const next = nextOf(o);
   const ids = [...new Set(sortLines(o.lines).map((l) => l.product_id))];
@@ -88,7 +90,7 @@ export const OrderCard: React.FC<{
   }
 
   return (
-    <article className={`adm-ocard${lane === 'stale' ? ' adm-ocard--stale' : ''}${selected ? ' is-open' : ''}`}>
+    <article className={`adm-ocard${lane === 'stale' ? ' adm-ocard--stale' : ''}${selected ? ' is-open' : ''}${flash ? ' is-flash' : ''}`}>
       <AdminLink className="adm-ocard__open" to={`/admin/orders/${o.code}`} aria-label={copy.open(o.name ?? o.code, o.code)} />
       <span className={`adm-pile adm-pile--${Math.min(ids.length, 2)}`}>
         {ids.slice(0, 2).map((id) => <Thumb key={id} id={id} />)}

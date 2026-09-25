@@ -32,7 +32,7 @@ export interface Order {
   phone: string | null;
   note: string | null;
   amount: number | null;
-  coupon: { code: string; valid: boolean; known: boolean } | null;
+  coupon: { code: string; valid: boolean; known: boolean; description: string | null } | null;
   lines: OrderLine[];
   packs: number;
   customer: { order_number: number; orders: number } | null;
@@ -124,6 +124,8 @@ export interface Overview {
   selling: { product_id: string; size: string; packs: number; orders: number }[];
   coupons: { code: string; orders: number; last_used_at: string | null }[];
   email: { active: number };
+  /** All time. */
+  done: { delivered_paid: number; cancelled: number };
 }
 
 export interface Customer {

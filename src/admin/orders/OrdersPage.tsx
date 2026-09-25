@@ -8,6 +8,7 @@ import { formatMoney } from '../format';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink, usePathPart, useQueryText } from '../router';
 import type { Order } from '../types';
+import { useOverview } from '../AdminLayout';
 import { useRpc } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
@@ -116,13 +117,26 @@ const OrdersPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const laptop = useLaptop();
+  const doneCounts = useOverview().data?.done;
   const q = new URLSearchParams(location.search).get('q') ?? '';
   const [searching, setSearching] = useState(false);
   const [confirming, setConfirming] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const list = useRpc(() => getOrders({ view: 'todo', limit: 1000 }), [], { refreshOnFocus: true });
-  const put = useCallback((o: Order) => list.setData((d) => d && { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A card that changes lane flashes where it lands.
+  const [flash, setFlash] = useState<string | null>(null);
+  const put = useCallback((o: Order) => list.setData((d) => {
+    if (!d) return d;
+    const before = d.orders.find((x) => x.id === o.id);
+    if (before && laneOf(before) !== laneOf(o)) setFlash(o.id);
+    return { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) };
+  }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), 900);
+    return () => clearTimeout(timer);
+  }, [flash]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
   const change = useOrderChange(put);
 
@@ -157,16 +171,10 @@ const OrdersPage: React.FC = () => {
   // Phone: one order is its own page.
   if (code && !laptop) return <OrderPage code={code} />;
 
-  const cards = (lane: Lane) =>
-    by[lane].length
-      ? by[lane].map((o) => <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} />)
-      : <p className="adm-lane__empty">{copy.laneEmpty}</p>;
-  const stale = by.stale.length > 0 && (
-    <>
-      <p className="adm-lane__sub">{copy.lanes.stale[0]} <span className="adm-count">{by.stale.length}</span></p>
-      {by.stale.map((o) => <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} />)}
-    </>
+  const card = (o: Order) => (
+    <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} flash={o.id === flash} />
   );
+  const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : <p className="adm-lane__empty">{copy.laneEmpty}</p>);
   const doneHits = settledQ ? done.data?.orders ?? [] : [];
   const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<Lane, number>;
   const summary = [
@@ -195,7 +203,7 @@ const OrdersPage: React.FC = () => {
           <button type="button" className="adm-iconbtn adm-phone-only" aria-label={copy.find} aria-expanded={searching || !!q}
             onClick={() => setSearching(true)}><Search size={20} aria-hidden="true" /></button>
           <AdminLink className="adm-btn adm-btn--tonal adm-btn--sm adm-phone-only" to="/admin/orders/new"><Plus size={18} aria-hidden="true" />{copy.add}</AdminLink>
-          <AdminLink className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" to="/admin/orders/done"><CheckCircle2 size={16} aria-hidden="true" />{copy.doneLink}</AdminLink>
+          <AdminLink className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" to="/admin/orders/done"><CheckCircle2 size={16} aria-hidden="true" />{doneCounts ? copy.doneCount(doneCounts.delivered_paid + doneCounts.cancelled) : copy.doneLink}</AdminLink>
           <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" onClick={() => setExporting(true)}>
             <Download size={16} aria-hidden="true" />{copy.exportCsv}
           </button>
@@ -221,17 +229,23 @@ const OrdersPage: React.FC = () => {
             {LANES.map((lane) => (!q || by[lane].length > 0) && (
               <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money}>
                 {cards(lane)}
-                {lane === 'confirm' && stale && <div className="adm-laptop-only adm-lane__stale">{stale}</div>}
+                {/* Laptop: stale orders sit at the bottom of To confirm. Phone: their own group, below. */}
+                {lane === 'confirm' && laptop && by.stale.length > 0 && (
+                  <div className="adm-lane__stale">
+                    <p className="adm-lane__sub">{copy.lanes.stale[0]} <span className="adm-count">{by.stale.length}</span></p>
+                    {by.stale.map(card)}
+                  </div>
+                )}
               </LaneBlock>
             ))}
           </div>
-          {stale && <LaneBlock lane="stale" orders={by.stale} className="adm-phone-only">{by.stale.map((o) => <OrderCard key={o.id} order={o} onAction={onAction} mark={q} />)}</LaneBlock>}
+          {!laptop && by.stale.length > 0 && <LaneBlock lane="stale" orders={by.stale}>{by.stale.map(card)}</LaneBlock>}
         </>
       )}
 
       {doneHits.length > 0 && (
         <LaneBlock lane="done" orders={doneHits}>
-          {doneHits.map((o) => <OrderCard key={o.id} order={o} onAction={onAction} mark={q} />)}
+          {doneHits.map(card)}
         </LaneBlock>
       )}
       {q.trim() && list.data && shown.length === 0 && settledQ && !done.loading && doneHits.length === 0 && (
@@ -244,7 +258,7 @@ const OrdersPage: React.FC = () => {
       {!q && list.data && (
         <AdminLink className="adm-donelink adm-phone-only" to="/admin/orders/done">
           <CheckCircle2 size={22} aria-hidden="true" />
-          <span><b>{copy.doneLink}</b><small>{copy.doneSub}</small></span>
+          <span><b>{copy.doneLink}</b>{doneCounts && <small>{copy.doneSub(doneCounts.delivered_paid, doneCounts.cancelled)}</small>}</span>
           <ChevronRight size={20} aria-hidden="true" />
         </AdminLink>
       )}

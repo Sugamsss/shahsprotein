@@ -109,7 +109,7 @@ export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
     </ul>
     {o.coupon && (
       <p className="adm-od-coupon">
-        <Ticket size={18} aria-hidden="true" /><b>{o.coupon.code}</b>{!o.coupon.valid && ` ${copy.couponInvalid}`}
+        <Ticket size={18} aria-hidden="true" /><span><b>{o.coupon.code}</b>{o.coupon.description && ` · ${o.coupon.description}`}{!o.coupon.valid && ` ${copy.couponInvalid}`}</span>
       </p>
     )}
   </section>
@@ -124,6 +124,17 @@ export const PasteButton: React.FC<{ onPaste: (text: string) => void }> = ({ onP
       <ClipboardPaste size={16} aria-hidden="true" />{copy.paste}
     </button>
   ) : null;
+
+/** Copies the saved phone, for pasting into WhatsApp or the dialler. */
+const CopyButton: React.FC<{ text: string }> = ({ text }) => {
+  const toast = useToast();
+  const copyIt = () => navigator.clipboard.writeText(text).then(() => toast.show({ text: adminCopy.orders.toasts.copied }), () => toast.error());
+  return (
+    <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" onClick={copyIt}>
+      <Copy size={16} aria-hidden="true" />{copy.copy}
+    </button>
+  );
+};
 
 type FieldKey = 'phone' | 'amount' | 'note';
 
@@ -196,7 +207,9 @@ const AutoField: React.FC<{
       prefix={field === 'amount' ? '₹' : undefined}
       error={isError ? status : null}
       hint={status || (field === 'amount' ? copy.totalHint : undefined)}
-      action={field === 'phone' && <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />}
+      action={field === 'phone' && (order.phone
+        ? <CopyButton text={formatPhone(order.phone)} />
+        : <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />)}
     >
       {field === 'note'
         ? <textarea {...common} rows={3} placeholder={copy.notePlaceholder} />
