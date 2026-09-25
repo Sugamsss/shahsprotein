@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { siteConfig } from '../../data/siteConfig';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -166,7 +167,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, titleClass
             </h3>
           )}
 
-          <button type="button" onClick={requestClose} aria-label="Close" className="modal-close-btn">
+          <button type="button" onClick={requestClose} aria-label={siteConfig.ui.close} className="modal-close-btn">
             <X size={20} />
           </button>
         </div>

@@ -1,5 +1,6 @@
 import { BrandValue } from '../types/values';
 
+export const valuesLabel = 'Our Principles';
 export const valuesEyebrow = 'OUR PRINCIPLES';
 export const valuesHeading = 'What we believe';
 

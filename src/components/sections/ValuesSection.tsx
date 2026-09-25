@@ -2,7 +2,7 @@ import React from 'react';
 import { ScanSearch, UsersRound, Utensils, type LucideIcon } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
-import { valuesData, valuesEyebrow, valuesHeading } from '../../data/values';
+import { valuesData, valuesEyebrow, valuesHeading, valuesLabel } from '../../data/values';
 import type { ValueIconType } from '../../types/values';
 
 const valueIconMap: Record<ValueIconType, LucideIcon> = {
@@ -15,7 +15,7 @@ export const ValuesSection: React.FC = () => (
   <section
     id="values"
     className="snap-section values-section"
-    aria-label="Our Principles"
+    aria-label={valuesLabel}
   >
     <Container>
       <div className="values-intro">

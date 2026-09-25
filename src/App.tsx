@@ -19,6 +19,7 @@ import { useTheme } from './context/ThemeContext';
 import { useSectionSettle } from './hooks/useSectionSettle';
 import './styles/global.css';
 import { NotFound } from './components/pages/NotFound';
+import { siteConfig } from './data/siteConfig';
 
 // Admin is loaded on demand, so landing visitors never download it or Supabase.
 const AdminLogin = React.lazy(() => import('./components/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })));
@@ -58,7 +59,7 @@ const LandingPage: React.FC = () => (
     <WaitlistProvider>
       <OrderProvider>
         <div className="app-shell">
-            <a href="#main-content" className="skip-link">Skip to main content</a>
+            <a href="#main-content" className="skip-link">{siteConfig.ui.skipLink}</a>
             <Header />
             <main id="main-content" className="site-main">
               <ErrorBoundary>

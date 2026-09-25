@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWaitlist } from '../../context/WaitlistContext';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { siteConfig } from '../../data/siteConfig';
 
 // Matches .toast--leaving in global.css (a short fade and drop).
 const EXIT_MS = 200;
@@ -49,7 +50,7 @@ export const Toast: React.FC = () => {
         <AlertCircle size={20} className="toast__icon" aria-hidden="true" />
       )}
       <span className="toast__message">{toastMessage}</span>
-      <button type="button" onClick={close} aria-label="Close notification" className="toast__close">
+      <button type="button" onClick={close} aria-label={siteConfig.ui.closeNotification} className="toast__close">
         <X size={16} aria-hidden="true" />
       </button>
     </div>

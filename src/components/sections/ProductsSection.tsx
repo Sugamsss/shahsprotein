@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
+import { HighlightedText } from '../ui/HighlightedText';
 import { Modal } from '../ui/Modal';
 import { OrderLink } from '../ui/OrderLink';
 import { SizeChoice } from '../order/SizeChoice';
@@ -20,6 +21,7 @@ const joinWithAnd = (items: string[]): string =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? '';
 
 const copy = siteConfig.order;
+const text = siteConfig.products;
 
 const ProductCard: React.FC<{
   product: Product;
@@ -31,7 +33,7 @@ const ProductCard: React.FC<{
     <img
       className="portfolio-card__art"
       src={theme === 'dark' ? product.imageDark : product.image}
-      alt={`${product.name} pouch and ingredients from the Shah's Nutrition product portfolio`}
+      alt={text.cardImageAlt(product.name)}
       width={946}
       height={728}
       loading="lazy"
@@ -45,11 +47,11 @@ const ProductCard: React.FC<{
         <button
           type="button"
           className="portfolio-card__action"
-          aria-label={`View details for ${product.name}`}
+          aria-label={text.viewDetailsLabel(product.name)}
           aria-haspopup="dialog"
           onClick={() => onOpen(product)}
         >
-          View details <ArrowUpRight size={18} aria-hidden="true" />
+          {text.viewDetails} <ArrowUpRight size={18} aria-hidden="true" />
         </button>
         {/* Adds the smallest pack (or one more of it) and opens "Your order". */}
         <button
@@ -126,12 +128,12 @@ export const ProductsSection: React.FC = () => {
 
   return (
     <>
-      <section id="products" ref={sectionRef} className="reveal products-section snap-section" aria-label="Our Products">
+      <section id="products" ref={sectionRef} className="reveal products-section snap-section" aria-label={text.label}>
         <Container>
           <div className="portfolio-intro">
-            <p className="portfolio-intro__eyebrow"><Badge>Meet the range</Badge></p>
-            <h2>Simple ingredients. <em>Extraordinary benefits.</em></h2>
-            <p>Wholesome everyday foods made with real ingredients and honest nutrition.</p>
+            <p className="portfolio-intro__eyebrow"><Badge>{text.eyebrow}</Badge></p>
+            <h2><HighlightedText segments={text.heading} as="em" /></h2>
+            <p>{text.intro}</p>
           </div>
           <div className="portfolio-grid">
             {productsData.map((product) => <ProductCard key={product.id} product={product} theme={theme} onOpen={setSelectedProduct} onAdd={addFromCard} />)}
@@ -156,8 +158,8 @@ export const ProductsSection: React.FC = () => {
               <p className="product-detail__tagline">{selectedProduct.tagline}</p>
               <p className="product-detail__description">{selectedProduct.fullDescription}</p>
 
-              <section className="product-detail__section" aria-label="Ingredients">
-                <h4>Ingredients</h4>
+              <section className="product-detail__section" aria-label={text.ingredients}>
+                <h4>{text.ingredients}</h4>
                 <ul className="product-detail__ingredients">
                   {selectedProduct.ingredients.map((ingredient, index) => {
                     const { image, rows } = selectedProduct.ingredientSprite;
@@ -182,38 +184,35 @@ export const ProductsSection: React.FC = () => {
                 </ul>
               </section>
 
-              <section className="product-detail__section" aria-label="Good to know">
-                <h4>Good to know</h4>
+              <section className="product-detail__section" aria-label={text.goodToKnow}>
+                <h4>{text.goodToKnow}</h4>
                 <dl className="product-detail__facts">
                   <div>
-                    <dt>Stays fresh</dt>
-                    <dd>
-                      {selectedProduct.shelfLife}. No preservatives.
-                      {selectedProduct.madeToOrder && ' Made after you order.'}
-                    </dd>
+                    <dt>{text.staysFresh}</dt>
+                    <dd>{text.freshness(selectedProduct.shelfLife, selectedProduct.madeToOrder)}</dd>
                   </div>
                   <div>
-                    <dt>Contains</dt>
+                    <dt>{text.contains}</dt>
                     <dd>{selectedProduct.contains}</dd>
                   </div>
                   {selectedProduct.weightOptions.length > 0 && (
                     <div>
-                      <dt>{selectedProduct.weightOptions.length > 1 ? 'Pack sizes' : 'Pack size'}</dt>
+                      <dt>{text.packSizes(selectedProduct.weightOptions.length)}</dt>
                       <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
                     </div>
                   )}
                 </dl>
               </section>
 
-              <section className="product-detail__section" aria-label="Nutrition information">
-                <h4>Nutrition information</h4>
+              <section className="product-detail__section" aria-label={text.nutrition}>
+                <h4>{text.nutrition}</h4>
                 {selectedProduct.nutritionFacts.length > 0 ? (
                   <table className="product-detail__nutrition">
                     <thead>
                       <tr>
-                        <th scope="col">Nutrient</th>
-                        <th scope="col">Per 100 g</th>
-                        <th scope="col">Per 30 g <span>(serving)</span></th>
+                        <th scope="col">{text.nutrient}</th>
+                        <th scope="col">{text.per100g}</th>
+                        <th scope="col">{text.perServing} <span>{text.serving}</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -228,12 +227,11 @@ export const ProductsSection: React.FC = () => {
                   </table>
                 ) : (
                   <p className="product-detail__note">
-                    We’re still adding the full nutrition panel for {selectedProduct.name}. Want the numbers before you
-                    order?{' '}
+                    {text.nutritionMissing(selectedProduct.name)}{' '}
                     <OrderLink source={`nutrition:${selectedProduct.id}`} ask variant="text">
-                      Ask us on WhatsApp
+                      {text.nutritionAsk}
                     </OrderLink>{' '}
-                    and we’ll share what we have.
+                    {text.nutritionAskAfter}
                   </p>
                 )}
               </section>

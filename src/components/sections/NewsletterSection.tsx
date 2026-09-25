@@ -13,7 +13,7 @@ import { CheckCircle2, Info, Loader2, Mail } from 'lucide-react';
 type FieldError = 'email' | 'consent' | null;
 type Outcome = { kind: 'done' | 'already'; email: string } | null;
 
-const { signup } = siteConfig;
+const { signup, orderCard } = siteConfig;
 
 /**
  * The end of the page: people who've been convinced land here, so ordering comes
@@ -69,23 +69,21 @@ export const NewsletterSection: React.FC = () => {
               <WhatsAppIcon size={24} />
             </div>
 
-            <h2 id="order-heading" className="order-card__title">Ready to give it a try?</h2>
+            <h2 id="order-heading" className="order-card__title">{orderCard.title}</h2>
 
-            <p className="order-card__lead">
-              Message us on WhatsApp. We’ll help you choose, and tell you the total with delivery.
-            </p>
+            <p className="order-card__lead">{orderCard.lead}</p>
 
-            <OrderButton from="banner" size="lg">Order on WhatsApp</OrderButton>
+            <OrderButton from="banner" size="lg">{siteConfig.orderCta}</OrderButton>
 
             <p className="order-card__reply">{siteConfig.replyTime}</p>
 
             <p className="order-card__number">
-              Or save our order number: <strong>{siteConfig.contact.order.display}</strong>
+              {orderCard.numberLead} <strong>{siteConfig.contact.order.display}</strong>
             </p>
           </div>
 
           <div id="updates" className="order-card__updates">
-            <p className="order-card__updates-intro">Not ready yet? Hear about new launches.</p>
+            <p className="order-card__updates-intro">{signup.intro}</p>
 
             {outcome ? (
               <div ref={outcomeRef} tabIndex={-1} className="waitlist-outcome" role="status">
@@ -100,7 +98,7 @@ export const NewsletterSection: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="waitlist-form" aria-label="Get email updates" noValidate>
+              <form onSubmit={handleSubmit} className="waitlist-form" aria-label={signup.formLabel} noValidate>
                 {/* Consent comes first in the DOM, so the tab order matches what's on screen. */}
                 <label className="waitlist-consent">
                   <input
@@ -115,16 +113,14 @@ export const NewsletterSection: React.FC = () => {
                     aria-describedby={fieldError === 'consent' ? 'waitlist-error' : undefined}
                   />
                   <span className="waitlist-checkbox" aria-hidden="true" />
-                  <span className="waitlist-consent__text">
-                    Email me about new products from Shah’s Nutrition. I can unsubscribe anytime.
-                  </span>
+                  <span className="waitlist-consent__text">{signup.consent}</span>
                 </label>
                 <div className="waitlist-form__field">
                   <Input
                     id="waitlist-email"
                     type="email"
-                    placeholder="Email address"
-                    aria-label="Email address"
+                    placeholder={signup.emailLabel}
+                    aria-label={signup.emailLabel}
                     autoComplete="email"
                     value={email}
                     onChange={(e) => {
@@ -141,7 +137,7 @@ export const NewsletterSection: React.FC = () => {
                 <button type="submit" className="waitlist-submit" disabled={isLoading}>
                   {/* The coupon check's spinner: still under reduced motion. */}
                   {isLoading && <Loader2 size={16} className="order-coupon__spinner" aria-hidden="true" />}
-                  {isLoading ? 'Adding you…' : 'Keep me posted'}
+                  {isLoading ? signup.submitting : signup.submit}
                 </button>
               </form>
             )}
