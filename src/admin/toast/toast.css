@@ -1,0 +1,31 @@
+/* ---- Undo toast (spec 2.3) -------------------------------------------------
+   Above the tab bar on phones, bottom right at 400px on laptops, and above any
+   open sheet or popup. Dark on light, light on dark. */
+.adm-toast-dock {
+  position: fixed; z-index: calc(var(--z-modal) + 10);
+  left: 16px; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom));
+  display: flex; justify-content: center; pointer-events: none;
+}
+.adm-toast {
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 440px;
+  min-height: 52px; padding: 4px 6px 4px 16px; border-radius: 16px;
+  background: var(--adm-toast-bg); color: var(--adm-toast-text); box-shadow: var(--adm-shadow-lift);
+  font-size: 0.9375rem; font-weight: 500; line-height: 1.35; pointer-events: auto;
+  animation: adm-toast-in 200ms var(--ease-glide) both;
+}
+.adm-toast svg { flex: 0 0 auto; }
+.adm-toast__tick { color: var(--adm-toast-tick); }
+.adm-toast__text { flex: 1; min-width: 0; padding: 8px 0; }
+.adm-toast__action {
+  flex: 0 0 auto; min-height: 44px; padding: 0 14px; border-radius: 12px;
+  color: var(--adm-toast-action); font-weight: 700;
+}
+.adm-toast__action:active { background: color-mix(in srgb, var(--adm-toast-text) 12%, transparent); }
+.adm-toast__action:focus-visible { outline-color: var(--adm-toast-action); }
+@keyframes adm-toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+@media (min-width: 960px) {
+  .adm-toast-dock { left: auto; right: 32px; bottom: 24px; }
+  .adm-toast { width: 400px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-toast { animation: none; } }

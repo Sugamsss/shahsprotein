@@ -7,6 +7,9 @@
    Phones first; the laptop layout starts at 960px (the mockups' breakpoint). */
 
 @import './AdminSheet.css';
+@import './toast/toast.css';
+@import './parts.css';
+@import './pages/products.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {
@@ -26,6 +29,11 @@
   --adm-frost: rgba(238, 244, 252, 0.45);
   --adm-scrim: rgba(15, 23, 42, 0.32);
   --adm-track-off: rgba(15, 23, 42, 0.12);
+  --adm-toast-bg: #0f172a;
+  --adm-toast-text: #ffffff;
+  --adm-toast-action: #93c5fd;
+  --adm-toast-tick: #4ade80;
+  --adm-knob: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -44,6 +52,11 @@
   --adm-frost: rgba(20, 20, 20, 0.5);
   --adm-scrim: rgba(0, 0, 0, 0.55);
   --adm-track-off: rgba(255, 255, 255, 0.14);
+  --adm-toast-bg: #f5f5f4;
+  --adm-toast-text: #111111;
+  --adm-toast-action: #8a6d12;
+  --adm-toast-tick: #137537;
+  --adm-knob: #ffffff;
 }
 
 /* ---- Page ------------------------------------------------------------------ */
@@ -248,4 +261,9 @@
 @media (prefers-reduced-motion: reduce) {
   .adm-btn, .adm-input { transition: none; }
   .adm-btn:active { transform: none; }
+}
+
+/* ---- Lane A: the switch knob (design's --adm-knob, the same in both themes) ---- */
+:root {
+  --adm-knob: #ffffff;
 }

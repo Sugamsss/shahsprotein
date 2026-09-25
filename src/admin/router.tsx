@@ -16,7 +16,8 @@ export const AdminLink: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement> &
       {...rest}
       onClick={(e) => {
         onClick?.(e);
-        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const elsewhere = (rest.target && rest.target !== '_self') || rest.download !== undefined;
+        if (e.defaultPrevented || elsewhere || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         navigate(to);
       }}

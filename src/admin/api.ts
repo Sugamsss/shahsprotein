@@ -25,15 +25,21 @@ export class AdminError extends Error {
 
 interface RpcFailure { message?: string; code?: string }
 
-/** Sorts a supabase/PostgREST failure into one of the kinds. */
-export const toAdminError = (error: unknown, status = 0): AdminError => {
+/**
+ * Sorts a failure into one of the kinds. `status` is the HTTP status of a
+ * supabase response (0 when the request never got an answer). A thrown error
+ * only counts as network when it's fetch's TypeError or the device is offline,
+ * so a bug in a screen never reads as "check your connection".
+ */
+export const toAdminError = (error: unknown, status?: number): AdminError => {
   if (error instanceof AdminError) return error;
   const { message = '', code = '' } = (error ?? {}) as RpcFailure;
   // Not an admin comes back as HTTP 400 / P0001 "Unauthorized"; anon gets 401.
   if (message === 'Unauthorized' || status === 401 || status === 403) return new AdminError('unauthorized');
   if (code === '22023' && message) return new AdminError('message', message);
   if (code === 'PT429' || status === 429) return new AdminError('rate');
-  if (status === 0 || (typeof navigator !== 'undefined' && !navigator.onLine)) return new AdminError('network');
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  if (status === 0 || offline || error instanceof TypeError) return new AdminError('network');
   return new AdminError('unknown');
 };
 

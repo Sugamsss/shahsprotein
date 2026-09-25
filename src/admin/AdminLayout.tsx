@@ -7,6 +7,7 @@ import { signOut, useAdminMe } from './auth';
 import { adminCopy as copy } from '../data/adminCopy';
 import { AdminLink } from './router';
 import { Logo } from './Splash';
+import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
 
 type OverviewState = ReturnType<typeof useRpc<Awaited<ReturnType<typeof getOverview>>>>;
@@ -29,7 +30,7 @@ const NavItem: React.FC<{ to: string; current?: boolean; children: React.ReactNo
 const OrdersBadge: React.FC<{ count: number }> = ({ count }) =>
   count > 0 ? (
     <>
-      <span className="adm-badge" aria-hidden="true">{count}</span>
+      <span className="adm-badge" aria-hidden="true">{count > 9 ? '9+' : count}</span>
       <span className="visually-hidden">, {copy.nav.toConfirm(count)}</span>
     </>
   ) : null;
@@ -162,6 +163,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   const toConfirm = overview.data?.queue.to_confirm ?? 0;
 
   return (
+    <ToastProvider>
     <div className="adm">
       <a href="#adm-main" className="skip-link">{copy.skipLink}</a>
       <Header toConfirm={toConfirm} />
@@ -170,5 +172,6 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       </main>
       <TabBar toConfirm={toConfirm} />
     </div>
+    </ToastProvider>
   );
 };

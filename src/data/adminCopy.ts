@@ -41,6 +41,13 @@ export const adminCopy = {
   },
 
   signOut: 'Sign out',
+  toast: {
+    undo: 'Undo',
+  dates: { yesterday: 'Yesterday' },
+    undone: 'Undone.',
+    retry: 'Try again',
+    failed: "That didn't save. Check your connection and try again.",
+  },
   /** AdminSheet's close button. */
   close: 'Close',
 
@@ -85,5 +92,21 @@ export const adminCopy = {
     coupons: 'Coupons',
     emailList: 'Email list',
     settings: 'Settings',
+  },
+
+  // ---- Lane A: shared states and screens (spec 2.3, 2.9) ----
+  loading: 'Loading',
+  loadError: "Couldn't load this. Check your connection, then try again.",
+  undo: 'Undo',
+  dates: { yesterday: 'Yesterday' },
+
+  products: {
+    title: 'Products',
+    intro: 'Turn a pack off and the site shows “Back soon” instead of Add.',
+    on: 'On the site',
+    off: 'Shows “Back soon”',
+    switchLabel: (item: string) => `${item} on the site`,
+    turnedOff: (item: string) => `${item} now shows “Back soon” on the site.`,
+    turnedOn: (item: string) => `${item} is back on the site.`,
   },
 };
