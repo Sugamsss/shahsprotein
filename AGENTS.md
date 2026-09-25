@@ -16,6 +16,7 @@ React 18 + TypeScript + Vite + plain CSS + Lucide icons. Supabase handles data a
 npm run dev      # local dev server (Vite)
 npm run build    # tsc + vite build → dist/  (run this before every commit)
 npm run lint     # type check only
+npm test         # Vitest: order message and cart logic (src/**/*.test.ts)
 ```
 
 **A push to `main` deploys to production** at **https://www.shahsnutrition.food**, the one canonical address. `shahsprotein.vercel.app` redirects there (308, set in `vercel.json` by host), so share the www link; Vercel preview deploys use other hosts and keep working. There's no staging. Check your work in a browser at phone and desktop sizes, in light and dark, before you push.
