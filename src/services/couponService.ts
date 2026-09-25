@@ -2,7 +2,7 @@ import type { CouponCheck } from '../types/order';
 
 // Same format the database enforces (coupons.code and check_coupon()).
 const COUPON_CODE_PATTERN = /^[A-Z0-9-]{3,24}$/i;
-const CHECK_TIMEOUT_MS = 8000;
+const CHECK_TIMEOUT_MS = 6000;
 
 /** Trims spaces and upper-cases, so "  example10 " and "EXAMPLE10" are the same code. */
 export function normalizeCouponCode(raw: string): string {

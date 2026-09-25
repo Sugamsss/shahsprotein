@@ -5,7 +5,7 @@ import type { AddResult, OrderLine } from '../types/order';
 
 // Pure cart functions: no React, no storage. Every change returns a new array,
 // or the same array when nothing changed, so React can skip needless renders.
-// Lines keep the order they were first added.
+// Stored lines keep the order they were first added; show them with sortLines().
 
 const DEFAULT_MAX = siteConfig.order.maxQuantity;
 
@@ -27,7 +27,8 @@ const toQuantity = (value: unknown, max: number): number | null => {
 
 /**
  * Adds packs, merging into an existing line for the same product and size.
- * No size means the product's first pack size. The quantity is clamped to max.
+ * No size means the product's first pack size. The quantity is clamped to max,
+ * and the result says `capped` when it was.
  */
 export const addLine = (
   lines: OrderLine[],
@@ -45,14 +46,38 @@ export const addLine = (
   }
 
   const index = lines.findIndex((l) => sameLine(l, productId, packSize));
+  const current = index === -1 ? 0 : lines[index].quantity;
+  const total = Math.min(current + amount, max);
+  const result: AddResult = current + amount > max ? 'capped' : 'added';
   if (index === -1) {
-    return { lines: [...lines, { productId, size: packSize, quantity: amount }], result: 'added' };
+    return { lines: [...lines, { productId, size: packSize, quantity: total }], result };
   }
-  if (lines[index].quantity >= max) return { lines, result: 'limit' };
+  if (total === current) return { lines, result };
 
   const next = lines.slice();
-  next[index] = { ...lines[index], quantity: Math.min(lines[index].quantity + amount, max) };
-  return { lines: next, result: 'added' };
+  next[index] = { ...lines[index], quantity: total };
+  return { lines: next, result };
+};
+
+/**
+ * Lines in product order (as in productsData), then pack-size order (as in
+ * weightOptions). The popup, the preview and the message all use this, so they
+ * always match. The stored order doesn't matter.
+ */
+export const sortLines = (
+  lines: readonly OrderLine[],
+  products: readonly Product[] = productsData,
+): OrderLine[] => {
+  const rank = (line: OrderLine): [number, number] => {
+    const productIndex = products.findIndex((p) => p.id === line.productId);
+    const sizeIndex = productIndex === -1 ? -1 : products[productIndex].weightOptions.indexOf(line.size);
+    return [productIndex === -1 ? products.length : productIndex, sizeIndex];
+  };
+  return [...lines].sort((a, b) => {
+    const [pa, sa] = rank(a);
+    const [pb, sb] = rank(b);
+    return pa - pb || sa - sb;
+  });
 };
 
 /** Sets a line's quantity, as a whole number clamped to 1..max. Removing a line is `removeLine`. */

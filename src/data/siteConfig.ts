@@ -56,16 +56,109 @@ export const siteConfig = {
     general: "Hi! I'd like to place an order.",
     product: (productName: string) => `Hi! I'd like to order ${productName}.`,
   },
-  // The "Your order" popup. No prices or totals anywhere: Pranjali replies with them.
+  // The "Your order" popup, in Pranjali's voice. No prices, totals or delivery
+  // costs anywhere: she replies with them on WhatsApp. Items read "Muesli, 250 g"
+  // in the popup and "Muesli 250 g" in the message.
   order: {
-    // Most packs of one product in one size per order. Bigger orders are a chat anyway.
+    // Most packs of one product in one size per order. Bigger orders are a chat.
     maxQuantity: 10,
-    // The WhatsApp message, piece by piece. Placeholder wording until Design sends the final words.
+
+    // Popup
+    title: 'Your order',
+    intro: "Pick what you'd like and send it to me on WhatsApp. I'll reply with the total, delivery and how to pay.",
+    itemsHeading: 'In your order', // visually hidden
+    addMoreHeading: 'Add something else',
+    detailsHeading: 'Your details',
+    droppedNotice: "A pack size you'd picked before isn't available any more, so I've taken it out.",
+
+    // Entry points
+    cardAdd: 'Add',
+    cardAddLabel: (name: string) => `Add ${name} to your order`,
+    addToOrder: 'Add to order',
+    sizeLegendProduct: 'Pack size',
+    headerOrder: 'Order',
+    headerEmptyLabel: 'Start your order',
+    headerCountLabel: (packs: number) => `Your order, ${packs} ${packs === 1 ? 'pack' : 'packs'}`,
+
+    // Empty
+    emptyTitle: 'Nothing in your order yet.',
+    emptyBody: "Pick something to start. You'll choose the pack size and how many next.",
+    pickAdd: 'Add',
+    pickAddLabel: (name: string, size: string) => `Add ${name}, ${size}`,
+    chatLead: 'Rather just chat?',
+    chatLink: 'Message me on WhatsApp',
+
+    // Lines
+    itemName: (name: string, size: string) => `${name}, ${size}`,
+    sizeLegend: (name: string) => `Pack size for ${name}`,
+    singleSize: (size: string) => `${size} pack`,
+    qtyGroup: (item: string) => `How many ${item}`,
+    qtyLess: (item: string) => `One less ${item}`,
+    qtyMore: (item: string) => `One more ${item}`,
+    qtyRemove: (item: string) => `Remove ${item}`,
+    maxNote: '10 is the most I can take here. Need more? Just say so in the chat.',
+    mergedNote: (item: string) => `Joined with your other ${item}.`,
+    removed: (item: string) => `Removed ${item}.`,
+    undo: 'Undo',
+
+    // Details
+    nameLabel: 'Your name',
+    pincodeLabel: 'Pincode',
+    pincodeHint: 'So I can check delivery to you.',
+    nameMissing: "Please add your name, so I know who's ordering.",
+    pincodeMissing: 'Please add your 6-digit pincode.',
+    pincodeInvalid: 'A pincode has 6 digits, like 415001.',
+
+    // Coupon
+    couponToggle: 'Have a coupon code?',
+    couponLabel: 'Coupon code',
+    couponPlaceholder: 'Enter code',
+    couponApply: 'Apply',
+    couponChecking: 'Checking',
+    couponAppliedNote: "I'll take it off your total.",
+    couponRemove: 'Remove',
+    couponInvalid: "I couldn't find that code. Check the spelling, or mention it in the chat.",
+    couponUnavailable: "Couldn't check it just now. I'll add it to your message and check it myself.",
+
+    // Message preview. "Usually replies the same day" matches replyTime above:
+    // if one changes, change them all (sentBody too).
+    previewShow: 'See your message',
+    previewHide: 'Hide your message',
+    previewTo: "To Pranjali, Shah's Nutrition",
+    previewReply: 'Usually replies the same day',
+    previewBlankName: 'your name',
+    previewBlankPincode: 'your pincode',
+
+    // Send
+    send: 'Send order on WhatsApp',
+    sendNote: 'Opens WhatsApp with your message ready to send.',
+
+    // Sent
+    sentTitle: 'Now press send in WhatsApp',
+    sentBody: "Your order is written out and waiting there. Once you send it, I'll reply with the total, delivery and how to pay. I usually reply the same day.",
+    retryLead: "WhatsApp didn't open?",
+    retry: 'Try again',
+    forgot: 'Forgot something? Just add it in the chat.',
+    newOrder: 'Start a new order',
+    done: 'Done',
+
+    // Screen reader announcements (polite)
+    announceAdded: (item: string, packs: number) => `${item} added. ${packs} ${packs === 1 ? 'pack' : 'packs'} in your order.`,
+    announceQty: (item: string, qty: number) => `${item}: ${qty}.`,
+    announceAtMax: (item: string) => `${item}: 10. That's the most for one order here.`,
+    announceMerged: (item: string, qty: number) => `Joined with your other ${item}. ${qty} now.`,
+    announceRemoved: (item: string) => `${item} removed. Undo is available.`,
+    announceEmpty: 'Your order is empty.',
+    announceCouponValid: (code: string, description: string) => `${code} applied. ${description}`,
+
+    // The WhatsApp message, piece by piece: greeting, lines, coupon and pincode, closing.
     message: {
       greeting: (name: string) => `Hi! I'm ${name}, and I'd like to place an order:`,
+      // Never sent in practice, because a name is required. Kept for safety.
       greetingNoName: "Hi! I'd like to place an order:",
       line: (productName: string, size: string, quantity: number) => `• ${productName} ${size} × ${quantity}`,
       coupon: (code: string) => `Coupon: ${code}`,
+      couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       pincode: (pincode: string) => `Pincode: ${pincode}`,
       closing: 'Could you send me the total?',
     },

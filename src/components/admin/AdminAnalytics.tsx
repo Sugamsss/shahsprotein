@@ -28,12 +28,14 @@ const PLACE_LABELS: Record<string, string> = {
 /**
  * "product:raggi-jaggi" → "Product card · Raggi Jaggi".
  * "order-popup:hero" → "Order popup, sent · Hero" (the place that opened the popup).
+ * "order-popup:chat" is the empty popup's direct WhatsApp link, not a Send.
  * Unknown sources show as-is.
  */
 const describeSource = (source: string): string => {
   const [place, productId] = source.split(':');
   const placeLabel = PLACE_LABELS[place] ?? source;
   if (!productId) return placeLabel;
+  if (source === 'order-popup:chat') return 'Order popup, "Rather just chat?" link';
   if (place === 'order-popup') return `${placeLabel} · ${PLACE_LABELS[productId] ?? productId}`;
   const productName = productsData.find((product) => product.id === productId)?.name ?? productId;
   return `${placeLabel} · ${productName}`;

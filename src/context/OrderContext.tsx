@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { siteConfig } from '../data/siteConfig';
-import type { AddResult, OrderLine } from '../types/order';
+import type { AddResult, CouponCheck, MessageCoupon, OrderLine } from '../types/order';
+import type { OrderPopupOpener } from '../utils/contact';
 import {
   addLine,
   changeLineSize,
@@ -9,32 +10,101 @@ import {
   removeLine,
   serializeCart,
   setLineQuantity,
+  sortLines,
 } from '../utils/orderCart';
+import { cleanName, orderMessageUrl } from '../utils/orderMessage';
+import { checkCoupon, looksLikeCouponCode, normalizeCouponCode } from '../services/couponService';
 
-// The cart for the "Your order" popup, kept in localStorage so a reload doesn't lose it.
-// Only the cart is saved: name, pincode and coupon are personal and live in the popup.
-// Storage can be missing, blocked, full or throw on access, so every touch is guarded
-// and the cart simply lives in memory when it can't be saved.
+// Everything behind the "Your order" popup.
+//
+// Only the cart is saved (localStorage), so a reload doesn't lose it. Name, pincode,
+// the coupon and the sent snapshot are personal or short-lived: they live in memory
+// for this visit, so they survive closing and reopening the popup, and never touch
+// storage. Storage can be missing, blocked, full or throw on access, so every touch
+// is guarded and the cart simply lives in memory when it can't be saved.
 
 const STORAGE_KEY = 'shahs-order-v1';
 const MAX_QUANTITY = siteConfig.order.maxQuantity;
 
+/** The coupon field's server answer. `idle` means nothing has been checked for what's typed. */
+export type CouponState =
+  | { status: 'idle' }
+  | { status: 'checking'; code: string }
+  | CouponCheck;
+
+/** What was sent, kept in memory after Send so the sent panel and "Try again" work. */
+export interface SentOrder {
+  lines: OrderLine[];
+  name: string;
+  pincode: string;
+  coupon: MessageCoupon | null;
+  url: string;
+}
+
+/** The last add, so the popup can flash that line and announce it. `at` makes each add unique. */
+export interface LastAdd {
+  productId: string;
+  size: string;
+  result: AddResult;
+  at: number;
+}
+
 export interface OrderContextType {
-  /** Lines in the order they were added. */
+  /** Lines in display order: product order, then pack-size order. */
   lines: OrderLine[];
   /** Total packs, for the header count. */
   itemCount: number;
   maxQuantity: number;
-  /** No size means the product's first pack size. Returns straight away, for "Added" feedback. */
+  /** No size means the product's first pack size. Drops a sent snapshot first. */
   addItem: (productId: string, size?: string, quantity?: number) => AddResult;
   /** Clamped to 1..maxQuantity. Use `removeItem` to remove. */
   setQuantity: (productId: string, size: string, quantity: number) => void;
-  /** Merges into the line for `to` if there is one. */
+  /** Merges into the line for `to` if there is one (clamped). */
   changeSize: (productId: string, from: string, to: string) => void;
   removeItem: (productId: string, size: string) => void;
   clear: () => void;
-  /** Saved lines thrown away on load because the product or pack size is gone. */
+  lastAdd: LastAdd | null;
+
+  /** Saved lines thrown away on load because the product or pack size is gone. Cleared when the popup closes. */
   droppedOnLoad: number;
+
+  // Details (memory only)
+  name: string;
+  setName: (value: string) => void;
+  pincode: string;
+  /** Keeps digits only, at most 6. */
+  setPincode: (value: string) => void;
+
+  // Coupon (memory only)
+  couponOpen: boolean;
+  setCouponOpen: (open: boolean) => void;
+  /** Upper case, no spaces, at most 24 characters. */
+  couponInput: string;
+  /** Typing clears any earlier answer. */
+  setCouponInput: (value: string) => void;
+  coupon: CouponState;
+  /** Checks what's typed. Does nothing if it's empty, or already checked or checking. */
+  applyCoupon: () => void;
+  /** Clears the field and any answer. */
+  removeCoupon: () => void;
+  /** The coupon as it goes in the message: checked, not checked yet, or none. */
+  messageCoupon: MessageCoupon | null;
+
+  // The popup
+  isOpen: boolean;
+  /** Which button opened the popup, for `trackOrderSend`. */
+  openedFrom: OrderPopupOpener | undefined;
+  openOrder: (from: OrderPopupOpener) => void;
+  closeOrder: () => void;
+
+  // Send
+  /** The finished wa.me link for what's in the popup right now. */
+  currentUrl: () => string;
+  /** Call once the Send link has opened: keeps a snapshot, clears the cart and the coupon. */
+  markSent: (url: string) => void;
+  sent: SentOrder | null;
+  /** Drops the snapshot. Name and pincode stay. */
+  startNewOrder: () => void;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -76,20 +146,44 @@ const saveCart = (lines: OrderLine[]): void => {
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [initial] = useState(loadCart);
-  const [lines, setLines] = useState<OrderLine[]>(initial.lines);
+  const [storedLines, setStoredLines] = useState<OrderLine[]>(initial.lines);
+  const [droppedOnLoad, setDroppedOnLoad] = useState(initial.dropped);
+  const [lastAdd, setLastAdd] = useState<LastAdd | null>(null);
+  const [name, setName] = useState('');
+  const [pincode, setPincodeState] = useState('');
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInputState] = useState('');
+  const [coupon, setCoupon] = useState<CouponState>({ status: 'idle' });
+  const [isOpen, setIsOpen] = useState(false);
+  const [openedFrom, setOpenedFrom] = useState<OrderPopupOpener | undefined>(undefined);
+  const [sent, setSent] = useState<SentOrder | null>(null);
 
-  // The ref is always the latest cart, so an action can answer synchronously and two
-  // quick clicks in the same tick both count (the second sees the first's result).
-  const linesRef = useRef(lines);
+  // Refs hold the latest values, so actions answer synchronously and two quick
+  // clicks in the same tick both count (the second sees the first's result).
+  const linesRef = useRef(storedLines);
+  const couponInputRef = useRef(couponInput);
+  const couponRef = useRef(coupon);
+  const sentRef = useRef(sent);
+
   const commit = useCallback((next: OrderLine[]) => {
     if (next === linesRef.current) return;
     linesRef.current = next;
-    setLines(next);
+    setStoredLines(next);
+  }, []);
+
+  const updateCoupon = useCallback((next: CouponState) => {
+    couponRef.current = next;
+    setCoupon(next);
+  }, []);
+
+  const updateSent = useCallback((next: SentOrder | null) => {
+    sentRef.current = next;
+    setSent(next);
   }, []);
 
   useEffect(() => {
-    saveCart(lines);
-  }, [lines]);
+    saveCart(storedLines);
+  }, [storedLines]);
 
   // Another tab changed the cart (or cleared all storage, where `key` is null).
   useEffect(() => {
@@ -102,10 +196,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [commit]);
 
   const addItem = useCallback((productId: string, size?: string, quantity = 1): AddResult => {
+    // A sent order is finished: anything added starts the next one.
+    if (sentRef.current) updateSent(null);
     const { lines: next, result } = addLine(linesRef.current, productId, size, quantity);
     commit(next);
+    if (result !== 'invalid') {
+      const line = next.find((l) => l.productId === productId && (size === undefined || l.size === size));
+      if (line) setLastAdd({ productId, size: line.size, result, at: Date.now() });
+    }
     return result;
-  }, [commit]);
+  }, [commit, updateSent]);
 
   const setQuantity = useCallback((productId: string, size: string, quantity: number) => {
     commit(setLineQuantity(linesRef.current, productId, size, quantity));
@@ -123,6 +223,85 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (linesRef.current.length > 0) commit([]);
   }, [commit]);
 
+  const setPincode = useCallback((value: string) => setPincodeState(value.replace(/\D/g, '').slice(0, 6)), []);
+
+  const setCouponInput = useCallback((value: string) => {
+    const next = value.replace(/\s/g, '').toUpperCase().slice(0, 24);
+    couponInputRef.current = next;
+    setCouponInputState(next);
+    // A new value needs a new check; an answer for the old one no longer applies.
+    const current = couponRef.current;
+    if (current.status !== 'idle' && current.code !== next) updateCoupon({ status: 'idle' });
+  }, [updateCoupon]);
+
+  const applyCoupon = useCallback(() => {
+    const code = normalizeCouponCode(couponInputRef.current);
+    const current = couponRef.current;
+    if (!code || (current.status !== 'idle' && current.code === code)) return;
+    updateCoupon({ status: 'checking', code });
+    void checkCoupon(code).then((result) => {
+      // Ignore an answer for a code the person has since changed.
+      if (normalizeCouponCode(couponInputRef.current) !== result.code) return;
+      updateCoupon(result);
+    });
+  }, [updateCoupon]);
+
+  const removeCoupon = useCallback(() => {
+    couponInputRef.current = '';
+    setCouponInputState('');
+    updateCoupon({ status: 'idle' });
+  }, [updateCoupon]);
+
+  const messageCoupon = useMemo<MessageCoupon | null>(() => {
+    const code = normalizeCouponCode(couponInput);
+    if (!code) return null;
+    switch (coupon.status) {
+      case 'valid':
+        return { code: coupon.code, checked: true };
+      case 'invalid':
+        return null;
+      case 'checking':
+      case 'unavailable':
+        return { code: coupon.code, checked: false };
+      default:
+        // Typed but not checked yet (Send pressed straight from the field).
+        return looksLikeCouponCode(code) ? { code, checked: false } : null;
+    }
+  }, [couponInput, coupon]);
+
+  const openOrder = useCallback((from: OrderPopupOpener) => {
+    setOpenedFrom(from);
+    setIsOpen(true);
+  }, []);
+
+  const closeOrder = useCallback(() => {
+    setIsOpen(false);
+    // The notice about dropped pack sizes shows once.
+    setDroppedOnLoad(0);
+  }, []);
+
+  const lines = useMemo(() => sortLines(storedLines), [storedLines]);
+
+  const currentUrl = useCallback(
+    () => orderMessageUrl({ lines: linesRef.current, name, pincode, coupon: messageCoupon }),
+    [name, pincode, messageCoupon],
+  );
+
+  const markSent = useCallback((url: string) => {
+    updateSent({
+      lines: sortLines(linesRef.current),
+      name: cleanName(name),
+      pincode,
+      coupon: messageCoupon,
+      url,
+    });
+    commit([]);
+    removeCoupon();
+    setCouponOpen(false);
+  }, [name, pincode, messageCoupon, commit, removeCoupon, updateSent]);
+
+  const startNewOrder = useCallback(() => updateSent(null), [updateSent]);
+
   const value = useMemo<OrderContextType>(() => ({
     lines,
     itemCount: countItems(lines),
@@ -132,8 +311,34 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     changeSize,
     removeItem,
     clear,
-    droppedOnLoad: initial.dropped,
-  }), [lines, addItem, setQuantity, changeSize, removeItem, clear, initial.dropped]);
+    lastAdd,
+    droppedOnLoad,
+    name,
+    setName,
+    pincode,
+    setPincode,
+    couponOpen,
+    setCouponOpen,
+    couponInput,
+    setCouponInput,
+    coupon,
+    applyCoupon,
+    removeCoupon,
+    messageCoupon,
+    isOpen,
+    openedFrom,
+    openOrder,
+    closeOrder,
+    currentUrl,
+    markSent,
+    sent,
+    startNewOrder,
+  }), [
+    lines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
+    name, pincode, setPincode, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
+    removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, currentUrl,
+    markSent, sent, startNewOrder,
+  ]);
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 };

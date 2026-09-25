@@ -37,8 +37,13 @@ export type OrderPopupOpener = 'header' | 'hero' | 'banner' | 'footer' | 'produc
  * The "Your order" popup's Send, recorded as an order click. Never pass the
  * name, pincode or coupon. `openedFrom` is the place that opened the popup
  * (e.g. "hero"), so the admin can still see which buttons lead to orders.
- * The places must match the `site_events` source pattern (migration 20260925000001).
+ * The places must match the `site_events` source pattern (migrations 20260925000001 and 000003).
  */
 export const trackOrderSend = (openedFrom?: OrderPopupOpener): void => {
   trackOrderClick(openedFrom ? `order-popup:${openedFrom}` : 'order-popup');
+};
+
+/** The empty popup's "Message me on WhatsApp", a direct order chat. Kept apart from Send. */
+export const trackOrderChat = (): void => {
+  trackOrderClick('order-popup:chat');
 };

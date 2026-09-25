@@ -16,15 +16,19 @@ describe('addLine', () => {
     ]);
   });
 
-  it('stops a line at 10 packs', () => {
+  it('stops a line at 10 packs and says it was capped', () => {
     const nine = [{ productId: 'bites', size: '250 g', quantity: 9 }];
 
-    const clamped = addLine(nine, 'bites', '250 g', 3);
-    expect(clamped.result).toBe('added');
-    expect(clamped.lines).toEqual([{ productId: 'bites', size: '250 g', quantity: 10 }]);
+    const toTen = addLine(nine, 'bites', '250 g');
+    expect(toTen.result).toBe('added');
+    expect(toTen.lines).toEqual([{ productId: 'bites', size: '250 g', quantity: 10 }]);
 
-    const full = addLine(clamped.lines, 'bites', '250 g');
-    expect(full.result).toBe('limit');
+    const over = addLine(nine, 'bites', '250 g', 3);
+    expect(over.result).toBe('capped');
+    expect(over.lines).toEqual([{ productId: 'bites', size: '250 g', quantity: 10 }]);
+
+    const full = addLine(toTen.lines, 'bites', '250 g');
+    expect(full.result).toBe('capped');
     expect(full.lines).toEqual([{ productId: 'bites', size: '250 g', quantity: 10 }]);
   });
 });
