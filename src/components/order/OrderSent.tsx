@@ -1,13 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
 import { saveOrder } from '../../services/orderService';
+import { buildOrderMessage } from '../../utils/orderMessage';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
 
 const copy = siteConfig.order;
+const order = siteConfig.contact.order;
+
+/** Clipboard API first, then the old select-and-copy for browsers that block it. Never throws. */
+const copyText = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.className = 'visually-hidden';
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+};
 
 interface OrderSentProps {
   sent: SentOrder;
@@ -17,6 +41,12 @@ interface OrderSentProps {
 /** After Send: what was sent, a way to open WhatsApp again, and what's next. */
 export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
   const close = useModalClose();
+  const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
+
+  // The same text WhatsApp gets (buildOrderMessage), so the two can't drift apart.
+  const onCopy = () => {
+    void copyText(buildOrderMessage(sent)).then((ok) => setCopied(ok ? 'ok' : 'failed'));
+  };
   const meta = [sent.name, sent.pincode, sent.coupon && copy.recapCoupon(sent.coupon.code)].filter(Boolean).join(' · ');
 
   return (
@@ -56,7 +86,15 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
             onClick={() => saveOrder(sent)}
           >
             {copy.retry}
-          </a>
+          </a>{' '}
+          {copy.copyLead}{' '}
+          <button type="button" className="order-text-link" onClick={onCopy}>
+            {copy.copyMessage}
+          </button>
+        </p>
+        {/* Always in the page, so the result is read out when it appears. */}
+        <p className="order-sent__copied" role="status">
+          {copied && (copied === 'ok' ? copy.copied(order.display) : copy.copyFailed(order.display))}
         </p>
         <p className="order-sent__forgot">{copy.forgot}</p>
       </div>

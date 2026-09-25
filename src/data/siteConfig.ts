@@ -229,6 +229,12 @@ export const siteConfig = {
     sentBody: "Your order is written out and waiting there. Once you send it, we'll reply with the total, delivery and how to pay. We usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
+    // A quiet fallback for when WhatsApp won't open at all (a laptop without it,
+    // some in-app browsers): copy the same message and paste it into a chat.
+    copyLead: 'or',
+    copyMessage: 'copy your message',
+    copied: (number: string) => `Copied. Paste it into a WhatsApp chat with ${number}.`,
+    copyFailed: (number: string) => `Couldn't copy it here. You can message us on WhatsApp at ${number}.`,
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapCoupon: (code: string) => `Coupon ${code}`,
