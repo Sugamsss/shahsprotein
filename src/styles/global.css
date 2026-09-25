@@ -174,6 +174,12 @@ body {
   outline: none;
 }
 
+/* Titles and panels that focus is moved to from code aren't controls, so no ring. */
+[tabindex='-1']:focus,
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
 /* Headings */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family-heading);
@@ -1385,6 +1391,13 @@ a {
   border-top: 1px solid var(--color-border-divider);
 }
 
+/* The last row's hairline already closes the list, so the next section
+   doesn't draw a second one. */
+.order-list + .popup-section {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .order-line {
   position: relative;
   display: grid;
@@ -1794,7 +1807,8 @@ a {
 /* Your details */
 .order-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 12rem;
+  /* Equal columns, so the pincode hint reads as one line on desktop. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 1rem;
 }
