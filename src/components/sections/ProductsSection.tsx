@@ -56,9 +56,7 @@ const ProductCard: React.FC<{
         </button>
         {/* Adds the smallest pack in stock (or one more of it) and opens "Your order". */}
         {out ? (
-          <span className="order-btn order-btn--sm portfolio-card__order portfolio-card__add back-soon">
-            {copy.backSoon}
-          </span>
+          <span className="back-soon">{copy.backSoon}</span>
         ) : (
           <button
             type="button"
@@ -85,30 +83,40 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
   // then the first size in stock. Undefined when every size is out.
   const size = picked && !stock.isOut(product.id, picked) ? picked : firstInStockSize(product, stock);
 
+  // Every size out: one full-width label in place of the switch and the button.
+  if (!size) {
+    return (
+      <div className="popup-bar product-detail__order">
+        <span className="back-soon back-soon--lg" role="status">{copy.backSoon}</span>
+      </div>
+    );
+  }
+
+  const outSizes = product.weightOptions.filter((option) => stock.isOut(product.id, option));
+
   return (
     <div className="popup-bar product-detail__order">
       <SizeChoice
         large
         sizes={product.weightOptions}
-        value={size ?? ''}
+        value={size}
         onChange={setSize}
         legend={copy.sizeLegendProduct}
         single={copy.singleSize(product.weightOptions[0])}
         isOut={(option) => stock.isOut(product.id, option)}
       />
-      {size ? (
-        <button
-          type="button"
-          className="order-btn order-btn--lg product-detail__add"
-          onClick={() => onAdd(size)}
-          {...preloadOrderHandlers}
-        >
-          <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
-          <span>{copy.addToOrder}</span>
-        </button>
-      ) : (
-        <span className="order-btn order-btn--lg product-detail__add back-soon">{copy.backSoon}</span>
-      )}
+      <button
+        type="button"
+        className="order-btn order-btn--lg product-detail__add"
+        onClick={() => onAdd(size)}
+        {...preloadOrderHandlers}
+      >
+        <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
+        <span>{copy.addToOrder}</span>
+      </button>
+      {outSizes.map((option) => (
+        <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>
+      ))}
     </div>
   );
 };

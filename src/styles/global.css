@@ -833,20 +833,37 @@ a {
   }
 }
 
-/* Out of stock: "Back soon" in place of an Add button, and Send with nothing to send.
-   Same shape as the button, but flat and quiet, so it doesn't read as tappable.
-   Draft look, waiting on design. */
-.order-btn.back-soon,
+/* Send with nothing to send (every line is back soon): flat and quiet. */
 .order-btn:disabled {
   background: var(--color-toggle-track);
   color: var(--color-text-secondary);
   box-shadow: none;
   transform: none;
-  cursor: default;
+  cursor: not-allowed;
 }
 
-.order-btn:disabled {
-  cursor: not-allowed;
+/* "Back soon": a plain label where an Add button would be, never a button.
+   36px on cards and picks (the height of the + Add it replaces), 48px and
+   full width in the product popup's bar. */
+.back-soon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-toggle-track);
+  box-shadow: inset 0 0 0 1px var(--color-choice-track-border);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.back-soon--lg {
+  min-height: 48px;
+  flex: 1;
+  font-size: 1rem;
 }
 
 [data-theme="light"] .hero-content {
@@ -1279,11 +1296,21 @@ a {
   background: var(--color-bg-main);
 }
 
-/* Pack size, then "Add to order" taking the rest of the row. */
+/* Pack size, then "Add to order" taking the rest of the row. A size that's
+   back soon gets a centred line under both. */
 .product-detail__order {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.625rem;
+}
+
+.product-detail__size-note {
+  flex: 1 0 100%;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .product-detail__add {
@@ -1380,6 +1407,15 @@ a {
 
 .order-intro + * {
   margin-top: 1rem;
+}
+
+/* Every line is back soon: said above the lines, with the chat link. */
+.order-all-out {
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .order-notice {
@@ -1513,6 +1549,17 @@ a {
 .order-line__size {
   grid-area: size;
   min-width: 0;
+}
+
+/* A saved line that's back soon: dimmed name, no stepper (only the bin), and a
+   plain note. It isn't sent or counted. */
+.order-line.is-out .order-line__name,
+.order-line.is-out .size-fixed {
+  color: var(--color-text-muted);
+}
+
+.order-line__note .order-line__back-soon {
+  display: block;
 }
 
 .order-line .qty-stepper {
@@ -1660,16 +1707,10 @@ a {
   }
 }
 
-/* An out-of-stock size ("Back soon" to screen readers). With every size out,
-   nothing is picked, so the thumb hides. */
+/* A size that's back soon: faded, and the radio is disabled so arrow keys skip it. */
 .size-choice input:disabled + label {
-  color: var(--color-text-muted);
-  text-decoration: line-through;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-.size-choice:not(:has(input:checked))::before {
-  opacity: 0;
 }
 
 /* The radio is hidden, so its focus ring goes on its label. */
@@ -1879,18 +1920,19 @@ a {
   transform: scale(0.98);
 }
 
-/* A product that's all out: the tile or row stays, quieter, with "Back soon". */
+/* A product that's all out: the tile stays, the pouch dims, and "Add" reads
+   "Back soon". A saved line that's out dims its thumbnail the same way. */
+.order-shelf__item.is-out {
+  cursor: default;
+}
+
 .order-shelf__item.is-out .order-shelf__art,
-.order-pick.is-out .order-pick__thumb {
-  opacity: 0.55;
+.order-line.is-out .order-line__thumb {
+  opacity: 0.45;
+  filter: grayscale(0.6);
 }
 
 .order-shelf__item.is-out .order-shelf__name small {
-  color: var(--color-text-secondary);
-}
-
-.order-pick.is-out .order-pick__add {
-  background: var(--color-toggle-track);
   color: var(--color-text-secondary);
 }
 
@@ -2233,12 +2275,13 @@ a {
   box-shadow: inset 0 -1.5px 0 currentColor;
 }
 
-/* What we keep, just above Send. */
+/* What we keep: the last thing in "Your details", just above Send. No icon:
+   a lock would promise more than a sentence can. */
 .order-privacy {
-  margin-top: 1rem;
+  margin: 1rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.45;
 }
 
 /* Send */
@@ -2315,6 +2358,12 @@ a {
 .order-recap li span {
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+.order-recap__code {
+  margin-top: 0.625rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
 }
 
 .order-recap__meta {
@@ -4056,13 +4105,6 @@ img {
     display: none;
   }
 
-  /* "Back soon" is text, so it keeps a small pill rather than the round "+". */
-  .order-pick.is-out .order-pick__add {
-    width: auto;
-    padding: 0 0.625rem;
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
 
   .order-fields {
     grid-template-columns: 1fr;

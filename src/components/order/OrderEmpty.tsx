@@ -48,7 +48,7 @@ export const OrderEmpty: React.FC<{ onAdd: (productId: string) => void }> = ({ o
               ) : (
                 <div className="order-pick is-out">
                   {details}
-                  <span className="order-pick__add">{copy.backSoon}</span>
+                  <span className="back-soon">{copy.backSoon}</span>
                 </div>
               )}
             </li>

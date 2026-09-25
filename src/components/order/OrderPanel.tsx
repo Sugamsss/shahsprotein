@@ -4,6 +4,7 @@ import { useOrder } from '../../context/OrderContext';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import { firstInStockSize, useStock } from '../../services/stockService';
+import { orderUrl, trackOrderChat } from '../../utils/contact';
 import type { OrderLine } from '../../types/order';
 import { OrderCheckout } from './OrderCheckout';
 import { OrderEmpty } from './OrderEmpty';
@@ -83,7 +84,7 @@ interface UndoState {
 export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false }) => {
   const {
     lines, itemCount, maxQuantity, addItem, setQuantity, changeSize, removeItem,
-    lastAdd, droppedOnLoad, sent, startNewOrder,
+    lastAdd, droppedOnLoad, sent, startNewOrder, sendLines,
   } = useOrder();
   const stock = useStock();
 
@@ -114,6 +115,18 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       ? copy.announceAtMax(itemOf(lastAdd))
       : copy.announceAdded(itemOf(lastAdd), itemCount));
   }, [lastAdd, lines, itemCount, announce]);
+
+  // Stock arrived (or changed) while the popup is open and knocked a line out:
+  // say so once, politely. Lines that were already out when it opened aren't announced.
+  const shownStock = useRef(stock);
+  useEffect(() => {
+    const before = shownStock.current;
+    if (before === stock) return;
+    shownStock.current = stock;
+    const knockedOut = linesRef.current.filter((line) =>
+      stock.isOut(line.productId, line.size) && !before.isOut(line.productId, line.size));
+    if (knockedOut.length > 0) announce(knockedOut.map((line) => copy.announceBackSoon(itemOf(line))).join(' '));
+  }, [stock, announce]);
 
   // Sent from here: the Send link is gone, so focus goes to the sent title.
   const hadSent = useRef(sent !== null);
@@ -259,8 +272,11 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       const key = lineKey(line);
       const product = productOf(line.productId);
       if (!product) return null;
+      // Out: "Back soon" for the product, or for this size when another is in stock.
+      const backSoonNote = !stock.isOut(line.productId, line.size)
+        ? undefined
+        : stock.isProductOut(line.productId) ? copy.lineBackSoon : copy.lineSizeBackSoon(line.size);
       const notes = [
-        stock.isOut(line.productId, line.size) ? copy.lineBackSoon : null,
         mergeNote?.key === key ? mergeNote.text : null,
         line.quantity >= maxQuantity ? copy.maxNote : null,
       ].filter((note): note is string => note !== null);
@@ -274,6 +290,8 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           notes={notes}
           leaving={leavingKey === key}
           isSizeOut={(size) => stock.isOut(line.productId, size)}
+          backSoonNote={backSoonNote}
+          onRemove={() => remove(line)}
           onSize={(size) => changeLineSize(line, size)}
           onLess={() => (line.quantity > 1 ? changeQuantity(line, line.quantity - 1) : remove(line))}
           onMore={() => {
@@ -291,6 +309,20 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
     body = (
       <>
         <p className="order-intro">{copy.intro}</p>
+        {sendLines.length === 0 && (
+          <p className="order-all-out">
+            {copy.allBackSoon}{' '}
+            <a
+              href={orderUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="order-text-link"
+              onClick={trackOrderChat}
+            >
+              {copy.chatLink}
+            </a>
+          </p>
+        )}
         <div className="order-list">
           {notice}
           <h4 className="visually-hidden">{copy.itemsHeading}</h4>

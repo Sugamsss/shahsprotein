@@ -12,7 +12,7 @@ const TILE_SIZES = '(max-width: 600px) calc((100vw - 68px) / 3), 48px';
 
 /**
  * "Add something else": a tile per product. Each adds the smallest pack in stock, or
- * one more of it. A product that's all out shows "Back soon" and can't be tapped.
+ * one more of it. A product that's all out is dimmed, says "Back soon" and does nothing.
  */
 export const OrderShelf: React.FC<{ onAdd: (productId: string) => void }> = ({ onAdd }) => {
   const stock = useStock();
@@ -45,13 +45,19 @@ export const OrderShelf: React.FC<{ onAdd: (productId: string) => void }> = ({ o
                   </span>
                 </button>
               ) : (
-                <div className="order-shelf__item is-out">
+                // Stays in the row of tiles, dimmed, and says why. Nothing happens on tap.
+                <button
+                  type="button"
+                  className="order-shelf__item is-out"
+                  aria-disabled="true"
+                  aria-label={copy.backSoonLabel(product.name)}
+                >
                   {art}
                   <span className="order-shelf__name">
                     {product.name}
-                    <small>{copy.backSoon}</small>
+                    <small aria-hidden="true">{copy.backSoon}</small>
                   </span>
-                </div>
+                </button>
               )}
             </li>
           );

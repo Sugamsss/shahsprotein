@@ -39,6 +39,7 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
               );
             })}
           </ul>
+          <p className="order-recap__code">{copy.sentCode(sent.code)}</p>
           {meta && <p className="order-recap__meta">{meta}</p>}
         </div>
 

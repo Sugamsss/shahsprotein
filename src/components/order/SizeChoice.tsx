@@ -12,7 +12,7 @@ export interface SizeChoiceProps {
   single: string;
   /** The bigger version in the product popup's bar. */
   large?: boolean;
-  /** Out-of-stock sizes are disabled, and described as "Back soon". */
+  /** Out-of-stock sizes are disabled (arrow keys skip them), and described as "250 g is back soon." */
   isOut?: (size: string) => boolean;
 }
 
@@ -29,9 +29,6 @@ export const SizeChoice: React.FC<SizeChoiceProps> = ({
   return (
     <fieldset className={`size-choice${large ? ' size-choice--lg' : ''}`}>
       <legend className="visually-hidden">{legend}</legend>
-      {sizes.some((size) => isOut?.(size)) && (
-        <span id={`${name}-out`} className="visually-hidden">{siteConfig.order.backSoon}</span>
-      )}
       {sizes.map((size, index) => {
         const id = `${name}-${index}`;
         const out = isOut?.(size) ?? false;
@@ -44,10 +41,11 @@ export const SizeChoice: React.FC<SizeChoiceProps> = ({
               value={size}
               checked={size === value}
               disabled={out}
-              aria-describedby={out ? `${name}-out` : undefined}
+              aria-describedby={out ? `${id}-out` : undefined}
               onChange={() => onChange(size)}
             />
             <label htmlFor={id}>{size}</label>
+            {out && <span id={`${id}-out`} className="visually-hidden">{siteConfig.order.sizeBackSoon(size)}</span>}
           </React.Fragment>
         );
       })}

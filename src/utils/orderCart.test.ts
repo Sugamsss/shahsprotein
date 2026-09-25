@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addLine, inStockLines, parseStoredCart } from './orderCart';
+import { addLine, countItems, inStockLines, parseStoredCart } from './orderCart';
 
 // Uses the real product list: Muesli comes in 250 g and 500 g, Date Bites in 250 g only.
 // The limit is siteConfig.order.maxQuantity (10 packs per line).
@@ -71,5 +71,18 @@ describe('inStockLines (what the message and the save carry)', () => {
       { productId: 'bites', size: '250 g', quantity: 1 },
     ]);
     expect(inStockLines(cart, () => true)).toEqual([]);
+  });
+
+  it('gives the header count only the packs that will be sent', () => {
+    // Raggi Jaggi 1 + Muesli 2 in stock, Date Bites 1 out: the header says 3, not 4.
+    const cart = [
+      { productId: 'raggi-jaggi', size: '250 g', quantity: 1 },
+      { productId: 'muesli', size: '500 g', quantity: 2 },
+      { productId: 'bites', size: '250 g', quantity: 1 },
+    ];
+    const isOut = (productId: string) => productId === 'bites';
+
+    expect(countItems(cart)).toBe(4);
+    expect(countItems(inStockLines(cart, isOut))).toBe(3);
   });
 });

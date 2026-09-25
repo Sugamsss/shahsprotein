@@ -55,7 +55,7 @@ export interface LastAdd {
 export interface OrderContextType {
   /** Lines in display order: product order, then pack-size order. */
   lines: OrderLine[];
-  /** Total packs, for the header count. */
+  /** Packs that will be sent (out-of-stock lines don't count), for the header count. */
   itemCount: number;
   maxQuantity: number;
   /** No size means the product's first pack size that's in stock. Drops a sent snapshot first. */
@@ -328,7 +328,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const value = useMemo<OrderContextType>(() => ({
     lines,
-    itemCount: countItems(lines),
+    itemCount: countItems(sendLines),
     maxQuantity: MAX_QUANTITY,
     addItem,
     setQuantity,
@@ -361,7 +361,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sent,
     startNewOrder,
   }), [
-    lines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
+    lines, sendLines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
     name, pincode, setPincode, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
     removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, code, sendLines,
     currentOrder, currentUrl, markSent, sent, startNewOrder,

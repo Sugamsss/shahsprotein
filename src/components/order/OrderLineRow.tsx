@@ -26,14 +26,20 @@ interface OrderLineRowProps {
   leaving: boolean;
   /** Pack sizes that are out of stock, disabled in the size switch. */
   isSizeOut: (size: string) => boolean;
+  /**
+   * Set when this line's size is out: the line dims, says why, and only the bin
+   * stays. It isn't sent or counted until it's back (or switched to a size in stock).
+   */
+  backSoonNote?: string;
   onSize: (size: string) => void;
   onLess: () => void;
+  onRemove: () => void;
   onMore: () => void;
 }
 
 /** One compact row: thumbnail, name, pack size, and a stepper whose minus becomes a bin at 1. */
 export const OrderLineRow: React.FC<OrderLineRowProps> = ({
-  line, product, maxQuantity, flash, notes, leaving, isSizeOut, onSize, onLess, onMore,
+  line, product, maxQuantity, flash, notes, leaving, isSizeOut, backSoonNote, onSize, onLess, onMore, onRemove,
 }) => {
   const item = copy.itemName(product.name, line.size);
   const atOne = line.quantity <= 1;
@@ -43,6 +49,7 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
     flash && 'is-new',
     flash?.rise && 'is-rising',
     leaving && 'is-leaving',
+    backSoonNote && 'is-out',
   ].filter(Boolean).join(' ');
 
   return (
@@ -60,28 +67,37 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
           isOut={isSizeOut}
         />
       </div>
-      <div className="qty-stepper" role="group" aria-label={copy.qtyGroup(item)}>
-        <button
-          type="button"
-          className={`qty-stepper__btn${atOne ? ' is-remove' : ''}`}
-          aria-label={atOne ? copy.qtyRemove(item) : copy.qtyLess(item)}
-          onClick={onLess}
-        >
-          {atOne ? <Trash2 size={16} strokeWidth={2.25} aria-hidden="true" /> : <Minus size={16} strokeWidth={2.25} aria-hidden="true" />}
-        </button>
-        <span className="qty-stepper__value">{line.quantity}</span>
-        <button
-          type="button"
-          className="qty-stepper__btn qty-stepper__btn--more"
-          aria-label={copy.qtyMore(item)}
-          aria-disabled={atMax || undefined}
-          onClick={onMore}
-        >
-          <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
-        </button>
-      </div>
-      {notes.length > 0 && (
+      {backSoonNote ? (
+        <div className="qty-stepper">
+          <button type="button" className="qty-stepper__btn is-remove" aria-label={copy.qtyRemove(item)} onClick={onRemove}>
+            <Trash2 size={16} strokeWidth={2.25} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <div className="qty-stepper" role="group" aria-label={copy.qtyGroup(item)}>
+          <button
+            type="button"
+            className={`qty-stepper__btn${atOne ? ' is-remove' : ''}`}
+            aria-label={atOne ? copy.qtyRemove(item) : copy.qtyLess(item)}
+            onClick={onLess}
+          >
+            {atOne ? <Trash2 size={16} strokeWidth={2.25} aria-hidden="true" /> : <Minus size={16} strokeWidth={2.25} aria-hidden="true" />}
+          </button>
+          <span className="qty-stepper__value">{line.quantity}</span>
+          <button
+            type="button"
+            className="qty-stepper__btn qty-stepper__btn--more"
+            aria-label={copy.qtyMore(item)}
+            aria-disabled={atMax || undefined}
+            onClick={onMore}
+          >
+            <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {(backSoonNote || notes.length > 0) && (
         <div className="order-line__note">
+          {backSoonNote && <p className="order-line__back-soon">{backSoonNote}</p>}
           {notes.map((note) => (
             <p key={note}>
               <Info size={15} aria-hidden="true" />
