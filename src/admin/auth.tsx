@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { client, getMe } from './api';
+import { client, getMe, setAccessToken } from './api';
 import { adminCopy as copy } from '../data/adminCopy';
 import { Splash } from './Splash';
 import { useRpc } from './useRpc';
@@ -37,6 +37,7 @@ export const useSession = (): Session | null | undefined => {
       if (!supabase) return setSession(null);
       // Fires INITIAL_SESSION first, then every sign-in, sign-out and refresh.
       const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+        setAccessToken(next?.access_token ?? null); // before the gate renders and asks get_admin_me
         if (next) remember(true);
         setSession(next);
       });

@@ -13,6 +13,16 @@ import type {
  * add its preload helper to the landing entry.
  */
 export const client = import('../services/supabaseClient').then((m) => m.supabase);
+/**
+ * The session's access token as the auth listener last saw it (auth.tsx). Right
+ * around sign-in, getSession() can briefly come back empty, and supabase-js then
+ * sends the anon key: admin RPCs would 401 and the gate would say "can't open
+ * the admin" to a real admin. So an admin call uses the session's token, or this
+ * one, and never goes out without a user token.
+ */
+let listenerToken: string | null = null;
+export const setAccessToken = (token: string | null): void => { listenerToken = token; };
+
 export const hasSupabaseConfig = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export type AdminErrorKind = 'unauthorized' | 'message' | 'rate' | 'network' | 'unknown';
@@ -51,7 +61,11 @@ const rpc = async <T>(name: string, args?: object): Promise<T> => {
   try {
     const supabase = await client;
     if (!supabase) throw new AdminError('unknown', copy.gate.notSetUp);
-    const { data, error, status } = await supabase.rpc(name, args && params(args));
+    // getSession() also refreshes a token that expired while the laptop slept.
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? listenerToken;
+    if (!token) throw new AdminError('unauthorized');
+    const { data, error, status } = await supabase.rpc(name, args && params(args)).setHeader('Authorization', `Bearer ${token}`);
     if (error) throw toAdminError(error, status);
     return data as T;
   } catch (error) {
