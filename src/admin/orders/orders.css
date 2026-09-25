@@ -225,13 +225,19 @@
 .adm-od-history ol { display: grid; gap: 8px; margin-top: 12px; list-style: none; color: var(--color-text-secondary); font-size: 0.875rem; }
 .adm-od-history b { color: var(--color-text-primary); font-weight: 600; }
 
-/* The next step, pinned above the tab bar. */
+/* The next step, pinned above the tab bar. The band runs down behind the tab bar
+   in the page colour (fading in at its top edge), so the fields scrolling under
+   it never show through between the button and the tab bar. */
 .adm-od-bar {
-  position: fixed; z-index: 4; left: 12px; right: 12px; bottom: calc(92px + env(safe-area-inset-bottom));
-  display: flex; justify-content: center; max-width: 480px; margin: 0 auto;
+  position: fixed; z-index: 4; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: center;
+  padding: 20px 12px calc(92px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--adm-page) 20px);
 }
 .adm-od-bar:empty { display: none; }
-.adm-od-go { flex: 1; }
+.adm-od-go { flex: 1; max-width: 480px; }
+/* Room to scroll the last card clear of the band. */
+.adm-od:has(.adm-od-bar) { padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
 .adm-od-alldone { padding: 12px; color: var(--color-text-muted); }
 
 .adm-omenu { position: relative; }
