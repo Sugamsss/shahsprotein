@@ -64,7 +64,7 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
           aria-label={atOne ? copy.qtyRemove(item) : copy.qtyLess(item)}
           onClick={onLess}
         >
-          {atOne ? <Trash2 size={18} aria-hidden="true" /> : <Minus size={18} aria-hidden="true" />}
+          {atOne ? <Trash2 size={16} strokeWidth={2.25} aria-hidden="true" /> : <Minus size={16} strokeWidth={2.25} aria-hidden="true" />}
         </button>
         <span className="qty-stepper__value">{line.quantity}</span>
         <button
@@ -74,7 +74,7 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
           aria-disabled={atMax || undefined}
           onClick={onMore}
         >
-          <Plus size={18} aria-hidden="true" />
+          <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
       {notes.length > 0 && (

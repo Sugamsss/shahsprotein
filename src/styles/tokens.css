@@ -87,6 +87,8 @@
   --transition-fast: 150ms ease;
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-theme: 350ms ease-in-out;
+  /* The bottom sheet's curve: the size switch slides on it too. */
+  --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Each product's art colour: behind its card image and its order thumbnail
      while they load. The same in both themes, like the art itself. */

@@ -199,7 +199,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
     const key = lineKey({ productId: line.productId, size });
     const existing = lines.find((l) => lineKey(l) === key);
     changeSize(line.productId, line.size, size);
-    // The row's identity changes with its size, so focus follows it to the new row.
+    // Focus follows the line to its new size (the same row, or the merged one).
     pendingFocus.current = { kind: 'line', key, part: 'size' };
     if (existing) {
       const merged = Math.min(line.quantity + existing.quantity, maxQuantity);
@@ -248,6 +248,10 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       </>
     );
   } else {
+    // A product's only line is keyed by the product, so changing its size
+    // updates the row in place and the size switch slides. With two sizes of
+    // one product, each line keeps its own key.
+    const soleLine = (line: OrderLine) => lines.filter((l) => l.productId === line.productId).length === 1;
     const rows: React.ReactNode[] = lines.map((line) => {
       const key = lineKey(line);
       const product = productOf(line.productId);
@@ -258,7 +262,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       ].filter((note): note is string => note !== null);
       return (
         <OrderLineRow
-          key={key}
+          key={soleLine(line) ? line.productId : key}
           line={line}
           product={product}
           maxQuantity={maxQuantity}

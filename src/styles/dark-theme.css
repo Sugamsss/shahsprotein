@@ -63,6 +63,13 @@
   /* Popup row hairlines, and the picked segment of a size switch. */
   --color-border-divider: rgba(255, 255, 255, 0.12);
   --color-choice-selected-bg: rgba(212, 175, 55, 0.16);
+  --color-choice-selected-text: #e5c158;
+  --shadow-choice-selected: inset 0 0 0 1px rgba(212, 175, 55, 0.38);
+  --color-choice-track-border: rgba(255, 255, 255, 0.06);
+
+  /* Quantity stepper: two soft circles. */
+  --color-stepper-bg: rgba(255, 255, 255, 0.08);
+  --color-stepper-bg-press: rgba(255, 255, 255, 0.14);
 
   /* Shadows & Glass */
   --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.4);
