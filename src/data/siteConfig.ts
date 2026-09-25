@@ -239,7 +239,6 @@ export const siteConfig = {
     },
   },
   social: {
-    instagram: "https://instagram.com/shahsnutrition",
     // Use the founder's confirmed inbox until branded receiving mailboxes are created.
     email: "pranjalishah25@gmail.com",
   },

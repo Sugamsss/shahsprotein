@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { preloadOrderHandlers } from '../order/OrderButton';
-import { Instagram, Mail, Menu, Moon, Sun, X } from 'lucide-react';
+import { Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
 import { logoSrc, warmTheme } from '../../utils/themeAssets';
@@ -114,16 +114,6 @@ export const Header: React.FC = () => {
           </span>
 
           <a
-            href={siteConfig.social.instagram}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Instagram"
-            className="icon-link header-icon-btn desktop-nav"
-          >
-            <Instagram size={18} />
-          </a>
-
-          <a
             href={`mailto:${siteConfig.social.email}`}
             aria-label={text.emailLabel}
             className="icon-link header-icon-btn desktop-nav"
@@ -177,11 +167,7 @@ export const Header: React.FC = () => {
           ))}
         </nav>
 
-        <div className="drawer-social">
-          <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="drawer-pill">
-            <Instagram size={18} aria-hidden="true" />
-            Instagram
-          </a>
+        <div className="drawer-contact">
           <a href={`mailto:${siteConfig.social.email}`} className="drawer-pill">
             <Mail size={18} aria-hidden="true" />
             {text.emailPill}

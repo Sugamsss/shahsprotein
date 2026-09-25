@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container } from './Container';
 import { siteConfig } from '../../data/siteConfig';
-import { Instagram, Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { OrderLink } from '../ui/OrderLink';
 import { OrderButton } from '../order/OrderButton';
@@ -62,11 +62,6 @@ export const Footer: React.FC = () => {
                     <span className="footer-contact__label">{siteConfig.contact.care.label}</span>{' '}
                     {siteConfig.contact.care.display}
                   </span>
-                </a>
-              </li>
-              <li>
-                <a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="footer-link footer-contact__row">
-                  <Instagram size={16} aria-hidden="true" /> Instagram
                 </a>
               </li>
               <li>

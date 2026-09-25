@@ -436,14 +436,6 @@ a {
   transform: translateX(22px);
 }
 
-/* Small tablets: the centred nav and the right-hand group (now with Order)
-   would touch, so drop the Instagram and email icons here. Both are in the footer. */
-@media (min-width: 769px) and (max-width: 880px) {
-  .header-icon-btn.desktop-nav {
-    display: none;
-  }
-}
-
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3856,7 +3848,7 @@ img {
   flex-direction: column;
 }
 
-.drawer-social {
+.drawer-contact {
   display: flex;
   gap: 0.5rem;
   padding-top: 0.75rem;
