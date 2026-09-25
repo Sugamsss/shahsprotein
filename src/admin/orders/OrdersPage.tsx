@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Download, Plus, Search } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
@@ -12,7 +12,7 @@ import { useOverview } from '../AdminLayout';
 import { useRpc, useSettled } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
-import { type Lane, LANES, NEXT, laneOf } from './model';
+import { type Lane, LANES, NEXT, laneOf, namesOneOrder, searchFor } from './model';
 import { type CardAction, OrderCard } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { useOrderChange } from './useOrderChange';
@@ -141,8 +141,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   // Search also looks through Done, and an empty board asks whether anything was ever done.
   const settledQ = useSettled(q.trim());
   const empty = list.data?.orders.length === 0;
+  // Which search Done's answer is for, so a new search never reads the last one's hits.
+  const doneFor = useRef<string | null>(null);
   const done = useRpc(
-    () => (settledQ || empty ? getOrders({ view: 'done', search: settledQ || undefined, limit: settledQ ? 20 : 1 }) : Promise.resolve(null)),
+    () => (settledQ || empty
+      ? getOrders({ view: 'done', search: settledQ || undefined, limit: settledQ ? 20 : 1 }).then((page) => { doneFor.current = settledQ; return page; })
+      : Promise.resolve(null)),
     [settledQ, empty],
   );
 
@@ -155,12 +159,25 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
 
   const [findText, setFindText] = useQueryText('/admin/orders');
 
+  // A search for a whole code or phone with exactly one hit (board or Done)
+  // opens that order. Once per search, so closing it leaves you on the results.
+  const opened = useRef('');
+  const oneHit = settledQ && settledQ === q.trim() && list.data && !done.loading && doneFor.current === settledQ && namesOneOrder(settledQ)
+    ? [...shown, ...(done.data?.orders ?? [])] : [];
+  const only = oneHit.length === 1 && !code ? oneHit[0].code : '';
+  useEffect(() => {
+    if (!settledQ) opened.current = ''; // a cleared search can open the same order again
+    if (!only || opened.current === settledQ) return;
+    opened.current = settledQ;
+    navigate(`/admin/orders/${only}${location.search}`);
+  }, [only, settledQ]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onAction = (o: Order, action: CardAction) => {
     const lane = laneOf(o);
-    if (action === 'next' && lane === 'confirm') {
+    if (action === 'next' && (lane === 'confirm' || lane === 'stale')) {
       if (laptop) navigate(`/admin/orders/${o.code}${location.search}`, { state: { focus: 'phone' } });
       else setConfirming(o);
-    } else if (action === 'next' && lane !== 'stale' && lane !== 'done') void change(o, NEXT[lane]);
+    } else if (action === 'next' && lane !== 'done') void change(o, NEXT[lane]);
     else if (action === 'paid') void change(o, { paid: !o.paid });
     else if (action === 'keep') void change(o, { kept: true });
     else if (action === 'cancel') void change(o, { status: 'cancelled' });
@@ -172,7 +189,10 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const card = (o: Order) => (
     <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} flash={o.id === flash} />
   );
-  const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : <p className="adm-lane__empty">{copy.laneEmpty}</p>);
+  // While searching, a lane with no hits of its own says nothing (it's only there for its stale hits).
+  const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : !q && <p className="adm-lane__empty">{copy.laneEmpty}</p>);
+  // Laptop: To confirm also holds the stale orders, so a stale-only hit still needs that lane.
+  const hasHits = (lane: Lane) => by[lane].length > 0 || (lane === 'confirm' && laptop && by.stale.length > 0);
   const doneHits = settledQ ? done.data?.orders ?? [] : [];
   const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<Lane, number>;
   const summary = [
@@ -211,7 +231,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       {(searching || q) && (
         <div className="adm-orders__find adm-phone-only" role="search">
           <input className="adm-input" type="search" autoFocus value={findText} placeholder={copy.findPlaceholder}
-            aria-label={copy.find} onChange={(e) => setFindText(e.target.value)} />
+            aria-label={copy.find} onChange={(e) => setFindText(searchFor(e.target.value))} />
           <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm" onClick={() => { setFindText(''); setSearching(false); }}>{copy.cancelFind}</button>
         </div>
       )}
@@ -224,12 +244,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
         <>
           {!q && <LaneJump counts={counts} money={money} />}
           <div className="adm-board">
-            {LANES.map((lane) => (!q || by[lane].length > 0) && (
+            {LANES.map((lane) => (!q || hasHits(lane)) && (
               <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money}>
                 {cards(lane)}
                 {/* Laptop: stale orders sit at the bottom of To confirm. Phone: their own group, below. */}
                 {lane === 'confirm' && laptop && by.stale.length > 0 && (
-                  <div className="adm-lane__stale">
+                  <div className="adm-lane__stale" id="lane-stale">
                     <p className="adm-lane__sub">{copy.lanes.stale[0]} <span className="adm-count">{by.stale.length}</span></p>
                     {by.stale.map(card)}
                   </div>

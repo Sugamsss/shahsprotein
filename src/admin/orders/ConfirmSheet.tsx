@@ -7,6 +7,9 @@ import { getOrders } from '../api';
 import { firstName, formatDay, formatPhone } from '../format';
 import type { Order, OrderChanges } from '../types';
 import { normalisePhone } from './model';
+
+/** "1,200" or "₹ 1200" → "1200", as the order page's Total takes it. */
+const totalDigits = (raw: string) => raw.replace(/[₹,\s]/g, '');
 import { PasteButton } from './OrderParts';
 
 const copy = adminCopy.order;
@@ -15,6 +18,21 @@ const copy = adminCopy.order;
 const CloseAfter: React.FC<{ run: () => boolean; children: React.ReactNode }> = ({ run, children }) => {
   const close = useDialogClose();
   return <button type="button" className="adm-btn adm-btn--primary adm-btn--block" onClick={() => run() && close()}>{children}</button>;
+};
+
+/** The form: Enter (Go on a phone keyboard) in either field confirms, like the button. */
+const EnterConfirms: React.FC<{ run: () => boolean; children: React.ReactNode }> = ({ run, children }) => {
+  const close = useDialogClose();
+  return (
+    <form className="adm-stack" noValidate onSubmit={(e) => e.preventDefault()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) return;
+        e.preventDefault();
+        if (run()) close();
+      }}>
+      {children}
+    </form>
+  );
 };
 
 /**
@@ -55,14 +73,14 @@ export const ConfirmSheet: React.FC<{
     if (!order) return false;
     const next = {
       phone: phone.trim() && !digits ? copy.phoneError : undefined,
-      amount: amount.trim() && !/^\d+$/.test(amount.trim()) ? copy.totalError : undefined,
+      amount: amount.trim() && !/^\d+$/.test(totalDigits(amount)) ? copy.totalError : undefined,
     };
     setErrors(next);
     if (next.phone || next.amount) return false;
     onConfirm(order, {
       status: 'confirmed',
       ...(digits && { phone: digits }),
-      ...(amount.trim() && { amount: Number(amount.trim()) }),
+      ...(amount.trim() && { amount: Number(totalDigits(amount)) }),
     });
     return true;
   };
@@ -82,17 +100,17 @@ export const ConfirmSheet: React.FC<{
       }
     >
       {order && (
-        <form className="adm-stack" onSubmit={(e) => e.preventDefault()} noValidate>
+        <EnterConfirms run={confirm}>
           <p className="adm-muted">{[order.code, copy.packs(order.packs), order.pincode].filter(Boolean).join(' · ')}</p>
           <Field label={copy.phone} error={errors.phone} hint={match || undefined} action={<PasteButton onPaste={setPhone} />}>
             <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={copy.phonePlaceholder}
               onChange={(e) => { setPhone(e.target.value); setErrors((x) => ({ ...x, phone: undefined })); }} onBlur={() => digits && setPhone(formatPhone(digits))} />
           </Field>
           <Field label={copy.total} optional={copy.optional} prefix="₹" error={errors.amount} hint={copy.totalHint}>
-            <input className="adm-input" inputMode="numeric" autoComplete="off" value={amount} placeholder={copy.totalPlaceholder}
+            <input className="adm-input" inputMode="numeric" enterKeyHint="go" autoComplete="off" value={amount} placeholder={copy.totalPlaceholder}
               onChange={(e) => { setAmount(e.target.value); setErrors((x) => ({ ...x, amount: undefined })); }} />
           </Field>
-        </form>
+        </EnterConfirms>
       )}
     </AdminSheet>
   );

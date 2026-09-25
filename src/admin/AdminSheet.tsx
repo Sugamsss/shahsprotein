@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { DialogCloseContext, useDialog } from '../components/ui/useDialog';
@@ -7,6 +7,9 @@ import { DialogCloseContext, useDialog } from '../components/ui/useDialog';
 // popup from 960px over the frosted page. Head, a body that scrolls on its own,
 // and an optional pinned bar. Focus, Esc, the scroll lock and the exit come
 // from useDialog, the same as the site's popups. Content can close it with useDialogClose().
+
+/** Fields you type in (not switches or radios). */
+const TYPING = 'input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]';
 
 export interface AdminSheetProps {
   isOpen: boolean;
@@ -35,6 +38,21 @@ export const AdminSheet: React.FC<AdminSheetProps> = ({
 }) => {
   const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose, initialFocus, canClose });
   const titleId = useId();
+
+  // Esc while typing in a field only leaves the field (which saves it); the next
+  // Esc closes. Caught before useDialog's own Esc, which listens on window.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      const field = e.target as HTMLElement;
+      if (e.key !== 'Escape' || !dialogRef.current?.contains(field) || !field.matches(TYPING)) return;
+      e.stopPropagation();
+      field.blur();
+      dialogRef.current.focus();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [isOpen, dialogRef]);
 
   if (!isOpen) return null;
 

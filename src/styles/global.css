@@ -885,8 +885,8 @@ a {
 }
 
 /* "Back soon": a plain label where an Add button would be, never a button.
-   36px on cards and picks (the height of the + Add it replaces), 48px and
-   full width in the product popup's bar. */
+   36px on cards and picks (the height of the + Add it replaces). The product
+   popup's bar has a quiet line instead (.product-detail__back-soon). */
 .back-soon {
   display: inline-flex;
   align-items: center;
@@ -900,12 +900,6 @@ a {
   font-size: 0.875rem;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.back-soon--lg {
-  min-height: 48px;
-  flex: 1;
-  font-size: 1rem;
 }
 
 [data-theme="light"] .hero-content {
@@ -1405,6 +1399,32 @@ a {
   min-width: 0;
 }
 
+/* Every size out: "Back soon · Ask us in the chat", centred, the height of
+   the bar it replaces so the popup doesn't jump when stock arrives. */
+.product-detail__order--out {
+  justify-content: center;
+  min-height: calc(48px + 2.5rem);
+}
+
+.product-detail__back-soon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* The chat link: 44px tall to tap, the look of the popup's other text links. */
+.product-detail__back-soon .order-text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .product-detail__nutrition {
   --nutrition-inline-padding: clamp(0.55rem, 2vw, 1.1rem);
   width: 100%;
@@ -1746,7 +1766,7 @@ a {
   background: var(--color-choice-selected-bg);
   box-shadow: var(--shadow-choice-selected);
   transform: translateX(calc(100% * var(--size-index, 0)));
-  transition: transform 260ms var(--ease-glide);
+  transition: transform 260ms var(--ease-glide), background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .size-choice:has(input:nth-of-type(2):checked) {
@@ -1800,6 +1820,17 @@ a {
   cursor: not-allowed;
 }
 
+/* A saved line whose size is out: the thumb stays there but unfilled, so it
+   doesn't look picked. Tapping the size in stock slides it over and fills it. */
+.size-choice:has(input:checked:disabled)::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+}
+
+.size-choice input:checked:disabled + label {
+  color: var(--color-text-secondary);
+}
+
 /* The radio is hidden, so its focus ring goes on its label. */
 .size-choice input:focus-visible + label {
   outline: 2px solid var(--color-accent-primary);
@@ -1823,6 +1854,11 @@ a {
   .size-choice input:checked + label {
     background: var(--color-choice-selected-bg);
     box-shadow: var(--shadow-choice-selected);
+  }
+
+  .size-choice input:checked:disabled + label {
+    background: none;
+    box-shadow: none;
   }
 }
 
@@ -2447,25 +2483,131 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.order-recap__code {
-  margin-top: 0.625rem;
-  color: var(--color-text-secondary);
-  font-size: 0.8125rem;
-}
-
 .order-recap__meta {
-  margin-top: 0.625rem;
-  padding-top: 0.625rem;
-  border-top: 1px solid var(--color-border-divider);
+  margin-top: 0.375rem;
   color: var(--color-text-secondary);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
 
+/* The order code: its own row under the packs, bold and tracked like the
+   admin's codes, with Copy beside it. user-select: all, so one long-press or
+   double-click takes the whole code, hyphen and all. */
+.order-recap__code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border-divider);
+}
+
+.order-recap__code p {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.order-recap__code-label {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.order-code {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/* 36px to look at, a 44px hit area. */
+.order-recap__copy {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--color-choice-track-border);
+  border-radius: var(--radius-full);
+  background: var(--color-toggle-track);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.order-recap__copy::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.order-recap__copy.is-copied {
+  color: var(--color-text-accent);
+}
+
+.order-recap__copy:active {
+  transform: scale(0.96);
+}
+
+.order-recap__copy:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .order-recap__copy:hover {
+    border-color: var(--color-border-hover);
+    color: var(--color-text-accent);
+  }
+}
+
+/* "WhatsApp didn't open? Try again or copy your message": one centred line
+   that wraps by phrase, with the status line right under it. */
 .order-sent__retry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0.3em;
   margin-top: 1rem;
   color: var(--color-text-secondary);
   font-size: 0.875rem;
+}
+
+/* "copy your message" is a button with the link look, like "Try again" beside it. */
+.order-sent__retry button {
+  padding: 0;
+}
+
+/* On touch, both get a 44px tall tap area; the negative margin keeps the
+   line as tight as the text, so it doesn't look any different. */
+@media (pointer: coarse) {
+  .order-sent__retry .order-text-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block: -0.75rem;
+  }
+}
+
+/* Empty until someone copies, so it takes no room until then. */
+.order-sent__copied {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.order-sent__copied:not(:empty) {
+  margin-top: 0.375rem;
 }
 
 .order-sent__forgot {
@@ -4209,6 +4351,12 @@ img {
     padding-top: 1rem;
   }
 
+  /* Sent screen: the question on one line, the two ways out together under
+     it, rather than a wrap that strands "copy your message" on its own. */
+  .order-sent__retry > span:first-child {
+    flex-basis: 100%;
+  }
+
   .product-detail__ingredients {
     gap: 0.75rem 0.25rem;
   }
@@ -4400,9 +4548,10 @@ img {
   }
 }
 
-/* Short screens: the note under Send goes, so more of the order shows. */
+/* Short screens: the note under Send goes, so more of the order shows.
+   The reason Send is off (everything back soon) stays. */
 @media (max-height: 640px) {
-  .order-send__note {
+  .order-send__note:not(.order-send__note--reason) {
     display: none;
   }
 }
@@ -4643,6 +4792,7 @@ img {
   .order-shelf__item,
   .order-pick,
   .pill-btn,
+  .order-recap__copy,
   .order-coupon__apply,
   .modal-close-btn,
   .mobile-drawer-scrim,
@@ -4663,6 +4813,7 @@ img {
   .order-pick:active,
   .qty-stepper__btn:not([aria-disabled='true']):active,
   .pill-btn:active,
+  .order-recap__copy:active,
   .order-coupon__apply:not([aria-disabled='true']):active,
   .modal-close-btn:active,
   .mobile-toggle:active,

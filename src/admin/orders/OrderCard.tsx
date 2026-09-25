@@ -3,7 +3,7 @@ import { ArrowRight, Check, IndianRupee, Instagram, Phone, Repeat, StickyNote, T
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { useTheme } from '../../context/ThemeContext';
 import { adminCopy } from '../../data/adminCopy';
-import { formatDay, formatMoney, formatWhen } from '../format';
+import { formatAge, formatDay, formatMoney, formatWhen } from '../format';
 import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
 import { laneOf, nextOf, productName, sortLines, thumbOf } from './model';
@@ -46,8 +46,17 @@ const VIA_ICON: Record<Exclude<OrderSource, 'site'>, React.ReactNode> = {
 export const Via: React.FC<{ source: OrderSource }> = ({ source }) =>
   source === 'site' ? null : <span className="adm-chip">{VIA_ICON[source]}{copy.via[source]}</span>;
 
-export const PaidChip: React.FC<{ order: Order; onToggle: () => void }> = ({ order, onToggle }) => {
+/** Paid, as a switch you tap; plain text where there's nothing to change it (a customer's page). */
+export const PaidChip: React.FC<{ order: Order; onToggle?: () => void }> = ({ order, onToggle }) => {
   const amount = order.amount != null ? `${formatMoney(order.amount)} · ` : '';
+  if (!onToggle) {
+    return (
+      <span className={`adm-paid adm-paid--static${order.paid ? ' is-paid' : ''}`}>
+        {order.paid ? <Check size={13} aria-hidden="true" /> : <i aria-hidden="true" />}
+        {amount}{order.paid ? copy.paid : copy.notPaid}
+      </span>
+    );
+  }
   return (
     <button type="button" className={`adm-paid${order.paid ? ' is-paid' : ''}`} aria-pressed={order.paid}
       aria-label={copy.paidLabel(order.name ?? order.code, order.paid)} onClick={onToggle}>
@@ -78,11 +87,11 @@ export const OrderCard: React.FC<{
   const ids = [...new Set(sortLines(o.lines).map((l) => l.product_id))];
   const act = (a: CardAction) => () => onAction?.(o, a);
   const chips: React.ReactNode[] = [];
-  if (lane === 'send' || lane === 'way') chips.push(<PaidChip key="p" order={o} onToggle={act('paid')} />);
+  if (lane === 'send' || lane === 'way') chips.push(<PaidChip key="p" order={o} onToggle={onAction && act('paid')} />);
   if (lane === 'collect' && o.amount != null) {
     chips.push(<span key="m" className="adm-chip adm-chip--money"><IndianRupee size={13} aria-hidden="true" />{copy.toCollect(formatMoney(o.amount))}</span>);
   }
-  if (lane === 'stale') chips.push(<span key="s" className="adm-chip">{copy.noMessage}</span>);
+  if (lane === 'stale') chips.push(<span key="s" className="adm-chip">{copy.noMessage(formatAge(o.created_at))}</span>);
   if (o.source !== 'site') chips.push(<Via key="v" source={o.source} />);
   if (o.coupon) chips.push(<span key="c" className="adm-chip"><Ticket size={13} aria-hidden="true" />{o.coupon.code}</span>);
   if (o.customer && o.customer.order_number > 1) {
@@ -116,13 +125,16 @@ export const OrderCard: React.FC<{
             <button type="button" className="adm-btn adm-btn--quiet adm-btn--xs" onClick={act('cancel')}>{copy.cancel}</button>
           </span>
         )}
-        {next && onAction && (
+        {/* A stale card keeps its pair; "They messaged, confirm it" is on the order itself. */}
+        {next && lane !== 'stale' && onAction && (
           <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" onClick={act('next')}>
             {lane === 'collect' && <Check size={16} aria-hidden="true" />}
             {next.labels[0]}
             {lane !== 'collect' && <ArrowRight size={16} aria-hidden="true" />}
           </button>
         )}
+        {/* A customer's page: where each open order is, as Done cards say theirs. */}
+        {dateTitle && lane !== 'done' && <span className="adm-ocard__word is-open">{adminCopy.order.steps[o.status as keyof typeof adminCopy.order.steps]}</span>}
         {lane === 'done' && (
           <span className={`adm-ocard__word${o.status === 'cancelled' ? ' is-cancelled' : ''}`}>
             {o.status === 'cancelled' ? copy.cancelled : <><Check size={14} aria-hidden="true" />{copy.deliveredPaid}</>}

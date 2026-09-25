@@ -152,6 +152,8 @@ export const siteConfig = {
     headerOrder: 'Order',
     headerEmptyLabel: 'Start your order',
     headerCountLabel: (packs: number) => `Your order, ${packs} ${packs === 1 ? 'pack' : 'packs'}`,
+    // Saved packs, but every one is back soon, so nothing would be sent.
+    headerBackSoonLabel: 'Your order, everything back soon',
 
     // Empty
     emptyTitle: 'Nothing in your order yet.',
@@ -214,13 +216,16 @@ export const siteConfig = {
     // Out of stock. A plain label, never a button. No dates, no "notify me".
     // In place of "Add" / "Add to order" when every pack size is out.
     backSoon: 'Back soon',
+    // Beside "Back soon" in the product popup: opens the order chat.
+    backSoonAsk: 'Ask us in the chat',
     // An "Add something else" tile for a product that's all out.
     backSoonLabel: (name: string) => `${name} is back soon`,
     // Under the product popup's bar, and read out for that size in the switch.
     sizeBackSoon: (size: string) => `${size} is back soon.`,
     // Under a saved line that's out. It stays in the cart but isn't sent or counted.
     lineBackSoon: "Back soon, so it's left out of your message.",
-    lineSizeBackSoon: (size: string) => `${size} is back soon, so it's left out of your message.`,
+    // When another size of the same product is in stock (tapping it in the switch works).
+    lineSizeBackSoon: (size: string, inStock: string) => `${size} is back soon. ${inStock} is here if you'd like it.`,
     // Above the lines when every line is out (with the "Message us on WhatsApp" link). Send is disabled.
     allBackSoon: 'Everything here is back soon. Pick something else, or just ask us in the chat.',
 
@@ -229,10 +234,21 @@ export const siteConfig = {
     sentBody: "Your order is written out and waiting there. Once you send it, we'll reply with the total, delivery and how to pay. We usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
+    // A quiet fallback for when WhatsApp won't open at all (a laptop without it,
+    // some in-app browsers): copy the same message and paste it into a chat.
+    copyLead: 'or',
+    copyMessage: 'copy your message',
+    copied: (number: string) => `Copied. Paste it into a WhatsApp chat with ${number}.`,
+    copyFailed: (number: string) => `Couldn't copy it here. You can message us on WhatsApp at ${number}.`,
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapCoupon: (code: string) => `Coupon ${code}`,
-    sentCode: (code: string) => `Your order code is ${code}.`,
+    // Its own row in the recap, so it can be grabbed when WhatsApp didn't open.
+    sentCode: 'Your order code',
+    copyCode: 'Copy',
+    copyCodeLabel: (code: string) => `Copy order code ${code}`,
+    codeCopied: 'Copied',
+    codeCopyFailed: "Couldn't copy it here. The code is selected, so you can copy it yourself.",
     newOrder: 'Start a new order',
     done: 'Done',
 

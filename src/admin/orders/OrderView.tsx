@@ -7,6 +7,7 @@ import { getOrder } from '../api';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import type { Order } from '../types';
+import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
 import { laneOf, nextOf } from './model';
 import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
@@ -78,7 +79,8 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
-          <PrimaryAction order={order} onNext={() => change(order, next.changes)} />
+          <ToastSlot />
+          <PrimaryAction order={order} change={change} />
         </div>
       )}
     </div>
@@ -111,9 +113,23 @@ export const OrderPopup: React.FC<{
     const to = sequence[at + step];
     if (at >= 0 && to) navigate(`/admin/orders/${to.code}`, { replace: true });
   };
-  const lane = order ? laneOf(order) : 'done';
-  const inLane = sequence.filter((o) => laneOf(o) === lane);
+  // The board draws stale orders at the bottom of To confirm, and ← → walk
+  // through them there, so the counter counts them as to confirm too.
+  const group = (o: Order) => (laneOf(o) === 'stale' ? 'confirm' : laneOf(o));
+  const lane = order ? group(order) : 'done';
+  const inLane = sequence.filter((o) => group(o) === lane);
   const next = order && nextOf(order);
+
+  // Enter (or the main button) does the next step, then moves on to the next
+  // order in the lane this one came from, so To confirm is Enter, Enter, Enter.
+  // The last one left in its lane stays open, showing where it went.
+  const doNext = () => {
+    if (!order || !next || !fromList) return;
+    const i = inLane.indexOf(fromList);
+    const then = inLane[i + 1] ?? inLane[i - 1];
+    change(order, next.changes);
+    if (then) navigate(`/admin/orders/${then.code}`, { replace: true });
+  };
 
   // A deep link can open the popup before the order has loaded, so focus lands
   // on ×. Once the order is there, move it to the name (or the phone, for Confirm).
@@ -126,16 +142,16 @@ export const OrderPopup: React.FC<{
   });
 
   // Latest values for the key handler, which is set up once.
-  const keys = useRef({ go, order, next, change });
-  keys.current = { go, order, next, change };
+  const keys = useRef({ go, order, doNext, change });
+  keys.current = { go, order, doNext, change };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       // Only this popup's own keys: not while typing, and not when a sheet sits on top.
       if (!target.closest?.('.adm-od-popup') || isTyping(target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      const { go: move, order: o, next: step, change: run } = keys.current;
+      const { go: move, order: o, doNext: step, change: run } = keys.current;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1); }
-      else if (e.key === 'Enter' && !target.closest('button, a, summary') && o && step) { e.preventDefault(); run(o, step.changes); }
+      else if (e.key === 'Enter' && !target.closest('button, a, summary') && o) { e.preventDefault(); step(); }
       else if (e.key.toLowerCase() === 'p' && o) { e.preventDefault(); run(o, { paid: !o.paid }); }
     };
     document.addEventListener('keydown', onKey);
@@ -163,11 +179,12 @@ export const OrderPopup: React.FC<{
       )}
       bar={order && (
         <>
+          <ToastSlot />
           <OrderMenu order={order} change={change} onDeleted={() => { onDeleted(order); onClose(); }} up />
           <span className="adm-od-keys" aria-hidden="true">
-            <kbd>Esc</kbd> {copy.keys[0]} <kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}
+            <span><kbd>Esc</kbd> {copy.keys[0]}</span> <span><kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}</span> <span><kbd>P</kbd> {copy.keys[2]}</span>
           </span>
-          <PrimaryAction order={order} onNext={() => next && change(order, next.changes)} />
+          <PrimaryAction order={order} change={change} onNext={doNext} />
         </>
       )}
     >

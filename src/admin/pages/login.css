@@ -6,3 +6,5 @@
 .adm-splash > .adm-back { margin-top: -8px; color: var(--color-text-accent); }
 /* After a failed sign-in: a quiet line, not a link. */
 .adm-login__hint { margin-top: -4px; padding-left: 26px; color: var(--color-text-muted); font-size: 0.875rem; line-height: 1.4; }
+/* Busy: looks disabled but keeps focus (LoginPage uses aria-disabled). */
+.adm-login .adm-btn[aria-disabled='true'] { opacity: 0.55; cursor: default; transform: none; }

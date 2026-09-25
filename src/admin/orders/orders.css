@@ -52,7 +52,8 @@
 .adm-paid::after { content: ''; position: absolute; inset: -9px -3px; }
 .adm-paid i { width: 11px; height: 11px; border: 1.5px dashed currentColor; border-radius: 50%; }
 .adm-paid.is-paid { box-shadow: none; background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
-.adm-paid:active { transform: scale(0.97); }
+.adm-paid:not(.adm-paid--static):active { transform: scale(0.97); }
+.adm-paid--static::after { content: none; }
 
 /* ---- The order card ----------------------------------------------------------- */
 .adm-ocard {
@@ -101,6 +102,7 @@
 .adm-ocard__pair { display: flex; gap: 6px; margin-left: auto; }
 .adm-ocard__word { display: inline-flex; align-items: center; gap: 4px; color: var(--color-success-text); font-size: 0.8125rem; font-weight: 600; }
 .adm-ocard__word.is-cancelled { color: var(--color-error-text); }
+.adm-ocard__word.is-open { color: var(--color-text-secondary); }
 
 @media (max-width: 359px) {
   .adm-ocard { grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; padding-inline: 12px; }
@@ -120,7 +122,8 @@
 .adm-jump {
   position: sticky; top: 0; z-index: 3;
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
-  margin: -4px -20px 0; padding: 8px 20px;
+  /* Edge to edge at every phone and tablet width (the page is 640px wide at most). */
+  margin: -4px calc(50% - 50vw) 0; padding: 8px calc(50vw - 50%);
   background: color-mix(in srgb, var(--adm-page) 86%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
@@ -131,7 +134,7 @@
 .adm-jump a[aria-current] b { color: var(--color-text-accent); }
 .adm-jump a.is-money b { color: var(--color-success-text); }
 .adm-jump a.is-zero b { color: var(--color-text-muted); font-weight: 600; }
-@media (max-width: 374px) { .adm-jump { margin-inline: -16px; padding-inline: 16px; } .adm-jump span { font-size: 0.625rem; } }
+@media (max-width: 374px) { .adm-jump span { font-size: 0.625rem; } }
 
 .adm-board { display: grid; gap: 24px; }
 .adm-lane { display: grid; gap: 8px; scroll-margin-top: 72px; }
@@ -142,7 +145,7 @@
 .adm-lane--stale .adm-count, .adm-lane__sub .adm-count { background: transparent; box-shadow: inset 0 0 0 1px var(--adm-track-off); }
 .adm-lane__hint { margin: -6px 4px 2px; color: var(--color-text-muted); font-size: 0.8125rem; line-height: 1.4; }
 .adm-lane__empty { padding: 4px 4px 0; color: var(--color-text-muted); font-size: 0.875rem; }
-.adm-lane__stale { display: grid; gap: 10px; }
+.adm-lane__stale { display: grid; gap: 10px; scroll-margin-top: 72px; }
 .adm-lane__sub { margin: 8px 6px 0; padding-top: 12px; border-top: 1px dashed var(--adm-track-off); color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 600; }
 
 .adm-donelink {
@@ -219,7 +222,8 @@
 .adm-field__control textarea.adm-input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 .adm-od-fact { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
 .adm-od-fact span { color: var(--color-text-muted); }
-.adm-od-reach { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.adm-od-reach { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-od-reach > .adm-btn { flex: 1 1 auto; }
 
 .adm-od-history summary { min-height: 28px; font-family: var(--font-family-heading); font-size: 1.0625rem; font-weight: 600; cursor: pointer; }
 .adm-od-history ol { display: grid; gap: 8px; margin-top: 12px; list-style: none; color: var(--color-text-secondary); font-size: 0.875rem; }
@@ -236,8 +240,13 @@
 }
 .adm-od-bar:empty { display: none; }
 .adm-od-go { flex: 1; max-width: 480px; }
+/* A stale order: Still waiting, then "They messaged, confirm it". When the two
+   don't fit side by side (most phones), the main button goes on top, full width. */
+.adm-od-pair { display: flex; flex: 1; flex-wrap: wrap-reverse; gap: 8px; max-width: 480px; }
+.adm-od-pair > .adm-btn { flex: 1 1 auto; }
 /* Room to scroll the last card clear of the band. */
 .adm-od:has(.adm-od-bar) { padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
+.adm-od:has(.adm-od-pair) { padding-bottom: calc(240px + env(safe-area-inset-bottom)); }
 .adm-od-alldone { padding: 12px; color: var(--color-text-muted); }
 
 .adm-omenu { position: relative; }
@@ -261,6 +270,10 @@
    Laptop: the board, the popup, the table
    ============================================================================ */
 @media (min-width: 960px) {
+  /* Board lanes are about 250px: the name gets two lines, and the pincode goes
+     (it's in the popup) rather than being cut to "411…". */
+  .adm-ocard__place { display: none; }
+  .adm-ocard__name { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow-wrap: anywhere; }
   .adm-orders { max-width: 1480px; margin: 0 auto; }
   .adm-done { max-width: 1120px; margin: 0 auto; }
   .adm-orders__top { align-items: flex-end; }
@@ -283,12 +296,12 @@
   .adm-od-popup .adm-sheet__body { display: grid; gap: 12px; }
   .adm-od-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
   .adm-od-pos { margin-right: 6px; color: var(--color-text-muted); font-size: 0.8125rem; white-space: nowrap; }
-  .adm-od-keys { display: flex; flex: 1; align-items: center; gap: 4px; color: var(--color-text-muted); font-size: 0.75rem; }
-  .adm-od-keys kbd:not(:first-child) { margin-left: 6px; }
-  .adm-od-keys kbd + kbd { margin-left: 0; }
+  .adm-od-keys { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 2px 10px; color: var(--color-text-muted); font-size: 0.75rem; }
+  .adm-od-keys > span { white-space: nowrap; }
   .adm-od-popup .adm-od-go { flex: 0 0 auto; min-width: 240px; }
+  .adm-od-popup .adm-od-pair { flex: 0 0 auto; flex-wrap: nowrap; max-width: none; }
   .adm-od-popup .adm-od-alldone { margin-left: auto; }
-  .adm-od-popup .adm-sheet__bar { display: flex; align-items: center; gap: 12px; }
+  .adm-od-popup .adm-sheet__bar { position: relative; display: flex; align-items: center; gap: 12px; }
   @media (max-height: 760px) { .adm-od-popup .adm-od-name { font-size: 1.375rem; } }
 }
 @media (prefers-reduced-motion: reduce) { .adm-steps__fill { transition: none; } .adm-ocard.is-flash::after { animation: none; opacity: 0; } .adm-ocard:has(.adm-ocard__open:active) { transform: none; } }

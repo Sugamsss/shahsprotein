@@ -3,14 +3,15 @@ import { Check, ClipboardPaste, Copy, Globe, IndianRupee, MessageCircle, MoreHor
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
-import { firstName, formatDay, formatPhone, formatTime } from '../format';
+import { useAdminMe } from '../auth';
+import { firstName, formatAgo, formatDay, formatMoney, formatPhone, formatTime } from '../format';
 import { AdminLink } from '../router';
 import { Field } from '../parts';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, Thumb, Via } from './OrderCard';
-import { itemsText, laneOf, nextOf, normalisePhone, productName, sortLines } from './model';
+import { itemsText, nextOf, normalisePhone, productName, sortLines } from './model';
 
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
@@ -48,7 +49,7 @@ export const OrderNotes: React.FC<{ order: Order }> = ({ order: o }) => {
 const STEPS: Exclude<OrderStatus, 'cancelled'>[] = ['new', 'confirmed', 'sent', 'delivered'];
 
 const hintOf = (o: Order) => {
-  if (o.stale) return copy.hints.stale;
+  if (o.stale) return copy.staleHint(formatAgo(o.created_at));
   if (o.status === 'delivered') return o.paid ? copy.hints.done : copy.hints.delivered;
   return copy.hints[o.status as keyof typeof copy.hints];
 };
@@ -162,6 +163,8 @@ const AutoField: React.FC<{
   const latest = useRef(order);
   latest.current = order;
   const timer = useRef<number>();
+  /** Typed but not saved yet. */
+  const pending = useRef<string | null>(null);
   const input = useRef<HTMLElement | null>(null);
 
   // A change from elsewhere ("Use 98231…", Undo) shows unless you're typing here.
@@ -172,6 +175,7 @@ const AutoField: React.FC<{
 
   const save = async (raw: string) => {
     window.clearTimeout(timer.current);
+    pending.current = null;
     const parsed = parseField(field, raw);
     if ('error' in parsed) return setStatus(parsed.error);
     const current = latest.current[field];
@@ -184,12 +188,19 @@ const AutoField: React.FC<{
       setStatus(e.kind === 'message' ? e.message : adminCopy.toast.failed);
     }
   };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  // Leaving (Esc, ← →, closing) saves what was typed rather than dropping it.
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => () => {
+    window.clearTimeout(timer.current);
+    if (pending.current !== null) void saveRef.current(pending.current);
+  }, []);
 
   const onChange = (next: string) => {
     setValue(next);
     setStatus('');
     window.clearTimeout(timer.current);
+    pending.current = next;
     timer.current = window.setTimeout(() => void save(next), 600);
   };
   const isError = status !== '' && status !== copy.saved;
@@ -219,12 +230,25 @@ const AutoField: React.FC<{
   );
 };
 
+/** "Reply on WhatsApp": their chat, with a first line ready from whoever is signed in. */
+const replyLink = (o: Order, from: string | null) => {
+  const text = copy.reply({
+    name: firstName(o.name),
+    from: firstName(from),
+    code: o.message_code,
+    packs: copy.packs(o.packs),
+    total: o.amount != null ? formatMoney(o.amount) : null,
+  });
+  return `https://wa.me/${o.phone}?text=${encodeURIComponent(text)}`;
+};
+
 /** Phone, total and note save as you type; then where it goes and how to reach them. */
 export const DetailsCard: React.FC<{
   order: Order & Partial<Pick<OrderDetail, 'phone_suggestion'>>;
   onSaved: (o: Order) => void;
   phoneRef?: React.Ref<HTMLInputElement>;
 }> = ({ order: o, onSaved, phoneRef }) => {
+  const me = useAdminMe();
   const suggestion = !o.phone && o.phone_suggestion;
   const [busy, setBusy] = useState(false);
   const useSuggestion = async () => {
@@ -246,7 +270,7 @@ export const DetailsCard: React.FC<{
       {o.pincode && <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode}</p>}
       {o.phone && (
         <div className="adm-od-reach">
-          <a className="adm-btn adm-btn--quiet adm-btn--sm" href={`https://wa.me/${o.phone}`} target="_blank" rel="noreferrer">
+          <a className="adm-btn adm-btn--quiet adm-btn--sm" href={replyLink(o, me.display_name)} target="_blank" rel="noreferrer">
             <MessageCircle size={18} aria-hidden="true" />{copy.whatsapp}
           </a>
           <a className="adm-btn adm-btn--quiet adm-btn--sm" href={`tel:+${o.phone}`}><Phone size={18} aria-hidden="true" />{copy.call}</a>
@@ -270,16 +294,24 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
     </details>
   ) : null;
 
-/** The pinned button: the order's next step, or "All done." */
-export const PrimaryAction: React.FC<{ order: Order; onNext: () => void }> = ({ order, onNext }) => {
+/**
+ * The pinned button: the order's next step, or "All done." A stale order gets
+ * "They messaged, confirm it", with Still waiting next to it.
+ */
+export const PrimaryAction: React.FC<{ order: Order; change: Change; onNext?: () => void }> = ({ order, change, onNext }) => {
   const next = nextOf(order);
-  if (!next) {
-    return laneOf(order) === 'stale' ? null : <span className="adm-od-alldone">{adminCopy.orders.allDone}</span>;
-  }
-  return (
-    <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={onNext}>
+  if (!next) return <span className="adm-od-alldone">{adminCopy.orders.allDone}</span>;
+  const go = (
+    <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={onNext ?? (() => change(order, next.changes))}>
       <Check size={20} aria-hidden="true" />{next.labels[1]}
     </button>
+  );
+  if (next.lane !== 'stale') return go;
+  return (
+    <span className="adm-od-pair">
+      <button type="button" className="adm-btn adm-btn--tonal" onClick={() => change(order, { kept: true })}>{adminCopy.orders.stillWaiting}</button>
+      {go}
+    </span>
   );
 };
 

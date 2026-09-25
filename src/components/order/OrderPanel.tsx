@@ -272,10 +272,12 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       const key = lineKey(line);
       const product = productOf(line.productId);
       if (!product) return null;
-      // Out: "Back soon" for the product, or for this size when another is in stock.
+      // Out: "Back soon" for the product, or for this size pointing to the size
+      // that's in stock (tapping it in the switch moves the line there).
+      const inStockSize = firstInStockSize(product, stock);
       const backSoonNote = !stock.isOut(line.productId, line.size)
         ? undefined
-        : stock.isProductOut(line.productId) ? copy.lineBackSoon : copy.lineSizeBackSoon(line.size);
+        : inStockSize ? copy.lineSizeBackSoon(line.size, inStockSize) : copy.lineBackSoon;
       const notes = [
         mergeNote?.key === key ? mergeNote.text : null,
         line.quantity >= maxQuantity ? copy.maxNote : null,

@@ -5,6 +5,12 @@
 
 export const adminCopy = {
   brand: "Shah's Nutrition",
+  /** The browser tab: "(3) Orders · Shah's". The count is the Orders badge's, shown only above 0. */
+  tabTitle: (page: string, toConfirm: number) => `${toConfirm > 0 ? `(${toConfirm}) ` : ''}${page} · Shah's`,
+  tabPages: {
+    home: 'Home', orders: 'Orders', done: 'Done', newOrder: 'New order', editOrder: 'Edit order', products: 'Products',
+    customers: 'Customers', coupons: 'Coupons', emailList: 'Email list', settings: 'Settings', more: 'More', signIn: 'Sign in',
+  },
   skipLink: 'Skip to content',
 
   nav: {
@@ -66,7 +72,7 @@ export const adminCopy = {
 
   gate: {
     loading: 'Opening the admin…',
-    noAccess: "This account can't open the admin. Ask Pranjali to add you.",
+    noAccess: "This account can't open the admin. Ask Sugam to add you.",
     offline: "We couldn't reach the admin. Check your connection and try again.",
     retry: 'Try again',
     notSetUp: "The admin isn't set up here. It needs the Supabase URL and key.",
@@ -75,14 +81,24 @@ export const adminCopy = {
   errors: {
     network: "That didn't go through. Check your connection and try again.",
     rate: 'Too many tries. Wait a minute, then try again.',
-    unauthorized: "This account can't open the admin. Ask Pranjali to add you.",
+    unauthorized: "This account can't open the admin. Ask Sugam to add you.",
     unknown: 'Something went wrong. Please try again.',
   },
 
   // ---- Lane A: shared states and screens (spec 2.3, 2.9) ----
   loading: 'Loading',
   loadError: "Couldn't load this. Check your connection, then try again.",
-  dates: { today: 'today', yesterday: 'Yesterday' },
+  dates: {
+    today: 'today',
+    yesterday: 'Yesterday',
+    // formatAge / formatAgo: "5 days", "a week ago".
+    age: {
+      days: (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`,
+      weeks: (n: number) => (n === 1 ? 'a week' : `${n} weeks`),
+      months: (n: number) => (n === 1 ? 'a month' : `${n} months`),
+      ago: (age: string) => `${age} ago`,
+    },
+  },
 
   products: {
     title: 'Products',
@@ -107,7 +123,7 @@ export const adminCopy = {
       send: ['To send', 'Confirmed. Pack them and send them.'],
       way: ['On the way', 'Mark delivered once it reaches them.'],
       collect: ['To collect', 'Delivered, not paid yet.'],
-      stale: ["Didn't come through?", 'Sent from the site 2 days ago, but no message came. Still waiting, or cancel it?'],
+      stale: ["Didn't come through?", 'Sent from the site, but no message came yet. Still waiting, or cancel it?'],
       done: ['Done', ''],
     },
     laneEmpty: 'Nothing here right now.',
@@ -124,6 +140,8 @@ export const adminCopy = {
       send: ['Mark sent', 'Mark sent'],
       way: ['Delivered', 'Mark delivered'],
       collect: ['Mark paid', 'Mark paid'],
+      // A "Didn't come through?" order whose message finally arrived.
+      stale: ['Confirm', 'They messaged, confirm it'],
     },
     stillWaiting: 'Still waiting',
     cancel: 'Cancel',
@@ -134,7 +152,8 @@ export const adminCopy = {
     notPaid: 'Not paid',
     paidLabel: (name: string, paid: boolean) =>
       `${name}: ${paid ? 'paid' : 'not paid'}. Tap to mark ${paid ? 'not paid' : 'paid'}`,
-    noMessage: 'No message in 2 days',
+    /** The stale card's chip: "No message in 5 days". */
+    noMessage: (age: string) => `No message in ${age}`,
     nthOrder: (n: number) => {
       const end = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
       return `${n}${end} order`;
@@ -174,8 +193,9 @@ export const adminCopy = {
       sent: 'On its way. Mark delivered once it reaches them.',
       delivered: 'Delivered. Mark paid when the money comes in.',
       done: 'All done.',
-      stale: 'Sent from the site 2 days ago, but no message came. Maybe they never pressed send in WhatsApp.',
     },
+    /** A stale order's hint, with formatAgo: "Sent from the site 5 days ago, …". */
+    staleHint: (ago: string) => `Sent from the site ${ago}, but no message came. Maybe they never pressed send in WhatsApp.`,
     cancelledOn: (day: string) => `Cancelled on ${day}.`,
     bringBack: 'Bring it back',
     notPaidYet: 'Not paid yet',
@@ -186,7 +206,7 @@ export const adminCopy = {
     edit: 'Edit',
     couponInvalid: '(not valid when sent)',
     phone: 'Their phone',
-    phonePlaceholder: 'From the WhatsApp chat',
+    phonePlaceholder: 'From their chat',
     paste: 'Paste',
     copy: 'Copy',
     phoneError: "That doesn't look like a phone number. It needs 10 digits.",
@@ -200,7 +220,16 @@ export const adminCopy = {
     saved: 'Saved',
     deliverTo: 'Deliver to',
     useSuggestion: (phone: string, day: string) => `Use ${phone} from their order on ${day}`,
-    whatsapp: 'WhatsApp',
+    whatsapp: 'Reply on WhatsApp',
+    /**
+     * The reply "Reply on WhatsApp" starts, from whoever is signed in. Admin only:
+     * the total never shows on the site. No delivery or payment promises here.
+     */
+    reply: ({ name, from, code, packs, total }: { name: string; from: string; code: string; packs: string; total: string | null }) =>
+      [
+        `Hi${name ? ` ${name}` : ''}, this is ${from ? `${from} from ` : ''}Shah's Nutrition about your order ${code} (${packs}).`,
+        total && `The total is ${total}.`,
+      ].filter(Boolean).join(' '),
     call: 'Call',
     history: 'History',
     events: {
@@ -216,7 +245,7 @@ export const adminCopy = {
     position: (i: number, n: number, lane: string) => `${i} of ${n} ${lane.toLowerCase()}`,
     prev: 'Previous order',
     nextOrder: 'Next order',
-    keys: ['close', 'next order'],
+    keys: ['close', 'next order', 'paid'],
     matchHint: (name: string, day: string) => `Same number as ${name}'s order on ${day}`,
     confirmTitle: (name: string) => `Confirm ${name}'s order`,
     confirmNote: 'You can add these later too.',
@@ -312,7 +341,7 @@ export const adminCopy = {
     access: 'Who can open the admin',
     since: (username: string, day: string) => `${username} · since ${day}`,
     you: 'You',
-    accessHint: 'Adding someone new takes a quick setup step. Ask whoever looks after the website.',
+    accessHint: 'Adding someone new takes a quick setup step. Ask Sugam.',
     appearance: 'Appearance',
     themes: { light: 'Light', dark: 'Dark', system: 'Like my phone' },
     youTitle: 'You',
