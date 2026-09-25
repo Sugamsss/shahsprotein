@@ -95,6 +95,11 @@ select jobname, schedule from cron.job where jobname = 'purge-site-events';
 select event, source, device_type, created_at from public.site_events order by created_at desc limit 10;
 ```
 
+Migration `20260925000001` widens the allowed sources so the "Your order" popup
+can record its Send as `order-popup`, or `order-popup:<place>` for the button
+that opened it (header, hero, banner, footer, product, product-details). It
+must be applied before the popup ships, or those clicks are rejected.
+
 
 ## Coupons
 

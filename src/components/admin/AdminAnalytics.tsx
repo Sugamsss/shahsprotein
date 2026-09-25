@@ -22,13 +22,19 @@ const PLACE_LABELS: Record<string, string> = {
   product: 'Product card',
   'product-details': 'Product popup',
   nutrition: 'Popup, nutrition note',
+  'order-popup': 'Order popup, sent',
 };
 
-/** "product:raggi-jaggi" → "Product card · Raggi Jaggi". Unknown sources show as-is. */
+/**
+ * "product:raggi-jaggi" → "Product card · Raggi Jaggi".
+ * "order-popup:hero" → "Order popup, sent · Hero" (the place that opened the popup).
+ * Unknown sources show as-is.
+ */
 const describeSource = (source: string): string => {
   const [place, productId] = source.split(':');
   const placeLabel = PLACE_LABELS[place] ?? source;
   if (!productId) return placeLabel;
+  if (place === 'order-popup') return `${placeLabel} · ${PLACE_LABELS[productId] ?? productId}`;
   const productName = productsData.find((product) => product.id === productId)?.name ?? productId;
   return `${placeLabel} · ${productName}`;
 };

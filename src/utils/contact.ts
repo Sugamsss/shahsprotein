@@ -29,3 +29,16 @@ export const careWhatsappUrl = (): string => whatsappUrl(care.number);
 export const trackOrderClick = (source: string): void => {
   AnalyticsService.trackSiteEvent('whatsapp_order_click', source);
 };
+
+/** Places that can open the "Your order" popup. */
+export type OrderPopupOpener = 'header' | 'hero' | 'banner' | 'footer' | 'product' | 'product-details';
+
+/**
+ * The "Your order" popup's Send, recorded as an order click. Never pass the
+ * name, pincode or coupon. `openedFrom` is the place that opened the popup
+ * (e.g. "hero"), so the admin can still see which buttons lead to orders.
+ * The places must match the `site_events` source pattern (migration 20260925000001).
+ */
+export const trackOrderSend = (openedFrom?: OrderPopupOpener): void => {
+  trackOrderClick(openedFrom ? `order-popup:${openedFrom}` : 'order-popup');
+};
