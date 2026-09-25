@@ -69,8 +69,8 @@ export const applyLocal = (o: Order, c: OrderChanges): Order => ({
 } as Order);
 
 // The code in a WhatsApp message, e.g. "…Order code: SN-7KQ4M". A hand-added
-// clash can carry -2 or -3. Same alphabet as the site's codes.
-const CODE_IN_TEXT = new RegExp(`(?:^|[^A-Z0-9])(SN-[${ORDER_CODE_ALPHABET}]{5}(?:-[23])?)(?![A-Z0-9-])`, 'i');
+// clash carries -2, -3 and so on. Same alphabet as the site's codes.
+const CODE_IN_TEXT = new RegExp(`(?:^|[^A-Z0-9])(SN-[${ORDER_CODE_ALPHABET}]{5}(?:-[1-9][0-9]{0,2})?)(?![A-Z0-9-])`, 'i');
 
 /**
  * What "Find an order" searches for: the order code when the text has one (a
