@@ -5,6 +5,7 @@ import { preloadOrderHandlers } from '../order/OrderButton';
 import { Instagram, Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
+import { logoSrc, warmTheme } from '../../utils/themeAssets';
 import { useOrder } from '../../context/OrderContext';
 
 const copy = siteConfig.order;
@@ -87,7 +88,7 @@ export const Header: React.FC = () => {
       <div className={`header-pill${isScrolled ? ' is-scrolled' : ''}`}>
         <a href="#" className="header-brand" aria-label={siteConfig.name}>
           <img
-            src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
+            src={logoSrc(theme)}
             alt={siteConfig.name}
             width={600}
             height={200}
@@ -140,10 +141,23 @@ export const Header: React.FC = () => {
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-drawer"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {/* Both icons stay in the DOM, so they can crossfade as the menu glides. */}
+            <span className="mobile-toggle__icon" aria-hidden="true">
+              <Menu size={24} />
+              <X size={24} />
+            </span>
           </button>
         </div>
       </div>
+
+      {/* A light layer over the page while the menu is open. A tap on it only
+          closes the menu, so it never opens whatever was under the finger. It
+          sits inside the header, so the outside-click handler ignores it. */}
+      <div
+        className={`mobile-drawer-scrim${mobileMenuOpen ? ' is-open' : ''}`}
+        aria-hidden="true"
+        onClick={() => setMobileMenuOpen(false)}
+      />
 
       {/* Phone menu */}
       <div
@@ -175,7 +189,13 @@ export const Header: React.FC = () => {
 
         <div className="drawer-appearance">
           <span id="drawer-appearance-label">Appearance</span>
-          <div className="segmented" role="group" aria-labelledby="drawer-appearance-label">
+          <div
+            className="segmented"
+            role="group"
+            aria-labelledby="drawer-appearance-label"
+            onPointerEnter={() => warmTheme(theme === 'dark' ? 'light' : 'dark')}
+            onFocus={() => warmTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
             <button type="button" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>
               <Sun size={16} aria-hidden="true" />
               Light

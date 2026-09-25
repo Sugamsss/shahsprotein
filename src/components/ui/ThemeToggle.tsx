@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { warmTheme } from '../../utils/themeAssets';
 
 export const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -11,6 +12,9 @@ export const ThemeToggle: React.FC = () => {
       type="button"
       className="theme-toggle"
       onClick={toggleTheme}
+      // Reaching for the switch starts loading the other theme's logo and hero art.
+      onPointerEnter={() => warmTheme(isDark ? 'light' : 'dark')}
+      onFocus={() => warmTheme(isDark ? 'light' : 'dark')}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
       <span className="theme-toggle__thumb" aria-hidden="true">

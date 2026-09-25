@@ -56,7 +56,7 @@
 
   /* Theme toggle track */
   --color-toggle-track: rgba(255, 255, 255, 0.08);
-  --color-toggle-track-hover: rgba(255, 255, 255, 0.08);
+  --color-toggle-track-hover: rgba(255, 255, 255, 0.14);
   --color-toggle-border: rgba(255, 255, 255, 0.08);
   --shadow-toggle-track: none;
 
@@ -81,8 +81,19 @@
   --shadow-header: 0 2px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
   --shadow-header-scrolled: 0 6px 28px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.10);
 
+  /* Header nav links and icon buttons inside the glass pill. */
+  --color-nav-link: rgba(255, 255, 255, 0.82);
+  --color-nav-link-hover: #ffffff;
+  --color-icon-btn: rgba(255, 255, 255, 0.75);
+  --color-icon-btn-border: rgba(255, 255, 255, 0.10);
+  --color-icon-btn-bg: rgba(255, 255, 255, 0.05);
+  --color-icon-btn-hover: #ffffff;
+  --color-icon-btn-border-hover: rgba(255, 255, 255, 0.22);
+  --color-icon-btn-bg-hover: rgba(255, 255, 255, 0.12);
+
   /* Section Backgrounds */
   --color-bg-faq-active: rgba(212, 175, 55, 0.06);
+  --shadow-faq-open: 0 0 20px rgba(212, 175, 55, 0.10);
 
   /* Hero Background Glow & Vignette */
   --color-hero-gradient: radial-gradient(ellipse at 70% 30%, rgba(255, 255, 255, 0.06) 0%, transparent 60%);

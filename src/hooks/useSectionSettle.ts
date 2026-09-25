@@ -21,6 +21,8 @@ const SECTION_SELECTOR = '.snap-section, .final-page-section';
 const REACH = 0.25;
 /** Browsers without `scrollend` (older Safari): treat this much quiet as the end. */
 const IDLE_MS = 150;
+/** A mouse wheel that's still turning isn't done: wait this long after its last notch. */
+const WHEEL_QUIET_MS = 180;
 
 export function useSectionSettle() {
   useEffect(() => {
@@ -29,8 +31,20 @@ export function useSectionSettle() {
     let lastY = window.scrollY;
     let direction = 0;
     let idleTimer: number | undefined;
+    let wheelTimer: number | undefined;
+    let lastWheel = 0;
+    let gliding = false;
 
     const settle = () => {
+      // Still wheeling: a fast wheel's notches come ~120ms apart, and scrollend
+      // fires between them. Settle once the wheel stops, not between notches.
+      const sinceWheel = performance.now() - lastWheel;
+      if (sinceWheel < WHEEL_QUIET_MS) {
+        window.clearTimeout(wheelTimer);
+        wheelTimer = window.setTimeout(settle, WHEEL_QUIET_MS - sinceWheel);
+        return;
+      }
+      gliding = false;
       // The popup and the phone menu lock the page with overflow: hidden.
       if (!media.matches || document.body.style.overflow === 'hidden') return;
 
@@ -49,6 +63,7 @@ export function useSectionSettle() {
             : undefined;
 
       if (target === undefined || target > maxY) return;
+      gliding = true;
       window.scrollTo({ top: target, behavior: 'smooth' });
     };
 
@@ -62,13 +77,25 @@ export function useSectionSettle() {
       }
     };
 
+    // A notch that lands mid-glide stops the glide, so the wheel is never ignored.
+    const onWheel = () => {
+      lastWheel = performance.now();
+      if (gliding) {
+        gliding = false;
+        window.scrollTo({ top: window.scrollY, behavior: 'instant' });
+      }
+    };
+
+    window.addEventListener('wheel', onWheel, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true });
     if (hasScrollEnd) window.addEventListener('scrollend', settle);
 
     return () => {
+      window.removeEventListener('wheel', onWheel);
       window.removeEventListener('scroll', onScroll);
       if (hasScrollEnd) window.removeEventListener('scrollend', settle);
       window.clearTimeout(idleTimer);
+      window.clearTimeout(wheelTimer);
     };
   }, []);
 }

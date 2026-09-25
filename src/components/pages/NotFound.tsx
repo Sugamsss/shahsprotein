@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
+import { logoSrc } from '../../utils/themeAssets';
 
 /** Any URL that isn't a page. The SPA rewrite serves it with a 200, so it also asks search engines not to index it. */
 export const NotFound: React.FC = () => {
@@ -25,7 +26,7 @@ export const NotFound: React.FC = () => {
     <main className="not-found">
       <div className="not-found__card glass-card">
         <img
-          src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
+          src={logoSrc(theme)}
           alt={siteConfig.name}
           width={600}
           height={200}

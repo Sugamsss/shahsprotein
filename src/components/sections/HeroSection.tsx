@@ -5,9 +5,11 @@ import { Badge } from '../ui/Badge';
 import { OrderButton } from '../order/OrderButton';
 import { useTheme } from '../../context/ThemeContext';
 import { siteConfig } from '../../data/siteConfig';
+import { heroArt } from '../../utils/themeAssets';
 
 export const HeroSection: React.FC = () => {
   const { theme } = useTheme();
+  const art = heroArt(theme);
 
   return (
     <section className="snap-section hero-section" aria-label="Hero">
@@ -49,13 +51,9 @@ export const HeroSection: React.FC = () => {
       <div className={`hero-visual-space hero-visual-space--${theme}`} aria-hidden="true">
         <img
           // index.html preloads this same srcset for the saved theme. Keep the two in sync.
-          src={`/assets/generated-muesli/muesli-hero-accurate-v2-${theme}.webp`}
-          srcSet={[
-            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}-828w.webp 828w`,
-            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}-1242w.webp 1242w`,
-            `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}.webp 1672w`,
-          ].join(', ')}
-          sizes="100vw"
+          src={art.src}
+          srcSet={art.srcSet}
+          sizes={art.sizes}
           alt=""
           className="hero-visual-image"
           width={1672}

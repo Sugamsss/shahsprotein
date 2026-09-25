@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { logoSrc } from '../utils/themeAssets';
 import { adminCopy as copy } from '../data/adminCopy';
 
 export const Logo: React.FC<{ className?: string }> = ({ className }) => {
@@ -7,7 +8,7 @@ export const Logo: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <img
       className={className}
-      src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
+      src={logoSrc(theme)}
       alt={copy.brand}
       width={150}
       height={50}

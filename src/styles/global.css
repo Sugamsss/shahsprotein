@@ -205,8 +205,10 @@ a {
   transition: color var(--transition-fast);
 }
 
-.icon-link:hover {
-  color: var(--color-text-primary);
+@media (hover: hover) {
+  .icon-link:hover {
+    color: var(--color-text-primary);
+  }
 }
 
 /* ─── Header: adapts to active glass theme ──────────────────────── */
@@ -215,6 +217,7 @@ a {
   display: inline-flex;
   align-items: center;
   padding: 0.2rem 0;
+  color: var(--color-nav-link);
   font-size: var(--font-size-sm);
   font-weight: 600;
   text-decoration: none;
@@ -235,59 +238,39 @@ a {
   transition: transform var(--transition-fast);
 }
 
-.header-nav-link:hover::after {
-  transform: scaleX(1);
-}
-
-[data-theme="light"] .header-nav-link {
-  color: #334155;
-}
-
-[data-theme="light"] .header-nav-link:hover {
-  color: #0f172a;
-}
-
-[data-theme="dark"] .header-nav-link {
-  color: rgba(255, 255, 255, 0.82);
-}
-
-[data-theme="dark"] .header-nav-link:hover {
-  color: #ffffff;
-}
-
 /* Header icon buttons inside the glass pill */
 .header-icon-btn {
   width: 32px;
   height: 32px;
+  border: 1px solid var(--color-icon-btn-border);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
+  color: var(--color-icon-btn);
+  background: var(--color-icon-btn-bg);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-[data-theme="light"] .header-icon-btn {
-  color: #334155;
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  background: rgba(255, 255, 255, 0.40);
+.header-icon-btn:active {
+  transform: scale(0.97);
 }
 
-[data-theme="light"] .header-icon-btn:hover {
-  color: #0f172a;
-  border-color: rgba(15, 23, 42, 0.20);
-  background: rgba(255, 255, 255, 0.85);
-}
+/* Hover only for a mouse: on touch screens a hover state sticks after a tap. */
+@media (hover: hover) {
+  .header-nav-link:hover {
+    color: var(--color-nav-link-hover);
+  }
 
-[data-theme="dark"] .header-icon-btn {
-  color: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.05);
-}
+  .header-nav-link:hover::after {
+    transform: scaleX(1);
+  }
 
-[data-theme="dark"] .header-icon-btn:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.12);
+  .header-icon-btn:hover {
+    color: var(--color-icon-btn-hover);
+    border-color: var(--color-icon-btn-border-hover);
+    background: var(--color-icon-btn-bg-hover);
+  }
 }
 
 /* Header: a fixed, floating glass pill. */
@@ -327,9 +310,15 @@ a {
 
 .header-brand {
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-start;
+  margin-right: auto;
+}
+
+.header-brand:focus-visible {
+  border-radius: var(--radius-sm);
+  outline-offset: 4px;
 }
 
 .header-nav {
@@ -359,6 +348,36 @@ a {
   justify-content: center;
   padding: 0.25rem;
   color: var(--color-text-primary);
+  transition: transform var(--transition-fast);
+}
+
+.mobile-toggle:active {
+  transform: scale(0.94);
+}
+
+/* Menu and close icons crossfade with a quarter turn while the menu glides. */
+.mobile-toggle__icon {
+  display: grid;
+}
+
+.mobile-toggle__icon svg {
+  grid-area: 1 / 1;
+  transition: opacity 150ms ease, transform 220ms var(--ease-glide);
+}
+
+.mobile-toggle__icon svg:last-child {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.8);
+}
+
+.mobile-toggle[aria-expanded='true'] .mobile-toggle__icon svg:first-child {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.8);
+}
+
+.mobile-toggle[aria-expanded='true'] .mobile-toggle__icon svg:last-child {
+  opacity: 1;
+  transform: none;
 }
 
 /* Logo: 24px on phones, 30px from 769px up so the tagline under it reads (D8). */
@@ -387,7 +406,11 @@ a {
   border-radius: var(--radius-full);
   background-color: var(--color-toggle-track);
   box-shadow: var(--shadow-toggle-track);
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  transition: background-color var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+}
+
+.theme-toggle:active {
+  transform: scale(0.97);
 }
 
 @media (hover: hover) {
@@ -457,6 +480,8 @@ a {
   font-size: 2.4rem;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  /* Even lines at every size, so the last word never sits alone. */
+  text-wrap: balance;
 }
 
 .hero-motto {
@@ -485,16 +510,18 @@ a {
   font-weight: 600;
 }
 
-.hero-actions__range:hover {
-  color: var(--color-text-accent);
-}
-
 .hero-actions__range svg {
   transition: transform var(--transition-fast);
 }
 
-.hero-actions__range:hover svg {
-  transform: translateY(2px);
+@media (hover: hover) {
+  .hero-actions__range:hover {
+    color: var(--color-text-accent);
+  }
+
+  .hero-actions__range:hover svg {
+    transform: translateY(2px);
+  }
 }
 
 .hero-note {
@@ -569,14 +596,14 @@ a {
   font-size: var(--font-size-base);
   font-weight: 600;
   white-space: nowrap;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+  gap: 0.5rem;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
 }
 
+/* A secondary pill: only its border answers the mouse, like the popup's. */
 @media (hover: hover) {
   .waitlist-submit:hover:not(:disabled) {
-    background: var(--color-bg-card-hover);
-    box-shadow: var(--shadow-card);
-    transform: scale(1.03);
+    border-color: var(--color-border-hover);
   }
 }
 
@@ -584,9 +611,10 @@ a {
   transform: scale(0.98);
 }
 
+/* It's only disabled while sending, so it should look busy, not switched off. */
 .waitlist-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 1;
+  cursor: progress;
 }
 
 .waitlist-consent {
@@ -615,10 +643,10 @@ a {
 .waitlist-checkbox {
   position: relative;
   flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
+  width: 1.125rem;
+  height: 1.125rem;
   margin-top: 0.02rem;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid color-mix(in srgb, var(--color-text-muted) 60%, transparent);
   border-radius: 0.3rem;
   background: var(--color-bg-input);
   box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.04);
@@ -628,8 +656,8 @@ a {
 .waitlist-checkbox::after {
   content: '';
   position: absolute;
-  left: 0.3rem;
-  top: 0.12rem;
+  left: 0.36rem;
+  top: 0.16rem;
   width: 0.25rem;
   height: 0.48rem;
   border: solid var(--color-btn-text);
@@ -659,8 +687,16 @@ a {
   outline-offset: 2px;
 }
 
+@media (hover: hover) {
+  .waitlist-consent:hover .waitlist-checkbox {
+    border-color: var(--color-border-hover);
+  }
+}
+
+/* The consent error matches the email error: red border plus a soft glow. */
 .waitlist-consent input[aria-invalid='true'] + .waitlist-checkbox {
   border-color: var(--color-error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 18%, transparent);
 }
 
 .input[aria-invalid='true'],
@@ -677,7 +713,7 @@ a {
   max-width: 520px;
   margin: 0 auto;
   padding-inline: 0.75rem;
-  color: var(--color-error);
+  color: var(--color-error-text);
   font-size: var(--font-size-sm);
   font-weight: 500;
   line-height: 1.45;
@@ -686,6 +722,7 @@ a {
 
 .waitlist-error:not(:empty) {
   margin-bottom: 0.75rem;
+  animation: order-rise 200ms ease-out;
 }
 
 .waitlist-outcome {
@@ -702,6 +739,7 @@ a {
   font-size: var(--font-size-sm);
   line-height: 1.5;
   text-align: left;
+  animation: order-rise 240ms var(--ease-glide);
 }
 
 .waitlist-outcome strong {
@@ -733,10 +771,12 @@ a {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.order-btn:hover {
-  color: var(--color-btn-text);
-  transform: scale(1.03);
-  box-shadow: 0 0 32px var(--color-accent-primary);
+@media (hover: hover) {
+  .order-btn:hover {
+    color: var(--color-btn-text);
+    transform: scale(1.03);
+    box-shadow: 0 0 32px var(--color-accent-primary);
+  }
 }
 
 .order-btn:active {
@@ -775,16 +815,24 @@ a {
   text-underline-offset: 0.18em;
 }
 
-.order-text-link:hover {
-  text-decoration-thickness: 2px;
+@media (hover: hover) {
+  .order-text-link:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* Touch has no hover, so these quiet links dim a little while pressed. */
+.footer-link:active,
+.hero-actions__range:active,
+.order-text-link:active {
+  opacity: 0.6;
 }
 
 /* Text links get a softly rounded focus ring. */
 .order-text-link:focus-visible,
 .footer-link:focus-visible,
 .header-nav-link:focus-visible,
-.hero-actions__range:focus-visible,
-.portfolio-card__action:focus-visible {
+.hero-actions__range:focus-visible {
   border-radius: 8px;
 }
 
@@ -813,9 +861,11 @@ a {
   transform: scale(0.98);
 }
 
-.care-link:hover {
-  border-color: var(--color-border-hover);
-  color: var(--color-text-accent);
+@media (hover: hover) {
+  .care-link:hover {
+    border-color: var(--color-border-hover);
+    color: var(--color-text-accent);
+  }
 }
 
 @media (max-width: 600px) {
@@ -988,7 +1038,6 @@ a {
     font-size: clamp(2.25rem, 0.9rem + 2.8vw, 3.25rem);
     line-height: 1.06;
     letter-spacing: -0.03em;
-    text-wrap: balance;
   }
 
   .hero-motto {
@@ -1004,6 +1053,32 @@ a {
   .hero-visual-image {
     object-fit: cover;
     object-position: 78% center;
+  }
+}
+
+/* 16:10 desktops (1280x800, 1440x900): the art fits whole, so the bowl clears
+   the card. From 31:20 the image's bottom edge lands inside the fade, so
+   there's no hard line. */
+@media (min-width: 1100px) and (min-aspect-ratio: 31/20) and (max-aspect-ratio: 16/10) and (orientation: landscape) {
+  .hero-visual-image {
+    object-fit: contain;
+    object-position: center top;
+  }
+
+  .hero-content {
+    max-width: 560px;
+  }
+
+  .hero-title {
+    font-size: clamp(2.25rem, 0.9rem + 2.8vw, 3rem);
+  }
+}
+
+/* 1024x768 and other small landscape desktops: the card sits clear of the
+   header pill instead of just under it. */
+@media (min-width: 901px) and (max-width: 1099px) and (min-height: 601px) and (orientation: landscape) {
+  .hero-grid {
+    margin-top: var(--header-height);
   }
 }
 
@@ -1062,10 +1137,12 @@ a {
   margin-bottom: 0.25rem;
 }
 
+/* One section-title size at every width (the token steps down at 1024/768/480),
+   always below the hero headline. */
 .portfolio-intro h2 {
   margin: 0.5rem 0 0.65rem;
-  font-size: clamp(2.1rem, 4vw, 3.4rem);
-  line-height: 1.08;
+  font-size: var(--font-size-3xl);
+  line-height: 1.1;
   text-wrap: balance;
 }
 
@@ -1099,7 +1176,7 @@ a {
   border-radius: 1.5rem;
   background: var(--color-bg-card);
   box-shadow: var(--shadow-card);
-  transition: transform var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+  transition: transform 160ms ease-out, border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 @media (hover: hover) {
@@ -1109,10 +1186,22 @@ a {
   }
 }
 
-/* Keyboard focus only, so a card doesn't look stuck after a tap. */
-.portfolio-card:has(:focus-visible) {
+/* A press you can feel on touch: "View details" covers the card, so pressing
+   it presses the card. "+ Add" presses itself. */
+.portfolio-card:has(.portfolio-card__action:active) {
+  transform: scale(0.985);
+}
+
+/* Keyboard focus only, so a card doesn't look stuck after a tap. The card
+   rings for "View details" (it covers the card); "+ Add" keeps its own ring,
+   so there's never two at once. */
+.portfolio-card:has(.portfolio-card__action:focus-visible) {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 3px;
+}
+
+.portfolio-card__action:focus-visible {
+  outline: none;
 }
 
 /* Each card image is its own crop of the product portfolio, cut at the card's 1.3 ratio. */
@@ -1149,13 +1238,16 @@ a {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-text-primary);
+  text-wrap: pretty;
 }
 
 .portfolio-card__description {
   margin-top: 0.4rem;
+  margin-bottom: 0.85rem;
   color: var(--color-text-secondary);
   font-size: 0.84rem;
   line-height: 1.5;
+  text-wrap: pretty;
 }
 
 .portfolio-card__actions {
@@ -1164,7 +1256,7 @@ a {
   gap: 0.75rem;
   margin-top: auto;
   padding-top: 0.85rem;
-  border-top: 1px solid var(--color-border-card);
+  border-top: 1px solid var(--color-border-divider);
 }
 
 .portfolio-card__action {
@@ -1205,7 +1297,7 @@ a {
 }
 
 .product-detail__tagline {
-  color: var(--color-product-name);
+  color: var(--color-text-primary);
   font-size: 1.05rem;
   font-weight: 600;
 }
@@ -1222,7 +1314,7 @@ a {
 .popup-section {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-card);
+  border-top: 1px solid var(--color-border-divider);
 }
 
 .product-detail__section h4,
@@ -1235,14 +1327,17 @@ a {
   text-transform: uppercase;
 }
 
+/* Five a row (three on phones), and a short last row sits centred. */
 .product-detail__ingredients {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.65rem 0.4rem;
   list-style: none;
 }
 
 .product-detail__ingredients li {
+  flex: 0 0 calc((100% - 4 * 0.4rem) / 5);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1292,7 +1387,7 @@ a {
   z-index: 1;
   margin: 1.5rem -2rem -2rem;
   padding: 1rem 2rem 1.5rem;
-  border-top: 1px solid var(--color-border-card);
+  border-top: 1px solid var(--color-border-divider);
   background: var(--color-bg-main);
 }
 
@@ -1749,12 +1844,12 @@ a {
   font-weight: 600;
 }
 
+/* In the product popup's bar it reads as information, like "250 g pack" in
+   the "Your order" lines, not as a switched-off control. */
 .size-fixed--lg {
   min-height: 48px;
-  padding: 0 1.1rem;
-  border: 1px solid var(--color-choice-track-border);
-  border-radius: var(--radius-full);
-  background: var(--color-toggle-track);
+  padding: 0 0.25rem 0 0.125rem;
+  color: var(--color-text-primary);
   font-size: 0.9375rem;
   white-space: nowrap;
 }
@@ -2644,9 +2739,12 @@ button, input, select, textarea {
   opacity: 1;
 }
 
+/* A soft ring as well as the border, so focus shows in dark too. The error
+   glow on an invalid field still wins. */
 .input:focus {
   background-color: var(--color-bg-input-focus);
   border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
 }
 
 button {
@@ -2749,6 +2847,19 @@ img {
   }
 }
 
+/* Big desktops: an even split gives the photo its due and keeps the lines
+   near 66 characters. Short desktops keep the split above, or the eyebrow
+   would touch the header. */
+@media (min-width: 1100px) and (min-height: 821px) {
+  .story-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .story-body {
+    max-width: 36rem;
+  }
+}
+
 /* 4:3 and other short desktops: the last line clears the bottom edge. */
 @media (min-width: 901px) and (max-height: 820px) {
   .story-section {
@@ -2781,19 +2892,17 @@ img {
               transform var(--transition-normal);
 }
 
-.glass-card:hover {
-  background: var(--color-bg-card-hover);
-  border-color: var(--color-border-hover);
-}
-
 .glass-card.interactive {
   cursor: pointer;
 }
 
-.glass-card.interactive:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-glow);
+/* Only cards you can click react, and only to a mouse. Static glass (story
+   photo, values, the banner, 404) stays still. */
+@media (hover: hover) {
+  .glass-card.interactive:hover {
+    background-color: var(--color-bg-card-hover);
+    border-color: var(--color-border-hover);
+  }
 }
 
 /* Product popup */
@@ -2821,7 +2930,7 @@ img {
   padding: 2rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--color-border-hover);
+  border: 1px solid var(--color-border-card);
   border-radius: 26px;
   background-color: var(--color-bg-main);
   box-shadow: var(--shadow-card);
@@ -2871,24 +2980,49 @@ img {
   font-size: var(--font-size-xl);
 }
 
+/* The product popup opens on the same lines as its card: the name in the
+   serif, in the product colour. */
+.modal-title--product {
+  color: var(--color-product-name);
+  font-family: var(--font-family-serif);
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+/* The same soft filled circle as the quantity stepper: 36px to look at, with
+   a 44px hit area. */
 .modal-close-btn {
+  position: relative;
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--color-border-card);
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-full);
-  color: var(--color-text-secondary);
-  transition: color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
+  background: var(--color-stepper-bg);
+  color: var(--color-text-primary);
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.modal-close-btn:hover {
-  color: var(--color-text-primary);
+.modal-close-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-full);
+}
+
+@media (hover: hover) {
+  .modal-close-btn:hover {
+    background: var(--color-stepper-bg-press);
+  }
 }
 
 .modal-close-btn:active {
-  transform: scale(0.94);
+  background: var(--color-stepper-bg-press);
+  transform: scale(0.92);
 }
 
 /* Section eyebrow: small capitals over an underline. */
@@ -2989,8 +3123,18 @@ img {
   font-size: var(--font-size-xs);
 }
 
-.footer-business {
-  font-size: var(--font-size-xs);
+/* Tablets and desktops: footer text at the small body size. The tagline and
+   copyright stay 12px (at 14px the tagline breaks "A brighter / you."). */
+@media (min-width: 601px) {
+  .footer-links,
+  .footer-contact {
+    font-size: var(--font-size-sm);
+  }
+
+  .footer-links,
+  .footer-contact {
+    gap: 0.625rem;
+  }
 }
 
 .footer-copyright {
@@ -3010,11 +3154,13 @@ img {
 
 .footer-link {
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), opacity var(--transition-fast);
 }
 
-.footer-link:hover {
-  color: var(--color-text-accent);
+@media (hover: hover) {
+  .footer-link:hover {
+    color: var(--color-text-accent);
+  }
 }
 
 /* Footer "Get in touch" */
@@ -3062,17 +3208,25 @@ img {
   }
 }
 
-/* Portrait tablets: three columns, with business under the brand rather than
-   alone on a second row (D19). */
-@media (min-width: 601px) and (max-width: 900px) {
+/* Big phones and small tablets: the brand on its own row, the two link
+   columns side by side under it. */
+@media (min-width: 481px) and (max-width: 767px) {
   .footer-grid {
-    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .footer-grid > :nth-child(1) { grid-area: 1 / 1; }
-  .footer-grid > :nth-child(2) { grid-area: 1 / 2; }
-  .footer-grid > :nth-child(3) { grid-area: 1 / 3 / span 2; }
-  .footer-grid > :nth-child(4) { grid-area: 2 / 1; }
+  .footer-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Tablets and desktops: the brand takes the spare width and the two link
+   columns sit against the right edge, so the row reads edge to edge. */
+@media (min-width: 768px) {
+  .footer-grid {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    column-gap: clamp(3rem, 7vw, 7rem);
+  }
 }
 
 /* Phones and small tablets: section links and icons move into the menu. */
@@ -3151,7 +3305,7 @@ img {
 .order-card__updates {
   margin-top: var(--space-8);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border-card);
+  border-top: 1px solid var(--color-border-divider);
 }
 
 .order-card__updates-intro {
@@ -3190,11 +3344,16 @@ img {
   transition: background-color var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
+/* A tap is felt on touch, where there's no hover. */
+.glass-card.faq-item:active {
+  background-color: var(--color-bg-card-hover);
+}
+
 .faq-item.is-open,
 .faq-item.is-open:hover {
   background-color: var(--color-bg-faq-active);
   border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-card), 0 0 20px rgba(59, 130, 246, 0.12);
+  box-shadow: var(--shadow-card), var(--shadow-faq-open);
 }
 
 .faq-item__question {
@@ -3261,6 +3420,11 @@ img {
   opacity: 1;
 }
 
+/* Only the question row toggles; the answer is text to read and copy. */
+.faq-item__answer {
+  cursor: auto;
+}
+
 .faq-item__answer-inner {
   overflow: hidden;
 }
@@ -3271,7 +3435,7 @@ img {
      stays near 64 characters a line (D9). */
   padding-top: 0.85rem;
   padding-right: max(0px, calc(100% - 64ch));
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-border-divider);
   color: var(--color-text-secondary);
   font-size: 0.9375rem;
   line-height: 1.6;
@@ -3324,6 +3488,18 @@ img {
   white-space: nowrap;
 }
 
+/* Each help line keeps its phrase whole, and the link gets a taller tap area
+   without moving the layout. */
+.faq-help .order-text-link {
+  white-space: nowrap;
+  padding-block: 0.75rem;
+}
+
+.faq-help__care-line {
+  display: block;
+  white-space: nowrap;
+}
+
 /* Sign-up failure toast. Opaque, and below the popup so it never covers its Order bar. */
 .toast {
   position: fixed;
@@ -3372,8 +3548,32 @@ img {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
   color: var(--color-text-muted);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.toast__close:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .toast__close:hover {
+    color: var(--color-text-primary);
+  }
+}
+
+.toast--leaving {
+  animation: toast-out 200ms ease-in both;
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 @media (max-width: 600px) {
@@ -3443,14 +3643,15 @@ img {
   text-align: center;
 }
 
+/* The shared section-title size (see .portfolio-intro h2). */
 .values-heading {
   margin: 0 0 clamp(2rem, 5vh, 3.5rem);
   color: var(--color-text-primary);
   font-family: var(--font-family-heading);
-  font-size: clamp(2.5rem, min(4.6vw, 7.5vh), 4.25rem);
+  font-size: var(--font-size-3xl);
   font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   text-align: center;
 }
 
@@ -3471,11 +3672,6 @@ img {
   text-align: left;
   gap: clamp(1.75rem, 5vh, 3.5rem);
   transition: transform var(--transition-normal), border-color var(--transition-theme), box-shadow var(--transition-normal), background-color var(--transition-theme);
-}
-
-.values-card:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-card);
 }
 
 .values-icon-circle {
@@ -3523,8 +3719,7 @@ img {
   }
 
   .values-heading {
-    font-size: clamp(2.25rem, 6vw, 3rem);
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
   }
 
   .values-card {
@@ -3585,15 +3780,6 @@ img {
   .values-card-desc {
     font-size: 0.9375rem;
     line-height: 1.5;
-  }
-}
-
-/* Desktop: every section title shares one size, below the hero headline (D6). */
-@media (min-width: 901px) {
-  .portfolio-intro h2,
-  .values-heading {
-    font-size: var(--font-size-3xl);
-    line-height: 1.1;
   }
 }
 
@@ -3672,10 +3858,24 @@ img {
   }
 }
 
-/* Portrait tablets: pull the hero card closer to the art (D22). */
+/* Portrait tablets: the hero ends under its card, like on phones, instead of
+   leaving an empty band to fill 100vh. */
+@media (min-width: 601px) and (max-width: 1199px) and (orientation: portrait) {
+  .hero-section {
+    min-height: auto;
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* Small portrait tablets: taller art, so it isn't a thin strip, and the card
+   close under it. */
 @media (min-width: 601px) and (max-width: 900px) and (orientation: portrait) {
+  .hero-visual-space {
+    height: calc(50svh - 4rem);
+  }
+
   .hero-content {
-    margin-top: max(calc(clamp(23rem, 40svh, 30rem) - 1.5rem), calc(50svh - 7rem));
+    margin-top: calc(50svh - 5rem);
   }
 }
 
@@ -3689,19 +3889,6 @@ img {
 /* Dark-mode artwork is lit for the charcoal page; keep only the hairline edge. */
 [data-theme='dark'] .portfolio-card__art {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-/* Only things you click lift on hover: the product cards. The order card holds
-   a form, and FAQ items and values cards stay put. */
-.order-card:hover,
-.values-card:hover,
-.glass-card.faq-item:hover {
-  transform: none;
-}
-
-.order-card:hover,
-.glass-card.faq-item:not(.is-open):hover {
-  box-shadow: var(--shadow-card);
 }
 
 /* Dark mode: value titles in gold. */
@@ -3735,6 +3922,24 @@ img {
   transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, padding 0.3s ease, border-color 0.3s ease, margin-top 0.3s ease;
 }
 
+/* A light see-through layer under the open menu. A tap on it only closes the
+   menu; it never reaches the page. It sits inside the header (z-index -1),
+   so it's behind the pill and the menu but above the page. */
+.mobile-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--color-bg-main) 35%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+
+.mobile-drawer-scrim.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .mobile-drawer.is-open {
   max-height: min(30rem, calc(100dvh - 5.5rem));
   margin-top: 6px;
@@ -3755,7 +3960,7 @@ img {
   display: flex;
   gap: 0.5rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border-card);
+  border-top: 1px solid var(--color-border-divider);
 }
 
 .drawer-pill {
@@ -3773,6 +3978,17 @@ img {
   font-size: var(--font-size-sm);
   font-weight: 600;
   white-space: nowrap;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.drawer-pill:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .drawer-pill:hover {
+    border-color: var(--color-border-hover);
+  }
 }
 
 /* Only on the smallest phones, where the header toggle is hidden. */
@@ -3787,17 +4003,45 @@ img {
   font-weight: 600;
 }
 
+/* Light/Dark: two equal halves and a gradient thumb that slides, like the
+   size switch. The thumb is ::before, moved by --seg-index. */
 .segmented {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   padding: 3px;
   border: 1px solid var(--color-toggle-border);
   border-radius: var(--radius-full);
   background: var(--color-toggle-track);
+  isolation: isolate;
+}
+
+.segmented::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-gradient);
+  box-shadow: var(--shadow-glow);
+  transform: translateX(calc(100% * var(--seg-index, 0)));
+  transition: transform 260ms var(--ease-glide);
+}
+
+.segmented:has(button:nth-child(2)[aria-pressed='true']) {
+  --seg-index: 1;
 }
 
 .segmented button {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.375rem;
   min-height: 38px;
   padding: 0 0.9rem;
@@ -3805,11 +4049,14 @@ img {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: color 180ms ease, transform var(--transition-fast);
+}
+
+.segmented button:active {
+  transform: scale(0.97);
 }
 
 .segmented button[aria-pressed='true'] {
-  background: var(--color-accent-gradient);
   color: var(--color-btn-text);
 }
 
@@ -3829,11 +4076,6 @@ img {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
-  }
-
-  .segmented button {
-    flex: 1;
-    justify-content: center;
   }
 }
 
@@ -3871,8 +4113,12 @@ img {
     font-weight: 600;
   }
 
+  .header-nav-btn:active {
+    color: var(--color-text-accent);
+  }
+
   .header-nav-btn + .header-nav-btn {
-    border-top: 1px solid var(--color-border-card);
+    border-top: 1px solid var(--color-border-divider);
   }
 }
 
@@ -3894,6 +4140,10 @@ img {
 
   .modal-title {
     font-size: 1.375rem;
+  }
+
+  .modal-title--product {
+    font-size: 1.5rem;
   }
 
   /* The pinned bar's offsets follow the smaller popup padding. */
@@ -3968,8 +4218,11 @@ img {
   }
 
   .product-detail__ingredients {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem 0.25rem;
+  }
+
+  .product-detail__ingredients li {
+    flex-basis: calc((100% - 2 * 0.25rem) / 3);
   }
 
   .product-detail__ingredient-art {
@@ -4177,8 +4430,9 @@ img {
     transform: none;
   }
 
+  /* The pouch sits fully in frame, with a strip of cloth to its right. */
   .hero-visual-image {
-    object-position: 88% 40%;
+    object-position: 97% 40%;
   }
 
   .hero-section {
@@ -4204,14 +4458,6 @@ img {
     margin-bottom: 0.8rem;
     font-size: 0.95rem;
     line-height: 1.45;
-  }
-
-  /* The principles heading is expressive; the desktop scale is tiring to
-     scan on a phone. */
-  .values-heading {
-    font-size: clamp(1.9rem, 8.4vw, 2.25rem);
-    line-height: 1.28;
-    letter-spacing: -0.025em;
   }
 }
 
@@ -4306,11 +4552,48 @@ img {
 
   .waitlist-consent {
     margin: 0.15rem 0.125rem 0;
+    padding-block: 0.4rem;
+    font-size: var(--font-size-xs);
   }
 
   .waitlist-submit {
     min-width: 12rem;
     justify-self: center;
+  }
+}
+
+/* Phones: a thin mat round the story photo with matching corners, and a
+   footer you can read and tap (44px rows). */
+@media (max-width: 600px) {
+  .glass-card.story-photo {
+    padding: 0.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .story-photo__img {
+    border-radius: 1rem;
+  }
+
+  .footer-links,
+  .footer-contact {
+    gap: 0;
+    font-size: var(--font-size-sm);
+  }
+
+  .footer-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+
+  .footer-tagline {
+    font-size: var(--font-size-sm);
+  }
+
+  .footer-heading {
+    margin-bottom: var(--space-2);
+    font-size: var(--font-size-base);
   }
 }
 
@@ -4353,7 +4636,10 @@ img {
   .order-coupon__spinner,
   .order-preview__panel,
   .order-sent,
-  .header-order-btn__count.is-pop {
+  .header-order-btn__count.is-pop,
+  .waitlist-error:not(:empty),
+  .waitlist-outcome,
+  .toast--leaving {
     animation: none;
   }
 
@@ -4366,7 +4652,16 @@ img {
   .order-pick,
   .pill-btn,
   .order-coupon__apply,
-  .modal-close-btn {
+  .modal-close-btn,
+  .mobile-drawer-scrim,
+  .segmented::before,
+  .segmented button,
+  .mobile-toggle,
+  .mobile-toggle__icon svg,
+  .header-icon-btn,
+  .theme-toggle,
+  .drawer-pill,
+  .toast__close {
     transition: none;
   }
 
@@ -4377,14 +4672,18 @@ img {
   .qty-stepper__btn:not([aria-disabled='true']):active,
   .pill-btn:active,
   .order-coupon__apply:not([aria-disabled='true']):active,
-  .modal-close-btn:active {
+  .modal-close-btn:active,
+  .mobile-toggle:active,
+  .header-icon-btn:active,
+  .theme-toggle:active,
+  .drawer-pill:active,
+  .segmented button:active,
+  .toast__close:active {
     transform: none;
   }
 
-  .glass-card:hover,
-  .glass-card.interactive:hover,
-  .values-card:hover,
-  .portfolio-card:hover {
+  .portfolio-card:hover,
+  .portfolio-card:has(.portfolio-card__action:active) {
     transform: none;
   }
 }

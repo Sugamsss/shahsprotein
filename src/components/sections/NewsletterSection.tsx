@@ -8,7 +8,7 @@ import { useWaitlist } from '../../context/WaitlistContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { WaitlistService } from '../../services/waitlistService';
 import { siteConfig } from '../../data/siteConfig';
-import { CheckCircle2, Info, Mail } from 'lucide-react';
+import { CheckCircle2, Info, Loader2, Mail } from 'lucide-react';
 
 type FieldError = 'email' | 'consent' | null;
 type Outcome = { kind: 'done' | 'already'; email: string } | null;
@@ -139,6 +139,8 @@ export const NewsletterSection: React.FC = () => {
                   />
                 </div>
                 <button type="submit" className="waitlist-submit" disabled={isLoading}>
+                  {/* The coupon check's spinner: still under reduced motion. */}
+                  {isLoading && <Loader2 size={16} className="order-coupon__spinner" aria-hidden="true" />}
                   {isLoading ? 'Adding you…' : 'Keep me posted'}
                 </button>
               </form>

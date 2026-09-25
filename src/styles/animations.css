@@ -25,8 +25,11 @@
   }
 }
 
+/* Entrances fill backwards, never forwards: a filled final keyframe keeps a
+   transform on the wrapper, which makes it a backdrop root and kills the
+   frosted blur on the header pill, the phone menu and the hero card. */
 .header-entrance {
-  animation: headerDropDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: headerDropDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 @keyframes heroCardEntrance {
@@ -41,7 +44,7 @@
 }
 
 .hero-card-entrance {
-  animation: heroCardEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+  animation: heroCardEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
 }
 
 @keyframes heroItemFadeUp {
@@ -123,11 +126,9 @@
 /* Stagger delay */
 .delay-200 { transition-delay: 200ms; }
 
-/* Glass cards lift on hover. global.css turns this off for the static ones. */
-@media (hover: hover) {
-  .glass-card:hover {
-    transform: translateY(-6px) scale(1.01);
-    border-color: rgba(59, 130, 246, 0.35);
-    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.70);
-  }
+/* Theme switch: a quick crossfade of the whole page (ThemeContext starts it).
+   Skipped for reduced motion, and browsers without View Transitions just switch. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 250ms;
 }

@@ -7,6 +7,8 @@ export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  /** Extra class on the title, e.g. `modal-title--product` (the serif product name). */
+  titleClassName?: string;
   /** Extra class on the dialog box, e.g. `order-dialog`. */
   className?: string;
   children: React.ReactNode;
@@ -17,7 +19,7 @@ export const useModalClose = useDialogClose;
 
 // Focus trap, focus restore, Esc, the scroll lock and the 240ms exit live in useDialog,
 // shared with the admin's sheets. This adds the site's look and the in-place title switch.
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, className, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, titleClassName, className, children }) => {
   const { dialogRef: modalRef, isClosing, requestClose } = useDialog({ isOpen, onClose });
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -54,12 +56,17 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, className,
         {/* On phones this row sticks to the top, so close stays in reach. */}
         <div className="modal-head">
           {title && (
-            <h3 id={titleId} ref={titleRef} tabIndex={-1} className="modal-title">
+            <h3
+              id={titleId}
+              ref={titleRef}
+              tabIndex={-1}
+              className={titleClassName ? `modal-title ${titleClassName}` : 'modal-title'}
+            >
               {title}
             </h3>
           )}
 
-          <button type="button" onClick={requestClose} aria-label="Close Modal" className="modal-close-btn">
+          <button type="button" onClick={requestClose} aria-label="Close" className="modal-close-btn">
             <X size={20} />
           </button>
         </div>

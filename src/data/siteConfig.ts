@@ -5,8 +5,8 @@ export const siteConfig = {
   tagline: "Tasty food. Healthy habits. A brighter you.",
   motto: "A curated range of wholesome everyday foods made with real ingredients and honest nutrition.",
   heroHeading: [
-    { text: 'Simple ingredients. ' },
-    { text: 'Extraordinary benefits.', highlight: true },
+    { text: 'Healthy food that ' },
+    { text: 'tastes unhealthy.', highlight: true },
   ] satisfies TextSegment[],
   story: {
     heading: "Making healthy food that tastes unhealthy.",
@@ -192,7 +192,6 @@ export const siteConfig = {
     instagram: "https://instagram.com/shahsnutrition",
     // Use the founder's confirmed inbox until branded receiving mailboxes are created.
     email: "pranjalishah25@gmail.com",
-    business: "pranjalishah25@gmail.com",
   },
   waitlist: {
     // Fallback count when Supabase can't be reached. The public page no longer shows a count.
