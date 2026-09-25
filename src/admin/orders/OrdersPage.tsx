@@ -102,8 +102,10 @@ const Empty: React.FC<{ first: boolean }> = ({ first }) => {
  * Orders (spec 2.5). Phone: stacked lanes with a jump strip; /admin/orders/:code
  * is its own page. Laptop: a 4-lane board, with /admin/orders/:code as a popup over it.
  */
-const OrdersPage: React.FC = () => {
-  const code = usePathPart(1);
+const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
+  // `behind`: drawn under the Add/Edit form on the laptop, so the path isn't an order code.
+  const path = usePathPart(1);
+  const code = behind ? '' : path;
   const location = useLocation();
   const navigate = useNavigate();
   const laptop = useLaptop();
@@ -115,7 +117,8 @@ const OrdersPage: React.FC = () => {
 
   const list = useRpc(() => getOrders({ view: 'todo', limit: 1000 }), [], { refreshOnFocus: true });
   // A card that changes lane flashes where it lands.
-  const [flash, setFlash] = useState<string | null>(null);
+  // Also the order just saved from the Add/Edit form (navigation state).
+  const [flash, setFlash] = useState<string | null>(() => (location.state as { flash?: string } | null)?.flash ?? null);
   const put = useCallback((o: Order) => list.setData((d) => {
     if (!d) return d;
     const before = d.orders.find((x) => x.id === o.id);
@@ -123,10 +126,10 @@ const OrdersPage: React.FC = () => {
     return { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) };
   }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!flash) return;
+    if (!flash || !list.data) return; // wait until the cards are on screen
     const timer = setTimeout(() => setFlash(null), 900);
     return () => clearTimeout(timer);
-  }, [flash]);
+  }, [flash, list.data]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
   const change = useOrderChange(put);
 

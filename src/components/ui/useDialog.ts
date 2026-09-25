@@ -19,6 +19,8 @@ export interface DialogOptions {
   onClose: () => void;
   /** Where focus goes on open. Default: the first control, or the dialog itself. */
   initialFocus?: React.RefObject<HTMLElement>;
+  /** Asked before close, Esc or the backdrop closes it. Return false to stay open (e.g. to ask "Leave without saving?"). */
+  canClose?: () => boolean;
 }
 
 export interface Dialog {
@@ -30,7 +32,7 @@ export interface Dialog {
   requestClose: () => void;
 }
 
-export const useDialog = ({ isOpen, onClose, initialFocus }: DialogOptions): Dialog => {
+export const useDialog = ({ isOpen, onClose, initialFocus, canClose }: DialogOptions): Dialog => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -41,8 +43,11 @@ export const useDialog = ({ isOpen, onClose, initialFocus }: DialogOptions): Dia
   const close = useCallback(() => onCloseRef.current(), []);
   const initialFocusRef = useRef(initialFocus);
   initialFocusRef.current = initialFocus;
+  const canCloseRef = useRef(canClose);
+  canCloseRef.current = canClose;
 
   const requestClose = useCallback(() => {
+    if (canCloseRef.current && !canCloseRef.current()) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       close();
       return;

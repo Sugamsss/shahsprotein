@@ -26,12 +26,14 @@ export interface AdminSheetProps {
   initialFocus?: React.RefObject<HTMLElement>;
   /** Extra class on the dialog box, for a screen's own layout inside it. */
   className?: string;
+  /** Return false to keep it open when × , Esc or the backdrop is used (see useDialog). */
+  canClose?: () => boolean;
 }
 
 export const AdminSheet: React.FC<AdminSheetProps> = ({
-  isOpen, onClose, title, closeLabel, children, bar, actions, width = 520, initialFocus, className,
+  isOpen, onClose, title, closeLabel, children, bar, actions, width = 520, initialFocus, className, canClose,
 }) => {
-  const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose, initialFocus });
+  const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose, initialFocus, canClose });
   const titleId = useId();
 
   if (!isOpen) return null;
