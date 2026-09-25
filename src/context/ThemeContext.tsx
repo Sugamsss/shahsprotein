@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Theme, ThemeContextType } from '../types/theme';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -48,13 +49,27 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  // A short crossfade between the two themes, so there's never a frame with
+  // one theme's text on the other's backgrounds. Browsers without View
+  // Transitions, and people who ask for less motion, switch at once as before.
+  const switchTheme = (next: Theme) => {
+    if (next === theme) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof document.startViewTransition !== 'function' || reduce) {
+      setThemeState(next);
+      return;
+    }
+    document.startViewTransition(() => {
+      flushSync(() => setThemeState(next));
+      // The effect above sets this too; setting it here makes sure the new
+      // snapshot is taken with the new theme in place.
+      document.documentElement.setAttribute('data-theme', next);
+    });
   };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
+  const toggleTheme = () => switchTheme(theme === 'dark' ? 'light' : 'dark');
+
+  const setTheme = (newTheme: Theme) => switchTheme(newTheme);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

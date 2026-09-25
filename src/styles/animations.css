@@ -131,3 +131,10 @@
     box-shadow: 0 20px 40px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.70);
   }
 }
+
+/* Theme switch: a quick crossfade of the whole page (ThemeContext starts it).
+   Skipped for reduced motion, and browsers without View Transitions just switch. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 250ms;
+}

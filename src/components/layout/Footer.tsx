@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { OrderLink } from '../ui/OrderLink';
 import { OrderButton } from '../order/OrderButton';
 import { careCallUrl } from '../../utils/contact';
+import { logoSrc } from '../../utils/themeAssets';
 
 export const Footer: React.FC = () => {
   const { theme } = useTheme();
@@ -17,7 +18,7 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div>
             <img
-              src={theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp'}
+              src={logoSrc(theme)}
               alt={siteConfig.name}
               width={600}
               height={200}
