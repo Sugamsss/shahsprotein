@@ -9,7 +9,7 @@ import { LoadError, Skeleton } from '../parts';
 import { AdminLink, usePathPart, useQueryText } from '../router';
 import type { Order } from '../types';
 import { useOverview } from '../AdminLayout';
-import { useRpc } from '../useRpc';
+import { useRpc, useSettled } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
 import { type Lane, LANES, NEXT, laneOf } from './model';
@@ -39,16 +39,6 @@ const matches = (o: Order, q: string) => {
   return o.code.toLowerCase().includes(t.replace(/^sn-/, ''))
     || (o.name ?? '').toLowerCase().includes(t)
     || (digits.length >= 4 && (o.phone ?? '').includes(digits));
-};
-
-/** Waits for typing to stop. */
-const useSettled = <T,>(value: T, ms = 300): T => {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), ms);
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return settled;
 };
 
 const LaneBlock: React.FC<{ lane: Lane; orders: Order[]; money?: number; children: React.ReactNode; className?: string }> = ({

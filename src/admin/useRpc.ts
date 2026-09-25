@@ -61,3 +61,13 @@ export function useRpc<T>(load: () => Promise<T>, deps: DependencyList, options:
 
   return { data, error, loading, reload, setData };
 }
+
+/** The value once it has stopped changing for `ms` (typing into a search). */
+export const useSettled = <T,>(value: T, ms = 300): T => {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+};
