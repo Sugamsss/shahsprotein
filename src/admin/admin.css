@@ -15,6 +15,7 @@
 @import './pages/settings.css';
 @import './pages/login.css';
 @import './orders/orders.css';
+@import './pages/customers.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {

@@ -1,0 +1,10 @@
+/* Customers and one customer (spec 2.10). Rows are the More page's .adm-list. */
+.adm-customers__find { border-radius: var(--radius-full); }
+.adm-list__icon.adm-avatar-mark { background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: 0.875rem; font-weight: 700; }
+.adm-customers .adm-list__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.adm-customers__end { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-weight: 600; }
+.adm-customer b { font-weight: 700; }
+
+@media (min-width: 960px) {
+  .adm-customers, .adm-customer { max-width: 720px; margin: 0 auto; }
+}
