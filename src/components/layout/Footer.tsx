@@ -78,18 +78,6 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
           </div>
-
-          {/* Business Inquiries */}
-          <div>
-            <h2 className="footer-heading">
-              For Business Inquiries
-            </h2>
-            <p className="footer-business">
-              <a href={`mailto:${siteConfig.social.business}`} className="footer-link">
-                {siteConfig.social.business}
-              </a>
-            </p>
-          </div>
         </div>
 
         {/* Bottom Copyright */}
