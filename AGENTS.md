@@ -56,6 +56,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
 - **Coupon codes live only in Supabase.** Never put a real code in the code, tests, seeds, docs or commit messages: the repo is public. Use `EXAMPLE10`-style placeholders.
 - **Section order is fixed:** Hero → Products → Values → Story → FAQ → Newsletter → Footer. No "building in public" section, even though the reference designs show one.
 - The email list code is still named "waitlist" (`useWaitlist`, `waitlistService`, admin screens). That's intentional. Don't rename it.
+- **Wrap every `localStorage` / `sessionStorage` access in try/catch**, including the inline script in `index.html`. Browsers that block site storage throw a SecurityError, and one unguarded read blanks the page. A failed read means "nothing saved"; a failed write is skipped.
 - Accessibility basics stay: `aria-label` on each section, focus trap and restore in Modal, 44px touch targets on phones, and `:focus-visible` rings.
 
 ## Gotchas
