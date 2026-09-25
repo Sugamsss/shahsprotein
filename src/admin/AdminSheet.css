@@ -1,0 +1,78 @@
+/* AdminSheet (spec 2.3): a bottom sheet under 960px, a centred popup from 960px.
+   Reuses the site's overlay-in/out and sheet-up/down keyframes (global.css).
+   Portalled to <body>, so nothing here depends on the admin page wrapper.
+   @imported by admin.css (the admin's CSS ships inlined in its JS). */
+
+/* ---- Phone: bottom sheet --------------------------------------------------- */
+.adm-sheet-layer {
+  position: fixed; inset: 0; z-index: var(--z-modal-overlay);
+  display: flex; align-items: flex-end; justify-content: center;
+  background: var(--adm-scrim); animation: overlay-in 0.2s ease both;
+}
+.adm-sheet-layer.is-closing { animation: overlay-out 0.24s ease both; }
+.adm-sheet {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%; max-width: 560px; max-height: 88vh; max-height: 88dvh; overflow: hidden;
+  border: 1px solid var(--adm-edge); border-bottom: 0; border-radius: 28px 28px 0 0;
+  background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
+  color: var(--color-text-primary); outline: none;
+  animation: sheet-up 0.32s var(--ease-glide) both;
+}
+.adm-sheet-layer.is-closing .adm-sheet { animation: sheet-down 0.24s cubic-bezier(0.32, 0, 0.67, 0) both; }
+.adm-sheet__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 12px; padding: 8px 12px 8px 20px; }
+.adm-sheet__grab {
+  grid-column: 1 / -1; justify-self: center; width: 40px; height: 5px; margin-bottom: 6px;
+  border-radius: 3px; background: var(--adm-track-off);
+}
+.adm-sheet__title {
+  min-width: 0; padding-top: 8px; overflow-wrap: anywhere;
+  font: 700 1.375rem/1.2 var(--font-family-heading); letter-spacing: -0.01em;
+}
+.adm-sheet__title:focus { outline: none; }
+.adm-sheet__actions { display: flex; align-items: center; gap: 4px; }
+.adm-sheet__close {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-full);
+  background: var(--adm-well); color: var(--color-text-secondary);
+  transition: background-color var(--transition-fast), transform 120ms ease;
+}
+.adm-sheet__close:active { background: var(--adm-well-press); transform: scale(0.97); }
+.adm-sheet__body { min-height: 0; padding: 8px 20px 20px; overflow-y: auto; overscroll-behavior: contain; }
+.adm-sheet__bar {
+  padding: 12px 20px max(16px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--adm-hairline); background: var(--adm-surface-solid);
+}
+@media (hover: hover) {
+  .adm-sheet__close:hover { background: var(--adm-well-press); color: var(--color-text-primary); }
+}
+
+/* ---- Laptop: centred popup over the frosted page ---------------------------- */
+@media (min-width: 960px) {
+  .adm-sheet-layer {
+    align-items: center; padding: 32px; background: var(--adm-frost);
+    -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  }
+  .adm-sheet {
+    width: min(520px, 100%); max-width: none; max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px);
+    border-bottom: 1px solid var(--adm-edge); border-radius: 28px; animation: adm-popup-in 0.2s ease-out both;
+  }
+  .adm-sheet--760 { width: min(760px, 100%); }
+  .adm-sheet--920 { width: min(920px, 100%); }
+  .adm-sheet-layer.is-closing .adm-sheet { animation: overlay-out 0.24s ease both; }
+  .adm-sheet__grab { display: none; }
+  .adm-sheet__head { padding: 20px 16px 12px 28px; border-bottom: 1px solid var(--adm-hairline); }
+  .adm-sheet__title { padding-top: 6px; }
+  .adm-sheet__body { padding: 20px 28px 24px; }
+  .adm-sheet__bar { padding: 14px 20px 16px 28px; }
+}
+
+/* Short laptop screens: a little less margin, so more of the body shows. */
+@media (min-width: 960px) and (max-height: 759px) {
+  .adm-sheet-layer { padding: 16px 32px; }
+  .adm-sheet { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); }
+}
+
+@keyframes adm-popup-in { from { opacity: 0; transform: scale(0.98); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-sheet-layer, .adm-sheet, .adm-sheet-layer.is-closing, .adm-sheet-layer.is-closing .adm-sheet { animation: none; }
+}

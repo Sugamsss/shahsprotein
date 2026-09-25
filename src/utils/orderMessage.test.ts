@@ -15,7 +15,7 @@ const lines = [
 
 describe('buildOrderMessage', () => {
   it('writes the full order in catalogue order, with a checked coupon', () => {
-    expect(buildOrderMessage({ lines, name: 'Anjali', pincode: '415001', coupon: { code: 'example10', checked: true } })).toBe(
+    expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', coupon: { code: 'example10', checked: true } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
       + '• Raggi Jaggi 250 g × 1\n'
@@ -25,6 +25,7 @@ describe('buildOrderMessage', () => {
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Pincode: 415001\n'
+      + 'Order code: SN-7KQ4M\n'
       + '\n'
       + 'Could you send me the total?',
     );
@@ -32,22 +33,24 @@ describe('buildOrderMessage', () => {
 
   it('marks a coupon the server could not check, and leaves out no coupon at all', () => {
     const one = [{ productId: 'muesli', size: '250 g', quantity: 2 }];
-    expect(buildOrderMessage({ lines: one, name: 'Anjali', pincode: '415001', coupon: { code: 'EXAMPLE10', checked: false } })).toBe(
+    expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', coupon: { code: 'EXAMPLE10', checked: false } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
       + '• Muesli 250 g × 2\n'
       + '\n'
       + 'Coupon: EXAMPLE10 (not checked yet)\n'
       + 'Pincode: 415001\n'
+      + 'Order code: SN-7KQ4M\n'
       + '\n'
       + 'Could you send me the total?',
     );
-    expect(buildOrderMessage({ lines: one, name: 'Anjali', pincode: '415001', coupon: null })).toBe(
+    expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', coupon: null })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
       + '• Muesli 250 g × 2\n'
       + '\n'
       + 'Pincode: 415001\n'
+      + 'Order code: SN-7KQ4M\n'
       + '\n'
       + 'Could you send me the total?',
     );
@@ -55,6 +58,7 @@ describe('buildOrderMessage', () => {
 
   it('keeps a name or pincode with odd whitespace on one tidy line', () => {
     const message = buildOrderMessage({
+      code: 'SN-7KQ4M',
       lines: [{ productId: 'muesli', size: '250 g', quantity: 2 }],
       name: '  Priya\n\tShah  ',
       pincode: ' 415001\n',
@@ -65,6 +69,7 @@ describe('buildOrderMessage', () => {
       + '• Muesli 250 g × 2\n'
       + '\n'
       + 'Pincode: 415001\n'
+      + 'Order code: SN-7KQ4M\n'
       + '\n'
       + 'Could you send me the total?',
     );
@@ -73,7 +78,7 @@ describe('buildOrderMessage', () => {
 
 describe('orderMessageParts with blanks (the preview)', () => {
   it('matches the sent text once the blanks are filled in', () => {
-    const input = { lines: [{ productId: 'bites', size: '250 g', quantity: 1 }], name: '', pincode: '' };
+    const input = { code: 'SN-7KQ4M', lines: [{ productId: 'bites', size: '250 g', quantity: 1 }], name: '', pincode: '' };
     const parts = orderMessageParts(input, { blanks: true });
 
     expect(parts.filter((part) => part.blank).map((part) => [part.blank, part.text])).toEqual([

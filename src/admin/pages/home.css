@@ -1,0 +1,63 @@
+/* Home (spec 2.4). Phone: one column. Laptop: two (waiting and this week; selling, stock, coupons). */
+.adm-home__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adm-home__logo { width: 124px; height: auto; }
+.adm-home__date { margin-top: 4px; color: var(--color-text-secondary); }
+.adm-home__grid, .adm-home__col { display: grid; gap: 16px; align-content: start; }
+.adm-home__card { display: grid; gap: 14px; }
+.adm-card.adm-home__card--flush { padding: 0; gap: 0; overflow: hidden; }
+.adm-home__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.adm-home__card--flush .adm-home__head { padding: 18px 20px 14px; border-bottom: 1px solid var(--adm-hairline); }
+.adm-home__head h2 { font: 600 1.125rem/1.3 var(--font-family-heading); }
+.adm-home__head > span { color: var(--color-text-muted); font-size: 0.875rem; }
+.adm-home__quiet { padding: 18px 20px; color: var(--color-text-secondary); line-height: 1.5; }
+.adm-home__card:not(.adm-home__card--flush) .adm-home__quiet { padding: 0; }
+
+/* Waiting on you: 64px rows with a 40px number circle. */
+.adm-list.adm-home__rows > a { grid-template-columns: 40px 1fr auto; min-height: 64px; padding: 10px 20px; }
+.adm-home__circle {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--adm-well); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.adm-home__circle.is-accent { background: var(--color-accent-gradient); color: var(--color-btn-text); }
+.adm-home__circle.is-money { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
+
+/* This week */
+.adm-home__sentence { color: var(--color-text-secondary); font-size: 1.0625rem; line-height: 1.5; }
+.adm-home__sentence strong { color: var(--color-text-primary); }
+.adm-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 150px; margin: 4px 0 0; padding: 0; list-style: none; }
+.adm-bars li { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 6px; min-width: 0; }
+.adm-bars__n { min-height: 1.2em; color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 600; }
+.adm-bars__bar {
+  align-self: end; width: 100%; max-width: 40px; height: max(2px, var(--h)); border-radius: 8px 8px 3px 3px;
+  background: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+}
+.adm-bars li.is-today .adm-bars__bar { background: var(--color-accent-gradient); }
+.adm-bars li.is-empty .adm-bars__bar { height: 2px; border-radius: 1px; background: var(--adm-track-off); }
+.adm-bars li.is-future .adm-bars__bar { height: 0; border-top: 2px dashed var(--adm-track-off); border-radius: 0; background: none; }
+.adm-bars__day { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 600; }
+.adm-bars li.is-today .adm-bars__day { color: var(--color-text-accent); }
+.adm-home__foot { display: flex; flex-wrap: wrap; gap: 4px 18px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); color: var(--color-text-secondary); font-size: 0.875rem; }
+
+/* What's selling, stock and coupons */
+.adm-home__sell, .adm-home__stock { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.adm-home__sell + .adm-home__sell { padding-top: 14px; border-top: 1px solid var(--adm-hairline); }
+.adm-home__thumb { width: 52px; height: 52px; border-radius: 12px; }
+.adm-home__sell .adm-pname { font-size: 1.0625rem; }
+.adm-home__sell small { color: var(--color-text-secondary); font-size: 0.875rem; }
+.adm-home__split { display: flex; height: 6px; margin-top: 6px; overflow: hidden; border-radius: 3px; background: var(--adm-well); }
+.adm-home__split i { width: var(--w); background: var(--color-accent-primary); }
+.adm-home__split i + i { background: color-mix(in srgb, var(--color-accent-primary) 45%, transparent); }
+.adm-home__total { display: grid; justify-items: end; color: var(--color-text-secondary); font-size: 0.8125rem; }
+.adm-home__total b { color: var(--color-text-primary); font-size: 1.25rem; }
+.adm-home__stock { grid-template-columns: 52px minmax(0, 1fr); }
+.adm-home__stock .adm-btn { grid-column: 1 / -1; }
+.adm-home__coupons { display: grid; list-style: none; }
+.adm-home__coupons li { display: flex; justify-content: space-between; gap: 12px; min-height: 48px; align-items: center; }
+.adm-home__coupons li + li { border-top: 1px solid var(--adm-hairline); }
+.adm-home__coupons li > span:last-child { color: var(--color-text-secondary); }
+
+@media (min-width: 960px) {
+  .adm-home { max-width: 1120px; margin-inline: auto; }
+  .adm-home__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; }
+  .adm-home__stock .adm-btn { grid-column: 2; justify-self: start; }
+}

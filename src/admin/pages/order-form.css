@@ -1,0 +1,66 @@
+/* Add / Edit order (spec 2.8). Phone: a page with a pinned bar. Laptop: a 920px popup, two columns. */
+.adm-of { display: grid; gap: 24px; }
+.adm-of__intro { margin-top: -12px; }
+.adm-of__section { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.adm-of__h { display: flex; justify-content: space-between; gap: 12px; padding: 0; color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.adm-of__h h2 { font: inherit; }
+.adm-of__h span { font-weight: 500; letter-spacing: 0; text-transform: none; }
+.adm-of__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); font-size: 0.9375rem; line-height: 1.45; }
+
+/* A row per product and size: thumb, name over size, then + Add or the stepper. */
+.adm-card.adm-of__packs { display: grid; padding: 4px 16px; list-style: none; }
+.adm-of__packs li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; }
+.adm-of__packs li + li { border-top: 1px solid var(--adm-hairline); }
+.adm-of__thumb { width: 44px; height: 44px; border-radius: 10px; }
+.adm-of__packs .adm-pname { display: block; font-size: 1.0625rem; line-height: 1.2; }
+.adm-of__packs small { color: var(--color-text-secondary); font-size: 0.875rem; }
+.adm-of__packs em { color: var(--color-text-muted); font-style: normal; }
+
+/* "Anjali Kulkarni · 2 orders before" with Use. */
+.adm-of__match { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--adm-accent-tint); }
+.adm-of__match small { color: var(--color-text-secondary); font-size: 0.8125rem; }
+.adm-of__initials { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: 0.875rem; font-weight: 700; }
+
+/* Came via: 2×2 choices, native radios. */
+.adm-of__via { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.adm-of__via label { position: relative; display: grid; }
+.adm-of__via input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-of__via span {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--adm-edge);
+  border-radius: 14px; background: var(--adm-surface); font-weight: 600; cursor: pointer;
+}
+.adm-of__via input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--color-text-accent); }
+.adm-of__via input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-of__via label:active span { transform: scale(0.97); }
+
+.adm-card.adm-paidrow { margin-top: 0; padding: 14px 16px; border-top: 1px solid var(--adm-edge); }
+.adm-of__links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.adm-of__bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.adm-of__bar > span { color: var(--color-text-secondary); font-weight: 600; }
+.adm-of__bar .adm-btn { flex: 1; max-width: 340px; }
+.adm-of__leave { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.adm-of-page .adm-title-row { align-items: flex-start; }
+
+/* Phone page: the bar sticks to the bottom and the tab bar steps aside. */
+.adm:has(.adm-of-page) .adm-tabbar { display: none; }
+.adm:has(.adm-of-page) { padding-bottom: 0; }
+.adm-of-page__bar {
+  position: sticky; bottom: 0; margin: 8px -16px 0; padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--adm-hairline); background: var(--adm-page);
+}
+
+@media (min-width: 375px) { .adm-of-page__bar { margin-inline: -20px; padding-inline: 20px; } }
+
+@media (min-width: 960px) {
+  /* Left: what they ordered, then where it's at. Right: who, came via, then the extras. */
+  .adm-of {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; column-gap: 32px;
+    grid-template-areas: 'intro intro' 'error error' 'ordered who' 'ordered via' 'where extras';
+  }
+  .adm-of__intro { grid-area: intro; }
+  .adm-of > .adm-form__error { grid-area: error; }
+  .adm-of--ordered { grid-area: ordered; } .adm-of--who { grid-area: who; } .adm-of--via { grid-area: via; }
+  .adm-of--where { grid-area: where; } .adm-of--extras { grid-area: extras; }
+  .adm-of__bar { justify-content: flex-end; }
+  .adm-of__bar .adm-btn { flex: 0 0 auto; min-width: 240px; }
+}

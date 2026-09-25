@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Theme, ThemeContextType } from '../types/theme';
+import { Theme, ThemeContextType, ThemeMode } from '../types/theme';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -16,24 +16,42 @@ const readSavedTheme = (): string | null => {
   }
 };
 
-const saveTheme = (theme: Theme): void => {
+// Only a choice someone made is saved. With nothing saved the site follows the
+// device (as the inline script in index.html also does), so it's removed for 'system'.
+const saveMode = (mode: ThemeMode): void => {
   try {
-    window.localStorage.setItem(STORAGE_KEY, theme);
+    if (mode === 'system') window.localStorage.removeItem(STORAGE_KEY);
+    else window.localStorage.setItem(STORAGE_KEY, mode);
   } catch {
     // Not remembered this time.
   }
 };
 
+const LIGHT_QUERY = '(prefers-color-scheme: light)';
+const deviceTheme = (): Theme => (window.matchMedia(LIGHT_QUERY).matches ? 'light' : 'dark');
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
+  const [mode, setModeState] = useState<ThemeMode>(() => {
     const saved = readSavedTheme();
-    if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    return saved === 'light' || saved === 'dark' ? saved : 'system';
   });
+  const [device, setDevice] = useState<Theme>(deviceTheme);
+  const theme = mode === 'system' ? device : mode;
+
+  // Follow the device live (it matters in 'system' mode).
+  useEffect(() => {
+    const query = window.matchMedia(LIGHT_QUERY);
+    const onChange = () => setDevice(query.matches ? 'light' : 'dark');
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    saveMode(mode);
+  }, [mode]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    saveTheme(theme);
 
     const prefix = theme === 'light' ? 'light' : 'dark';
     const version = '?v=5';
@@ -52,27 +70,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // A short crossfade between the two themes, so there's never a frame with
   // one theme's text on the other's backgrounds. Browsers without View
   // Transitions, and people who ask for less motion, switch at once as before.
-  const switchTheme = (next: Theme) => {
-    if (next === theme) return;
+  // A mode change that doesn't change what's on screen just saves.
+  const setMode = (next: ThemeMode) => {
+    if (next === mode) return;
+    const shown = next === 'system' ? device : next;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (typeof document.startViewTransition !== 'function' || reduce) {
-      setThemeState(next);
+    if (shown === theme || typeof document.startViewTransition !== 'function' || reduce) {
+      setModeState(next);
       return;
     }
     document.startViewTransition(() => {
-      flushSync(() => setThemeState(next));
+      flushSync(() => setModeState(next));
       // The effect above sets this too; setting it here makes sure the new
       // snapshot is taken with the new theme in place.
-      document.documentElement.setAttribute('data-theme', next);
+      document.documentElement.setAttribute('data-theme', shown);
     });
   };
 
-  const toggleTheme = () => switchTheme(theme === 'dark' ? 'light' : 'dark');
-
-  const setTheme = (newTheme: Theme) => switchTheme(newTheme);
+  const toggleTheme = () => setMode(theme === 'dark' ? 'light' : 'dark');
+  const setTheme = (newTheme: Theme) => setMode(newTheme);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, mode, setMode, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

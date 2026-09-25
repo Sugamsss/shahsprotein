@@ -127,6 +127,15 @@ export const removeLine = (lines: OrderLine[], productId: string, size: string):
   return next.length === lines.length ? lines : next;
 };
 
+/**
+ * The lines that go in the message and the save: out-of-stock ones are left out
+ * (they stay in the cart with a "Back soon" note). In display order.
+ */
+export const inStockLines = (
+  lines: readonly OrderLine[],
+  isOut: (productId: string, size: string) => boolean,
+): OrderLine[] => sortLines(lines.filter((line) => !isOut(line.productId, line.size)));
+
 /** Total packs across all lines, for the header count. */
 export const countItems = (lines: readonly OrderLine[]): number =>
   lines.reduce((sum, l) => sum + l.quantity, 0);

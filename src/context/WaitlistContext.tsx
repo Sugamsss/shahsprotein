@@ -2,10 +2,12 @@ import React, { createContext, useContext, useState } from 'react';
 import { WaitlistContextType, WaitlistResponse } from '../types/waitlist';
 import { WaitlistService } from '../services/waitlistService';
 import { AnalyticsService } from '../services/analyticsService';
+import { useTheme } from './ThemeContext';
 
 const WaitlistContext = createContext<WaitlistContextType | undefined>(undefined);
 
 export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { theme } = useTheme();
   const [waitlistCount, setWaitlistCount] = useState<number>(WaitlistService.getStoredCount());
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export const WaitlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         source,
         productId,
         marketingConsent,
-        AnalyticsService.getSessionSnapshot(),
+        theme,
       );
       setWaitlistCount(res.totalCount);
 

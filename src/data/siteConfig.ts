@@ -205,6 +205,24 @@ export const siteConfig = {
     // Send
     send: 'Send order on WhatsApp',
     sendNote: 'Opens WhatsApp with your message ready to send.',
+    // In place of sendNote when every line is out and Send is off.
+    allOutNote: 'Everything in your order is out of stock right now.',
+    // The last thing in "Your details", above Send. What's saved with the order on
+    // our server (not browser storage, not analytics). Revisit if reorder nudges happen.
+    privacyNote: 'We keep your name, pincode and what you ordered, so we can look after your order.',
+
+    // Out of stock. A plain label, never a button. No dates, no "notify me".
+    // In place of "Add" / "Add to order" when every pack size is out.
+    backSoon: 'Back soon',
+    // An "Add something else" tile for a product that's all out.
+    backSoonLabel: (name: string) => `${name} is back soon`,
+    // Under the product popup's bar, and read out for that size in the switch.
+    sizeBackSoon: (size: string) => `${size} is back soon.`,
+    // Under a saved line that's out. It stays in the cart but isn't sent or counted.
+    lineBackSoon: "Back soon, so it's left out of your message.",
+    lineSizeBackSoon: (size: string) => `${size} is back soon, so it's left out of your message.`,
+    // Above the lines when every line is out (with the "Message us on WhatsApp" link). Send is disabled.
+    allBackSoon: 'Everything here is back soon. Pick something else, or just ask us in the chat.',
 
     // Sent
     sentTitle: 'Now press send in WhatsApp',
@@ -214,6 +232,7 @@ export const siteConfig = {
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapCoupon: (code: string) => `Coupon ${code}`,
+    sentCode: (code: string) => `Your order code is ${code}.`,
     newOrder: 'Start a new order',
     done: 'Done',
 
@@ -224,9 +243,11 @@ export const siteConfig = {
     announceMerged: (item: string, qty: number) => `Joined with your other ${item}. ${qty} now.`,
     announceRemoved: (item: string) => `${item} removed. Undo is available.`,
     announceEmpty: 'Your order is empty.',
+    announceBackSoon: (item: string) => `${item} is back soon, so it's left out of your message.`,
     announceCouponValid: (code: string, description: string) => `${code} applied. ${description}`,
 
-    // The WhatsApp message, piece by piece: greeting, lines, coupon and pincode, closing.
+    // The WhatsApp message, piece by piece: greeting, lines, then coupon, pincode
+    // and order code, then the closing.
     message: {
       greeting: (name: string) => `Hi! I'm ${name}, and I'd like to place an order:`,
       // Never sent in practice, because a name is required. Kept for safety.
@@ -235,6 +256,8 @@ export const siteConfig = {
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       pincode: (pincode: string) => `Pincode: ${pincode}`,
+      // The code Sunit matches to the order book. Always there: it's made when the order starts.
+      code: (code: string) => `Order code: ${code}`,
       closing: 'Could you send me the total?',
     },
   },

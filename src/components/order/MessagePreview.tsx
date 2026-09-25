@@ -12,13 +12,13 @@ const copy = siteConfig.order;
  * pincode show as highlighted blanks where they'll go. Closed each time the popup opens.
  */
 export const MessagePreview: React.FC = () => {
-  const { lines, name, pincode, messageCoupon } = useOrder();
+  const { code, sendLines, name, pincode, messageCoupon } = useOrder();
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
   const parts = useMemo(
-    () => orderMessageParts({ lines, name, pincode, coupon: messageCoupon }, { blanks: true }),
-    [lines, name, pincode, messageCoupon],
+    () => orderMessageParts({ code, lines: sendLines, name, pincode, coupon: messageCoupon }, { blanks: true }),
+    [code, sendLines, name, pincode, messageCoupon],
   );
 
   return (

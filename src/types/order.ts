@@ -34,8 +34,13 @@ export interface MessageCoupon {
   checked: boolean;
 }
 
-/** Everything the WhatsApp message needs. Name and pincode are never stored or tracked. */
+/**
+ * Everything the WhatsApp message needs, and what's saved to the order book on Send.
+ * Name and pincode are never put in storage or tracked.
+ */
 export interface OrderMessageInput {
+  /** The order code, e.g. "SN-7KQ4M" (utils/orderCode). */
+  code: string;
   lines: OrderLine[];
   name: string;
   pincode: string;

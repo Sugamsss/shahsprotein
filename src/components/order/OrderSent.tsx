@@ -2,6 +2,7 @@ import React from 'react';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
+import { saveOrder } from '../../services/orderService';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
@@ -38,13 +39,22 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
               );
             })}
           </ul>
+          <p className="order-recap__code">{copy.sentCode(sent.code)}</p>
           {meta && <p className="order-recap__meta">{meta}</p>}
         </div>
 
         <p className="order-sent__retry">
           {copy.retryLead}{' '}
-          {/* Opens the same message again. Not counted again: it's the same order. */}
-          <a href={sent.url} target="_blank" rel="noopener noreferrer" className="order-text-link">
+          {/* Opens the same message again, and saves the same order again in case the
+              first save didn't make it (the server ignores a repeat). Not counted again
+              as a click: it's the same order. */}
+          <a
+            href={sent.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="order-text-link"
+            onClick={() => saveOrder(sent)}
+          >
             {copy.retry}
           </a>
         </p>

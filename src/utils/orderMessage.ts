@@ -78,6 +78,8 @@ export const orderMessageParts = (
   if (pincode || options.blanks) {
     details.push(fill(words.pincode, pincode, 'pincode', previewBlankPincode));
   }
+  const code = toOneLine(input.code);
+  if (code) details.push([{ text: words.code(code) }]);
 
   // Blocks are separated by a blank line; an empty block is left out entirely.
   const blocks: MessagePart[][] = [

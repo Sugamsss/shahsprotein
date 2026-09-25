@@ -1,4 +1,5 @@
-import { WaitlistAnalytics, WaitlistResponse } from '../types/waitlist';
+import type { Theme } from '../types/theme';
+import { WaitlistResponse } from '../types/waitlist';
 import { siteConfig } from '../data/siteConfig';
 
 // Sign-ups are double opt-in (Loops), so a new sign-up is pending until the link is tapped.
@@ -20,7 +21,7 @@ export class WaitlistService {
     source = 'hero',
     productId?: string,
     marketingConsent = false,
-    analytics?: WaitlistAnalytics,
+    theme?: Theme,
   ): Promise<WaitlistResponse> {
     const trimmed = email.trim();
 
@@ -38,19 +39,10 @@ export class WaitlistService {
       p_email: trimmed,
       p_source: source,
       p_product_id: productId || null,
-      p_theme: analytics?.theme || null,
+      // The theme is kept on the member. Session fields (dwell, UTM, active time) are no longer sent.
+      p_theme: theme || null,
       p_marketing_consent: marketingConsent,
       p_consent_version: marketingConsent ? CONSENT_VERSION : null,
-      p_session_key: analytics?.sessionKey || null,
-      p_session_started_at: analytics?.startedAt || null,
-      p_session_ended_at: analytics?.endedAt || null,
-      p_active_seconds: analytics?.activeSeconds || 0,
-      p_section_dwell: analytics?.sectionDwell || {},
-      p_device_type: analytics?.deviceType || 'unknown',
-      p_referrer: analytics?.referrer || null,
-      p_utm_source: analytics?.utmSource || null,
-      p_utm_medium: analytics?.utmMedium || null,
-      p_utm_campaign: analytics?.utmCampaign || null,
     });
 
     if (error) {
