@@ -23,7 +23,7 @@ The owner dashboard is available at `/admin/login` after setting `VITE_SUPABASE_
 
 - Enable email/password Auth and configure a production SMTP provider.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only.
-- Add a CAPTCHA or edge rate limit before opening the public RPC to high traffic.
+- Add a CAPTCHA or edge rate limit before opening the public RPCs (`submit_waitlist_member`, `track_site_event`, `check_coupon`) to high traffic.
 - Configure Loops for waitlist double opt-in. Supabase remains the source of truth for members and admin data.
 
 ## Email functions
@@ -95,3 +95,44 @@ select jobname, schedule from cron.job where jobname = 'purge-site-events';
 select event, source, device_type, created_at from public.site_events order by created_at desc limit 10;
 ```
 
+
+## Coupons
+
+Migration `20260925000000` adds `coupons`, `coupon_check_rate_limits` and the
+public RPC `check_coupon(p_code)`, which the "Your order" popup calls when
+someone types a code. Both tables have RLS on with no policies and all grants
+revoked from anon and authenticated, so the site can't list codes or read any
+row. The only way in is the RPC, and it returns only `{"valid": true,
+"description": "..."}` or `{"valid": false}`. Expiry dates, notes and ids never
+leave the database.
+
+Codes are matched ignoring case and spaces around them (`example10` finds
+`EXAMPLE10`), and must be unique ignoring case. A code is 3 to 24 letters,
+digits or hyphens.
+
+Add a code from the SQL editor:
+
+```sql
+insert into public.coupons (code, description, expires_at, minimum_note)
+values ('EXAMPLE10', '10% off your order', '2026-10-31 23:59+05:30', '2 packs or more');
+```
+
+`expires_at` is a `timestamptz`, so write the `+05:30` for India time; leave it
+out (or `null`) for a code that doesn't expire. `minimum_note` and
+`internal_note` are private reminders for you; the customer never sees them,
+so check the minimum yourself in the WhatsApp chat.
+
+Turn a code off, or back on:
+
+```sql
+update public.coupons set active = false where upper(code) = 'EXAMPLE10';
+```
+
+The description is shown to the customer, up to 60 characters. It can't
+mention `₹`, `Rs` or `INR`: the site doesn't show prices, so a flat-off code
+reads as "Flat discount on your order" and the amount goes in the chat. The
+insert fails with a check-constraint error if it does.
+
+`check_coupon` allows 30 checks per IP per rolling hour (calls with no IP share
+one bucket). Past that it returns HTTP 429, which the site shows as "couldn't
+check", never as "not valid".
