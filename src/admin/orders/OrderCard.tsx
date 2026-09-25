@@ -3,7 +3,7 @@ import { ArrowRight, Check, IndianRupee, Instagram, Phone, Repeat, StickyNote, T
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { useTheme } from '../../context/ThemeContext';
 import { adminCopy } from '../../data/adminCopy';
-import { formatDay, formatMoney, formatWhen } from '../format';
+import { formatAge, formatDay, formatMoney, formatWhen } from '../format';
 import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
 import { laneOf, nextOf, productName, sortLines, thumbOf } from './model';
@@ -82,7 +82,7 @@ export const OrderCard: React.FC<{
   if (lane === 'collect' && o.amount != null) {
     chips.push(<span key="m" className="adm-chip adm-chip--money"><IndianRupee size={13} aria-hidden="true" />{copy.toCollect(formatMoney(o.amount))}</span>);
   }
-  if (lane === 'stale') chips.push(<span key="s" className="adm-chip">{copy.noMessage}</span>);
+  if (lane === 'stale') chips.push(<span key="s" className="adm-chip">{copy.noMessage(formatAge(o.created_at))}</span>);
   if (o.source !== 'site') chips.push(<Via key="v" source={o.source} />);
   if (o.coupon) chips.push(<span key="c" className="adm-chip"><Ticket size={13} aria-hidden="true" />{o.coupon.code}</span>);
   if (o.customer && o.customer.order_number > 1) {
@@ -116,7 +116,8 @@ export const OrderCard: React.FC<{
             <button type="button" className="adm-btn adm-btn--quiet adm-btn--xs" onClick={act('cancel')}>{copy.cancel}</button>
           </span>
         )}
-        {next && onAction && (
+        {/* A stale card keeps its pair; "They messaged, confirm it" is on the order itself. */}
+        {next && lane !== 'stale' && onAction && (
           <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" onClick={act('next')}>
             {lane === 'collect' && <Check size={16} aria-hidden="true" />}
             {next.labels[0]}

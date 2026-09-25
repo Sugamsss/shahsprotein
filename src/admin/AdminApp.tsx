@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { hasSupabaseConfig } from './api';
 import { AdminGate, useSession } from './auth';
@@ -40,6 +40,10 @@ const returnPath = (state: unknown): string => {
 const AdminApp: React.FC = () => {
   const session = useSession();
   const location = useLocation();
+  // Admin screens name the tab themselves; leaving the admin puts the site's title back.
+  // Read during the first render, before any child's effect renames the tab.
+  const [siteTitle] = useState(() => document.title);
+  useEffect(() => () => { document.title = siteTitle; }, [siteTitle]);
 
   if (!hasSupabaseConfig) return <Splash><p className="adm-splash__text">{copy.gate.notSetUp}</p></Splash>;
   if (session === undefined) return <Splash busy />;

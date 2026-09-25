@@ -78,7 +78,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
-          <PrimaryAction order={order} onNext={() => change(order, next.changes)} />
+          <PrimaryAction order={order} change={change} />
         </div>
       )}
     </div>
@@ -111,8 +111,11 @@ export const OrderPopup: React.FC<{
     const to = sequence[at + step];
     if (at >= 0 && to) navigate(`/admin/orders/${to.code}`, { replace: true });
   };
-  const lane = order ? laneOf(order) : 'done';
-  const inLane = sequence.filter((o) => laneOf(o) === lane);
+  // The board draws stale orders at the bottom of To confirm, and ← → walk
+  // through them there, so the counter counts them as to confirm too.
+  const group = (o: Order) => (laneOf(o) === 'stale' ? 'confirm' : laneOf(o));
+  const lane = order ? group(order) : 'done';
+  const inLane = sequence.filter((o) => group(o) === lane);
   const next = order && nextOf(order);
 
   // A deep link can open the popup before the order has loaded, so focus lands
@@ -167,7 +170,7 @@ export const OrderPopup: React.FC<{
           <span className="adm-od-keys" aria-hidden="true">
             <kbd>Esc</kbd> {copy.keys[0]} <kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}
           </span>
-          <PrimaryAction order={order} onNext={() => next && change(order, next.changes)} />
+          <PrimaryAction order={order} change={change} />
         </>
       )}
     >

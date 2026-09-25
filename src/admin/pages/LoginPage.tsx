@@ -23,6 +23,7 @@ const LoginPage: React.FC = () => {
   // The last session ended by itself (spec 2.14 "Session ended"): say so once.
   const [sessionEnded] = useState(endedBefore);
   useEffect(forgetSessionEnded, []);
+  useEffect(() => { document.title = copy.tabTitle(copy.tabPages.signIn, 0); }, []);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

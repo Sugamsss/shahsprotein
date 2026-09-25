@@ -6,6 +6,7 @@ import { getOverview } from './api';
 import { signOut, useAdminMe } from './auth';
 import { adminCopy as copy } from '../data/adminCopy';
 import { AdminLink, useQueryText } from './router';
+import { searchFor } from './orders/model';
 import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
@@ -124,7 +125,7 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
         <Search size={18} aria-hidden="true" />
         <input ref={search} className="adm-input" type="search" placeholder={copy.header.find}
           aria-label={copy.header.findLabel} value={value}
-          onChange={(e) => (onBoard ? setBoardQuery : setQuery)(e.target.value)}
+          onChange={(e) => (onBoard ? setBoardQuery : setQuery)(searchFor(e.target.value))}
           onKeyDown={(e) => e.key === 'Escape' && value && (onBoard ? setBoardQuery : setQuery)('')} />
         <kbd aria-hidden="true">/</kbd>
       </form>
@@ -134,6 +135,17 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
       <AccountMenu />
     </header>
   );
+};
+
+/** The page's name for the browser tab, from the path after /admin. */
+const tabPage = (pathname: string): string => {
+  const [section = '', sub = '', action = ''] = pathname.split('/').filter(Boolean).slice(1);
+  const p = copy.tabPages;
+  if (section === 'orders') return sub === 'done' ? p.done : sub === 'new' ? p.newOrder : action === 'edit' ? p.editOrder : p.orders;
+  const names: Record<string, string> = {
+    products: p.products, customers: p.customers, coupons: p.coupons, 'email-list': p.emailList, settings: p.settings, more: p.more,
+  };
+  return names[section] ?? p.home;
 };
 
 const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings)(\/|$)/;
@@ -168,6 +180,9 @@ const TabBar: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const overview = useRpc(getOverview, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   const toConfirm = overview.data?.queue.to_confirm ?? 0;
+  // "(3) Orders · Shah's": the same count as the Orders badge. AdminApp puts the site's title back.
+  const { pathname } = useLocation();
+  useEffect(() => { document.title = copy.tabTitle(tabPage(pathname), toConfirm); }, [pathname, toConfirm]);
 
   return (
     <ToastProvider>

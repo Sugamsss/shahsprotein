@@ -1,5 +1,6 @@
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
+import { ORDER_CODE_ALPHABET } from '../../utils/orderCode';
 import { firstName } from '../format';
 import type { Order, OrderChanges, OrderLine } from '../types';
 
@@ -20,9 +21,13 @@ export const laneOf = (o: Order): Lane => {
   return o.stale ? 'stale' : 'confirm';
 };
 
-/** The one-tap next step for a lane. Confirm goes through the Confirm sheet (or the popup). */
-export const NEXT: Record<(typeof LANES)[number], OrderChanges> = {
+/**
+ * The one-tap next step for a lane. Confirm goes through the Confirm sheet (or the popup).
+ * A stale order confirms the same way, once their message finally arrives.
+ */
+export const NEXT: Record<Exclude<Lane, 'done'>, OrderChanges> = {
   confirm: { status: 'confirmed' },
+  stale: { status: 'confirmed' },
   send: { status: 'sent' },
   way: { status: 'delivered' },
   collect: { paid: true },
@@ -30,7 +35,7 @@ export const NEXT: Record<(typeof LANES)[number], OrderChanges> = {
 
 export const nextOf = (o: Order) => {
   const lane = laneOf(o);
-  return lane === 'stale' || lane === 'done' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
+  return lane === 'done' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
 };
 
 /** What the toast says about a change. */
@@ -49,7 +54,12 @@ export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
   ...(changes.kept !== undefined && { kept: false }),
 });
 
-/** The change as the list should show it before the server answers. */
+/**
+ * The change as the list should show it before the server answers. The server
+ * owns `stale`; locally it only ever clears it, because a status change or
+ * Still waiting restarts the server's clock. Undoing Still waiting leaves it
+ * to the server's answer.
+ */
 export const applyLocal = (o: Order, c: OrderChanges): Order => ({
   ...o,
   ...c,
@@ -57,6 +67,19 @@ export const applyLocal = (o: Order, c: OrderChanges): Order => ({
   stale: c.status || c.kept ? false : o.stale,
   kept: c.kept ?? o.kept,
 } as Order);
+
+// The code in a WhatsApp message, e.g. "…Order code: SN-7KQ4M". A hand-added
+// clash can carry -2 or -3. Same alphabet as the site's codes.
+const CODE_IN_TEXT = new RegExp(`(?:^|[^A-Z0-9])(SN-[${ORDER_CODE_ALPHABET}]{5}(?:-[23])?)(?![A-Z0-9-])`, 'i');
+
+/**
+ * What "Find an order" searches for: the order code when the text has one (a
+ * pasted message), else the text as typed (a name, phone digits, part of a code).
+ */
+export const searchFor = (text: string): string => {
+  const code = CODE_IN_TEXT.exec(text)?.[1];
+  return code ? code.toUpperCase() : text;
+};
 
 /** Digits as the server stores them, or null if it can't be a phone (same rule as the contract). */
 export const normalisePhone = (raw: string): string | null => {

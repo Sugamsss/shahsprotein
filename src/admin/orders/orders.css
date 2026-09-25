@@ -142,7 +142,7 @@
 .adm-lane--stale .adm-count, .adm-lane__sub .adm-count { background: transparent; box-shadow: inset 0 0 0 1px var(--adm-track-off); }
 .adm-lane__hint { margin: -6px 4px 2px; color: var(--color-text-muted); font-size: 0.8125rem; line-height: 1.4; }
 .adm-lane__empty { padding: 4px 4px 0; color: var(--color-text-muted); font-size: 0.875rem; }
-.adm-lane__stale { display: grid; gap: 10px; }
+.adm-lane__stale { display: grid; gap: 10px; scroll-margin-top: 72px; }
 .adm-lane__sub { margin: 8px 6px 0; padding-top: 12px; border-top: 1px dashed var(--adm-track-off); color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 600; }
 
 .adm-donelink {
@@ -236,6 +236,9 @@
 }
 .adm-od-bar:empty { display: none; }
 .adm-od-go { flex: 1; max-width: 480px; }
+/* A stale order: Still waiting, then "They messaged, confirm it". */
+.adm-od-pair { display: flex; flex: 1; gap: 8px; max-width: 480px; }
+.adm-od-pair > .adm-btn:first-child { flex: 0 0 auto; }
 /* Room to scroll the last card clear of the band. */
 .adm-od:has(.adm-od-bar) { padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
 .adm-od-alldone { padding: 12px; color: var(--color-text-muted); }
@@ -287,6 +290,7 @@
   .adm-od-keys kbd:not(:first-child) { margin-left: 6px; }
   .adm-od-keys kbd + kbd { margin-left: 0; }
   .adm-od-popup .adm-od-go { flex: 0 0 auto; min-width: 240px; }
+  .adm-od-popup .adm-od-pair { flex: 0 0 auto; max-width: none; }
   .adm-od-popup .adm-od-alldone { margin-left: auto; }
   .adm-od-popup .adm-sheet__bar { display: flex; align-items: center; gap: 12px; }
   @media (max-height: 760px) { .adm-od-popup .adm-od-name { font-size: 1.375rem; } }
