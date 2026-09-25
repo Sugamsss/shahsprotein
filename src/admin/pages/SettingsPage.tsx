@@ -1,13 +1,12 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ChevronRight, Mail, Pencil, User } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { adminCopy } from '../../data/adminCopy';
 import type { ThemeMode } from '../../types/theme';
-import { AdminSheet } from '../AdminSheet';
-import { changePassword, getUsers, type AdminError } from '../api';
+import { changePassword, getUsers } from '../api';
 import { signOut, useAdminMe } from '../auth';
 import { firstName, formatDay } from '../format';
-import { Field, LoadError, Segmented, Skeleton } from '../parts';
+import { Field, LoadError, Segmented, SheetForm, Skeleton } from '../parts';
 import { useToast } from '../toast';
 import { useRpc } from '../useRpc';
 
@@ -17,51 +16,29 @@ const THEMES = (['light', 'dark', 'system'] as const).map((value) => ({ value, l
 // Settings (spec 2.13): who can open the admin, appearance, and you.
 
 const PasswordSheet: React.FC<{ onClose: () => void; onDone: () => void }> = ({ onClose, onDone }) => {
-  const id = useId();
   const [password, setPassword] = useState('');
   const [again, setAgain] = useState('');
-  const [problem, setProblem] = useState<{ field?: 'password' | 'again'; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<{ field: 'password' | 'again'; text: string } | null>(null);
   const firstRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
     if (password.length < 8) return setProblem({ field: 'password', text: copy.tooShort });
     if (again !== password) return setProblem({ field: 'again', text: copy.mismatch });
-    setBusy(true);
     setProblem(null);
-    try {
-      await changePassword(password);
-      onDone();
-    } catch (error) {
-      setProblem({ text: (error as AdminError).message });
-      setBusy(false);
-    }
+    await changePassword(password);
+    onDone();
   };
   const errorFor = (field: 'password' | 'again') => (problem?.field === field ? problem.text : null);
 
   return (
-    <AdminSheet
-      isOpen
-      onClose={onClose}
-      title={copy.changePassword}
-      closeLabel={adminCopy.close}
-      initialFocus={firstRef}
-      bar={
-        <button type="submit" form={`${id}-form`} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
-          {busy ? copy.changing : copy.changePassword}
-        </button>
-      }
-    >
-      <form id={`${id}-form`} className="adm-form" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        {problem && !problem.field && <p className="adm-form__error" role="alert">{problem.text}</p>}
-        <Field label={copy.newPassword} hint={copy.tooShort} error={errorFor('password')}>
-          <input ref={firstRef} className="adm-input" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </Field>
-        <Field label={copy.again} error={errorFor('again')}>
-          <input className="adm-input" type="password" autoComplete="new-password" value={again} onChange={(event) => setAgain(event.target.value)} />
-        </Field>
-      </form>
-    </AdminSheet>
+    <SheetForm title={copy.changePassword} submitLabel={copy.changePassword} busyLabel={copy.changing} onClose={onClose} onSubmit={save} initialFocus={firstRef}>
+      <Field label={copy.newPassword} hint={copy.tooShort} error={errorFor('password')}>
+        <input ref={firstRef} className="adm-input" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
+      </Field>
+      <Field label={copy.again} error={errorFor('again')}>
+        <input className="adm-input" type="password" autoComplete="new-password" value={again} onChange={(event) => setAgain(event.target.value)} />
+      </Field>
+    </SheetForm>
   );
 };
 

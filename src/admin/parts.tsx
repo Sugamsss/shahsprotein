@@ -1,8 +1,10 @@
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import { adminCopy as copy } from '../data/adminCopy';
+import { AdminSheet } from './AdminSheet';
+import { toAdminError } from './api';
 
-// Small shared parts for the admin screens (spec 2.3): a form field, a segmented
-// switch, the load error, skeletons. Styles: parts.css.
+// Small shared parts for the admin screens (spec 2.3): a form field, a sheet
+// with a form, a segmented switch, the load error, skeletons. Styles: parts.css.
 
 /**
  * A labelled field. Pass one input (or textarea, select) as the child: Field
@@ -39,6 +41,54 @@ export const Field: React.FC<{
       </div>
       {note && <span id={`${id}-note`} className={error ? 'adm-field__error' : 'adm-field__hint'}>{note}</span>}
     </div>
+  );
+};
+
+/**
+ * A sheet whose body is one form and whose pinned bar is its submit button
+ * (Coupons' new/edit, Settings' change password). `onSubmit` does the page's
+ * own checks (return early to stay) and the save; while it runs the button says
+ * `busyLabel`, and if it throws, the server's message shows at the top.
+ */
+export const SheetForm: React.FC<{
+  title: string;
+  submitLabel: string;
+  busyLabel: string;
+  onClose: () => void;
+  onSubmit: () => Promise<void>;
+  initialFocus?: React.RefObject<HTMLElement>;
+  children: React.ReactNode;
+}> = ({ title, submitLabel, busyLabel, onClose, onSubmit, initialFocus, children }) => {
+  const id = useId();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await onSubmit();
+    } catch (err) {
+      setError(toAdminError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <AdminSheet
+      isOpen
+      onClose={onClose}
+      title={title}
+      closeLabel={copy.close}
+      initialFocus={initialFocus}
+      bar={<button type="submit" form={id} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>{busy ? busyLabel : submitLabel}</button>}
+    >
+      <form id={id} className="adm-form" noValidate onSubmit={submit}>
+        {error && <p className="adm-form__error" role="alert">{error}</p>}
+        {children}
+      </form>
+    </AdminSheet>
   );
 };
 

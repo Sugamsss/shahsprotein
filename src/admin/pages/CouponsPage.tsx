@@ -1,10 +1,9 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ClipboardList, Pencil, Plus } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
-import { AdminSheet } from '../AdminSheet';
-import { createCoupon, getCoupons, setCouponActive, updateCoupon, type AdminError } from '../api';
+import { createCoupon, getCoupons, setCouponActive, updateCoupon } from '../api';
 import { endOfDayIst, formatDay, formatDayInSentence, istDateValue } from '../format';
-import { Field, LoadError, Skeleton } from '../parts';
+import { Field, LoadError, SheetForm, Skeleton } from '../parts';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Coupon } from '../types';
@@ -53,28 +52,23 @@ const CouponCard: React.FC<{ coupon: Coupon; onActive: (active: boolean) => void
 const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSaved: () => void }> = ({
   coupon, onClose, onSaved,
 }) => {
-  const id = useId();
   const [code, setCode] = useState(coupon?.code ?? '');
   const [gives, setGives] = useState(coupon?.description ?? '');
   const [ends, setEnds] = useState(coupon?.expires_at ? istDateValue(coupon.expires_at) : '');
   const [note, setNote] = useState(coupon?.internal_note ?? '');
-  const [problem, setProblem] = useState<{ field?: 'code' | 'gives'; text: string } | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<{ field: 'code' | 'gives'; text: string } | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   const givesRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
     if (!coupon && !CODE.test(code)) {
       setProblem({ field: 'code', text: copy.codeInvalid });
-      codeRef.current?.focus();
-      return;
+      return codeRef.current?.focus();
     }
     if (!gives.trim()) {
       setProblem({ field: 'gives', text: copy.givesMissing });
-      givesRef.current?.focus();
-      return;
+      return givesRef.current?.focus();
     }
-    setSaving(true);
     setProblem(null);
     const fields = {
       description: gives.trim(),
@@ -82,59 +76,47 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
       minimum_note: coupon?.minimum_note ?? null, // kept as it was
       internal_note: note.trim() || null,
     };
-    try {
-      if (coupon) await updateCoupon(coupon.id, coupon.active, fields);
-      else await createCoupon(code, fields);
-      onSaved();
-    } catch (error) {
-      setProblem({ text: (error as AdminError).message });
-      setSaving(false);
-    }
+    if (coupon) await updateCoupon(coupon.id, coupon.active, fields);
+    else await createCoupon(code, fields);
+    onSaved();
   };
 
   const errorFor = (field: 'code' | 'gives') => (problem?.field === field ? problem.text : null);
 
   return (
-    <AdminSheet
-      isOpen
-      onClose={onClose}
+    <SheetForm
       title={coupon ? copy.sheetEdit : copy.sheetNew}
-      closeLabel={adminCopy.close}
+      submitLabel={copy.save}
+      busyLabel={copy.saving}
+      onClose={onClose}
+      onSubmit={save}
       initialFocus={coupon ? givesRef : codeRef}
-      bar={
-        <button type="submit" form={`${id}-form`} className="adm-btn adm-btn--primary adm-btn--block" disabled={saving}>
-          {saving ? copy.saving : copy.save}
-        </button>
-      }
     >
-      <form id={`${id}-form`} className="adm-form" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        {problem && !problem.field && <p className="adm-form__error" role="alert">{problem.text}</p>}
-        <Field label={copy.code} hint={copy.codeHint} error={errorFor('code')}>
-          <input
-            ref={codeRef}
-            className="adm-input adm-input--mono"
-            value={code}
-            readOnly={coupon !== null}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={24}
-            onChange={(event) => setCode(event.target.value.toUpperCase().replace(/\s/g, ''))}
-          />
+      <Field label={copy.code} hint={copy.codeHint} error={errorFor('code')}>
+        <input
+          ref={codeRef}
+          className="adm-input adm-input--mono"
+          value={code}
+          readOnly={coupon !== null}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={24}
+          onChange={(event) => setCode(event.target.value.toUpperCase().replace(/\s/g, ''))}
+        />
+      </Field>
+      <Field label={copy.gives} hint={copy.givesHint} error={errorFor('gives')}>
+        <input ref={givesRef} className="adm-input" value={gives} maxLength={120} onChange={(event) => setGives(event.target.value)} />
+      </Field>
+      <div className="adm-form__pair">
+        <Field label={copy.endsOn} optional={copy.optional}>
+          <input className="adm-input" type="date" value={ends} min={istDateValue()} onChange={(event) => setEnds(event.target.value)} />
         </Field>
-        <Field label={copy.gives} hint={copy.givesHint} error={errorFor('gives')}>
-          <input ref={givesRef} className="adm-input" value={gives} maxLength={120} onChange={(event) => setGives(event.target.value)} />
+        <Field label={copy.note} optional={copy.noteOnlyYou}>
+          <input className="adm-input" value={note} placeholder={copy.notePlaceholder} onChange={(event) => setNote(event.target.value)} />
         </Field>
-        <div className="adm-form__pair">
-          <Field label={copy.endsOn} optional={copy.optional}>
-            <input className="adm-input" type="date" value={ends} min={istDateValue()} onChange={(event) => setEnds(event.target.value)} />
-          </Field>
-          <Field label={copy.note} optional={copy.noteOnlyYou}>
-            <input className="adm-input" value={note} placeholder={copy.notePlaceholder} onChange={(event) => setNote(event.target.value)} />
-          </Field>
-        </div>
-      </form>
-    </AdminSheet>
+      </div>
+    </SheetForm>
   );
 };
 
