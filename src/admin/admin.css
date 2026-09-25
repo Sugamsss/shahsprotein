@@ -262,8 +262,3 @@
   .adm-btn, .adm-input { transition: none; }
   .adm-btn:active { transform: none; }
 }
-
-/* ---- Lane A: the switch knob (design's --adm-knob, the same in both themes) ---- */
-:root {
-  --adm-knob: #ffffff;
-}
