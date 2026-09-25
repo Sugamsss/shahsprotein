@@ -2,7 +2,7 @@
 
 The public site for Shah's Nutrition, a small healthy-food brand from Satara. The brand launched on **2026-09-23**. The site's job is to **help people order on WhatsApp**, and to answer the questions of people holding a pack (the URL is printed on every pack). Email sign-up is a smaller, secondary choice for people who aren't ready to order yet.
 
-Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Supabase stores email sign-ups and runs the owner dashboard (`/admin`). Loops sends the double opt-in email.
+Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Supabase stores email sign-ups and saved orders, and runs the order book (`/admin`). Loops sends the double opt-in email.
 
 ---
 
@@ -15,7 +15,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 
 ## 2. Themes and design tokens
 
-Tokens live in `src/styles/tokens.css` (type, spacing, radii, z-index) and per theme in `src/styles/light-theme.css` and `src/styles/dark-theme.css`. The theme is stored in `localStorage` (`shahsnutrition_theme`), falling back to the system setting. `index.html` applies it before first paint.
+Tokens live in `src/styles/tokens.css` (type, spacing, radii, z-index) and per theme in `src/styles/light-theme.css` and `src/styles/dark-theme.css`. The theme follows the device until someone picks one with the toggle; only then is it stored in `localStorage` (`shahsnutrition_theme`). With nothing stored it follows the device live (`ThemeContext` `mode`: light, dark or system; the admin's Settings offers "Like my phone"). `index.html` applies it before first paint.
 
 - **Dark:** obsidian surface (`#1f1f1f`), warm gold accent (`#d4af37` to `#b89327`) with dark button text.
 - **Light:** soft sky-to-blush canvas (`#eef4fc` base), blue accent (`#3b82f6` to `#2563eb`) with white button text.
@@ -39,12 +39,12 @@ Rules:
 
 ### The "Your order" popup
 
-People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): we reply on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no accounts and no order database.
+People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): we reply on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
 
 - **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
-- **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, and "See your message", which shows the exact text. **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
+- **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, "See your message", which shows the exact text, and a short privacy note ("We keep your name, pincode and what you ordered, so we can look after your order."). **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
 - **Order of lines.** Always product order (Raggi Jaggi, Muesli, Date Bites), smaller pack first, in the popup and in the message (`sortLines`).
-- **What's kept.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, pincode and the coupon stay in memory for the visit and are never saved. At Send the cart is cleared, and a snapshot stays in memory so the "Now press send in WhatsApp" panel can offer **Try again**. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
+- **What's kept in the browser.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, pincode, the coupon and the order code stay in memory for the visit and never go into browser storage (they're sent to our server with the order on Send). At Send the cart is cleared, and a snapshot stays in memory so the "Now press send in WhatsApp" panel can offer **Try again**. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
 - **The message** comes from `buildOrderMessage` (`src/utils/orderMessage.ts`), with its words in `siteConfig.order.message`:
 
   ```
@@ -55,16 +55,28 @@ People build their order on the site and send Sunit one tidy WhatsApp message on
 
   Coupon: EXAMPLE10
   Pincode: 415001
+  Order code: SN-7KQ4M
 
   Could you send me the total?
   ```
 
-  A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out.
+  A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out. The order code is always there: it's made when the order starts. The sent panel also shows it ("Your order code is SN-7KQ4M.").
 - **State** lives in `OrderContext` (`src/context/OrderContext.tsx`). All popup copy is in `siteConfig.order`. The popup body is lazy-loaded.
+
+### Saved orders
+
+- **The code.** `SN-` plus 5 characters from an alphabet with no look-alikes (`23456789ABCDEFGHJKMNPQRSTVWXYZ`), made in the browser with `crypto.getRandomValues` (`src/utils/orderCode.ts`). The browser makes it because Send has to open WhatsApp straight away: anything awaited before the link opens gets blocked on iOS and in in-app browsers.
+- **The save.** Send builds the link, then `saveOrder` (`src/services/orderService.ts`) posts to the RPC `submit_order` with `fetch(..., { keepalive: true })` and doesn't wait. If the save fails, the WhatsApp message still goes, and Sunit adds the order by hand with the code from the chat. **Try again** saves the same order again, and the server ignores a repeat. Only the live site saves (the same host rule as click tracking, below).
+- **On the server.** `submit_order` checks everything again, allows 10 orders per IP per hour and 300 per hour overall, and ignores a repeat of the same order. If two different orders get the same code (rare), the second is stored as `SN-7KQ4M-2`. Orders keep the name, pincode and items; Sunit adds the phone in the admin. They're kept with no auto-delete.
+- **A saved order means "they tapped Send", not "they bought".** Statuses in the admin turn it into a real record.
+
+### Stock
+
+Pranjali turns a pack size off in the admin (Products). The site reads which sizes are out with one GET to `get_product_stock` (`src/services/stockService.ts`, plain `fetch`, no supabase-js), caches the answer in localStorage (`shahs-stock-v1`), and **fails open**: if the check fails, everything stays orderable. A product with every size out shows a **Back soon** label instead of **+ Add** and **Add to order**. One size out is disabled in the size switch ("500 g is back soon."). A saved cart line that's now out stays in the cart, dimmed, and is left out of the message, the save and the pack count. If every line is out, Send is off and says why.
 
 ### Coupons
 
-Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; we work out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes at `/admin/coupons` (see §7).
+Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; we work out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes in the admin under Coupons (see §7).
 
 ### Direct WhatsApp links
 
@@ -72,12 +84,12 @@ Codes live **only in Supabase** (`public.coupons`), never in the site code or th
 
 **Order click tracking.** A `whatsapp_order_click` is recorded only when something actually opens WhatsApp to order: the popup's Send (`trackOrderSend`, source `order-popup:<place that opened it>`, or `order-popup`), the empty popup's chat link (`order-popup:chat`), and the direct links (`faq`, `nutrition:<id>`, `footer`). Buttons that only open the popup record nothing. The name, pincode and coupon are never recorded. `trackOrderClick` calls `AnalyticsService.trackSiteEvent`, which posts `{ p_event, p_source, p_device_type, p_theme }` to the Supabase RPC `track_site_event` with `fetch(..., { keepalive: true })`. It is fire and forget: never awaited, errors ignored, so it can't delay opening WhatsApp. Rows go to `site_events` (migration `20260924000000`) and hold no PII: no IP, user agent, session key or link to a member.
 
-- **Only the live site writes.** Events are sent when the build is a production build *and* the host is `shahsnutrition.food` or `www.shahsnutrition.food` (`PRODUCTION_HOSTS` in `analyticsService.ts`). Local dev, `vite preview` and Vercel preview deploys only log to the console, because `.env.local` and previews point at the production Supabase. **If the domain changes, update `PRODUCTION_HOSTS` or clicks stop being recorded.** `VITE_TRACK_EVENTS=true` forces sending, for testing against a local Supabase only.
+- **Only the live site writes.** Events are sent when the build is a production build *and* the host is `shahsnutrition.food` or `www.shahsnutrition.food` (`PRODUCTION_HOSTS` in `src/services/publicRpc.ts`, shared with order saves). Local dev, `vite preview` and Vercel preview deploys only log to the console, because `.env.local` and previews point at the production Supabase. **If the domain changes, update `PRODUCTION_HOSTS` or clicks and orders stop being recorded.** `VITE_TRACK_EVENTS=true` forces sending, for testing against a local Supabase (or a deliberately switched-on preview).
 - **The source list is enforced in the database.** `track_site_event` rejects unknown events and any source outside the allowed list: `header`, `hero`, `faq`, `banner`, `footer`, `product:<id>`, `product-details:<id>`, `nutrition:<id>`, `order-popup`, and `order-popup:` + `header`, `hero`, `banner`, `footer`, `product`, `product-details` or `chat` (product ids: lowercase letters, digits and dashes). The older sources stay allowed so past rows still count (migrations `20260925000001` and `000003`). A new button with a new kind of source needs a migration that updates the check in both the function and the `site_events` table.
 - **Rate limits:** 60 clicks per IP per hour (hashed IP, kept about an hour in `site_event_rate_limits`, never joined to events) and 3,000 clicks per hour overall. Over the limit, clicks are dropped quietly.
 - **Retention:** 13 months, purged daily at 03:15 UTC by the `purge-site-events` cron job.
 
-Other events (`waitlist_submission_*`, `render_error`) still only log in development. Section dwell time is only stored alongside an email sign-up.
+Other events (`waitlist_submission_*`, `render_error`) still only log in development. The site no longer records section dwell time or UTM data with sign-ups (the old `analytics_sessions` rows are kept, nothing new is written).
 
 ## 4. Page sections (top to bottom)
 
@@ -133,13 +145,15 @@ Consent versions stored per member:
 
 The public page no longer fetches or shows a sign-up count. The confirmation email's wording lives in Loops, not in this repo.
 
-## 7. Owner dashboard
+## 7. The admin (order book)
 
-`/admin` (Supabase Auth, `admin_users`) shows members, campaigns, coupons and analytics. It still says "waitlist", which is fine because only the founder sees it. Setup is in `supabase/README.md`.
+`/admin` is the order book for Pranjali and Sunit, on phone and laptop. Sign-in is Supabase Auth, and only people in `admin_users` get in. It's its own lazy chunk, so the landing page never downloads it. Setup and RPCs are in `supabase/README.md`; code is in `src/admin/`, copy in `src/data/adminCopy.ts`.
 
-**Analytics** (`/admin/analytics`, `AdminAnalytics.tsx`) opens with **WhatsApp order clicks**: total clicks, a mobile/desktop/tablet split, and clicks per button (e.g. "Product card · Raggi Jaggi") with the last click time, for the last 7 days, last 30 days or all time. It reads through the admin-only RPC `get_admin_order_clicks(p_days)`. Popup sends show as "Order popup, sent · <button that opened it>". Consented sessions are listed below it.
-
-**Coupons** (`/admin/coupons`, `AdminCoupons.tsx`) lists every code with its public description, status (On, Off, or Ended once its end date has passed), end date and private minimum note. Pranjali can add a code, edit it, or turn it on and off. There's no delete: turning a code off retires it and keeps its history, and a code can't be renamed. The end date is stored as the end of that day in India time. It uses admin-only RPCs (`get_admin_coupons`, `create_admin_coupon`, `update_admin_coupon`, `set_admin_coupon_active`), and server errors are written for her and shown as they come.
+- **Home.** What's waiting (to confirm, to send, money to collect, on the way, didn't come through), this week, what's selling (30 days), stock that's off, and coupons used.
+- **Orders.** Lanes on the phone and a board on the laptop: To confirm, To send, On the way, To collect. Each card has its next step as one tap, with Undo. Statuses are New → Confirmed → Sent → Delivered, plus Cancelled; **Paid** is a separate yes/no (some pay on delivery). A New order untouched for 48 hours shows under "Didn't come through?" with **Still waiting** (off the list for 2 more days) and **Cancel**. One order opens as a page on the phone and a popup over the board on the laptop, with its history. Search by code, name or phone. **Done** is a table on the laptop. Orders export to CSV.
+- **Add or edit an order** by hand, for orders that came by WhatsApp, a call, Instagram or in person ("Came via").
+- **Products** (stock switches), **Customers** (grouped by phone, with their orders), **Coupons** (add, edit, on/off, how often used), **Email list** (with CSV), **Settings** (who has access, appearance, password, sign out).
+- The amount Sunit quoted is private to the admin. ₹ amounts are fine there; the "no prices" rule is for the public site.
 
 ## 8. Meta
 

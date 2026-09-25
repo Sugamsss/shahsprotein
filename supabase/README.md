@@ -8,22 +8,26 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-Create the first owner account in Supabase Auth, then add that user to `public.admin_users` from the SQL editor:
+**Adding someone to the admin.** Invite them in the dashboard (**Authentication → Users → Invite user**) so they set their own password, then add them to `public.admin_users` from the SQL editor. The `display_name` is what the admin greets them with. Type the real email only in the live project, never in this repo:
 
 ```sql
 insert into public.admin_users (id, email, display_name)
 select id, email, 'Owner'
 from auth.users
-where email = 'owner@example.com';
+where email = 'owner@example.com'
+on conflict (id) do nothing;
 ```
 
-The owner dashboard is available at `/admin/login` after setting `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the deployment environment.
+If the invite email doesn't arrive (Supabase's built-in mailer only sends to the project's team unless custom SMTP is set up), create the user with **Add user** (auto-confirm) and a temporary password they change in the admin's Settings.
+
+The admin is at `/admin` once `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in the deployment environment. Signed in but not in `admin_users` shows "This account can't open the admin".
 
 ## Required production configuration
 
 - Enable email/password Auth and configure a production SMTP provider.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only.
-- Add a CAPTCHA or edge rate limit before opening the public RPCs (`submit_waitlist_member`, `track_site_event`, `check_coupon`) to high traffic.
+- Keep public sign-ups off in Supabase Auth. Only invited people have accounts.
+- The public RPCs are `submit_waitlist_member`, `track_site_event`, `check_coupon`, `submit_order` and `get_product_stock`. Each write is rate-limited in SQL; add a CAPTCHA (e.g. Turnstile on `submit_order`) if junk shows up.
 - Configure Loops for waitlist double opt-in. Supabase remains the source of truth for members and admin data.
 
 ## Email functions
@@ -31,13 +35,12 @@ The owner dashboard is available at `/admin/login` after setting `VITE_SUPABASE_
 ```bash
 supabase functions deploy sync-waitlist-loops
 supabase functions deploy loops-webhook --no-verify-jwt
-supabase functions deploy unsubscribe --no-verify-jwt
 supabase secrets set LOOPS_FORM_ENDPOINT="https://app.loops.so/api/newsletter-form/<form-id>" LOOPS_WAITLIST_MAILING_LIST_ID=<mailing-list-id>
 supabase secrets set LOOPS_SIGNING_SECRET=<signing-secret>
 supabase secrets set RESEND_API_KEY=... WAITLIST_OWNER_EMAIL="pranjalishah25@gmail.com,sugamsh08@gmail.com" EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>"
 ```
 
-`sync-waitlist-loops` is invoked after Supabase stores a new signup and is non-blocking. It submits the email, Waitlist mailing list ID, and optional source as `application/x-www-form-urlencoded` to the Loops Form endpoint. Loops owns double opt-in; provider errors are logged and reported as `stored: true` so they never falsely undo a stored signup. Set the endpoint and list ID as Supabase secrets, not frontend variables. Because the function is callable with the public anon key, it only posts to Loops (and sends the owner alert) for an active member whose `signed_up_at`, or `verified_at` after a resubscribe, is within the last 10 minutes. Every other call, including an unknown email, gets the same `202 { "accepted": true }`, so it cannot be used to re-send Loops emails to people already on the list or to check whether an address is on it. The old `send-waitlist-confirmation` and `verify-waitlist-email` functions are retired and should not be deployed. Keep `unsubscribe` deployed: `send-admin-email` still uses it as the fallback unsubscribe handler for custom Resend campaign URLs.
+`sync-waitlist-loops` is invoked after Supabase stores a new signup and is non-blocking. It submits the email, Waitlist mailing list ID, and optional source as `application/x-www-form-urlencoded` to the Loops Form endpoint. Loops owns double opt-in; provider errors are logged and reported as `stored: true` so they never falsely undo a stored signup. Set the endpoint and list ID as Supabase secrets, not frontend variables. Because the function is callable with the public anon key, it only posts to Loops (and sends the owner alert) for an active member whose `signed_up_at`, or `verified_at` after a resubscribe, is within the last 10 minutes. Every other call, including an unknown email, gets the same `202 { "accepted": true }`, so it cannot be used to re-send Loops emails to people already on the list or to check whether an address is on it. The old `send-waitlist-confirmation`, `verify-waitlist-email`, `send-admin-email` and `unsubscribe` functions are retired and should not be deployed (Loops handles unsubscribes).
 
 The same function sends a separate owner-only alert through Resend after confirming the member exists in Supabase. Loops does not provide an appropriate internal-notification path here; its Form endpoint is for contacts and double opt-in. `RESEND_API_KEY` and `WAITLIST_OWNER_EMAIL` stay server-side. Set `WAITLIST_OWNER_EMAIL` to one address or a comma-separated list (for example, `pranjalishah25@gmail.com,sugamsh08@gmail.com`) to send one alert to each recipient. Alerts use a member-based Resend idempotency key and are retried when delivery or status recording fails; they never block the signup or create a fake Loops contact.
 
@@ -45,42 +48,45 @@ In Loops, open **Settings → Webhooks**, set the endpoint to `https://<project-
 
 The published Loops double opt-in email is branded as follows: `Pranjali from Shah’s Nutrition` sends from `hello@mail.shahsnutrition.food` and replies to `pranjalishah25@gmail.com`. Its subject is `Confirm your Shah’s Nutrition waitlist spot`, the preview says `One quick click to confirm your email and save your spot.`, and the body asks the subscriber to confirm before receiving launch updates and early access. The confirmation button uses the Shah’s Nutrition gold accent. Loops automatically adds the configured company name and physical address footer.
 
-## CRM admin functions
+## Orders and the admin
 
-Migration `20260727000003` adds member tags/notes/status tracking, `email_campaigns` and `email_log` tables, and admin-safe RPCs.
+Migrations `20260926000000` to `000004` add the order book and remove the old waitlist-era admin (its CRM, campaign and unsubscribe functions, and the empty `email_campaigns`, `email_log` and `waitlist_email_tokens` tables). `analytics_sessions` and its rows are kept, but nothing writes to it any more.
 
-### Deploy the send-admin-email edge function
+**Tables** (RLS on, no policies, all grants revoked; the only ways in are the functions below):
 
-```bash
-supabase functions deploy send-admin-email
-supabase secrets set RESEND_API_KEY=... PUBLIC_SITE_URL=https://www.shahsnutrition.food EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>" EMAIL_REPLY_TO=pranjalishah25@gmail.com
-```
+| Table | What |
+|---|---|
+| `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`new`, `confirmed`, `sent`, `delivered`, `cancelled`), `paid_at` (null = not paid), `kept_at` ("Still waiting"), name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
+| `order_lines` | Product id, size and quantity per order. Checked for shape only; names come from `src/data/products.ts`. |
+| `order_events` | History, written only by a trigger: created, each status, paid/unpaid, kept/unkept, with who did it. |
+| `product_stock` | Product and size that are off the site. A missing row means in stock. |
+| `order_rate_limits` | Hashed IPs for about an hour, cleared by `purge_site_events()`. |
 
-The function validates the caller is an admin via JWT, accepts up to 100 member IDs, excludes unsubscribed/non-consenting/bounced/spam members, sends via Resend with unsubscribe links, logs delivery/failure to `email_log`, and returns per-member results.
+**Public RPCs:**
+- `submit_order(p_code, p_lines, p_name, p_pincode, p_coupon)`: the popup's Send. 10 per IP per hour, 300 per hour overall (`PT429`). Bad input raises `22023`. A repeat of the same order does nothing; a different order with a taken code is stored as `-2`, `-3`… A malformed coupon is dropped, not an error.
+- `get_product_stock(apikey text default null)`: `[{product_id, size, since}]` for what's off, `[]` when all is in. It's `stable`, so the site calls it with a plain GET, `/rest/v1/rpc/get_product_stock?apikey=<anon key>`. The `apikey` parameter is ignored; it's there because PostgREST treats every query-string key as an argument, and a gateway that passes `?apikey=` through would otherwise answer 404.
 
-### Admin RPCs available
+**Admin RPCs** (granted to `authenticated` only; each checks `is_admin()`):
 
 | Function | Purpose |
 |---|---|
-| `get_admin_waitlist(p_page, p_per_page, p_search, p_source, p_theme, p_marketing_consent, p_status)` | List members with session stats and new fields |
-| `get_admin_member_detail(p_member_id)` | Full member profile + sessions + email log |
-| `update_admin_member(p_member_id, p_tags, p_notes, p_status, p_marketing_consent, p_product_id, p_theme)` | Update member fields |
-| `get_admin_campaigns(p_page, p_per_page)` | List campaigns with delivery stats |
-| `get_admin_campaign_log(p_campaign_id, p_page, p_per_page)` | Campaign delivery log |
-| `get_waitlist_count_stats()` | Consistent count breakdown (active, bounced, etc.) |
-| `get_admin_order_clicks(p_days)` | WhatsApp order clicks by source and device; `p_days = null` for all time |
-| `get_admin_coupons()` | All coupon codes with private notes, newest first |
-| `create_admin_coupon(p_code, p_description, p_expires_at, p_minimum_note, p_internal_note)` | Add a code (starts on; expiry must be in the future) |
-| `update_admin_coupon(p_id, p_description, p_active, p_expires_at, p_minimum_note, p_internal_note)` | Replace a code's editable fields; the code itself is fixed |
-| `set_admin_coupon_active(p_id, p_active)` | Turn a code on or off |
+| `get_admin_me()` | Who's signed in (the admin's auth gate) |
+| `get_admin_users()` | Who has access |
+| `get_admin_orders(p_view, p_status, p_paid, p_search, p_phone, p_source, p_from, p_to, p_before, p_limit)` | Orders with their lines. Views `todo`, `done`, `all`. Search by code, name or phone. `p_from` inclusive, `p_to` exclusive. Page with `next_before`; a page can run slightly over `p_limit` so it never splits orders saved at the same moment. |
+| `get_admin_order(p_code)` | One order with history and a phone suggestion; null if none |
+| `update_admin_order(p_id, p_changes)` | Quick changes: status, paid, kept, phone, amount, note, name, pincode (only the keys sent change). Also Undo. |
+| `save_admin_order(p_id, p_order)` | Add by hand (`p_id` null) or a full edit. Call with named arguments. |
+| `delete_admin_order(p_id)` | Deletes one order for good |
+| `get_admin_overview()` | Home and the badge: what's waiting, this week (Monday start, India time), what's selling and coupons (30 days, confirmed and later), done counts, email count |
+| `get_admin_customers(p_search)` | People grouped by phone |
+| `set_admin_stock(p_product_id, p_size, p_in_stock)` | The stock switch |
+| `get_admin_coupons()`, `create_admin_coupon`, `update_admin_coupon`, `set_admin_coupon_active` | Coupons, with how often each was used |
+| `get_admin_email_list()` | Email list members and counts |
 
-All admin RPCs check `public.is_admin()`. A non-admin gets an `Unauthorized` error (HTTP 400 from PostgREST); anon has no execute grant on the newer ones and gets a 401.
+- **Errors:** plain messages for people use errcode `22023` and are shown as they come. **Not an admin comes back as HTTP 400, code `P0001`, message `Unauthorized`** (anon gets 401). The admin matches on the message.
+- **"Didn't come through?"**: an order that's been New for 48 hours, and wasn't marked "Still waiting" in the last 48 hours (`order_is_stale()`).
 
-Migration `20260727000006` enables `pg_cron`, restricts
-`purge_waitlist_retention()` execution to `service_role`, and schedules the
-existing retention cleanup daily at **03:00 UTC** under the
-`purge-waitlist-retention` job name. The migration replaces an existing job
-with that name when rerun; no external scheduler is required.
+**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
 
 ## WhatsApp order click tracking
 
@@ -123,8 +129,8 @@ digits or hyphens.
 
 ### From the admin area
 
-Migration `20260925000002` adds admin-only RPCs (listed in the table above) for
-the coupon screen in the admin area. There you can list every code, add one,
+Migration `20260925000002` adds admin-only RPCs (listed above) for the coupon
+screen in the admin area. There you can list every code, add one,
 turn it on or off, set or clear its expiry, and keep a private minimum note and
 internal note. Codes are saved in capitals. A few rules:
 
