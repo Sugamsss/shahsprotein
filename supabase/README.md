@@ -58,12 +58,12 @@ supabase functions deploy sync-waitlist-loops
 supabase functions deploy loops-webhook --no-verify-jwt
 supabase secrets set LOOPS_FORM_ENDPOINT="https://app.loops.so/api/newsletter-form/<form-id>" LOOPS_WAITLIST_MAILING_LIST_ID=<mailing-list-id>
 supabase secrets set LOOPS_SIGNING_SECRET=<signing-secret>
-supabase secrets set RESEND_API_KEY=... WAITLIST_OWNER_EMAIL="pranjalishah25@gmail.com,sugamsh08@gmail.com" EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>"
+supabase secrets set RESEND_API_KEY=... WAITLIST_OWNER_EMAIL="pranjalishah25@gmail.com,owner@example.com" EMAIL_FROM="Shah's Nutrition <hello@shahsnutrition.food>"
 ```
 
 `sync-waitlist-loops` is invoked after Supabase stores a new signup and is non-blocking. It submits the email, Waitlist mailing list ID, and optional source as `application/x-www-form-urlencoded` to the Loops Form endpoint. Loops owns double opt-in; provider errors are logged and reported as `stored: true` so they never falsely undo a stored signup. Set the endpoint and list ID as Supabase secrets, not frontend variables. Because the function is callable with the public anon key, it only posts to Loops (and sends the owner alert) for an active member whose `signed_up_at`, or `verified_at` after a resubscribe, is within the last 10 minutes. Every other call, including an unknown email, gets the same `202 { "accepted": true }`, so it cannot be used to re-send Loops emails to people already on the list or to check whether an address is on it. The old `send-waitlist-confirmation`, `verify-waitlist-email`, `send-admin-email` and `unsubscribe` functions are retired and should not be deployed (Loops handles unsubscribes).
 
-The same function sends a separate owner-only alert through Resend after confirming the member exists in Supabase. Loops does not provide an appropriate internal-notification path here; its Form endpoint is for contacts and double opt-in. `RESEND_API_KEY` and `WAITLIST_OWNER_EMAIL` stay server-side. Set `WAITLIST_OWNER_EMAIL` to one address or a comma-separated list (for example, `pranjalishah25@gmail.com,sugamsh08@gmail.com`) to send one alert to each recipient. Alerts use a member-based Resend idempotency key and are retried when delivery or status recording fails; they never block the signup or create a fake Loops contact.
+The same function sends a separate owner-only alert through Resend after confirming the member exists in Supabase. Loops does not provide an appropriate internal-notification path here; its Form endpoint is for contacts and double opt-in. `RESEND_API_KEY` and `WAITLIST_OWNER_EMAIL` stay server-side. Set `WAITLIST_OWNER_EMAIL` to one address or a comma-separated list (for example, `pranjalishah25@gmail.com,owner@example.com`) to send one alert to each recipient. Alerts use a member-based Resend idempotency key and are retried when delivery or status recording fails; they never block the signup or create a fake Loops contact.
 
 In Loops, open **Settings → Webhooks**, set the endpoint to `https://<project-ref>.supabase.co/functions/v1/loops-webhook`, save the generated signing secret as `LOOPS_SIGNING_SECRET`, and enable `contact.created`, `contact.mailingList.unsubscribed`, `contact.unsubscribed`, `email.unsubscribed`, `email.spamReported`, and `email.hardBounced`. The webhook verifies `Webhook-Id`, `Webhook-Timestamp`, and `Webhook-Signature`, marks confirmed members verified, and syncs unsubscribe, spam, and hard-bounce states by normalized email. Test events and duplicate deliveries are acknowledged safely.
 
@@ -105,7 +105,8 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 | `get_admin_email_list()` | Email list members and counts |
 
 - **Errors:** plain messages for people use errcode `22023` and are shown as they come. **Not an admin comes back as HTTP 400, code `P0001`, message `Unauthorized`** (anon gets 401). The admin matches on the message.
-- **"Didn't come through?"**: an order that's been New for 48 hours, and wasn't marked "Still waiting" in the last 48 hours (`order_is_stale()`).
+- **"Didn't come through?"**: a site order that's been New for 48 hours, and wasn't marked "Still waiting" in the last 48 hours (`order_is_stale()`). Orders added by hand (WhatsApp, call, Instagram, in person) never go stale: they already came through.
+- **`get_waitlist_count_stats()` is internal.** No role can call it through the API (migration `20260926000005`); `get_admin_email_list()` uses it inside the database for its counts.
 
 **Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
 

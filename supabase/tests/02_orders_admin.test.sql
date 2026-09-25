@@ -420,7 +420,7 @@ select set_config(
 -- B: Sunday 23:30 India time → last week. Same phone as A.
 -- C: this week but cancelled → not counted.
 -- D, E: delivered, not paid, long ago → money to collect.
--- F: New for days → stale (created long before last week).
+-- F: a site order, New for days → stale (created long before last week).
 -- G: delivered, not paid, same person as D by name (no phone).
 -- H: delivered and paid, long ago → done.
 insert into public.orders (id, code, source, status, name, phone, amount, coupon_code, coupon_id, created_at, paid_at) values
@@ -443,7 +443,9 @@ insert into public.orders (id, code, source, status, name, phone, amount, coupon
     current_setting('test.week_start')::timestamptz - interval '30 days', now());
 
 update public.orders set pincode = '411038' where code = 'SN-BBBBB';
-update public.orders set status_changed_at = now() - interval '3 days' where code = 'SN-FFFFF';
+-- Only site orders go stale (20260926000005), so F came from the site.
+update public.orders set source = 'site', pincode = '415001', status_changed_at = now() - interval '3 days'
+where code = 'SN-FFFFF';
 
 insert into public.order_lines (order_id, product_id, size, quantity) values
   ('00000000-0000-4000-a000-00000000000a', 'muesli', '250 g', 2),
