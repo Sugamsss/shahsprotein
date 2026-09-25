@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(85);
+select plan(87);
 
 -- ─── Fixtures ───────────────────────────────────────────
 
@@ -411,6 +411,8 @@ select set_config(
 -- B: Sunday 23:30 India time → last week. Same phone as A.
 -- C: this week but cancelled → not counted.
 -- D, E: delivered, not paid, long ago → money to collect.
+-- F: New for days → stale (created long before last week).
+-- G: delivered, not paid, same person as D by name (no phone).
 insert into public.orders (id, code, source, status, name, phone, amount, coupon_code, coupon_id, created_at, paid_at) values
   ('00000000-0000-4000-a000-00000000000a', 'SN-AAAAA', 'call', 'new', 'Week A', '919800000011', null, null, null,
     current_setting('test.week_start')::timestamptz + interval '30 minutes', null),
@@ -422,7 +424,14 @@ insert into public.orders (id, code, source, status, name, phone, amount, coupon
   ('00000000-0000-4000-a000-00000000000d', 'SN-DDDDD', 'call', 'delivered', 'Week D', null, 500, null, null,
     current_setting('test.week_start')::timestamptz - interval '20 days', null),
   ('00000000-0000-4000-a000-00000000000e', 'SN-EEEEE', 'call', 'delivered', 'Week E', null, null, null, null,
-    current_setting('test.week_start')::timestamptz - interval '20 days', null);
+    current_setting('test.week_start')::timestamptz - interval '20 days', null),
+  ('00000000-0000-4000-a000-00000000000f', 'SN-FFFFF', 'call', 'new', 'Week F', null, null, null, null,
+    current_setting('test.week_start')::timestamptz - interval '10 days', null),
+  ('00000000-0000-4000-a000-000000000009', 'SN-GGGGG', 'call', 'delivered', 'WEEK D', null, null, null, null,
+    current_setting('test.week_start')::timestamptz - interval '19 days', null);
+
+update public.orders set pincode = '411038' where code = 'SN-BBBBB';
+update public.orders set status_changed_at = now() - interval '3 days' where code = 'SN-FFFFF';
 
 insert into public.order_lines (order_id, product_id, size, quantity) values
   ('00000000-0000-4000-a000-00000000000a', 'muesli', '250 g', 2),
@@ -458,11 +467,23 @@ select is(
   'week: totals, a repeat customer, and Sunday 23:30 counted in last week'
 );
 select is(
-  (current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}',
+  ((current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}')
+    - array['to_confirm_oldest', 'stale_oldest'],
   '{"to_confirm":1,"to_send":{"count":1,"paid":0},
-    "to_collect":{"count":2,"amount":500,"without_amount":1,"oldest":{"code":"SN-DDDDD","name":"Week D"}},
-    "on_the_way":{"count":0,"not_paid":0},"stale":0}'::jsonb,
-  'queue: the five groups, with money to collect and its oldest order'
+    "to_collect":{"count":3,"amount":500,"without_amount":2,"people":2,
+                  "oldest":{"code":"SN-DDDDD","name":"Week D"}},
+    "on_the_way":{"count":0,"not_paid":0},"stale":1}'::jsonb,
+  'queue: the five groups; money to collect from 2 people (by phone, else by name)'
+);
+select ok(
+  (current_setting('test.overview')::jsonb #>> '{queue,to_confirm_oldest}')::timestamptz
+    = current_setting('test.week_start')::timestamptz + interval '30 minutes',
+  'queue: to_confirm_oldest is the oldest New, not-stale order'
+);
+select ok(
+  (current_setting('test.overview')::jsonb #>> '{queue,stale_oldest}')::timestamptz
+    = current_setting('test.week_start')::timestamptz - interval '10 days',
+  'queue: stale_oldest is the oldest stale order'
 );
 
 -- ─── 8. Customers, stock, coupons, email list, delete ──
@@ -470,12 +491,12 @@ select is(
 select is(
   (select jsonb_agg(c - 'first_order_at' - 'last_order_at')
    from jsonb_array_elements(public.get_admin_customers()::jsonb -> 'customers') c),
-  '[{"phone":"919800000011","name":"Week A","orders":2,"delivered":0,"open":2,"amount_total":0}]'::jsonb,
-  'customers: grouped by phone, latest name, not-cancelled orders'
+  '[{"phone":"919800000011","name":"Week A","pincode":"411038","orders":2,"delivered":0,"open":2,"amount_total":0}]'::jsonb,
+  'customers: grouped by phone, latest name, latest known pincode, not-cancelled orders'
 );
 select is(
   public.get_admin_customers()::jsonb -> 'without_phone',
-  '2'::jsonb,
+  '4'::jsonb,
   'customers: orders without a phone are counted apart'
 );
 select is(

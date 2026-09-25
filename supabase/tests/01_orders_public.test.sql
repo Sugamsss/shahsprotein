@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(51);
+select plan(57);
 
 -- ─── Fixtures ───────────────────────────────────────────
 
@@ -384,6 +384,51 @@ update public.orders set status_changed_at = now() - interval '10 days' where co
 select is(
   (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
   'false', 'only New orders can be stale'
+);
+
+-- "Still waiting" (Keep) restarts the clock rather than hiding the order
+-- for good (20260926000003). SN-7KQ4M-4 is new; age both clocks.
+select set_config('test.wait_id', (select id::text from public.orders where code = 'SN-7KQ4M-4'), true);
+update public.orders
+set status_changed_at = now() - interval '5 days', kept_at = now() - interval '49 hours'
+where code = 'SN-7KQ4M-4';
+select is(
+  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-4'),
+  'true', 'kept more than 48 hours ago: stale again'
+);
+
+update public.orders set kept_at = now() - interval '47 hours' where code = 'SN-7KQ4M-4';
+select is(
+  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-4'),
+  'false', 'kept less than 48 hours ago: not stale'
+);
+
+update public.orders set kept_at = now() - interval '3 days' where code = 'SN-7KQ4M-4';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select is(
+  public.update_admin_order(current_setting('test.wait_id')::uuid, '{"kept":true}')::jsonb ->> 'stale',
+  'false', 'a re-tap on an already kept order takes it off the list again'
+);
+reset role;
+select ok(
+  (select kept_at = timezone('utc', now()) from public.orders where code = 'SN-7KQ4M-4')
+  and (select e.event || '/' || e.by from public.order_events e
+       where e.order_id = current_setting('test.wait_id')::uuid order by e.id desc limit 1)
+      = 'kept/00000000-0000-4000-8000-000000000001',
+  'the re-tap refreshes kept_at to now and logs a kept event'
+);
+
+set local role authenticated;
+select is(
+  public.update_admin_order(current_setting('test.wait_id')::uuid, '{"kept":false}')::jsonb ->> 'stale',
+  'true', 'Undo clears kept_at, so the order is stale again'
+);
+reset role;
+select is(
+  (select event from public.order_events e
+   where e.order_id = current_setting('test.wait_id')::uuid order by e.id desc limit 1),
+  'unkept', 'Undo logs unkept'
 );
 
 select * from finish();
