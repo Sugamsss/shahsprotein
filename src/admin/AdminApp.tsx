@@ -8,9 +8,9 @@ import { Redirect } from './router';
 import { Splash } from './Splash';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
-import OrdersPage from './pages/OrdersPage';
+import OrdersPage from './orders/OrdersPage';
+import DonePage from './orders/DonePage';
 import NewOrderPage from './pages/NewOrderPage';
-import OrderPage from './pages/OrderPage';
 import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
 import CustomerPage from './pages/CustomerPage';
@@ -58,8 +58,11 @@ const AdminApp: React.FC = () => {
         <Routes>
           <Route index element={<HomePage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="orders/done" element={<DonePage />} />
           <Route path="orders/new" element={<NewOrderPage />} />
-          <Route path="orders/:code" element={<OrderPage />} />
+          {/* Phone: its own page. Laptop: a popup over the board. OrdersPage decides. */}
+          <Route path="orders/:code" element={<OrdersPage />} />
+          <Route path="orders/:code/edit" element={<NewOrderPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="customers/:phone" element={<CustomerPage />} />

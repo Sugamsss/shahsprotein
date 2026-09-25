@@ -76,27 +76,32 @@ const AccountMenu: React.FC = () => {
 
 const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
   const navigate = useNavigate();
+  const { pathname, search: params } = useLocation();
   const search = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
+  // On the board the field filters it live, through ?q=. Elsewhere Enter takes you there.
+  const onBoard = /^\/admin\/orders\/?$/.test(pathname);
+  const value = onBoard ? new URLSearchParams(params).get('q') ?? '' : query;
+  const find = (q: string) => navigate(q ? `/admin/orders?q=${encodeURIComponent(q)}` : '/admin/orders', { replace: onBoard });
 
-  // "/" jumps to the search field from anywhere that isn't a text field.
+  // "/" finds, N adds an order: not while typing, and not over a popup.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || document.querySelector('[role="dialog"]')) return;
+      if (e.key === '/') search.current?.focus();
+      else if (e.key.toLowerCase() === 'n') navigate('/admin/orders/new');
+      else return;
       e.preventDefault();
-      search.current?.focus();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    navigate(`/admin/orders?q=${encodeURIComponent(q)}`);
+    if (onBoard || !query.trim()) return;
+    find(query.trim());
     setQuery('');
-    search.current?.blur();
   };
 
   const links: [string, string][] = [
@@ -118,7 +123,9 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
       <form className="adm-search" role="search" onSubmit={onSubmit}>
         <Search size={18} aria-hidden="true" />
         <input ref={search} className="adm-input" type="search" placeholder={copy.header.find}
-          aria-label={copy.header.findLabel} value={query} onChange={(e) => setQuery(e.target.value)} />
+          aria-label={copy.header.findLabel} value={value}
+          onChange={(e) => (onBoard ? find(e.target.value) : setQuery(e.target.value))}
+          onKeyDown={(e) => e.key === 'Escape' && value && (e.stopPropagation(), onBoard ? find('') : setQuery(''))} />
         <kbd aria-hidden="true">/</kbd>
       </form>
       <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--primary adm-btn--sm">
