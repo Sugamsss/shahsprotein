@@ -19,6 +19,8 @@ The admin also has a home screen ("waiting on you", this week, what's selling), 
 
 Pranjali and Sunit sign in with a username (`pranjali`, `sunit`) and a password. There's no email reset: Sugam sets or resets a password with `node scripts/set-admin-password.mjs <username>` (needs `supabase login`). How to add someone is in [supabase/README.md](supabase/README.md).
 
+To keep the admin on a phone like an app, open `/admin` in Safari (or Chrome on Android), tap Share → **Add to Home Screen**, and sign in once inside the new "Shah's Orders" icon.
+
 ## Getting started
 
 ```bash

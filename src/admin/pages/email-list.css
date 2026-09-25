@@ -1,6 +1,19 @@
-/* Email list (spec 2.12): a row per person, the status on the right. */
+/* Email list (spec 2.12). Phone: the status sits under the date, so the address
+   has the whole width. From 600px: the status on the right. */
 .adm-emails { margin-top: 4px; list-style: none; }
-.adm-email { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; }
-.adm-email__address { font-weight: 600; overflow-wrap: break-word; }
-.adm-email__status { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-muted); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; }
+.adm-email {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 12px;
+  min-height: 68px; padding: 10px 16px;
+}
+.adm-email .adm-list__icon { grid-row: span 2; }
+.adm-email .adm-list__main { min-width: 0; }
+/* Breaks before the @ first (the <wbr>), then anywhere, so a long address never runs past the card. */
+.adm-email__address { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.adm-email__status { display: inline-flex; align-items: center; gap: 4px; grid-column: 2; color: var(--color-text-muted); font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
 .adm-email__status.is-confirmed { color: var(--color-success-text); }
+
+@media (min-width: 600px) {
+  .adm-email { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; }
+  .adm-email .adm-list__icon { grid-row: auto; }
+  .adm-email__status { grid-column: auto; font-size: 0.9375rem; }
+}

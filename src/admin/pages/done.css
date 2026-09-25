@@ -1,0 +1,5 @@
+/* Done's laptop table (DonePage.tsx): every column but Items stays on one line,
+   and Items takes what's left and wraps, so most rows are one line tall.
+   Kept apart from orders.css. Column 4 is Items. */
+.adm-table thead th, .adm-table tbody td:not(:nth-child(4)) { white-space: nowrap; }
+.adm-table tbody td:nth-child(4) { width: 100%; }

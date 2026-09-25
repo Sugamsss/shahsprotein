@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { hasSupabaseConfig } from './api';
 import { AdminGate, useSession } from './auth';
 import { AdminLayout } from './AdminLayout';
+import { useHomeScreenApp } from './homeScreenApp';
 import { adminCopy as copy } from '../data/adminCopy';
 import { Redirect } from './router';
 import { Splash } from './Splash';
@@ -44,6 +45,7 @@ const AdminApp: React.FC = () => {
   // Read during the first render, before any child's effect renames the tab.
   const [siteTitle] = useState(() => document.title);
   useEffect(() => () => { document.title = siteTitle; }, [siteTitle]);
+  useHomeScreenApp();
 
   if (!hasSupabaseConfig) return <Splash><p className="adm-splash__text">{copy.gate.notSetUp}</p></Splash>;
   if (session === undefined) return <Splash busy />;
