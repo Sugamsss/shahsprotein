@@ -1,0 +1,6 @@
+/* Sign in (spec 2.14): the error and "You were signed out" lines, with their icon. */
+.adm-login__error, .adm-login__note { display: flex; align-items: flex-start; gap: 8px; }
+.adm-login__error svg, .adm-login__note svg { flex: 0 0 auto; margin-top: 1px; }
+.adm-login__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); color: var(--color-text-primary); font-size: 0.9375rem; line-height: 1.45; }
+.adm-login__note svg { color: var(--color-text-accent); }
+.adm-splash > .adm-back { margin-top: -8px; color: var(--color-text-accent); }

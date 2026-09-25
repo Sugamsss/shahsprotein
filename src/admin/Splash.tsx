@@ -16,7 +16,7 @@ export const Logo: React.FC<{ className?: string }> = ({ className }) => {
 };
 
 /** The logo over one small card: sign in, loading, no access, can't connect. */
-export const Splash: React.FC<{ busy?: boolean; children?: React.ReactNode }> = ({ busy, children }) => (
+export const Splash: React.FC<{ busy?: boolean; children?: React.ReactNode; footer?: React.ReactNode }> = ({ busy, children, footer }) => (
   <main className="adm adm-splash" aria-busy={busy || undefined}>
     <Logo className="adm-splash__logo" />
     {busy ? (
@@ -24,5 +24,6 @@ export const Splash: React.FC<{ busy?: boolean; children?: React.ReactNode }> = 
     ) : (
       <section className="adm-card adm-splash__card">{children}</section>
     )}
+    {footer}
   </main>
 );

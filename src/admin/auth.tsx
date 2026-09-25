@@ -6,6 +6,26 @@ import { Splash } from './Splash';
 import { useRpc } from './useRpc';
 import type { AdminMe } from './types';
 
+// "You were signed out" (spec 2.14): this tab had a session, and it ended
+// without Sign out being tapped. Guarded: blocked storage just skips the message.
+const HAD_SESSION = 'shahs-admin-had-session';
+const remember = (had: boolean) => {
+  try {
+    if (had) sessionStorage.setItem(HAD_SESSION, '1');
+    else sessionStorage.removeItem(HAD_SESSION);
+  } catch { /* no message this time */ }
+};
+
+/** On the sign-in page: did the last session end by itself? Read-only; clear it with forgetSessionEnded(). */
+export const sessionEnded = (): boolean => {
+  try {
+    return sessionStorage.getItem(HAD_SESSION) === '1';
+  } catch {
+    return false;
+  }
+};
+export const forgetSessionEnded = (): void => remember(false);
+
 /** The Supabase session: undefined while it's still being read. */
 export const useSession = (): Session | null | undefined => {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -16,7 +36,10 @@ export const useSession = (): Session | null | undefined => {
       if (cancelled) return;
       if (!supabase) return setSession(null);
       // Fires INITIAL_SESSION first, then every sign-in, sign-out and refresh.
-      const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+      const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+        if (next) remember(true);
+        setSession(next);
+      });
       unsubscribe = () => data.subscription.unsubscribe();
     }).catch(() => !cancelled && setSession(null)); // offline: sign-in shows, and says so
     return () => { cancelled = true; unsubscribe?.(); };
@@ -26,6 +49,7 @@ export const useSession = (): Session | null | undefined => {
 
 /** Signs out on this device only, so Sunit's phone stays signed in when he leaves the laptop. */
 export const signOut = async (): Promise<void> => {
+  remember(false);
   await (await client)?.auth.signOut({ scope: 'local' });
 };
 

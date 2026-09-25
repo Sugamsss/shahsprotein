@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronLeft, Info, X } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
 import { client } from '../api';
+import { forgetSessionEnded, sessionEnded as endedBefore } from '../auth';
 import { Splash } from '../Splash';
 
 const messageFor = (status: number): string => {
@@ -17,6 +18,9 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // The last session ended by itself (spec 2.14 "Session ended"): say so once.
+  const [sessionEnded] = useState(endedBefore);
+  useEffect(forgetSessionEnded, []);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,10 +45,13 @@ const LoginPage: React.FC = () => {
   const errorProps = error ? { 'aria-invalid': true, 'aria-describedby': 'adm-login-error' } : {};
 
   return (
-    <Splash>
+    <Splash footer={<a className="adm-back" href="/"><ChevronLeft size={18} aria-hidden="true" />{copy.login.back}</a>}>
       <form className="adm-login" onSubmit={onSubmit} noValidate>
         <h1 className="adm-login__title">{copy.login.title}</h1>
         <p className="adm-login__sub">{copy.login.sub}</p>
+        {sessionEnded && !error && (
+          <p className="adm-login__note" role="status"><Info size={18} aria-hidden="true" />{copy.login.sessionEnded}</p>
+        )}
         <label className="adm-field">
           <span className="adm-field__label">{copy.login.email}</span>
           <input className="adm-input" type="email" autoComplete="username" inputMode="email"
@@ -55,12 +62,11 @@ const LoginPage: React.FC = () => {
           <input className="adm-input" type="password" autoComplete="current-password"
             value={password} onChange={(e) => setPassword(e.target.value)} {...errorProps} />
         </label>
-        {error && <p id="adm-login-error" className="adm-login__error" role="alert">{error}</p>}
+        {error && <p id="adm-login-error" className="adm-login__error" role="alert"><X size={18} aria-hidden="true" />{error}</p>}
         <button type="submit" className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
           {busy ? copy.login.busy : copy.login.submit}
         </button>
       </form>
-      <a className="adm-back" href="/"><ChevronLeft size={18} aria-hidden="true" />{copy.login.back}</a>
     </Splash>
   );
 };
