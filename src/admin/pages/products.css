@@ -1,6 +1,6 @@
 /* Products (spec 2.9): a card per product, a row per size with its switch. */
 .adm-products { display: grid; gap: 16px; }
-.adm-product { display: grid; padding: 16px 16px 4px; }
+.adm-card.adm-product { display: grid; padding: 16px 16px 4px; }
 .adm-product__head { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; }
 .adm-product__thumb { width: 56px; height: 56px; border-radius: 14px; }
 .adm-product__name { color: var(--color-product-name); font: 700 1.25rem/1.2 var(--font-family-serif); }

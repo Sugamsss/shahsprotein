@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endOfDayIst, firstName, formatDay, formatDayInSentence, formatMoney, formatPhone, formatWhen, istDateValue } from './format';
+import { endOfDayIst, firstName, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatPhone, formatWhen, istDateValue } from './format';
 
 // Spec 2.1 "Formats". Every date is India time, so these hold whatever
 // timezone the machine running them is in. "Now" is Fri 25 Sep 2026, 2:00 pm IST.
@@ -56,6 +56,15 @@ describe('formatDayInSentence', () => {
     expect(formatDayInSentence('2026-09-25T08:00:00+05:30', now)).toBe('today');
     expect(formatDayInSentence('2026-09-24T08:00:00+05:30', now)).toBe('yesterday');
     expect(formatDayInSentence('2026-09-21T08:00:00+05:30', now)).toBe('Mon 21 Sep');
+  });
+});
+
+describe('Home: the hour and the long date in India', () => {
+  it('uses India time, not the machine clock', () => {
+    expect(istHour(Date.parse('2026-09-25T06:29:00Z'))).toBe(11); // 11:59 am IST
+    expect(istHour(Date.parse('2026-09-25T06:30:00Z'))).toBe(12);
+    expect(istHour(Date.parse('2026-09-24T18:40:00Z'))).toBe(0); // just after midnight on the 25th
+    expect(formatLongDate(Date.parse('2026-09-24T18:40:00Z'))).toBe('Friday, 25 September');
   });
 });
 

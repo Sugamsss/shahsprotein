@@ -130,6 +130,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     const timer = setTimeout(() => setFlash(null), 900);
     return () => clearTimeout(timer);
   }, [flash, list.data]);
+  // Home's "Waiting on you" rows link to /admin/orders#lane-…: scroll there once the lanes are drawn.
+  const hasData = !!list.data;
+  useEffect(() => {
+    if (hasData && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [hasData, location.hash]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
   const change = useOrderChange(put);
 

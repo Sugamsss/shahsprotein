@@ -62,6 +62,16 @@ export const formatDayInSentence = (iso: string, now = Date.now()): string => {
   return formatDay(iso, now);
 };
 
+/** The hour in India, 0–23 (Home's greeting switches at 12 and 17). */
+export const istHour = (now = Date.now()): number => partsOf(new Date(now)).hour;
+
+/** "Friday, 25 September" */
+export const formatLongDate = (value: string | number = Date.now()): string => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: IST, weekday: 'long', day: 'numeric', month: 'long' }).formatToParts(new Date(value));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('weekday')}, ${get('day')} ${get('month')}`;
+};
+
 /** "₹1,240": whole rupees, Indian grouping. */
 export const formatMoney = (amount: number): string => `₹${Math.round(amount).toLocaleString('en-IN')}`;
 

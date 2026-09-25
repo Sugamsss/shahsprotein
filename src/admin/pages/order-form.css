@@ -8,7 +8,7 @@
 .adm-of__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); font-size: 0.9375rem; line-height: 1.45; }
 
 /* A row per product and size: thumb, name over size, then + Add or the stepper. */
-.adm-of__packs { display: grid; padding: 4px 16px; list-style: none; }
+.adm-card.adm-of__packs { display: grid; padding: 4px 16px; list-style: none; }
 .adm-of__packs li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; }
 .adm-of__packs li + li { border-top: 1px solid var(--adm-hairline); }
 .adm-of__thumb { width: 44px; height: 44px; border-radius: 10px; }
