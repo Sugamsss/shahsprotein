@@ -163,6 +163,8 @@ const AutoField: React.FC<{
   const latest = useRef(order);
   latest.current = order;
   const timer = useRef<number>();
+  /** Typed but not saved yet. */
+  const pending = useRef<string | null>(null);
   const input = useRef<HTMLElement | null>(null);
 
   // A change from elsewhere ("Use 98231…", Undo) shows unless you're typing here.
@@ -173,6 +175,7 @@ const AutoField: React.FC<{
 
   const save = async (raw: string) => {
     window.clearTimeout(timer.current);
+    pending.current = null;
     const parsed = parseField(field, raw);
     if ('error' in parsed) return setStatus(parsed.error);
     const current = latest.current[field];
@@ -185,12 +188,19 @@ const AutoField: React.FC<{
       setStatus(e.kind === 'message' ? e.message : adminCopy.toast.failed);
     }
   };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  // Leaving (Esc, ← →, closing) saves what was typed rather than dropping it.
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => () => {
+    window.clearTimeout(timer.current);
+    if (pending.current !== null) void saveRef.current(pending.current);
+  }, []);
 
   const onChange = (next: string) => {
     setValue(next);
     setStatus('');
     window.clearTimeout(timer.current);
+    pending.current = next;
     timer.current = window.setTimeout(() => void save(next), 600);
   };
   const isError = status !== '' && status !== copy.saved;
@@ -288,11 +298,11 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
  * The pinned button: the order's next step, or "All done." A stale order gets
  * "They messaged, confirm it", with Still waiting next to it.
  */
-export const PrimaryAction: React.FC<{ order: Order; change: Change }> = ({ order, change }) => {
+export const PrimaryAction: React.FC<{ order: Order; change: Change; onNext?: () => void }> = ({ order, change, onNext }) => {
   const next = nextOf(order);
   if (!next) return <span className="adm-od-alldone">{adminCopy.orders.allDone}</span>;
   const go = (
-    <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={() => change(order, next.changes)}>
+    <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={onNext ?? (() => change(order, next.changes))}>
       <Check size={20} aria-hidden="true" />{next.labels[1]}
     </button>
   );
