@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { DialogCloseContext, useDialog, useDialogClose } from './useDialog';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -11,115 +12,14 @@ export interface ModalProps {
   children: React.ReactNode;
 }
 
-// Matches the exit animation in global.css (sheet slides down, dialog fades).
-const EXIT_MS = 240;
-
-const focusableSelector =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** Closes the popup the same way the close button does (with the exit animation). */
-const ModalCloseContext = createContext<() => void>(() => {});
-
 /** For buttons inside a popup's content that close it, like "Done". */
-export const useModalClose = (): (() => void) => useContext(ModalCloseContext);
+export const useModalClose = useDialogClose;
 
+// Focus trap, focus restore, Esc, the scroll lock and the 240ms exit live in useDialog,
+// shared with the admin's sheets. This adds the site's look and the in-place title switch.
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, className, children }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const { dialogRef: modalRef, isClosing, requestClose } = useDialog({ isOpen, onClose });
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-
-  // The latest onClose, so a caller passing a new function never re-runs the
-  // open effect (which would move focus and restore it again).
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  const close = useCallback(() => onCloseRef.current(), []);
-
-  // Play the exit animation, then close. Instant for people who ask for less motion.
-  const requestClose = useCallback(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      close();
-      return;
-    }
-    setIsClosing(true);
-  }, [close]);
-
-  useEffect(() => {
-    if (!isClosing) return;
-    const timer = setTimeout(close, EXIT_MS);
-    return () => clearTimeout(timer);
-  }, [isClosing, close]);
-
-  useEffect(() => {
-    if (!isOpen) setIsClosing(false);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Store previously focused element to restore upon closing
-    previousActiveElement.current = document.activeElement as HTMLElement | null;
-
-    document.body.style.overflow = 'hidden';
-
-    // Focus the first focusable element or modal container
-    const timer = setTimeout(() => {
-      if (modalRef.current) {
-        const focusables = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
-        if (focusables.length > 0) {
-          focusables[0].focus();
-        } else {
-          modalRef.current.focus();
-        }
-      }
-    }, 0);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        requestClose();
-        return;
-      }
-
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusables = Array.from(
-          modalRef.current.querySelectorAll<HTMLElement>(focusableSelector)
-        );
-
-        if (focusables.length === 0) {
-          e.preventDefault();
-          return;
-        }
-
-        const firstElement = focusables[0];
-        const lastElement = focusables[focusables.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement || !modalRef.current.contains(document.activeElement)) {
-            e.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (document.activeElement === lastElement || !modalRef.current.contains(document.activeElement)) {
-            e.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      clearTimeout(timer);
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-
-      // Restore focus to previously active element
-      if (previousActiveElement.current) {
-        previousActiveElement.current.focus();
-      }
-    };
-  }, [isOpen, requestClose]);
 
   // The title changed while open (the product popup switching to "Your order"):
   // start the new content from the top and move focus to the new title, so
@@ -164,7 +64,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, className,
           </button>
         </div>
 
-        <ModalCloseContext.Provider value={requestClose}>{children}</ModalCloseContext.Provider>
+        <DialogCloseContext.Provider value={requestClose}>{children}</DialogCloseContext.Provider>
       </div>
     </div>,
     document.body
