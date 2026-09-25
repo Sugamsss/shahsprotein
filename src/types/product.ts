@@ -5,6 +5,12 @@ export interface NutritionFact {
   isSubItem?: boolean;
 }
 
+/** One picture exported at several widths, for `srcSet`. */
+export interface ImageSet {
+  src: string;
+  srcSet: string;
+}
+
 export type IconType = 'leaf' | 'wheat' | 'dumbbell' | 'currency';
 
 export interface Product {
@@ -22,6 +28,9 @@ export interface Product {
   /** 192px square thumbnails for the "Your order" popup, per theme. */
   orderThumb: string;
   orderThumbDark: string;
+  /** 4:5 shots of the whole pouch for the "Add something else" tiles, per theme. */
+  orderTile: ImageSet;
+  orderTileDark: ImageSet;
   nutritionFacts: NutritionFact[];
   /** Pack sizes, e.g. "250 g". Prices are not published yet. */
   weightOptions: string[];

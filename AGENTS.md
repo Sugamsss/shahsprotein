@@ -86,6 +86,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
   - Product cards each get their own crop at the card's 1.3 ratio, in `public/assets/product-cards/`.
   - The story image has an 800/1200/1672w `srcSet` and a fixed `aspectRatio`.
   - Ingredient sprites use 216px per tile, so they're 648px wide.
+  - Order popup: the order lines and empty-order rows use square 192w thumbnails (`order-thumbs/`). The "Add something else" tiles use 4:5 shots of the whole pouch (`order-tiles/`, 180/360/540w) with `srcSet`; `TILE_SIZES` in `OrderShelf.tsx` must follow the tile width in CSS. Masters and crop notes are in `Private/order-tiles/`.
 - **Below the fold:** `<img loading="lazy" decoding="async">` with `width` and `height`.
 - **Fonts are self-hosted:** latin variable woff2 in `public/assets/fonts/`, `@font-face` in `tokens.css`, and a preload in `index.html`. Don't add the Google Fonts link back.
 - **Serif:** `--font-family-serif` is `Georgia, 'Gelasio', …`. Gelasio (metric-matched to Georgia) only downloads where Georgia is missing, which is Android. Don't preload it, or everyone downloads it.

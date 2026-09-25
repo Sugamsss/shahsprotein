@@ -6,6 +6,9 @@ import { OrderThumb } from './OrderThumb';
 
 const copy = siteConfig.order;
 
+/** The tile picture's width: a third of the sheet on phones, 48px beside the name on wider screens. Matches .order-shelf__art. */
+const TILE_SIZES = '(max-width: 600px) calc((100vw - 68px) / 3), 48px';
+
 /** "Add something else": a tile per product. Each adds the smallest pack, or one more of it. */
 export const OrderShelf: React.FC<{ onAdd: (productId: string) => void }> = ({ onAdd }) => (
   <section className="popup-section" aria-label={copy.addMoreHeading}>
@@ -19,7 +22,7 @@ export const OrderShelf: React.FC<{ onAdd: (productId: string) => void }> = ({ o
             aria-label={copy.pickAddLabel(product.name, product.weightOptions[0])}
             onClick={() => onAdd(product.id)}
           >
-            <OrderThumb product={product} className="order-shelf__art" />
+            <OrderThumb product={product} className="order-shelf__art" tileSizes={TILE_SIZES} />
             <span className="order-shelf__plus" aria-hidden="true">
               <Plus size={14} strokeWidth={2.75} />
             </span>

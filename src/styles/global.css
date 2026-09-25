@@ -1772,7 +1772,7 @@ a {
 
 .order-shelf__art {
   width: 48px;
-  height: 48px;
+  height: 60px;
   border-radius: 0.625rem;
 }
 
@@ -3932,9 +3932,8 @@ img {
     inset: -2px 0;
   }
 
-  /* Picture on top at 4:3, cropped from just above the pouch so the whole
-     label ("SHAH'S" and the name) shows. The "+" sits in the picture's
-     bottom-right corner, clear of the label, which is nearly tile-wide. */
+  /* Picture on top at 4:5: the whole pouch, like a small product shot. The
+     "+" sits in the picture's bottom-right corner, below the label. */
   .order-shelf__item {
     display: grid;
     grid-template-rows: auto 1fr;
@@ -3951,12 +3950,8 @@ img {
   .order-shelf__art {
     width: auto;
     height: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 4 / 5;
     border-radius: 0;
-  }
-
-  .order-shelf__art img {
-    object-position: 50% 15%;
   }
 
   .order-shelf__name {
