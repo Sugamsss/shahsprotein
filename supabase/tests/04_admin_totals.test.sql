@@ -1,17 +1,17 @@
--- 20260926000006: get_admin_totals(), the totals at the top of the admin
--- Home. Who can call it, zeros on an empty database, the "right now"
--- numbers, which statuses a period counts, sizes, the week's days, and where
--- each period starts (India time). Test data is fake (9198000000xx,
+-- 20260926000006: get_admin_totals() for the per-product Home, and
+-- get_admin_orders(p_product). Who can call them, zeros on an empty
+-- database, every stage per product and overall, weights, money, the week
+-- boundaries, and the product filter. Test data is fake (9198000000xx,
 -- example.com) and everything rolls back at the end.
 --
--- The period tests never depend on today's date: each one places a pair of
--- orders on that period's own start, so they hold on a Monday, on the 1st and
--- just after midnight IST alike.
+-- Nothing here depends on today's date: fixtures are placed microseconds
+-- apart from now, or on each week's own start, so the tests hold on a
+-- Monday, on the 1st and just after midnight IST alike.
 
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(28);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
@@ -27,7 +27,7 @@ values
 insert into public.admin_users (id, email, display_name)
 values ('00000000-0000-4000-8000-000000000001', 'owner@example.com', 'Owner');
 
--- ─── 1. Who can call it ─────────────────────────────────
+-- ─── 1. Who can call them, and the signatures ──────────
 
 set local role anon;
 select throws_ok('select public.get_admin_totals()', '42501', null, 'anon cannot call get_admin_totals');
@@ -36,11 +36,24 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}';
 select throws_ok('select public.get_admin_totals()', 'P0001', 'Unauthorized', 'non-admin: get_admin_totals');
+select throws_ok($$select public.get_admin_orders(p_product => 'muesli')$$, 'P0001', 'Unauthorized',
+  'non-admin: get_admin_orders with p_product');
 reset role;
 
 select ok(
-  not has_function_privilege('public', 'public.get_admin_totals()', 'execute'),
-  'PUBLIC has no execute on get_admin_totals'
+  not has_function_privilege('public', 'public.get_admin_totals()', 'execute')
+  and not has_function_privilege('anon',
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text)', 'execute')
+  and has_function_privilege('authenticated',
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text)', 'execute'),
+  'grants: PUBLIC cannot run get_admin_totals; get_admin_orders is authenticated only'
+);
+
+select is(
+  (select array_agg(p.oid::regprocedure::text) from pg_proc p
+   where p.pronamespace = 'public'::regnamespace and p.proname = 'get_admin_orders'),
+  array['get_admin_orders(text,text[],boolean,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,integer,text)'],
+  'get_admin_orders has one signature, with p_product; the old 10-argument one is gone'
 );
 
 -- ─── 2. An empty database gives zeros ───────────────────
@@ -50,82 +63,89 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","r
 select set_config('test.empty', public.get_admin_totals()::text, true);
 reset role;
 
+select is(current_setting('test.empty')::jsonb -> 'products', '[]'::jsonb, 'empty: no products');
+
 select is(
-  current_setting('test.empty')::jsonb -> 'now',
-  '{"pending":0,"to_confirm":0,"to_send":0,"on_the_way":0,"packs_to_send":0,
-    "packs_to_send_by_size":[],"to_collect":{"amount":0,"orders":0,"without_amount":0}}'::jsonb,
-  'empty: right now is all zeros'
+  current_setting('test.empty')::jsonb -> 'overall',
+  (select jsonb_object_agg(s, '{"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0}'::jsonb)
+   from unnest(array['to_confirm', 'to_send', 'on_the_way', 'to_collect', 'stale']) s),
+  'empty: every overall stage is zeros'
 );
 
 select is(
-  (select jsonb_object_agg(p.key, p.value - array['starts_on', 'days'])
-   from jsonb_each(current_setting('test.empty')::jsonb -> 'periods') p),
-  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"packs_by_size":[],"earned":0,
-                               "paid_orders":0,"paid_without_amount":0}'::jsonb)
-   from unnest(array['today', 'week', 'month', 'all']) k),
-  'empty: every period is zeros and an empty size list'
-);
-
--- Where each period starts, from plain date_trunc on India time.
-select is(
-  (select jsonb_object_agg(p.key, p.value -> 'starts_on')
-   from jsonb_each(current_setting('test.empty')::jsonb -> 'periods') p),
-  jsonb_build_object(
-    'today', date_trunc('day', now() at time zone 'Asia/Kolkata')::date,
-    'week', date_trunc('week', now() at time zone 'Asia/Kolkata')::date,
-    'month', date_trunc('month', now() at time zone 'Asia/Kolkata')::date,
-    'all', null
-  ),
-  'starts_on: today, Monday and the 1st in India time; null for all time'
+  (select jsonb_object_agg(w.key, w.value - array['starts_at', 'ends_at', 'days'])
+   from jsonb_each(current_setting('test.empty')::jsonb -> 'weeks') w),
+  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0}'::jsonb)
+   from unnest(array['this', 'last', 'last_so_far']) k),
+  'empty: every week is zeros'
 );
 
 select is(
-  current_setting('test.empty')::jsonb #> '{periods,week,days}',
+  current_setting('test.empty')::jsonb #> '{weeks,this,days}',
   (select jsonb_agg(jsonb_build_object(
       'date', date_trunc('week', now() at time zone 'Asia/Kolkata')::date + i,
       'orders', 0, 'packs', 0) order by i)
    from generate_series(0, 6) i),
-  'empty: the week has 7 zero days, Monday to Sunday'
+  'empty: this week has 7 zero days, Monday to Sunday IST'
 );
 
--- ─── 3. Right now, and which orders a period counts ─────
+-- Where each week starts and ends, from plain date_trunc on India time.
+select is(
+  (select jsonb_object_agg(w.key, jsonb_build_object(
+      'starts_at', (w.value ->> 'starts_at')::timestamptz,
+      'ends_at', (w.value ->> 'ends_at')::timestamptz))
+   from jsonb_each(current_setting('test.empty')::jsonb -> 'weeks') w)::text,
+  jsonb_build_object(
+    'this', jsonb_build_object(
+      'starts_at', date_trunc('week', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata',
+      'ends_at', now()),
+    'last', jsonb_build_object(
+      'starts_at', (date_trunc('week', now() at time zone 'Asia/Kolkata') - interval '7 days') at time zone 'Asia/Kolkata',
+      'ends_at', date_trunc('week', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata'),
+    'last_so_far', jsonb_build_object(
+      'starts_at', (date_trunc('week', now() at time zone 'Asia/Kolkata') - interval '7 days') at time zone 'Asia/Kolkata',
+      'ends_at', now() - interval '7 days')
+  )::text,
+  'weeks: this from Monday 00:00 IST to now, last is the whole week before, last_so_far ends 7 days ago'
+);
 
--- All saved now (inside every period). Orders that must not count carry 9
--- packs of a size, so a leak shows in the numbers.
+-- ─── 3. Stages, per product and overall ─────────────────
+
+-- Created a few microseconds apart, newest first in the list below.
 insert into public.orders (code, source, status, name, pincode, phone, amount, paid_at, created_at) values
-  ('SN-NEWAA', 'site',      'new',       'New Example',   '415001', null, 200,  now(), now()),
-  ('SN-STXAA', 'site',      'new',       'Stale Example', '415001', null, null, null,  now()),
-  ('SN-HNDAA', 'whatsapp',  'new',       null,            null, '919800000041', null, null, now()),
-  ('SN-CNFAA', 'site',      'confirmed', 'Conf Example',  '415001', null, null, null,  now()),
-  ('SN-CNFBB', 'call',      'confirmed', null,            null, '919800000042', null, null, now()),
-  ('SN-SNTAA', 'instagram', 'sent',      'Sent Example',  null,     null, null, now(), now()),
-  ('SN-DVRAA', 'site',      'delivered', 'Dlv Example',   '415001', null, 600,  null,  now()),
-  ('SN-DVRBB', 'site',      'delivered', 'Dlv Example',   '415001', null, 400,  null,  now()),
-  ('SN-DVRCC', 'in_person', 'delivered', 'Dlv Example',   null,     null, null, null,  now()),
-  ('SN-DVRDD', 'site',      'delivered', 'Paid Example',  '415001', null, 900,  now(), now()),
-  ('SN-CANAA', 'site',      'cancelled', 'Cancel Example', '415001', null, 700, now(), now());
+  -- to_confirm
+  ('SN-NEW22', 'site',      'new',       'Asha Example',  '415001', null, 300,  null,  now() - interval '1 microsecond'),
+  -- stale: New for 3 days (set below), must not be in to_confirm
+  ('SN-STX22', 'site',      'new',       'Stale Example', '415001', null, null, null,  now() - interval '2 microseconds'),
+  -- to_send, mixed: two products, two sizes and a kilo; paid before delivery
+  ('SN-MXD22', 'whatsapp',  'confirmed', 'Mixed Example', null, '919800000061', 800, now(), now() - interval '3 microseconds'),
+  -- to_send, no amount yet; '250g' with no space
+  ('SN-CNF22', 'call',      'confirmed', 'Conf Example',  null, '919800000062', null, null, now() - interval '4 microseconds'),
+  -- on_the_way
+  ('SN-SNT22', 'instagram', 'sent',      'Sent Example',  null, null, 500,  null,  now() - interval '5 microseconds'),
+  -- to_collect, one with an amount and one without
+  ('SN-DVR22', 'site',      'delivered', 'Owed Example',  '415001', null, 600, null, now() - interval '6 microseconds'),
+  ('SN-DVR33', 'in_person', 'delivered', 'Owed Example',  null, null, null, null,  now() - interval '7 microseconds'),
+  -- done (delivered and paid) and cancelled: in no stage
+  ('SN-DNE22', 'site',      'delivered', 'Done Example',  '415001', null, 900, now(), now() - interval '8 microseconds'),
+  ('SN-CXN22', 'site',      'cancelled', 'Cancel Example', '415001', null, 700, now(), now() - interval '9 microseconds');
 
--- New for 3 days: the site one is stale, the WhatsApp one is not.
-update public.orders set status_changed_at = now() - interval '3 days'
-where code in ('SN-STXAA', 'SN-HNDAA');
+update public.orders set status_changed_at = now() - interval '3 days' where code = 'SN-STX22';
 
 insert into public.order_lines (order_id, product_id, size, quantity)
 select o.id, l.product_id, l.size, l.quantity
 from (values
-  ('SN-NEWAA', 'muesli',       '250 g', 9),
-  ('SN-STXAA', 'muesli',       '250 g', 9),
-  ('SN-HNDAA', 'muesli',       '250 g', 9),
-  ('SN-CNFAA', 'raggi-jaggi',  '250 g', 2),
-  ('SN-CNFAA', 'muesli',       '500 g', 1),
-  -- No space and a kilo size: still grouped and sorted by weight.
-  ('SN-CNFBB', 'raggi-jaggi',  '250g',  1),
-  ('SN-CNFBB', 'muesli',       '1 kg',  1),
-  ('SN-SNTAA', 'muesli',       '500 g', 4),
-  ('SN-DVRAA', 'date-bites',   '250 g', 1),
-  ('SN-DVRBB', 'muesli',       '500 g', 1),
-  ('SN-DVRCC', 'raggi-jaggi',  '250 g', 1),
-  ('SN-DVRDD', 'muesli',       '500 g', 2),
-  ('SN-CANAA', 'muesli',       '500 g', 9)
+  ('SN-NEW22', 'raggi-jaggi', '250 g', 2),
+  ('SN-STX22', 'raggi-jaggi', '500 g', 9),
+  ('SN-MXD22', 'raggi-jaggi', '250 g', 2),
+  ('SN-MXD22', 'raggi-jaggi', '500 g', 1),
+  ('SN-MXD22', 'muesli',      '1 kg',  1),
+  ('SN-CNF22', 'raggi-jaggi', '250g',  1),
+  ('SN-SNT22', 'muesli',      '500 g', 2),
+  ('SN-DVR22', 'date-bites',  '250 g', 3),
+  ('SN-DVR33', 'date-bites',  '250 g', 1),
+  ('SN-DNE22', 'muesli',      '250 g', 9),
+  ('SN-CXN22', 'muesli',      '500 g', 9)
 ) as l(code, product_id, size, quantity)
 join public.orders o on o.code = l.code;
 
@@ -134,135 +154,191 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","r
 select set_config('test.totals', public.get_admin_totals()::text, true);
 reset role;
 
+create function pg_temp.product(p_id text) returns jsonb language sql as $$
+  select p -> 'stages'
+  from jsonb_array_elements(current_setting('test.totals')::jsonb -> 'products') p
+  where p ->> 'product_id' = p_id
+$$;
+
 select is(
-  (current_setting('test.totals')::jsonb -> 'now')
-    - array['packs_to_send', 'packs_to_send_by_size', 'to_collect'],
-  '{"pending":5,"to_confirm":2,"to_send":2,"on_the_way":1}'::jsonb,
-  'now: pending is to confirm + to send + on the way; stale, delivered and cancelled are left out'
+  (select jsonb_agg(p -> 'product_id') from jsonb_array_elements(current_setting('test.totals')::jsonb -> 'products') p),
+  '["date-bites","muesli","raggi-jaggi"]'::jsonb,
+  'products: every product with lines in a stage, by id'
 );
 
 select is(
+  pg_temp.product('raggi-jaggi'),
+  '{
+    "to_confirm": {"orders":1,"packs":2,"grams":500,"by_size":[{"size":"250 g","grams_each":250,"packs":2}]},
+    "to_send":    {"orders":2,"packs":4,"grams":1250,"by_size":[{"size":"250 g","grams_each":250,"packs":3},
+                                                                {"size":"500 g","grams_each":500,"packs":1}]},
+    "on_the_way": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "to_collect": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "stale":      {"orders":1,"packs":9,"grams":4500,"by_size":[{"size":"500 g","grams_each":500,"packs":9}]}
+  }'::jsonb,
+  'raggi-jaggi: the stale order is only in stale; 250g and 250 g are one size; grams add up'
+);
+
+select is(
+  pg_temp.product('muesli'),
+  '{
+    "to_confirm": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "to_send":    {"orders":1,"packs":1,"grams":1000,"by_size":[{"size":"1 kg","grams_each":1000,"packs":1}]},
+    "on_the_way": {"orders":1,"packs":2,"grams":1000,"by_size":[{"size":"500 g","grams_each":500,"packs":2}]},
+    "to_collect": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "stale":      {"orders":0,"packs":0,"grams":0,"by_size":[]}
+  }'::jsonb,
+  'muesli: the mixed order counts once here too, with its kilo; done and cancelled are in no stage'
+);
+
+select is(
+  pg_temp.product('date-bites'),
+  '{
+    "to_confirm": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "to_send":    {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "on_the_way": {"orders":0,"packs":0,"grams":0,"by_size":[]},
+    "to_collect": {"orders":2,"packs":4,"grams":1000,"by_size":[{"size":"250 g","grams_each":250,"packs":4}]},
+    "stale":      {"orders":0,"packs":0,"grams":0,"by_size":[]}
+  }'::jsonb,
+  'date-bites: delivered and not paid is to collect'
+);
+
+select is(
+  current_setting('test.totals')::jsonb -> 'overall',
+  '{
+    "to_confirm": {"orders":1,"packs":2,"amount":300,"without_amount":0,"paid":0,"unpaid_amount":300},
+    "to_send":    {"orders":2,"packs":5,"amount":800,"without_amount":1,"paid":1,"unpaid_amount":0},
+    "on_the_way": {"orders":1,"packs":2,"amount":500,"without_amount":0,"paid":0,"unpaid_amount":500},
+    "to_collect": {"orders":2,"packs":4,"amount":600,"without_amount":1,"paid":0,"unpaid_amount":600},
+    "stale":      {"orders":1,"packs":9,"amount":0,"without_amount":1,"paid":0,"unpaid_amount":0}
+  }'::jsonb,
+  'overall: orders, packs, amount, without amount, paid and unpaid amount per stage'
+);
+
+select is(
+  (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days'],
+  '{"orders":6,"packs":20,"amount_in":1700,"paid_orders":2,"paid_without_amount":0}'::jsonb,
+  'this week: real orders only (not new, stale or cancelled); money in skips the cancelled order'
+);
+
+select is(
+  (select jsonb_build_object('orders', sum((d ->> 'orders')::int), 'packs', sum((d ->> 'packs')::int))
+   from jsonb_array_elements(current_setting('test.totals')::jsonb #> '{weeks,this,days}') d),
   jsonb_build_object(
-    'packs', current_setting('test.totals')::jsonb #> '{now,packs_to_send}',
-    'by_size', current_setting('test.totals')::jsonb #> '{now,packs_to_send_by_size}'),
-  '{"packs":5,"by_size":[{"size":"250 g","packs":3},{"size":"500 g","packs":1},{"size":"1 kg","packs":1}]}'::jsonb,
-  'now: packs to send counts only confirmed orders, by size'
+    'orders', current_setting('test.totals')::jsonb #> '{weeks,this,orders}',
+    'packs', current_setting('test.totals')::jsonb #> '{weeks,this,packs}'),
+  'this week: the days add up to the week'
 );
 
+-- ─── 4. get_admin_orders(p_product) ─────────────────────
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
+
+create function pg_temp.codes(p json) returns text[] language sql as $$
+  select coalesce(array_agg(o ->> 'code' order by n), '{}') from json_array_elements(p -> 'orders') with ordinality as t(o, n)
+$$;
+
+select is(pg_temp.codes(public.get_admin_orders(p_view => 'all', p_product => 'muesli')),
+  array['SN-MXD22', 'SN-SNT22', 'SN-DNE22', 'SN-CXN22'],
+  'p_product: every order with muesli, any size, newest first');
+select is(pg_temp.codes(public.get_admin_orders(p_product => 'muesli')),
+  array['SN-MXD22', 'SN-SNT22'], 'p_product with the todo view');
+select is(pg_temp.codes(public.get_admin_orders(p_view => 'done', p_product => 'muesli')),
+  array['SN-DNE22', 'SN-CXN22'], 'p_product with the done view');
+select is(pg_temp.codes(public.get_admin_orders(p_view => 'all', p_product => 'raggi-jaggi', p_search => 'example')),
+  array['SN-NEW22', 'SN-STX22', 'SN-MXD22', 'SN-CNF22'], 'p_product with a name search');
+select is(pg_temp.codes(public.get_admin_orders(p_view => 'all', p_product => 'date-bites', p_search => 'MXD22')),
+  '{}'::text[], 'p_product and search must both match');
+select is(pg_temp.codes(public.get_admin_orders(p_view => 'all', p_product => 'saffron')),
+  '{}'::text[], 'an unknown product matches nothing');
+
+select set_config('test.page1', public.get_admin_orders(p_view => 'all', p_product => 'muesli', p_limit => 2)::text, true);
 select is(
-  current_setting('test.totals')::jsonb #> '{now,to_collect}',
-  '{"amount":1000,"orders":3,"without_amount":1}'::jsonb,
-  'now: to collect is delivered and not paid, with the ones missing an amount'
+  pg_temp.codes(current_setting('test.page1')::json)
+    || pg_temp.codes(public.get_admin_orders(p_view => 'all', p_product => 'muesli', p_limit => 2,
+         p_before => (current_setting('test.page1')::json ->> 'next_before')::timestamptz)),
+  array['SN-MXD22', 'SN-SNT22', 'SN-DNE22', 'SN-CXN22'],
+  'p_product pages with next_before and loses nothing'
+);
+select ok(
+  public.get_admin_orders(p_view => 'all', p_product => 'muesli', p_limit => 2,
+    p_before => (current_setting('test.page1')::json ->> 'next_before')::timestamptz) ->> 'next_before' is null,
+  'p_product: the last page has no next_before'
 );
 
-select is(
-  (current_setting('test.totals')::jsonb #> '{periods,all}') - array['starts_on', 'packs_by_size', 'earned', 'paid_orders', 'paid_without_amount'],
-  '{"orders":7,"packs":14}'::jsonb,
-  'all time: confirmed, sent and delivered count; new, stale and cancelled do not'
-);
+reset role;
 
-select is(
-  current_setting('test.totals')::jsonb #> '{periods,all,packs_by_size}',
-  '[{"size":"250 g","packs":5},{"size":"500 g","packs":8},{"size":"1 kg","packs":1}]'::jsonb,
-  'all time: packs by size, lightest first, 250g and 250 g as one'
-);
+-- ─── 5. Week boundaries ─────────────────────────────────
 
-select is(
-  jsonb_build_object(
-    'earned', current_setting('test.totals')::jsonb #> '{periods,all,earned}',
-    'paid_orders', current_setting('test.totals')::jsonb #> '{periods,all,paid_orders}',
-    'paid_without_amount', current_setting('test.totals')::jsonb #> '{periods,all,paid_without_amount}'),
-  '{"earned":1100,"paid_orders":3,"paid_without_amount":1}'::jsonb,
-  'all time: earned counts paid orders of any status but cancelled'
-);
-
-select is(
-  (current_setting('test.totals')::jsonb #> '{periods,today}') - 'starts_on',
-  (current_setting('test.totals')::jsonb #> '{periods,all}') - 'starts_on',
-  'today: everything saved and paid just now is in it'
-);
-
-select is(
-  jsonb_build_object(
-    'orders', (select sum((d ->> 'orders')::int) from jsonb_array_elements(current_setting('test.totals')::jsonb #> '{periods,week,days}') d),
-    'packs', (select sum((d ->> 'packs')::int) from jsonb_array_elements(current_setting('test.totals')::jsonb #> '{periods,week,days}') d)),
-  jsonb_build_object(
-    'orders', current_setting('test.totals')::jsonb #> '{periods,week,orders}',
-    'packs', current_setting('test.totals')::jsonb #> '{periods,week,packs}'),
-  'week: the days add up to the week''s orders and packs'
-);
-
-select is(
-  (select jsonb_agg(d -> 'date' order by n)
-   from jsonb_array_elements(current_setting('test.totals')::jsonb #> '{periods,week,days}') with ordinality as x(d, n)),
-  (select jsonb_agg(to_jsonb(date_trunc('week', now() at time zone 'Asia/Kolkata')::date + i) order by i)
-   from generate_series(0, 6) i),
-  'week: days run Monday to Sunday, India time'
-);
-
--- ─── 4. Where each period starts ────────────────────────
-
--- For one period, clears the orders and adds four around its IST start:
---   SN-NCRAT  confirmed, created at the start           (3 packs, not paid)
---   SN-XCRAT  confirmed, created 1 µs before the start  (5 packs, not paid)
---   SN-NPAYT  new, created long ago, paid at the start          (₹30)
---   SN-XPAYT  new, created long ago, paid 1 µs before the start (₹50)
--- and returns that period's totals plus all time's. Runs as the test user
--- with the admin's claims (get_admin_totals only checks is_admin()).
-create function pg_temp.around_start(p_unit text, p_key text)
+-- Clears the orders and puts pairs on each edge of each week. Confirmed
+-- orders carry 1, 2, 4… packs, and paid ones ₹1, ₹2, ₹4…, so every total
+-- says exactly which orders were counted:
+--   this Monday 00:00 IST     created 1 pack  / paid ₹1
+--   1 µs before that          created 2       / paid ₹2
+--   last Monday 00:00 IST     created 4       / paid ₹4
+--   1 µs before that          created 8       / paid ₹8
+--   exactly 7 days ago        created 16      / paid ₹16
+--   1 µs before that          created 32      / paid ₹32
+create function pg_temp.around_weeks()
 returns jsonb
 language plpgsql
 as $$
 declare
-  v_start timestamptz := date_trunc(p_unit, now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata';
+  v_this timestamptz := date_trunc('week', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata';
+  v_last timestamptz := v_this - interval '7 days';
+  v_ago timestamptz := now() - interval '7 days';
   v_totals jsonb;
 begin
   delete from public.orders;
 
-  insert into public.orders (code, source, status, phone, amount, paid_at, created_at) values
-    ('SN-NCRAT', 'whatsapp', 'confirmed', '919800000051', null, null, v_start),
-    ('SN-XCRAT', 'whatsapp', 'confirmed', '919800000052', null, null, v_start - interval '1 microsecond'),
-    ('SN-NPAYT', 'whatsapp', 'new',       '919800000053', 30, v_start, '2020-01-01'),
-    ('SN-XPAYT', 'whatsapp', 'new',       '919800000054', 50, v_start - interval '1 microsecond', '2020-01-01');
+  insert into public.orders (code, source, status, phone, amount, paid_at, created_at)
+  select 'SN-WK' || t.tag || '22', 'whatsapp', 'confirmed', '9198000000' || (70 + t.n), null, null, t.at
+  from (values
+    ('A', 1, v_this), ('B', 2, v_this - interval '1 microsecond'),
+    ('C', 3, v_last), ('D', 4, v_last - interval '1 microsecond'),
+    ('E', 5, v_ago),  ('F', 6, v_ago - interval '1 microsecond')
+  ) as t(tag, n, at)
+  union all
+  select 'SN-PY' || t.tag || '22', 'whatsapp', 'new', '9198000000' || (80 + t.n), t.amount, t.at, '2020-01-01'
+  from (values
+    ('A', 1, 1, v_this), ('B', 2, 2, v_this - interval '1 microsecond'),
+    ('C', 3, 4, v_last), ('D', 4, 8, v_last - interval '1 microsecond'),
+    ('E', 5, 16, v_ago), ('F', 6, 32, v_ago - interval '1 microsecond')
+  ) as t(tag, n, amount, at);
 
   insert into public.order_lines (order_id, product_id, size, quantity)
-  select o.id, 'muesli', '250 g', case o.code when 'SN-NCRAT' then 3 else 5 end
-  from public.orders o where o.code in ('SN-NCRAT', 'SN-XCRAT');
+  select o.id, 'muesli', '250 g', power(2, ascii(substring(o.code from 6 for 1)) - ascii('A'))::integer
+  from public.orders o where o.code like 'SN-WK%';
 
   perform set_config('request.jwt.claims',
     '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
   v_totals := public.get_admin_totals()::jsonb;
 
-  return jsonb_build_object(
-    'period', (v_totals #> array['periods', p_key]) - array['starts_on', 'packs_by_size', 'days'],
-    'all', (v_totals #> '{periods,all}') - array['starts_on', 'packs_by_size']
+  return (
+    select jsonb_object_agg(w.key, jsonb_build_object(
+      'orders', w.value -> 'orders', 'packs', w.value -> 'packs', 'amount_in', w.value -> 'amount_in'))
+    from jsonb_each(v_totals -> 'weeks') w
   );
 end;
 $$;
 
--- In: SN-NCRAT (3 packs) and SN-NPAYT (₹30). Out: the two 1 µs earlier.
-select is(
-  pg_temp.around_start('day', 'today') -> 'period',
-  '{"orders":1,"packs":3,"earned":30,"paid_orders":1,"paid_without_amount":0}'::jsonb,
-  'today: created or paid at IST midnight is in; a microsecond before is out'
-);
+select set_config('test.weeks', pg_temp.around_weeks()::text, true);
 
 select is(
-  pg_temp.around_start('week', 'week') -> 'period',
-  '{"orders":1,"packs":3,"earned":30,"paid_orders":1,"paid_without_amount":0}'::jsonb,
-  'week: created or paid at Monday 00:00 IST is in; a microsecond before is out'
+  current_setting('test.weeks')::jsonb -> 'this',
+  '{"orders":1,"packs":1,"amount_in":1}'::jsonb,
+  'this week: from Monday 00:00 IST exactly; a microsecond before is out'
 );
-
 select is(
-  pg_temp.around_start('month', 'month') -> 'period',
-  '{"orders":1,"packs":3,"earned":30,"paid_orders":1,"paid_without_amount":0}'::jsonb,
-  'month: created or paid at 00:00 IST on the 1st is in; a microsecond before is out'
+  current_setting('test.weeks')::jsonb -> 'last',
+  '{"orders":4,"packs":54,"amount_in":54}'::jsonb,
+  'last week: from last Monday 00:00 IST up to (not including) this Monday'
 );
-
 select is(
-  pg_temp.around_start('month', 'all') -> 'all',
-  '{"orders":2,"packs":8,"earned":80,"paid_orders":2,"paid_without_amount":0}'::jsonb,
-  'all time: no start, so both sides of every boundary count'
+  current_setting('test.weeks')::jsonb -> 'last_so_far',
+  '{"orders":2,"packs":36,"amount_in":36}'::jsonb,
+  'last week so far: from last Monday up to (not including) exactly 7 days ago'
 );
 
 select * from finish();

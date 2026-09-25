@@ -93,13 +93,13 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 |---|---|
 | `get_admin_me()` | Who's signed in (the admin's auth gate) |
 | `get_admin_users()` | Who has access |
-| `get_admin_orders(p_view, p_status, p_paid, p_search, p_phone, p_source, p_from, p_to, p_before, p_limit)` | Orders with their lines. Views `todo`, `done`, `all`. Search by code, name or phone. `p_from` inclusive, `p_to` exclusive. Page with `next_before`; a page can run slightly over `p_limit` so it never splits orders saved at the same moment. |
+| `get_admin_orders(p_view, p_status, p_paid, p_search, p_phone, p_source, p_from, p_to, p_before, p_limit, p_product)` | Orders with their lines. Views `todo`, `done`, `all`. Search by code, name or phone. `p_product` (e.g. `raggi-jaggi`) keeps orders containing that product, any size. `p_from` inclusive, `p_to` exclusive. Page with `next_before`; a page can run slightly over `p_limit` so it never splits orders saved at the same moment. |
 | `get_admin_order(p_code)` | One order with history and a phone suggestion; null if none |
 | `update_admin_order(p_id, p_changes)` | Quick changes: status, paid, kept, phone, amount, note, name, pincode (only the keys sent change). Also Undo. |
 | `save_admin_order(p_id, p_order)` | Add by hand (`p_id` null) or a full edit. Call with named arguments. |
 | `delete_admin_order(p_id)` | Deletes one order for good |
 | `get_admin_overview()` | Home and the badge: what's waiting, this week (Monday start, India time), what's selling and coupons (30 days, confirmed and later), done counts, email count |
-| `get_admin_totals()` | Home's totals at a glance: right now (pending, packs to send, to collect) and today, this week, this month and all time in one call, plus the week's 7 days |
+| `get_admin_totals()` | Home's per-product numbers: each product's orders, packs, grams and packs by size in each stage; the same stages overall with money (amount, without amount, paid, unpaid); this week, last week and last week so far (orders, packs, money in), with this week's 7 days |
 | `get_admin_customers(p_search)` | People grouped by phone |
 | `set_admin_stock(p_product_id, p_size, p_in_stock)` | The stock switch |
 | `get_admin_coupons()`, `create_admin_coupon`, `update_admin_coupon`, `set_admin_coupon_active` | Coupons, with how often each was used |
@@ -107,10 +107,10 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 
 - **Errors:** plain messages for people use errcode `22023` and are shown as they come. **Not an admin comes back as HTTP 400, code `P0001`, message `Unauthorized`** (anon gets 401). The admin matches on the message.
 - **"Didn't come through?"**: a site order that's been New for 48 hours, and wasn't marked "Still waiting" in the last 48 hours (`order_is_stale()`). Orders added by hand (WhatsApp, call, Instagram, in person) never go stale: they already came through.
-- **Totals (`get_admin_totals()`)**, India time: a period's orders and packs are confirmed, sent or delivered orders by `created_at` (new, stale and cancelled never count), and its week days use the same rule so they add up. Earned is the sum of `amount` on not-cancelled orders by `paid_at`; `paid_without_amount` says when that's a floor. Periods start at IST midnight, Monday and the 1st, inclusive. Empty means zeros, not nulls.
+- **Stages (`get_admin_totals()`)**: `to_confirm` is New and not stale, `to_send` Confirmed, `on_the_way` Sent, `to_collect` Delivered and not paid, `stale` is `order_is_stale()`; cancelled and done orders are in none. Weight comes from the size (`1 kg` is 1000 g). Money is per order, so it's only in `overall`. Weeks start Monday 00:00 IST; their orders and packs are confirmed, sent or delivered orders by `created_at`, money in is `amount` on not-cancelled orders by `paid_at`. Empty means zeros, not nulls.
 - **`get_waitlist_count_stats()` is internal.** No role can call it through the API (migration `20260926000005`); `get_admin_email_list()` uses it inside the database for its counts.
 
-**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview, the Home totals and their period starts, and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
+**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview, the Home totals and their week boundaries, the product filter, and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
 
 ## WhatsApp order click tracking
 
