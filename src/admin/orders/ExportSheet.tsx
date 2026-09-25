@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Download } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
-import { AdminSheet } from '../AdminSheet';
-import { getOrders, toAdminError } from '../api';
+import { AdminError, getOrders } from '../api';
 import { downloadCsv, toCsv } from '../csv';
 import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
-import { Segmented } from '../parts';
+import { Segmented, SheetForm } from '../parts';
 import { itemsText } from './model';
 
 const copy = adminCopy.exportOrders;
@@ -31,39 +29,25 @@ const row = (o: Order) => [
 /** Export orders (spec 2.5): every order in the range, newest first, paged with next_before. */
 export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const [range, setRange] = useState<Range>('month');
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState('');
 
   const download = async () => {
-    setBusy(true);
-    setNote('');
-    try {
-      const orders: Order[] = [];
-      let before: string | undefined;
-      do {
-        const page = await getOrders({ view: 'all', from: fromOf(range), before, limit: 1000 });
-        orders.push(...page.orders);
-        before = page.next_before ?? undefined;
-      } while (before);
-      if (!orders.length) setNote(copy.none);
-      else downloadCsv(copy.file(istDateValue()), toCsv(copy.columns, orders.map(row)));
-    } catch (err) {
-      setNote(toAdminError(err).message);
-    }
-    setBusy(false);
+    const orders: Order[] = [];
+    let before: string | undefined;
+    do {
+      const page = await getOrders({ view: 'all', from: fromOf(range), before, limit: 1000 });
+      orders.push(...page.orders);
+      before = page.next_before ?? undefined;
+    } while (before);
+    if (!orders.length) throw new AdminError('message', copy.none); // SheetForm shows it at the top
+    downloadCsv(copy.file(istDateValue()), toCsv(copy.columns, orders.map(row)));
   };
 
+  if (!isOpen) return null;
   return (
-    <AdminSheet isOpen={isOpen} onClose={onClose} title={copy.title} closeLabel={adminCopy.close}
-      bar={
-        <button type="button" className="adm-btn adm-btn--primary adm-btn--block" disabled={busy} onClick={download}>
-          <Download size={18} aria-hidden="true" />{busy ? copy.busy : copy.download}
-        </button>
-      }>
+    <SheetForm title={copy.title} submitLabel={copy.download} busyLabel={copy.busy} onClose={onClose} onSubmit={download}>
       <p className="adm-field__label" aria-hidden="true">{copy.range}</p>
       <Segmented label={copy.range} value={range} onChange={setRange}
         options={(Object.keys(copy.ranges) as Range[]).map((r) => ({ value: r, label: copy.ranges[r] }))} />
-      <p className="adm-muted" role="status">{note}</p>
-    </AdminSheet>
+    </SheetForm>
   );
 };
