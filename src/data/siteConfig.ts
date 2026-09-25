@@ -56,6 +56,20 @@ export const siteConfig = {
     general: "Hi! I'd like to place an order.",
     product: (productName: string) => `Hi! I'd like to order ${productName}.`,
   },
+  // The "Your order" popup. No prices or totals anywhere: Pranjali replies with them.
+  order: {
+    // Most packs of one product in one size per order. Bigger orders are a chat anyway.
+    maxQuantity: 10,
+    // The WhatsApp message, piece by piece. Placeholder wording until Design sends the final words.
+    message: {
+      greeting: (name: string) => `Hi! I'm ${name}, and I'd like to place an order:`,
+      greetingNoName: "Hi! I'd like to place an order:",
+      line: (productName: string, size: string, quantity: number) => `• ${productName} ${size} × ${quantity}`,
+      coupon: (code: string) => `Coupon: ${code}`,
+      pincode: (pincode: string) => `Pincode: ${pincode}`,
+      closing: 'Could you send me the total?',
+    },
+  },
   social: {
     instagram: "https://instagram.com/shahsnutrition",
     // Use the founder's confirmed inbox until branded receiving mailboxes are created.

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { WaitlistProvider } from './context/WaitlistContext';
+import { OrderProvider } from './context/OrderContext';
 import { Header } from './components/layout/Header';
 import { HeroSection } from './components/sections/HeroSection';
 import { ProductsSection } from './components/sections/ProductsSection';
@@ -53,7 +54,7 @@ const LandingPage: React.FC = () => (
     <AnalyticsTracker />
     <SectionSettle />
     <WaitlistProvider>
-      <>
+      <OrderProvider>
         <div className="app-shell">
             <a href="#main-content" className="skip-link">Skip to main content</a>
             <Header />
@@ -83,7 +84,7 @@ const LandingPage: React.FC = () => (
 
             <Toast />
         </div>
-      </>
+      </OrderProvider>
     </WaitlistProvider>
   </>
 );
