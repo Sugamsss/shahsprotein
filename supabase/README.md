@@ -99,6 +99,7 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 | `save_admin_order(p_id, p_order)` | Add by hand (`p_id` null) or a full edit. Call with named arguments. |
 | `delete_admin_order(p_id)` | Deletes one order for good |
 | `get_admin_overview()` | Home and the badge: what's waiting, this week (Monday start, India time), what's selling and coupons (30 days, confirmed and later), done counts, email count |
+| `get_admin_totals()` | Home's totals at a glance: right now (pending, packs to send, to collect) and today, this week, this month and all time in one call, plus the week's 7 days |
 | `get_admin_customers(p_search)` | People grouped by phone |
 | `set_admin_stock(p_product_id, p_size, p_in_stock)` | The stock switch |
 | `get_admin_coupons()`, `create_admin_coupon`, `update_admin_coupon`, `set_admin_coupon_active` | Coupons, with how often each was used |
@@ -106,9 +107,10 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 
 - **Errors:** plain messages for people use errcode `22023` and are shown as they come. **Not an admin comes back as HTTP 400, code `P0001`, message `Unauthorized`** (anon gets 401). The admin matches on the message.
 - **"Didn't come through?"**: a site order that's been New for 48 hours, and wasn't marked "Still waiting" in the last 48 hours (`order_is_stale()`). Orders added by hand (WhatsApp, call, Instagram, in person) never go stale: they already came through.
+- **Totals (`get_admin_totals()`)**, India time: a period's orders and packs are confirmed, sent or delivered orders by `created_at` (new, stale and cancelled never count), and its week days use the same rule so they add up. Earned is the sum of `amount` on not-cancelled orders by `paid_at`; `paid_without_amount` says when that's a floor. Periods start at IST midnight, Monday and the 1st, inclusive. Empty means zeros, not nulls.
 - **`get_waitlist_count_stats()` is internal.** No role can call it through the API (migration `20260926000005`); `get_admin_email_list()` uses it inside the database for its counts.
 
-**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
+**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview, the Home totals and their period starts, and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
 
 ## WhatsApp order click tracking
 
