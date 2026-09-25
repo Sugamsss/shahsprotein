@@ -39,7 +39,7 @@ export const trackOrderSend = (openedFrom?: OrderPopupOpener): void => {
   trackOrderClick(openedFrom ? `order-popup:${openedFrom}` : 'order-popup');
 };
 
-/** The empty popup's "Message me on WhatsApp", a direct order chat. Kept apart from Send. */
+/** The empty popup's "Message us on WhatsApp", a direct order chat. Kept apart from Send. */
 export const trackOrderChat = (): void => {
   trackOrderClick('order-popup:chat');
 };

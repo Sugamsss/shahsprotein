@@ -55,20 +55,21 @@ export const siteConfig = {
   orderMessages: {
     general: "Hi! I'd like to place an order.",
   },
-  // The "Your order" popup, in Pranjali's voice. No prices, totals or delivery
-  // costs anywhere: she replies with them on WhatsApp. Items read "Muesli, 250 g"
-  // in the popup and "Muesli 250 g" in the message.
+  // The "Your order" popup. It says "we", and names Sunit as the one who gets the
+  // message: orders go to him on the order number above. No prices, totals or
+  // delivery costs anywhere: we reply with them on WhatsApp. Items read
+  // "Muesli, 250 g" in the popup and "Muesli 250 g" in the message.
   order: {
     // Most packs of one product in one size per order. Bigger orders are a chat.
     maxQuantity: 10,
 
     // Popup
     title: 'Your order',
-    intro: "Pick what you'd like and send it to me on WhatsApp. I'll reply with the total, delivery and how to pay.",
+    intro: "Pick what you'd like and send it to Sunit on WhatsApp. We'll reply with the total, delivery and how to pay.",
     itemsHeading: 'In your order', // visually hidden
     addMoreHeading: 'Add something else',
     detailsHeading: 'Your details',
-    droppedNotice: "A pack size you'd picked before isn't available any more, so I've taken it out.",
+    droppedNotice: "A pack size you'd picked before isn't available any more, so we've taken it out.",
 
     // Entry points
     cardAdd: 'Add',
@@ -85,7 +86,7 @@ export const siteConfig = {
     pickAdd: 'Add',
     pickAddLabel: (name: string, size: string) => `Add ${name}, ${size}`,
     chatLead: 'Rather just chat?',
-    chatLink: 'Message me on WhatsApp',
+    chatLink: 'Message us on WhatsApp',
 
     // Lines
     itemName: (name: string, size: string) => `${name}, ${size}`,
@@ -95,7 +96,7 @@ export const siteConfig = {
     qtyLess: (item: string) => `One less ${item}`,
     qtyMore: (item: string) => `One more ${item}`,
     qtyRemove: (item: string) => `Remove ${item}`,
-    maxNote: '10 is the most I can take here. Need more? Just say so in the chat.',
+    maxNote: '10 is the most we can take here. Need more? Just say so in the chat.',
     mergedNote: (item: string) => `Joined with your other ${item}.`,
     removed: (item: string) => `Removed ${item}.`,
     undo: 'Undo',
@@ -103,8 +104,8 @@ export const siteConfig = {
     // Details
     nameLabel: 'Your name',
     pincodeLabel: 'Pincode',
-    pincodeHint: 'So I can check delivery to you.',
-    nameMissing: "Please add your name, so I know who's ordering.",
+    pincodeHint: 'So we can check delivery to you.',
+    nameMissing: "Please add your name, so we know who's ordering.",
     pincodeMissing: 'Please add your 6-digit pincode.',
     pincodeInvalid: 'A pincode has 6 digits, like 415001.',
 
@@ -114,16 +115,16 @@ export const siteConfig = {
     couponPlaceholder: 'Enter code',
     couponApply: 'Apply',
     couponChecking: 'Checking',
-    couponAppliedNote: "I'll take it off your total.",
+    couponAppliedNote: "We'll take it off your total.",
     couponRemove: 'Remove',
-    couponInvalid: "I couldn't find that code. Check the spelling, or mention it in the chat.",
-    couponUnavailable: "Couldn't check it just now. I'll add it to your message and check it myself.",
+    couponInvalid: "We couldn't find that code. Check the spelling, or mention it in the chat.",
+    couponUnavailable: "Couldn't check it just now. We'll add it to your message and check it ourselves.",
 
     // Message preview. "Usually replies the same day" matches replyTime above:
     // if one changes, change them all (sentBody too).
     previewShow: 'See your message',
     previewHide: 'Hide your message',
-    previewTo: "To Pranjali, Shah's Nutrition",
+    previewTo: "To Sunit, Shah's Nutrition",
     previewReply: 'Usually replies the same day',
     previewBlankName: 'your name',
     previewBlankPincode: 'your pincode',
@@ -134,7 +135,7 @@ export const siteConfig = {
 
     // Sent
     sentTitle: 'Now press send in WhatsApp',
-    sentBody: "Your order is written out and waiting there. Once you send it, I'll reply with the total, delivery and how to pay. I usually reply the same day.",
+    sentBody: "Your order is written out and waiting there. Once you send it, we'll reply with the total, delivery and how to pay. We usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
     forgot: 'Forgot something? Just add it in the chat.',

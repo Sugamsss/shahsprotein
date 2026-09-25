@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildOrderMessage, orderMessageParts } from './orderMessage';
 
-// The exact text the customer sends and Pranjali reads. When the wording in
+// The exact text the customer sends and Sunit reads. When the wording in
 // siteConfig.order.message changes on purpose, update these strings with it.
 
 // Deliberately out of order: the message lists products in catalogue order

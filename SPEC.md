@@ -10,6 +10,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
+- **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with the total…"). The WhatsApp message itself is the customer speaking.
 - **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". No prices are shown yet.
 
 ## 2. Themes and design tokens
@@ -38,10 +39,10 @@ Rules:
 
 ### The "Your order" popup
 
-People build their order on the site and send Pranjali one tidy WhatsApp message. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): she replies on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no accounts and no order database.
+People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): we reply on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no accounts and no order database.
 
 - **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
-- **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so she can quote delivery), an optional coupon, and "See your message", which shows the exact text. **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message me on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
+- **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, and "See your message", which shows the exact text. **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
 - **Order of lines.** Always product order (Raggi Jaggi, Muesli, Date Bites), smaller pack first, in the popup and in the message (`sortLines`).
 - **What's kept.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, pincode and the coupon stay in memory for the visit and are never saved. At Send the cart is cleared, and a snapshot stays in memory so the "Now press send in WhatsApp" panel can offer **Try again**. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
 - **The message** comes from `buildOrderMessage` (`src/utils/orderMessage.ts`), with its words in `siteConfig.order.message`:
@@ -63,7 +64,7 @@ People build their order on the site and send Pranjali one tidy WhatsApp message
 
 ### Coupons
 
-Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; Pranjali works out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes at `/admin/coupons` (see §7).
+Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; we work out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes at `/admin/coupons` (see §7).
 
 ### Direct WhatsApp links
 
