@@ -24,6 +24,8 @@ interface OrderLineRowProps {
   /** Short notes under the row, e.g. the merge note and the limit hint. */
   notes: string[];
   leaving: boolean;
+  /** Pack sizes that are out of stock, disabled in the size switch. */
+  isSizeOut: (size: string) => boolean;
   onSize: (size: string) => void;
   onLess: () => void;
   onMore: () => void;
@@ -31,7 +33,7 @@ interface OrderLineRowProps {
 
 /** One compact row: thumbnail, name, pack size, and a stepper whose minus becomes a bin at 1. */
 export const OrderLineRow: React.FC<OrderLineRowProps> = ({
-  line, product, maxQuantity, flash, notes, leaving, onSize, onLess, onMore,
+  line, product, maxQuantity, flash, notes, leaving, isSizeOut, onSize, onLess, onMore,
 }) => {
   const item = copy.itemName(product.name, line.size);
   const atOne = line.quantity <= 1;
@@ -55,6 +57,7 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
           onChange={onSize}
           legend={copy.sizeLegend(product.name)}
           single={copy.singleSize(line.size)}
+          isOut={isSizeOut}
         />
       </div>
       <div className="qty-stepper" role="group" aria-label={copy.qtyGroup(item)}>

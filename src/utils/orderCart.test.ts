@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addLine, parseStoredCart } from './orderCart';
+import { addLine, inStockLines, parseStoredCart } from './orderCart';
 
 // Uses the real product list: Muesli comes in 250 g and 500 g, Date Bites in 250 g only.
 // The limit is siteConfig.order.maxQuantity (10 packs per line).
@@ -54,5 +54,22 @@ describe('parseStoredCart', () => {
   it('treats unreadable saved data as an empty cart', () => {
     expect(parseStoredCart('{not json')).toEqual({ lines: [], dropped: 0 });
     expect(parseStoredCart(JSON.stringify({ lines: 'nope' }))).toEqual({ lines: [], dropped: 0 });
+  });
+});
+
+describe('inStockLines (what the message and the save carry)', () => {
+  it('leaves out lines that are out of stock, and keeps the rest in catalogue order', () => {
+    const cart = [
+      { productId: 'bites', size: '250 g', quantity: 1 },
+      { productId: 'muesli', size: '500 g', quantity: 2 },
+      { productId: 'muesli', size: '250 g', quantity: 1 },
+    ];
+    const isOut = (productId: string, size: string) => productId === 'muesli' && size === '500 g';
+
+    expect(inStockLines(cart, isOut)).toEqual([
+      { productId: 'muesli', size: '250 g', quantity: 1 },
+      { productId: 'bites', size: '250 g', quantity: 1 },
+    ]);
+    expect(inStockLines(cart, () => true)).toEqual([]);
   });
 });

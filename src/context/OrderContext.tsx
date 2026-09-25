@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { siteConfig } from '../data/siteConfig';
-import type { AddResult, CouponCheck, MessageCoupon, OrderLine } from '../types/order';
+import { productsData } from '../data/products';
+import type { AddResult, CouponCheck, MessageCoupon, OrderLine, OrderMessageInput } from '../types/order';
 import type { OrderPopupOpener } from '../utils/contact';
 import {
   addLine,
   changeLineSize,
   countItems,
+  inStockLines,
   parseStoredCart,
   removeLine,
   serializeCart,
@@ -13,12 +15,14 @@ import {
   sortLines,
 } from '../utils/orderCart';
 import { cleanName, orderMessageUrl } from '../utils/orderMessage';
+import { makeOrderCode } from '../utils/orderCode';
 import { checkCoupon, looksLikeCouponCode, normalizeCouponCode } from '../services/couponService';
+import { firstInStockSize, useStock } from '../services/stockService';
 
 // Everything behind the "Your order" popup.
 //
 // Only the cart is saved (localStorage), so a reload doesn't lose it. Name, pincode,
-// the coupon and the sent snapshot are personal or short-lived: they live in memory
+// the coupon, the order code and the sent snapshot are personal or short-lived: they live in memory
 // for this visit, so they survive closing and reopening the popup, and never touch
 // storage. Storage can be missing, blocked, full or throw on access, so every touch
 // is guarded and the cart simply lives in memory when it can't be saved.
@@ -32,12 +36,11 @@ export type CouponState =
   | { status: 'checking'; code: string }
   | CouponCheck;
 
-/** What was sent, kept in memory after Send so the sent panel and "Try again" work. */
-export interface SentOrder {
-  lines: OrderLine[];
-  name: string;
-  pincode: string;
-  coupon: MessageCoupon | null;
+/**
+ * What was sent (and saved), kept in memory after Send so the sent panel and
+ * "Try again" work. "Try again" reopens `url` and saves the same order again.
+ */
+export interface SentOrder extends OrderMessageInput {
   url: string;
 }
 
@@ -55,7 +58,7 @@ export interface OrderContextType {
   /** Total packs, for the header count. */
   itemCount: number;
   maxQuantity: number;
-  /** No size means the product's first pack size. Drops a sent snapshot first. */
+  /** No size means the product's first pack size that's in stock. Drops a sent snapshot first. */
   addItem: (productId: string, size?: string, quantity?: number) => AddResult;
   /** Clamped to 1..maxQuantity. Use `removeItem` to remove. */
   setQuantity: (productId: string, size: string, quantity: number) => void;
@@ -98,12 +101,18 @@ export interface OrderContextType {
   closeOrder: () => void;
 
   // Send
-  /** The finished wa.me link for what's in the popup right now. */
+  /** This order's code, e.g. "SN-7KQ4M". Memory only. A new one comes with each new order. */
+  code: string;
+  /** The lines that go in the message and the save: in stock, in display order. */
+  sendLines: OrderLine[];
+  /** The order as it would be sent right now. */
+  currentOrder: () => OrderMessageInput;
+  /** The finished wa.me link for `currentOrder()`. */
   currentUrl: () => string;
-  /** Call once the Send link has opened: keeps a snapshot, clears the cart and the coupon. */
-  markSent: (url: string) => void;
+  /** Call once the Send link has opened: keeps the snapshot, clears the cart and the coupon. */
+  markSent: (order: OrderMessageInput, url: string) => void;
   sent: SentOrder | null;
-  /** Drops the snapshot. Name and pincode stay. */
+  /** Drops the snapshot and starts a new code. Name and pincode stay. */
   startNewOrder: () => void;
 }
 
@@ -157,6 +166,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOpen, setIsOpen] = useState(false);
   const [openedFrom, setOpenedFrom] = useState<OrderPopupOpener | undefined>(undefined);
   const [sent, setSent] = useState<SentOrder | null>(null);
+  const [code, setCode] = useState(makeOrderCode);
+  const stock = useStock();
 
   // Refs hold the latest values, so actions answer synchronously and two quick
   // clicks in the same tick both count (the second sees the first's result).
@@ -164,6 +175,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const couponInputRef = useRef(couponInput);
   const couponRef = useRef(coupon);
   const sentRef = useRef(sent);
+  const stockRef = useRef(stock);
+  stockRef.current = stock;
 
   const commit = useCallback((next: OrderLine[]) => {
     if (next === linesRef.current) return;
@@ -181,6 +194,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSent(next);
   }, []);
 
+  /** A sent order is finished: drop it, and the next order gets a new code. */
+  const finishSent = useCallback(() => {
+    if (!sentRef.current) return;
+    updateSent(null);
+    setCode(makeOrderCode());
+  }, [updateSent]);
+
   useEffect(() => {
     saveCart(storedLines);
   }, [storedLines]);
@@ -196,16 +216,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [commit]);
 
   const addItem = useCallback((productId: string, size?: string, quantity = 1): AddResult => {
-    // A sent order is finished: anything added starts the next one.
-    if (sentRef.current) updateSent(null);
-    const { lines: next, result } = addLine(linesRef.current, productId, size, quantity);
+    const product = productsData.find((p) => p.id === productId);
+    const packSize = size ?? (product && firstInStockSize(product, stockRef.current));
+    if (!packSize) return 'invalid';
+    // Anything added after a sent order starts the next one.
+    finishSent();
+    const { lines: next, result } = addLine(linesRef.current, productId, packSize, quantity);
     commit(next);
     if (result !== 'invalid') {
-      const line = next.find((l) => l.productId === productId && (size === undefined || l.size === size));
-      if (line) setLastAdd({ productId, size: line.size, result, at: Date.now() });
+      setLastAdd({ productId, size: packSize, result, at: Date.now() });
     }
     return result;
-  }, [commit, updateSent]);
+  }, [commit, finishSent]);
 
   const setQuantity = useCallback((productId: string, size: string, quantity: number) => {
     commit(setLineQuantity(linesRef.current, productId, size, quantity));
@@ -282,25 +304,27 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const lines = useMemo(() => sortLines(storedLines), [storedLines]);
 
-  const currentUrl = useCallback(
-    () => orderMessageUrl({ lines: linesRef.current, name, pincode, coupon: messageCoupon }),
-    [name, pincode, messageCoupon],
-  );
+  const sendLines = useMemo(() => inStockLines(storedLines, stock.isOut), [storedLines, stock]);
 
-  const markSent = useCallback((url: string) => {
-    updateSent({
-      lines: sortLines(linesRef.current),
-      name: cleanName(name),
-      pincode,
-      coupon: messageCoupon,
-      url,
-    });
+  // Built from the refs at call time, so a click right after a change sends what's on screen.
+  const currentOrder = useCallback((): OrderMessageInput => ({
+    code,
+    lines: inStockLines(linesRef.current, stockRef.current.isOut),
+    name: cleanName(name),
+    pincode,
+    coupon: messageCoupon,
+  }), [code, name, pincode, messageCoupon]);
+
+  const currentUrl = useCallback(() => orderMessageUrl(currentOrder()), [currentOrder]);
+
+  const markSent = useCallback((order: OrderMessageInput, url: string) => {
+    updateSent({ ...order, url });
     commit([]);
     removeCoupon();
     setCouponOpen(false);
-  }, [name, pincode, messageCoupon, commit, removeCoupon, updateSent]);
+  }, [commit, removeCoupon, updateSent]);
 
-  const startNewOrder = useCallback(() => updateSent(null), [updateSent]);
+  const startNewOrder = finishSent;
 
   const value = useMemo<OrderContextType>(() => ({
     lines,
@@ -329,6 +353,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     openedFrom,
     openOrder,
     closeOrder,
+    code,
+    sendLines,
+    currentOrder,
     currentUrl,
     markSent,
     sent,
@@ -336,8 +363,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }), [
     lines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
     name, pincode, setPincode, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
-    removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, currentUrl,
-    markSent, sent, startNewOrder,
+    removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, code, sendLines,
+    currentOrder, currentUrl, markSent, sent, startNewOrder,
   ]);
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;

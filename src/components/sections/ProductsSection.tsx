@@ -11,6 +11,7 @@ import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import { useOrder } from '../../context/OrderContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
 import type { Product } from '../../types/product';
 import type { Theme } from '../../types/theme';
@@ -24,9 +25,11 @@ const copy = siteConfig.order;
 const ProductCard: React.FC<{
   product: Product;
   theme: Theme;
+  /** Every pack size is out: "Back soon" instead of Add. */
+  out: boolean;
   onOpen: (product: Product) => void;
   onAdd: (product: Product) => void;
-}> = ({ product, theme, onOpen, onAdd }) => (
+}> = ({ product, theme, out, onOpen, onAdd }) => (
   <article className={`portfolio-card portfolio-card--${product.id}`}>
     <img
       className="portfolio-card__art"
@@ -51,18 +54,24 @@ const ProductCard: React.FC<{
         >
           View details <ArrowUpRight size={18} aria-hidden="true" />
         </button>
-        {/* Adds the smallest pack (or one more of it) and opens "Your order". */}
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          className="order-btn order-btn--sm portfolio-card__order portfolio-card__add"
-          aria-label={copy.cardAddLabel(product.name)}
-          onClick={() => onAdd(product)}
-          {...preloadOrderHandlers}
-        >
-          <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-          <span>{copy.cardAdd}</span>
-        </button>
+        {/* Adds the smallest pack in stock (or one more of it) and opens "Your order". */}
+        {out ? (
+          <span className="order-btn order-btn--sm portfolio-card__order portfolio-card__add back-soon">
+            {copy.backSoon}
+          </span>
+        ) : (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            className="order-btn order-btn--sm portfolio-card__order portfolio-card__add"
+            aria-label={copy.cardAddLabel(product.name)}
+            onClick={() => onAdd(product)}
+            {...preloadOrderHandlers}
+          >
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+            <span>{copy.cardAdd}</span>
+          </button>
+        )}
       </div>
     </div>
   </article>
@@ -70,27 +79,36 @@ const ProductCard: React.FC<{
 
 /** The product popup's pinned bar: pick a pack size, then add it to the order. */
 const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => void }> = ({ product, onAdd }) => {
-  const [size, setSize] = useState(product.weightOptions[0]);
+  const stock = useStock();
+  const [picked, setSize] = useState<string | undefined>(undefined);
+  // The picked size, unless it's out (stock can arrive while the popup is open):
+  // then the first size in stock. Undefined when every size is out.
+  const size = picked && !stock.isOut(product.id, picked) ? picked : firstInStockSize(product, stock);
 
   return (
     <div className="popup-bar product-detail__order">
       <SizeChoice
         large
         sizes={product.weightOptions}
-        value={size}
+        value={size ?? ''}
         onChange={setSize}
         legend={copy.sizeLegendProduct}
-        single={copy.singleSize(size)}
+        single={copy.singleSize(product.weightOptions[0])}
+        isOut={(option) => stock.isOut(product.id, option)}
       />
-      <button
-        type="button"
-        className="order-btn order-btn--lg product-detail__add"
-        onClick={() => onAdd(size)}
-        {...preloadOrderHandlers}
-      >
-        <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
-        <span>{copy.addToOrder}</span>
-      </button>
+      {size ? (
+        <button
+          type="button"
+          className="order-btn order-btn--lg product-detail__add"
+          onClick={() => onAdd(size)}
+          {...preloadOrderHandlers}
+        >
+          <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
+          <span>{copy.addToOrder}</span>
+        </button>
+      ) : (
+        <span className="order-btn order-btn--lg product-detail__add back-soon">{copy.backSoon}</span>
+      )}
     </div>
   );
 };
@@ -100,6 +118,7 @@ export const ProductsSection: React.FC = () => {
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { addItem, openOrder, closeOrder, isOpen, openedFrom } = useOrder();
+  const stock = useStock();
 
   // "Add to order" turns this popup into "Your order" in place: the overlay
   // stays, and the title and content change. The shared OrderDialog stays shut
@@ -134,7 +153,16 @@ export const ProductsSection: React.FC = () => {
             <p>Wholesome everyday foods made with real ingredients and honest nutrition.</p>
           </div>
           <div className="portfolio-grid">
-            {productsData.map((product) => <ProductCard key={product.id} product={product} theme={theme} onOpen={setSelectedProduct} onAdd={addFromCard} />)}
+            {productsData.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                theme={theme}
+                out={stock.isProductOut(product.id)}
+                onOpen={setSelectedProduct}
+                onAdd={addFromCard}
+              />
+            ))}
           </div>
         </Container>
       </section>

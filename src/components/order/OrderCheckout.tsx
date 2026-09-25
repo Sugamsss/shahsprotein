@@ -2,8 +2,9 @@ import React, { useId, useRef, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { siteConfig } from '../../data/siteConfig';
+import { saveOrder } from '../../services/orderService';
 import { trackOrderSend } from '../../utils/contact';
-import { isValidName, isValidPincode } from '../../utils/orderMessage';
+import { isValidName, isValidPincode, orderMessageUrl } from '../../utils/orderMessage';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { CouponField } from './CouponField';
 import { MessagePreview } from './MessagePreview';
@@ -16,7 +17,9 @@ type Field = 'name' | 'pincode';
 
 /** "Your details" (name, pincode, coupon, message preview) and the pinned Send link. */
 export const OrderCheckout: React.FC = () => {
-  const { name, setName, pincode, setPincode, currentUrl, markSent, openedFrom } = useOrder();
+  const {
+    name, setName, pincode, setPincode, sendLines, currentOrder, currentUrl, markSent, openedFrom,
+  } = useOrder();
   const nameRef = useRef<HTMLInputElement>(null);
   const pincodeRef = useRef<HTMLInputElement>(null);
   const sendRef = useRef<HTMLAnchorElement>(null);
@@ -28,6 +31,8 @@ export const OrderCheckout: React.FC = () => {
   const [left, setLeft] = useState<Record<Field, boolean>>({ name: false, pincode: false });
   const [submitted, setSubmitted] = useState(false);
 
+  // Every line is out of stock: there's nothing to send.
+  const nothingToSend = sendLines.length === 0;
   const nameOk = isValidName(name);
   const pincodeOk = isValidPincode(pincode);
   const nameError = !nameOk && (submitted || left.name) ? copy.nameMissing : null;
@@ -51,11 +56,19 @@ export const OrderCheckout: React.FC = () => {
       return;
     }
     // Rebuilt at click time, so a coupon checked by this same click (its field
-    // just lost focus) is in the message.
-    const url = currentUrl();
+    // just lost focus) is in the message. Everything here is synchronous: nothing
+    // may wait before the link opens, or iOS and in-app browsers block WhatsApp.
+    // The save starts in the background and the message goes either way.
+    const order = currentOrder();
+    if (order.lines.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const url = orderMessageUrl(order);
     event.currentTarget.href = url;
+    saveOrder(order);
     trackOrderSend(openedFrom);
-    setTimeout(() => markSent(url), 0);
+    setTimeout(() => markSent(order, url), 0);
   };
 
   const nameErrorId = `${id}-name-error`;
@@ -140,21 +153,29 @@ export const OrderCheckout: React.FC = () => {
 
         <CouponField />
         <MessagePreview />
+        <p className="order-privacy">{copy.privacyNote}</p>
       </section>
 
       <div className="popup-bar order-send">
-        <a
-          ref={sendRef}
-          href={currentUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="order-btn order-btn--lg order-send__btn"
-          onClick={onSend}
-        >
-          <WhatsAppIcon size={18} />
-          <span>{copy.send}</span>
-        </a>
-        <p className="order-send__note">{copy.sendNote}</p>
+        {nothingToSend ? (
+          <button type="button" className="order-btn order-btn--lg order-send__btn" disabled aria-describedby={`${id}-send-note`}>
+            <WhatsAppIcon size={18} />
+            <span>{copy.send}</span>
+          </button>
+        ) : (
+          <a
+            ref={sendRef}
+            href={currentUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="order-btn order-btn--lg order-send__btn"
+            onClick={onSend}
+          >
+            <WhatsAppIcon size={18} />
+            <span>{copy.send}</span>
+          </a>
+        )}
+        <p id={`${id}-send-note`} className="order-send__note">{nothingToSend ? copy.allOutNote : copy.sendNote}</p>
       </div>
     </>
   );

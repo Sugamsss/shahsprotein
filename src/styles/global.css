@@ -833,6 +833,22 @@ a {
   }
 }
 
+/* Out of stock: "Back soon" in place of an Add button, and Send with nothing to send.
+   Same shape as the button, but flat and quiet, so it doesn't read as tappable.
+   Draft look, waiting on design. */
+.order-btn.back-soon,
+.order-btn:disabled {
+  background: var(--color-toggle-track);
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  transform: none;
+  cursor: default;
+}
+
+.order-btn:disabled {
+  cursor: not-allowed;
+}
+
 [data-theme="light"] .hero-content {
   background: rgba(255, 255, 255, 0.58);
   border-color: rgba(255, 255, 255, 0.78);
@@ -1639,9 +1655,21 @@ a {
 }
 
 @media (hover: hover) {
-  .size-choice input:not(:checked) + label:hover {
+  .size-choice input:not(:checked):not(:disabled) + label:hover {
     color: var(--color-text-primary);
   }
+}
+
+/* An out-of-stock size ("Back soon" to screen readers). With every size out,
+   nothing is picked, so the thumb hides. */
+.size-choice input:disabled + label {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.size-choice:not(:has(input:checked))::before {
+  opacity: 0;
 }
 
 /* The radio is hidden, so its focus ring goes on its label. */
@@ -1834,8 +1862,8 @@ a {
 }
 
 @media (hover: hover) {
-  .order-shelf__item:hover,
-  .order-pick:hover {
+  .order-shelf__item:not(.is-out):hover,
+  .order-pick:not(.is-out):hover {
     border-color: var(--color-border-hover);
     transform: translateY(-2px);
   }
@@ -1846,9 +1874,24 @@ a {
 }
 
 /* Pressed: the tiles and rows give a little. */
-.order-shelf__item:active,
-.order-pick:active {
+.order-shelf__item:not(.is-out):active,
+.order-pick:not(.is-out):active {
   transform: scale(0.98);
+}
+
+/* A product that's all out: the tile or row stays, quieter, with "Back soon". */
+.order-shelf__item.is-out .order-shelf__art,
+.order-pick.is-out .order-pick__thumb {
+  opacity: 0.55;
+}
+
+.order-shelf__item.is-out .order-shelf__name small {
+  color: var(--color-text-secondary);
+}
+
+.order-pick.is-out .order-pick__add {
+  background: var(--color-toggle-track);
+  color: var(--color-text-secondary);
 }
 
 .order-shelf__item,
@@ -2188,6 +2231,14 @@ a {
   color: var(--color-text-accent);
   font-weight: 600;
   box-shadow: inset 0 -1.5px 0 currentColor;
+}
+
+/* What we keep, just above Send. */
+.order-privacy {
+  margin-top: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 /* Send */
@@ -3966,6 +4017,13 @@ img {
     display: none;
   }
 
+  /* "Back soon" stays: it's the only thing that says why there's no "+". */
+  .order-shelf__item.is-out .order-shelf__name small {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
   .order-shelf__plus {
     position: relative;
     align-self: end;
@@ -3996,6 +4054,14 @@ img {
 
   .order-pick__add span {
     display: none;
+  }
+
+  /* "Back soon" is text, so it keeps a small pill rather than the round "+". */
+  .order-pick.is-out .order-pick__add {
+    width: auto;
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 
   .order-fields {

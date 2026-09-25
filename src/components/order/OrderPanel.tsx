@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
+import { firstInStockSize, useStock } from '../../services/stockService';
 import type { OrderLine } from '../../types/order';
 import { OrderCheckout } from './OrderCheckout';
 import { OrderEmpty } from './OrderEmpty';
@@ -84,6 +85,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
     lines, itemCount, maxQuantity, addItem, setQuantity, changeSize, removeItem,
     lastAdd, droppedOnLoad, sent, startNewOrder,
   } = useOrder();
+  const stock = useStock();
 
   const rootRef = useRef<HTMLDivElement>(null);
   const [liveText, announce] = useAnnouncer();
@@ -159,10 +161,11 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
 
   const add = (productId: string, focusLine: boolean) => {
     const product = productOf(productId);
-    if (!product) return;
-    const result = addItem(productId);
+    const size = product && firstInStockSize(product, stock);
+    if (!size) return;
+    const result = addItem(productId, size);
     if (result !== 'invalid' && focusLine) {
-      pendingFocus.current = { kind: 'line', key: lineKey({ productId, size: product.weightOptions[0] }), part: 'first' };
+      pendingFocus.current = { kind: 'line', key: lineKey({ productId, size }), part: 'first' };
     }
   };
 
@@ -257,6 +260,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
       const product = productOf(line.productId);
       if (!product) return null;
       const notes = [
+        stock.isOut(line.productId, line.size) ? copy.lineBackSoon : null,
         mergeNote?.key === key ? mergeNote.text : null,
         line.quantity >= maxQuantity ? copy.maxNote : null,
       ].filter((note): note is string => note !== null);
@@ -269,6 +273,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           flash={flash?.key === key ? flash : undefined}
           notes={notes}
           leaving={leavingKey === key}
+          isSizeOut={(size) => stock.isOut(line.productId, size)}
           onSize={(size) => changeLineSize(line, size)}
           onLess={() => (line.quantity > 1 ? changeQuantity(line, line.quantity - 1) : remove(line))}
           onMore={() => {

@@ -132,6 +132,17 @@ export const siteConfig = {
     // Send
     send: 'Send order on WhatsApp',
     sendNote: 'Opens WhatsApp with your message ready to send.',
+    // DRAFT copy, waiting on design
+    privacyNote: 'We keep your name, pincode and order so we can deliver it. Nothing else, and never shared.',
+    // DRAFT copy, waiting on design. Shown under Send when every line in the order is out of stock.
+    allOutNote: 'Everything in your order is out of stock right now.',
+
+    // Out of stock. DRAFT copy, waiting on design.
+    // In place of "Add" / "Add to order" when every pack size is out, and read
+    // out for a pack size that's out in the size switch.
+    backSoon: 'Back soon',
+    // Under a line in the order that's out of stock. It stays in the cart but isn't sent.
+    lineBackSoon: "Back soon. It's left out of your message for now.",
 
     // Sent
     sentTitle: 'Now press send in WhatsApp',
@@ -153,7 +164,8 @@ export const siteConfig = {
     announceEmpty: 'Your order is empty.',
     announceCouponValid: (code: string, description: string) => `${code} applied. ${description}`,
 
-    // The WhatsApp message, piece by piece: greeting, lines, coupon and pincode, closing.
+    // The WhatsApp message, piece by piece: greeting, lines, then coupon, pincode
+    // and order code, then the closing.
     message: {
       greeting: (name: string) => `Hi! I'm ${name}, and I'd like to place an order:`,
       // Never sent in practice, because a name is required. Kept for safety.
@@ -162,6 +174,8 @@ export const siteConfig = {
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       pincode: (pincode: string) => `Pincode: ${pincode}`,
+      // DRAFT copy, waiting on design. The code Sunit matches to the order book.
+      code: (code: string) => `Order code: ${code}`,
       closing: 'Could you send me the total?',
     },
   },

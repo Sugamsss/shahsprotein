@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { siteConfig } from '../../data/siteConfig';
 
 export interface SizeChoiceProps {
   /** The product's pack sizes, e.g. ["250 g", "500 g"]. */
@@ -11,10 +12,14 @@ export interface SizeChoiceProps {
   single: string;
   /** The bigger version in the product popup's bar. */
   large?: boolean;
+  /** Out-of-stock sizes are disabled, and described as "Back soon". */
+  isOut?: (size: string) => boolean;
 }
 
 /** Pack size as native radios in a pill, so arrow keys work. One size is plain text. */
-export const SizeChoice: React.FC<SizeChoiceProps> = ({ sizes, value, onChange, legend, single, large = false }) => {
+export const SizeChoice: React.FC<SizeChoiceProps> = ({
+  sizes, value, onChange, legend, single, large = false, isOut,
+}) => {
   const name = useId();
 
   if (sizes.length < 2) {
@@ -24,8 +29,12 @@ export const SizeChoice: React.FC<SizeChoiceProps> = ({ sizes, value, onChange, 
   return (
     <fieldset className={`size-choice${large ? ' size-choice--lg' : ''}`}>
       <legend className="visually-hidden">{legend}</legend>
+      {sizes.some((size) => isOut?.(size)) && (
+        <span id={`${name}-out`} className="visually-hidden">{siteConfig.order.backSoon}</span>
+      )}
       {sizes.map((size, index) => {
         const id = `${name}-${index}`;
+        const out = isOut?.(size) ?? false;
         return (
           <React.Fragment key={size}>
             <input
@@ -34,6 +43,8 @@ export const SizeChoice: React.FC<SizeChoiceProps> = ({ sizes, value, onChange, 
               name={name}
               value={size}
               checked={size === value}
+              disabled={out}
+              aria-describedby={out ? `${name}-out` : undefined}
               onChange={() => onChange(size)}
             />
             <label htmlFor={id}>{size}</label>
