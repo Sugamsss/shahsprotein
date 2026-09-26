@@ -57,7 +57,7 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","r
 
 select is(
   public.get_admin_me()::jsonb,
-  '{"id":"00000000-0000-4000-8000-000000000001","email":"owner@example.com","display_name":"Owner"}'::jsonb,
+  '{"id":"00000000-0000-4000-8000-000000000001","email":"owner@example.com","display_name":"Owner","home_view":"admin"}'::jsonb,
   'get_admin_me returns the admin'
 );
 

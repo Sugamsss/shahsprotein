@@ -22,15 +22,23 @@
 -- group by weight, so '250g' and '250 g' are one row, sorted lightest first;
 -- the label is '<n> g', or '<n> kg' for whole kilos. Sizes with no packs are
 -- left out. Money exists per order, so it's only in "overall", never per
--- product. Everything is zeros and empty arrays, never null.
+-- product, and never on stale orders (they never came through). Overall
+-- to_collect and on_the_way also name up to 3 people (first names, oldest
+-- order first) with no total yet / not paid yet. Everything is zeros and
+-- empty arrays, never null, except first_order_at (null with no real order).
 --
 -- Weeks start on Monday, India time. A week's orders and packs are real
 -- orders (confirmed, sent or delivered) by created_at; its money is the amount
 -- on not-cancelled orders by paid_at. "this" runs from Monday 00:00 IST to
 -- now; "last" is the whole of last week; "last_so_far" is last week up to the
 -- same moment 7 days ago, for a fair comparison. Starts are inclusive and
--- ends exclusive. Only "this" has days: always 7, Monday to Sunday, same rule,
--- so they add up to it.
+-- ends exclusive. "this" and "last" have days: always 7, Monday to Sunday,
+-- same rule, so they add up to the week. "this" and "last_so_far" have
+-- by_product: each product's packs and orders, for a fair comparison.
+--
+-- 3. admin_users.home_view ('cook' or 'admin', default 'admin') picks which
+--    Home someone sees, and get_admin_me() returns it. Nobody is set to
+--    'cook' here; that's done in production by user id.
 
 -- ═══════════════════════════════════════════════════════
 -- 1. get_admin_totals()
@@ -59,7 +67,7 @@ begin
       values ('to_confirm', 1), ('to_send', 2), ('on_the_way', 3), ('to_collect', 4), ('stale', 5)
     ),
     staged as (
-      select o.id, o.amount, o.paid_at,
+      select o.id, o.amount, o.paid_at, o.name, o.created_at,
         case
           when public.order_is_stale(o) then 'stale'
           when o.status = 'new' then 'to_confirm'
@@ -114,18 +122,46 @@ begin
         where sl.product_id = p.product_id and sl.stage = st.stage
       ) a
     ),
+    -- Stale orders never came through, so they carry no money. Two stages
+    -- also name who they're waiting on: first names, at most 3, oldest
+    -- first; an order with no name is counted but not named.
     overall as (
       select st.stage, st.position,
-        json_build_object(
+        jsonb_build_object(
           'orders', count(s.id),
           'packs', coalesce((
             select sum(sl.quantity) from staged_lines sl where sl.stage = st.stage
-          ), 0),
+          ), 0)
+        )
+        || case when st.stage = 'stale' then '{}'::jsonb else jsonb_build_object(
           'amount', coalesce(sum(s.amount), 0),
           'without_amount', count(s.id) filter (where s.amount is null),
           'paid', count(s.id) filter (where s.paid_at is not null),
           'unpaid_amount', coalesce(sum(s.amount) filter (where s.paid_at is null), 0)
-        ) as totals
+        ) end
+        || case st.stage
+          when 'to_collect' then jsonb_build_object('without_amount_names', (
+            select coalesce(jsonb_agg(n.first_name order by n.created_at, n.id), '[]'::jsonb)
+            from (
+              select split_part(btrim(x.name), ' ', 1) as first_name, x.created_at, x.id
+              from staged x
+              where x.stage = st.stage and x.amount is null and nullif(btrim(x.name), '') is not null
+              order by x.created_at, x.id
+              limit 3
+            ) n
+          ))
+          when 'on_the_way' then jsonb_build_object('unpaid_names', (
+            select coalesce(jsonb_agg(n.first_name order by n.created_at, n.id), '[]'::jsonb)
+            from (
+              select split_part(btrim(x.name), ' ', 1) as first_name, x.created_at, x.id
+              from staged x
+              where x.stage = st.stage and x.paid_at is null and nullif(btrim(x.name), '') is not null
+              order by x.created_at, x.id
+              limit 3
+            ) n
+          ))
+          else '{}'::jsonb
+        end as totals
       from stages st
       left join staged s on s.stage = st.stage
       group by st.stage, st.position
@@ -137,20 +173,29 @@ begin
       from public.orders o
       where o.status in ('confirmed', 'sent', 'delivered')
     ),
+    real_lines as (
+      select o.id, o.created_at, l.product_id, l.quantity
+      from public.orders o
+      join public.order_lines l on l.order_id = o.id
+      where o.status in ('confirmed', 'sent', 'delivered')
+    ),
     paid as (
       select o.paid_at, o.amount
       from public.orders o
       where o.status <> 'cancelled' and o.paid_at is not null
     ),
-    -- A null ends_at means "up to now", with no upper bound.
-    weeks (key, position, starts_at, ends_at) as (
+    -- A null ends_at means "up to now", with no upper bound. monday is the
+    -- India date the week starts, for its days.
+    weeks (key, position, monday, starts_at, ends_at) as (
       values
-        ('this', 1, v_this_start, null::timestamptz),
-        ('last', 2, v_last_start, v_this_start),
-        ('last_so_far', 3, v_last_start, now() - interval '7 days')
+        ('this', 1, v_this_monday, v_this_start, null::timestamptz),
+        ('last', 2, v_this_monday - 7, v_last_start, v_this_start),
+        ('last_so_far', 3, v_this_monday - 7, v_last_start, now() - interval '7 days')
     )
     select json_build_object(
       'as_of', now(),
+      -- The earliest real order, so the app knows when there's no last week yet.
+      'first_order_at', (select min(r.created_at) from real_orders r),
       'products', (
         select coalesce(json_agg(
           json_build_object(
@@ -194,16 +239,30 @@ begin
                 and pd.paid_at >= w.starts_at and (w.ends_at is null or pd.paid_at < w.ends_at)
             )
           )
-          || case when w.key = 'this' then jsonb_build_object('days', (
+          -- This week and last: the 7 days, Monday to Sunday, same rule.
+          || case when w.key in ('this', 'last') then jsonb_build_object('days', (
             select jsonb_agg(
               jsonb_build_object(
-                'date', v_this_monday + d.i,
-                'orders', (select count(*) from real_orders r where r.day = v_this_monday + d.i),
-                'packs', (select coalesce(sum(r.packs), 0) from real_orders r where r.day = v_this_monday + d.i)
+                'date', w.monday + d.i,
+                'orders', (select count(*) from real_orders r where r.day = w.monday + d.i),
+                'packs', (select coalesce(sum(r.packs), 0) from real_orders r where r.day = w.monday + d.i)
               )
               order by d.i
             )
             from generate_series(0, 6) as d(i)
+          )) else '{}'::jsonb end
+          -- This week and last week so far: each product's packs and orders.
+          || case when w.key in ('this', 'last_so_far') then jsonb_build_object('by_product', (
+            select coalesce(jsonb_agg(
+              jsonb_build_object('product_id', b.product_id, 'packs', b.packs, 'orders', b.orders)
+              order by b.product_id
+            ), '[]'::jsonb)
+            from (
+              select rl.product_id, sum(rl.quantity) as packs, count(distinct rl.id) as orders
+              from real_lines rl
+              where rl.created_at >= w.starts_at and (w.ends_at is null or rl.created_at < w.ends_at)
+              group by rl.product_id
+            ) b
           )) else '{}'::jsonb end
         ) order by w.position)
         from weeks w
@@ -406,3 +465,41 @@ $$;
 
 revoke all on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text) from public, anon;
 grant execute on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text) to authenticated;
+
+-- ═══════════════════════════════════════════════════════
+-- 3. admin_users.home_view, returned by get_admin_me()
+-- ═══════════════════════════════════════════════════════
+
+alter table public.admin_users
+  add column if not exists home_view text not null default 'admin'
+    constraint admin_users_home_view_check check (home_view in ('cook', 'admin'));
+
+-- The admin's auth gate. Raises for anyone who isn't an admin. The same as
+-- in 20260926000001, plus home_view.
+create or replace function public.get_admin_me()
+returns json
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_admin public.admin_users;
+begin
+  if not public.is_admin() then
+    raise exception using message = 'Unauthorized';
+  end if;
+
+  select * into v_admin from public.admin_users where id = auth.uid();
+
+  return json_build_object(
+    'id', v_admin.id,
+    'email', v_admin.email,
+    'display_name', v_admin.display_name,
+    'home_view', v_admin.home_view
+  );
+end;
+$$;
+
+revoke all on function public.get_admin_me() from public, anon;
+grant execute on function public.get_admin_me() to authenticated;
