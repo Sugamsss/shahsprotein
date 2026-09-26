@@ -4,7 +4,8 @@ import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { formatDay, formatMoney, formatMoneyShort, istDateValue } from '../format';
-import type { Totals, TotalsWeekProduct } from '../types';
+import { moneyByMethod } from '../orders/model';
+import type { Totals, TotalsByMethod, TotalsWeekProduct } from '../types';
 
 const copy = adminCopy.homePage;
 
@@ -83,6 +84,17 @@ const Change: React.FC<{ now: number; before: number; show: (n: number) => strin
   return <em className={now > before ? 'is-up' : ''}>{Icon && <Icon size={13} aria-hidden="true" />}{text}</em>;
 };
 
+/** Under ₹ came in: this week's money by how it was paid, one quiet line each, zeros left out. */
+const ByMethod: React.FC<{ totals: TotalsByMethod | undefined }> = ({ totals }) => {
+  const rows = moneyByMethod(totals);
+  if (!rows.length) return null;
+  return (
+    <ul className="adm-home__methods" aria-label={copy.vsByMethod}>
+      {rows.map((r) => <li key={r.key}><span>{r.label}</span><span>{formatMoney(r.amount)}</span></li>)}
+    </ul>
+  );
+};
+
 /** Sunit's: orders and ₹ in against this time last week, and the days with last week's height dashed. */
 export const AdminWeek: React.FC<{ totals: Totals | null | undefined }> = ({ totals }) => {
   const first = totals ? firstWeek(totals) !== null : false;
@@ -113,6 +125,7 @@ export const AdminWeek: React.FC<{ totals: Totals | null | undefined }> = ({ tot
           ) : <Pulse className="adm-pulse--big" />}
           <span>{copy.vsCameIn}</span>
           {w && <Change now={w.this.amount_in} before={w.last_so_far.amount_in} show={formatMoney} first={first} />}
+          {w && <ByMethod totals={w.this.amount_by_method} />}
           {w && w.this.paid_without_amount > 0 && <small>{copy.vsNoTotal(w.this.paid_without_amount)}</small>}
         </div>
       </div>

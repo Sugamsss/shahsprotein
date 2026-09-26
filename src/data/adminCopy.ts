@@ -569,6 +569,9 @@ export const adminCopy = {
     vsSame: (last: string) => `Same as ${last}`,
     vsFirst: 'Nothing to compare yet',
     vsNoTotal: (n: number) => `+ ${n} paid with no total`,
+    // Under ₹ came in: UPI, Cash, Bank, Other (paidBy.methods), then orders paid before methods existed.
+    vsByMethod: 'How it was paid',
+    notRecorded: 'Not recorded',
     vsBars: 'Orders each day, this week and last',
     vsDay: (day: string, orders: number, last: number | null) =>
       `${day}: ${orders} ${orders === 1 ? 'order' : 'orders'}${last === null ? '' : `, ${last} last week`}`,

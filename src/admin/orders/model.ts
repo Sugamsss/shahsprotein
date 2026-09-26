@@ -2,7 +2,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { ORDER_CODE_ALPHABET } from '../../utils/orderCode';
 import { firstName } from '../format';
-import type { Order, OrderChanges, OrderLine } from '../types';
+import type { Order, OrderChanges, OrderLine, TotalsByMethod } from '../types';
 
 // The order book's rules in one place: which lane an order is in, its next
 // step, and what a change says and how it's undone. No React here.
@@ -44,6 +44,19 @@ export const paidByText = (p: Pick<Order, 'paid_method' | 'paid_note'> | Pick<Or
   if (!p.paid_method) return null;
   return p.paid_method === 'other' ? adminCopy.paidBy.other(p.paid_note ?? '') : adminCopy.paidBy.names[p.paid_method];
 };
+
+/**
+ * Home's ₹ came in, by how it was paid: UPI, Cash, Bank, Other, then Not recorded,
+ * leaving out zeros. The sums come from get_admin_totals(); nothing is added up here.
+ */
+export const moneyByMethod = (by: TotalsByMethod | undefined): { key: keyof TotalsByMethod; label: string; amount: number }[] =>
+  !by ? [] : (['upi', 'cash', 'bank', 'other', 'not_recorded'] as const)
+    .filter((key) => by[key] > 0)
+    .map((key) => ({
+      key,
+      label: key === 'not_recorded' ? adminCopy.homePage.notRecorded : adminCopy.paidBy.methods[key],
+      amount: by[key],
+    }));
 
 /** What the toast says about a change. */
 export const changeText = (o: Order, changes: OrderChanges): string => {
