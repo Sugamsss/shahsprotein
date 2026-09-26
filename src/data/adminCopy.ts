@@ -192,7 +192,10 @@ export const adminCopy = {
 
   /** How an order was paid: picked when it's marked paid (detail, cards, Done, Add order). */
   paidBy: {
-    methods: { upi: 'UPI', cash: 'Cash', other: 'Other' },
+    /** The pills. "Bank" keeps four pills on one line on a 320px phone. */
+    methods: { upi: 'UPI', cash: 'Cash', bank: 'Bank', other: 'Other' },
+    /** In the order, the toast and the CSV. Other reads as `other(note)`. */
+    names: { upi: 'UPI', cash: 'Cash', bank: 'Bank transfer' },
     /** "Other: bank transfer", in the detail, the toast and the CSV. */
     other: (note: string) => `Other: ${note}`,
     question: 'How did they pay?',

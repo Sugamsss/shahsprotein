@@ -5,7 +5,7 @@ export type OrderStatus = 'new' | 'confirmed' | 'sent' | 'delivered' | 'cancelle
 export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_person';
 export type OrderView = 'todo' | 'done' | 'all';
 /** How a paid order was paid. Old paid orders have none (null). */
-export type PaidMethod = 'upi' | 'cash' | 'other';
+export type PaidMethod = 'upi' | 'cash' | 'bank' | 'other';
 
 export interface AdminMe {
   id: string;

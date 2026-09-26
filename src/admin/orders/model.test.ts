@@ -79,7 +79,7 @@ describe('a card on a filtered board', () => {
   });
 });
 
-// Paid with a method (UPI, Cash, Other + note). Undo must send what the server accepts.
+// Paid with a method (UPI, Cash, Bank transfer, Other + note). Undo must send what the server accepts.
 
 const paidOrder = (paid_method: Order['paid_method'], paid_note: string | null = null) =>
   ({ paid: true, paid_at: '2026-09-26T10:00:00Z', paid_method, paid_note } as Order);
@@ -88,11 +88,12 @@ const unpaidOrder = { paid: false, paid_at: null, paid_method: null, paid_note: 
 describe('paying with a method', () => {
   it('undoing Not paid puts the method and note back', () => {
     expect(reverseOf(paidOrder('upi'), { paid: false })).toEqual({ paid: true, paid_method: 'upi' });
+    expect(reverseOf(paidOrder('bank'), { paid: false })).toEqual({ paid: true, paid_method: 'bank' });
     expect(reverseOf(paidOrder('other', 'bank transfer'), { paid: false }))
       .toEqual({ paid: true, paid_method: 'other', paid_note: 'bank transfer' });
   });
 
-  it('undoing Not paid on an old order sends no method, since the server refuses a null one', () => {
+  it('undoing Not paid on an old order sends no method, so it stays with none', () => {
     expect(reverseOf(paidOrder(null), { paid: false })).toEqual({ paid: true });
   });
 
@@ -107,9 +108,10 @@ describe('paying with a method', () => {
     expect([unpaid.paid, unpaid.paid_at, unpaid.paid_method, unpaid.paid_note]).toEqual([false, null, null, null]);
   });
 
-  it('reads as UPI, Cash or Other with its note, and nothing for an old order', () => {
+  it('reads as UPI, Cash, Bank transfer or Other with its note, and nothing for an old order', () => {
     expect(paidByText(paidOrder('upi'))).toBe('UPI');
     expect(paidByText(paidOrder('cash'))).toBe('Cash');
+    expect(paidByText(paidOrder('bank'))).toBe('Bank transfer');
     expect(paidByText(paidOrder('other', 'bank transfer'))).toBe('Other: bank transfer');
     expect(paidByText(paidOrder(null))).toBeNull();
   });

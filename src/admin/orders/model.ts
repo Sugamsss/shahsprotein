@@ -39,10 +39,10 @@ export const nextOf = (o: Order) => {
   return lane === 'done' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
 };
 
-/** "UPI", "Cash", "Other: bank transfer", or null when there's no method (not paid, or an old order). */
+/** "UPI", "Cash", "Bank transfer", "Other: paid by her brother", or null when there's no method (not paid, or an old order). */
 export const paidByText = (p: Pick<Order, 'paid_method' | 'paid_note'> | Pick<OrderChanges, 'paid_method' | 'paid_note'>): string | null => {
   if (!p.paid_method) return null;
-  return p.paid_method === 'other' ? adminCopy.paidBy.other(p.paid_note ?? '') : adminCopy.paidBy.methods[p.paid_method];
+  return p.paid_method === 'other' ? adminCopy.paidBy.other(p.paid_note ?? '') : adminCopy.paidBy.names[p.paid_method];
 };
 
 /** What the toast says about a change. */

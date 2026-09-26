@@ -10,15 +10,15 @@ import type { Order, OrderChanges, PaidMethod } from '../types';
 
 const copy = adminCopy.paidBy;
 /** UPI first: most people pay that way. Nothing is ever picked for them. */
-export const PAID_METHODS: readonly PaidMethod[] = ['upi', 'cash', 'other'];
+export const PAID_METHODS: readonly PaidMethod[] = ['upi', 'cash', 'bank', 'other'];
 
 /** The keys that mark an order paid this way. */
 export const paidWith = (method: PaidMethod, note?: string): OrderChanges =>
   ({ paid: true, paid_method: method, ...(method === 'other' && { paid_note: note }) });
 
 /**
- * UPI, Cash, Other as buttons that commit on tap (not radios, so arrow keys never
- * save by accident). UPI and Cash call `onPick` at once; Other opens a one-line
+ * UPI, Cash, Bank, Other as buttons that commit on tap (not radios, so arrow keys never
+ * save by accident). UPI, Cash and Bank call `onPick` at once; Other opens a one-line
  * note with Mark paid, and Enter there does the same.
  */
 export const PaidChoices: React.FC<{
