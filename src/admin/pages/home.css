@@ -93,7 +93,6 @@
 .adm-pcard__stages li > span { display: grid; min-width: 0; color: var(--adm-ink-2); line-height: 1.35; }
 .adm-pcard__stages small { display: none; }
 .adm-pcard__stages b { color: var(--adm-ink-1); font-weight: 600; line-height: 1.35; white-space: nowrap; }
-.adm-pcard__stages b em { display: none; color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-style: normal; font-weight: 500; }
 .adm-pcard__stages b.is-zero { color: var(--adm-ink-3); font-weight: 400; }
 .adm-pcard__stages .adm-pulse { width: 12px; }
 .adm-pcard__note { margin-top: 4px; }
@@ -193,7 +192,6 @@
   .adm-pcard__sizes i { display: inline; }
   .adm-pcard__long { display: inline; }
   .adm-pcard__short { display: none; }
-  .adm-pcard__stages b em { display: inline; }
   .adm-pcard__stages small { display: block; }
 }
 

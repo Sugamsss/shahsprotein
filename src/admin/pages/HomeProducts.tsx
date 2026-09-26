@@ -94,10 +94,11 @@ const CookBody: React.FC<{ stages?: ProductStages; off?: string[] | null }> = ({
   );
 };
 
-const Value: React.FC<{ n?: number; unit?: string }> = ({ n, unit }) => {
+/** A stage's count: just the number, like every row. "To pack" counts packs; its sizes line says so, and the card's label says "5 packs". */
+const Value: React.FC<{ n?: number }> = ({ n }) => {
   if (n === undefined) return <Pulse />;
   if (!n) return <b className="is-zero">0</b>;
-  return <b>{n}{unit && <em> {unit}</em>}</b>;
+  return <b>{n}</b>;
 };
 
 /** Sunit: the four stages, always all four in the same order, zeros faded. */
@@ -116,7 +117,7 @@ const AdminBody: React.FC<{ stages?: ProductStages; off?: string[] | null }> = (
             {copy.toPack}
             {pack && pack.packs > 0 && <small>{pack.by_size.map((s) => copy.sizeTimes(s.size, s.packs)).join(' · ')}</small>}
           </span>
-          <Value n={pack?.packs} unit={pack ? copy.pack(pack.packs) : undefined} />
+          <Value n={pack?.packs} />
         </li>
         <li><span>{copy.onTheWay}</span><Value n={stages?.on_the_way.orders} /></li>
         <li><span>{copy.notPaid}</span><Value n={stages?.to_collect.orders} /></li>
