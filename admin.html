@@ -21,11 +21,18 @@
     <!-- iOS labels the home-screen icon with this. "Orders" (like short_name in the
          manifest) fits under the icon on every phone; "Shah's Orders" gets cut on some. -->
     <meta name="apple-mobile-web-app-title" content="Orders" />
+    <!-- Edge to edge by colour, not by drawing under the bar: with "default", iOS
+         paints the status bar in theme-color, which matches the page's top edge,
+         so there's no strip. Not "black-translucent": its clock and battery are
+         always white (unreadable on the light theme), iOS 26+ lays a blur over
+         whatever is under the bar, and iOS reads this tag only when the icon is
+         added, so changing it means everyone re-adds the app. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="application-name" content="Shah's Orders" />
 
-    <!-- The toolbar and status bar follow the admin's page colour (--adm-page).
-         The script points both at the saved theme; ThemeContext keeps them in step. -->
+    <!-- The toolbar and status bar follow the admin's page colour (--adm-page, which
+         equals the site's --color-bg-main). The script points both at the saved
+         theme; ThemeContext keeps them in step. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef4fc" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
     <script>

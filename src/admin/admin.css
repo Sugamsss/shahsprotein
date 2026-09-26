@@ -69,12 +69,17 @@
 }
 
 /* ---- Page ------------------------------------------------------------------ */
+/* Edge to edge in the installed app: iOS paints the status bar in theme-color,
+   which is --color-bg-main (set by admin.html's script, then ThemeContext). So
+   --adm-page must equal --color-bg-main, and the page's top edge must be that
+   flat colour, or the bar shows as a strip above the app. The first layer fades
+   the glow in below the edge. */
 .adm {
   min-height: 100vh;
   padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) calc(112px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: var(--adm-page-glow), var(--adm-page);
+  background: linear-gradient(var(--adm-page), transparent), var(--adm-page-glow), var(--adm-page);
   background-repeat: no-repeat;
-  background-size: 100% 520px, auto;
+  background-size: 100% 72px, 100% 520px, auto;
   font-variant-numeric: tabular-nums;
 }
 .adm-main { max-width: 640px; margin: 0 auto; }

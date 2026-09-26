@@ -1,7 +1,8 @@
-import React, { useEffect, useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { DialogCloseContext, useDialog } from '../components/ui/useDialog';
+import { dimStatusBar } from './homeScreenApp';
 
 // Every admin sheet and popup (spec 2.3): a bottom sheet under 960px, a centred
 // popup from 960px over the frosted page. Head, a body that scrolls on its own,
@@ -38,6 +39,10 @@ export const AdminSheet: React.FC<AdminSheetProps> = ({
 }) => {
   const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose, initialFocus, canClose });
   const titleId = useId();
+  const layerRef = useRef<HTMLDivElement>(null);
+
+  // The status bar dims with the page while the sheet is up (and until its exit ends).
+  useEffect(() => (isOpen && layerRef.current ? dimStatusBar(layerRef.current) : undefined), [isOpen]);
 
   // Esc while typing in a field only leaves the field (which saves it); the next
   // Esc closes. Caught before useDialog's own Esc, which listens on window.
@@ -59,7 +64,7 @@ export const AdminSheet: React.FC<AdminSheetProps> = ({
   const classes = ['adm-sheet', `adm-sheet--${width}`, className].filter(Boolean).join(' ');
 
   return createPortal(
-    <div className={`adm-sheet-layer${isClosing ? ' is-closing' : ''}`} onClick={requestClose}>
+    <div ref={layerRef} className={`adm-sheet-layer${isClosing ? ' is-closing' : ''}`} onClick={requestClose}>
       <div
         ref={dialogRef}
         tabIndex={-1}
