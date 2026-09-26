@@ -129,7 +129,8 @@
 .adm-filter__chip:active { background: var(--adm-accent-tint-press); }
 @media (hover: hover) { .adm-filter__chip:hover { background: var(--adm-accent-tint-press); } }
 .adm-filter__text { color: var(--color-text-muted); font-size: 0.875rem; }
-.adm-ocard__items li.is-other { opacity: 0.5; }
+/* 0.75: the faded blue name still reaches 3:1 on a light card (0.5 was 2.1:1). */
+.adm-ocard__items li.is-other { opacity: 0.75; }
 .adm-title:focus { outline: none; }
 
 .adm-jump {

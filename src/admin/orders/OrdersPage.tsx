@@ -210,11 +210,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const hasHits = (lane: Lane) => by[lane].length > 0 || (lane === 'confirm' && laptop && by.stale.length > 0);
   const doneHits = settledQ && doneFor.current === doneKey ? done.data?.orders ?? [] : [];
   const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<Lane, number>;
-  // The chip: which product, how many orders on the board have it (stale ones sit apart), and To send's packing line.
+  // The chip: which product, and how many cards the board draws for it (the four lanes and stale; the
+  // list can briefly hold a card that just went to Done, which the board no longer shows). Then To send's packing line.
   const filter = product && {
     id: product,
     name: productName(product),
-    count: orders.filter((o) => laneOf(o) !== 'stale').length,
+    count: orders.filter((o) => laneOf(o) !== 'done').length,
     clear: (() => {
       const rest = new URLSearchParams(location.search);
       rest.delete('product');
