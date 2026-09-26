@@ -485,15 +485,18 @@ export const adminCopy = {
       adminTitle: 'By product',
       adminMeta: 'Tap one to see its orders',
       seeOrders: 'See its orders.',
-      // Pranjali: "Make 3 kg", "6 × 250 g · 3 × 500 g", "for 6 orders".
+      // Pranjali: "Make 3 kg", "250 g × 6 · 500 g × 3" (sizeTimes, like everywhere else), "for 6 orders".
       make: 'Make',
-      packsOf: (packs: number, size: string) => `${packs} × ${size}`,
       forOrders: (n: number) => `for ${n} ${n === 1 ? 'order' : 'orders'}`,
       nothingToMake: 'Nothing to make',
       nothingYet: 'Nothing to make yet',
       maybe: 'Maybe',
-      maybeMore: (orders: number) => `more, if ${orders === 1 ? 'a new order goes' : `${orders} new orders go`} ahead`,
-      offOnSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off on the site` : 'Off on the site'),
+      // After "Maybe 1¾ kg". Only "more" when there's already something to make.
+      maybeIf: (orders: number, more: boolean) =>
+        `${more ? ' more' : ''}, if ${orders === 1 ? 'a new order goes' : `${orders} new orders go`} ahead`,
+      // The tablet's short form: "Maybe +1¾ kg", or "Maybe 1¾ kg" when there's nothing to make yet.
+      maybeShort: (weight: string, more: boolean) => (more ? `+${weight}` : weight),
+      offSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off the site` : 'Off the site'),
       cookName: (product: string, main: string, maybe: string, off: string) =>
         [`${product}: ${main}.`, maybe && `${maybe}.`, off && `${off}.`, 'See its orders.'].filter(Boolean).join(' '),
       // Sunit: every stage, always in this order.
@@ -513,7 +516,9 @@ export const adminCopy = {
     // The line under the date.
     cookLede: (weight: string, orders: number) => [weight, ` to make in all, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`] as const,
     cookNothing: 'Nothing to make right now.',
-    cookMaybe: (oneOrder: boolean, products: string[]) => `${oneOrder ? 'A new order' : 'New orders'} might need some ${andList(products)}.`,
+    // Under "Nothing to make right now.", quieter. The cards below name each product, so every product is "some of each".
+    cookMaybe: (oneOrder: boolean, products: string[], every: boolean) =>
+      `${oneOrder ? 'A new order' : 'New orders'} might need some ${every ? 'of each' : andList(products)}.`,
     adminLede: (orders: number) => [`${orders} ${orders === 1 ? 'order' : 'orders'}`, ` ${orders === 1 ? 'needs' : 'need'} you`] as const,
     adminNothing: 'Nothing needs you right now',
     stillOut: [', and ', ' is still out'] as const,
@@ -554,8 +559,9 @@ export const adminCopy = {
     fastest: (many: boolean) => (many ? ' are going fastest.' : ' is going fastest.'),
     packsHint: 'Packs going out, and the change from last week.',
     packsHintFirst: 'Packs going out this week.',
-    packsThisWeek: (n: number) => (n ? `${n} ${n === 1 ? 'pack' : 'packs'} this week` : 'None yet this week'),
-    packsDiff: (diff: number) => (diff > 0 ? `${diff} more` : diff < 0 ? `${-diff} fewer` : 'Same'),
+    // A row under "This week", so it doesn't say "this week" again.
+    weekPacks: (n: number) => (n ? `${n} ${n === 1 ? 'pack' : 'packs'}` : 'None yet'),
+    packsDiff: (diff: number) => (diff > 0 ? `${diff} more` : diff < 0 ? `${-diff} fewer` : 'same'),
     packsDiffName: (diff: number) => (diff > 0 ? `${diff} more than last week` : diff < 0 ? `${-diff} fewer than last week` : 'the same as last week'),
 
     // This week vs last, Sunit's.

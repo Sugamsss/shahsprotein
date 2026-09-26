@@ -63,7 +63,7 @@ export const CookWeek: React.FC<{ totals: Totals | null | undefined }> = ({ tota
             <OrderThumb product={product} className="adm-home__thumb" />
             <span className="adm-list__main">
               <b className="adm-pname">{product.name}</b>
-              {totals ? <small>{copy.packsThisWeek(packs)}</small> : <Pulse />}
+              {totals ? <small>{copy.weekPacks(packs)}</small> : <Pulse />}
             </span>
             {totals && !first && (
               <span className={`adm-home__diff${diff > 0 ? ' is-up' : ''}`} aria-label={copy.packsDiffName(diff)}>
