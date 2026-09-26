@@ -46,7 +46,8 @@ export const usePathPart = (index: number): string => {
  */
 export const useQueryText = (path: string): [string, (text: string) => void] => {
   const navigate = useNavigate();
-  const q = new URLSearchParams(useLocation().search).get('q') ?? '';
+  const location = useLocation();
+  const q = new URLSearchParams(location.search).get('q') ?? '';
   const [text, setText] = useState(q);
   const sent = useRef<string | null>(null);
   useEffect(() => {
@@ -56,7 +57,12 @@ export const useQueryText = (path: string): [string, (text: string) => void] => 
   const update = (next: string) => {
     setText(next);
     sent.current = next.trim();
-    navigate(next.trim() ? `${path}?q=${encodeURIComponent(next.trim())}` : path, { replace: true });
+    // Other keys on the same page stay (the board's ?product=).
+    const params = new URLSearchParams(location.pathname === path ? location.search : '');
+    if (next.trim()) params.set('q', next.trim());
+    else params.delete('q');
+    const query = params.toString();
+    navigate(query ? `${path}?${query}` : path, { replace: true });
   };
   return [text, update];
 };

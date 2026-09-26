@@ -118,3 +118,36 @@ export const sortLines = (lines: OrderLine[]): OrderLine[] => {
 /** "Raggi Jaggi 250 g × 1, Muesli 500 g × 2" */
 export const itemsText = (o: Order) =>
   sortLines(o.lines).map((l) => `${productName(l.product_id)} ${l.size} × ${l.quantity}`).join(', ');
+
+/** A product id from the URL, or null when it isn't one of ours (then there's no filter). */
+export const productFilter = (raw: string | null): string | null =>
+  (raw && productsData.some((p) => p.id === raw) ? raw : null);
+
+/** "250 g" → 250, "1 kg" → 1000. Anything else sorts last. */
+export const gramsOf = (size: string): number => {
+  const m = /^\s*([\d.]+)\s*(kg|g)\s*$/i.exec(size);
+  return m ? Number(m[1]) * (m[2].toLowerCase() === 'kg' ? 1000 : 1) : Number.MAX_SAFE_INTEGER;
+};
+
+/** What to pack of one product across these orders: total packs, and packs per size by weight. */
+export const packsOf = (orders: Order[], productId: string): { packs: number; sizes: [string, number][] } => {
+  const by = new Map<string, number>();
+  orders.forEach((o) => o.lines.forEach((l) => {
+    if (l.product_id === productId && l.quantity > 0) by.set(l.size, (by.get(l.size) ?? 0) + l.quantity);
+  }));
+  const sizes = [...by].sort(([a], [b]) => gramsOf(a) - gramsOf(b));
+  return { packs: sizes.reduce((sum, [, n]) => sum + n, 0), sizes };
+};
+
+/** Lines in the site's order, with `first`'s lines (the filtered product) moved to the top. */
+export const linesFirst = (lines: OrderLine[], first?: string | null): OrderLine[] => {
+  const sorted = sortLines(lines);
+  return first ? [...sorted.filter((l) => l.product_id === first), ...sorted.filter((l) => l.product_id !== first)] : sorted;
+};
+
+/** The card's pouch pile, at most two: the last one sits on top, so the filtered product goes last. */
+export const pileOf = (lines: OrderLine[], top?: string | null): string[] => {
+  const ids = [...new Set(sortLines(lines).map((l) => l.product_id))];
+  if (!top || !ids.includes(top)) return ids.slice(0, 2);
+  return [...ids.filter((id) => id !== top).slice(0, 1), top];
+};

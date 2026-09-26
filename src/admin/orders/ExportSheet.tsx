@@ -5,7 +5,7 @@ import { downloadCsv, toCsv } from '../csv';
 import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
 import { Segmented, SheetForm } from '../parts';
-import { itemsText } from './model';
+import { itemsText, productName } from './model';
 
 const copy = adminCopy.exportOrders;
 type Range = keyof typeof copy.ranges;
@@ -27,14 +27,14 @@ const row = (o: Order) => [
 ];
 
 /** Export orders (spec 2.5): every order in the range, newest first, paged with next_before. */
-export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void; product?: string | null }> = ({ isOpen, onClose, product }) => {
   const [range, setRange] = useState<Range>('month');
 
   const download = async () => {
     const orders: Order[] = [];
     let before: string | undefined;
     do {
-      const page = await getOrders({ view: 'all', from: fromOf(range), before, limit: 1000 });
+      const page = await getOrders({ view: 'all', from: fromOf(range), before, product: product ?? undefined, limit: 1000 });
       orders.push(...page.orders);
       before = page.next_before ?? undefined;
     } while (before);
@@ -48,6 +48,8 @@ export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void }> = (
       <p className="adm-field__label" aria-hidden="true">{copy.range}</p>
       <Segmented label={copy.range} value={range} onChange={setRange}
         options={(Object.keys(copy.ranges) as Range[]).map((r) => ({ value: r, label: copy.ranges[r] }))} />
+      {/* From a filtered board: the whole order, but only orders with that product. */}
+      {product && <p className="adm-muted">{adminCopy.ordersProduct.exportOnly(productName(product))}</p>}
     </SheetForm>
   );
 };

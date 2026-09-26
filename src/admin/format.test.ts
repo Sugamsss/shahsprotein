@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endOfDayIst, firstName, formatAge, formatAgo, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatPhone, formatWhen, istDateValue } from './format';
+import { endOfDayIst, firstName, formatAge, formatAgo, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatMoneyShort, formatPhone, formatWeight, formatWhen, istDateValue } from './format';
 
 // Spec 2.1 "Formats". Every date is India time, so these hold whatever
 // timezone the machine running them is in. "Now" is Fri 25 Sep 2026, 2:00 pm IST.
@@ -110,5 +110,38 @@ describe('money, phone and names', () => {
     expect(formatPhone('447700900123')).toBe('+447700900123');
     expect(firstName('  Anjali   Kulkarni ')).toBe('Anjali');
     expect(firstName(null)).toBe('');
+  });
+});
+
+describe('formatMoneyShort', () => {
+  it.each([
+    [0, '₹0'],
+    [2860, '₹2,860'],
+    [99_999, '₹99,999'],
+    [100_000, '₹1.00L'],
+    [110_000, '₹1.10L'],
+    [124_599, '₹1.24L'], // rounded down, never up to 1.25
+    [199_999, '₹1.99L'],
+    [12_34_567, '₹12.34L'],
+  ])('%d → %s', (amount, expected) => {
+    expect(formatMoneyShort(amount)).toBe(expected);
+  });
+});
+
+describe('formatWeight', () => {
+  it.each([
+    [0, '0 g'],
+    [250, '250 g'],
+    [750, '750 g'],
+    [1000, '1 kg'],
+    [1250, '1¼ kg'],
+    [1500, '1½ kg'],
+    [1750, '1¾ kg'],
+    [4750, '4¾ kg'],
+    [12000, '12 kg'],
+    [1100, '1,100 g'], // not a quarter kilo: whole grams, never rounded
+    [100, '100 g'],
+  ])('%d g → %s', (grams, expected) => {
+    expect(formatWeight(grams)).toBe(expected);
   });
 });

@@ -1,24 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Download, Plus, Search } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Download, Plus, Search, X } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { getOrders } from '../api';
 import { formatMoney } from '../format';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink, usePathPart, useQueryText } from '../router';
-import type { Order } from '../types';
+import type { Order, OrderPage as Page } from '../types';
 import { useOverview } from '../AdminLayout';
 import { useRpc, useSettled } from '../useRpc';
 import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
-import { type Lane, LANES, NEXT, laneOf, namesOneOrder, searchFor } from './model';
-import { type CardAction, OrderCard } from './OrderCard';
+import { type Lane, LANES, NEXT, laneOf, namesOneOrder, packsOf, productFilter, productName, searchFor } from './model';
+import { type CardAction, OrderCard, Thumb } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { useOrderChange } from './useOrderChange';
 import { useTheme } from '../../context/ThemeContext';
 
 const copy = adminCopy.orders;
+const filterCopy = adminCopy.ordersProduct;
 const LAPTOP = '(min-width: 960px)';
 
 export const useLaptop = (): boolean => {
@@ -41,10 +42,11 @@ const matches = (o: Order, q: string) => {
     || (digits.length >= 4 && (o.phone ?? '').includes(digits));
 };
 
-const LaneBlock: React.FC<{ lane: Lane; orders: Order[]; money?: number; children: React.ReactNode; className?: string }> = ({
-  lane, orders, money, children, className = '',
+const LaneBlock: React.FC<{ lane: Lane; orders: Order[]; money?: number; hint?: string; children: React.ReactNode; className?: string }> = ({
+  lane, orders, money, hint: ownHint, children, className = '',
 }) => {
-  const [title, hint] = copy.lanes[lane];
+  const [title, laneHint] = copy.lanes[lane];
+  const hint = ownHint ?? laneHint;
   return (
     <section className={`adm-lane adm-lane--${lane} ${className}`} id={`lane-${lane}`} aria-labelledby={`lane-${lane}-t`}>
       <div className="adm-lane__head">
@@ -110,12 +112,22 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const navigate = useNavigate();
   const laptop = useLaptop();
   const doneCounts = useOverview().data?.done;
-  const q = new URLSearchParams(location.search).get('q') ?? '';
+  const query = new URLSearchParams(location.search);
+  const q = query.get('q') ?? '';
+  // ?product=raggi-jaggi (a Home product card): only orders with it. An id we don't sell is ignored.
+  const product = productFilter(query.get('product'));
   const [searching, setSearching] = useState(false);
   const [confirming, setConfirming] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement>(null); // clearing the filter moves focus here
 
-  const list = useRpc(() => getOrders({ view: 'todo', limit: 1000 }), [], { refreshOnFocus: true });
+  // Each answer says which filter it's for, so clearing the chip never shows the last filter's cards.
+  const list = useRpc(
+    (): Promise<Page & { for: string | null }> => getOrders({ view: 'todo', limit: 1000, product: product ?? undefined }).then((page) => ({ ...page, for: product })),
+    [product],
+    { refreshOnFocus: true },
+  );
+  const board = list.data?.for === product ? list.data : null;
   // A card that changes lane flashes where it lands.
   // Also the order just saved from the Add/Edit form (navigation state).
   const [flash, setFlash] = useState<string | null>(() => (location.state as { flash?: string } | null)?.flash ?? null);
@@ -126,12 +138,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     return { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) };
   }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!flash || !list.data) return; // wait until the cards are on screen
+    if (!flash || !board) return; // wait until the cards are on screen
     const timer = setTimeout(() => setFlash(null), 900);
     return () => clearTimeout(timer);
-  }, [flash, list.data]);
+  }, [flash, board]);
   // Home's "Waiting on you" rows link to /admin/orders#lane-…: scroll there once the lanes are drawn.
-  const hasData = !!list.data;
+  const hasData = !!board;
   useEffect(() => {
     if (hasData && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
   }, [hasData, location.hash]);
@@ -140,17 +152,19 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
 
   // Search also looks through Done, and an empty board asks whether anything was ever done.
   const settledQ = useSettled(q.trim());
-  const empty = list.data?.orders.length === 0;
-  // Which search Done's answer is for, so a new search never reads the last one's hits.
+  const empty = board?.orders.length === 0;
+  // Which search (and product) Done's answer is for, so a new search never reads the last one's hits.
+  const doneKey = `${product ?? ''}|${settledQ}`;
   const doneFor = useRef<string | null>(null);
   const done = useRpc(
     () => (settledQ || empty
-      ? getOrders({ view: 'done', search: settledQ || undefined, limit: settledQ ? 20 : 1 }).then((page) => { doneFor.current = settledQ; return page; })
+      ? getOrders({ view: 'done', search: settledQ || undefined, product: product ?? undefined, limit: settledQ ? 20 : 1 })
+        .then((page) => { doneFor.current = doneKey; return page; })
       : Promise.resolve(null)),
-    [settledQ, empty],
+    [settledQ, empty, product],
   );
 
-  const orders = list.data?.orders ?? [];
+  const orders = board?.orders ?? [];
   const shown = q.trim() ? orders.filter((o) => matches(o, q)) : orders;
   const by: Record<Lane, Order[]> = { confirm: [], send: [], way: [], collect: [], stale: [], done: [] };
   shown.forEach((o) => by[laneOf(o)].push(o));
@@ -162,7 +176,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   // A search for a whole code or phone with exactly one hit (board or Done)
   // opens that order. Once per search, so closing it leaves you on the results.
   const opened = useRef('');
-  const oneHit = settledQ && settledQ === q.trim() && list.data && !done.loading && doneFor.current === settledQ && namesOneOrder(settledQ)
+  const oneHit = settledQ && settledQ === q.trim() && board && !done.loading && doneFor.current === doneKey && namesOneOrder(settledQ)
     ? [...shown, ...(done.data?.orders ?? [])] : [];
   const only = oneHit.length === 1 && !code ? oneHit[0].code : '';
   useEffect(() => {
@@ -187,14 +201,30 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   if (code && !laptop) return <OrderPage code={code} />;
 
   const card = (o: Order) => (
-    <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} flash={o.id === flash} />
+    <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} flash={o.id === flash}
+      product={product} search={location.search} />
   );
   // While searching, a lane with no hits of its own says nothing (it's only there for its stale hits).
   const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : !q && <p className="adm-lane__empty">{copy.laneEmpty}</p>);
   // Laptop: To confirm also holds the stale orders, so a stale-only hit still needs that lane.
   const hasHits = (lane: Lane) => by[lane].length > 0 || (lane === 'confirm' && laptop && by.stale.length > 0);
-  const doneHits = settledQ ? done.data?.orders ?? [] : [];
+  const doneHits = settledQ && doneFor.current === doneKey ? done.data?.orders ?? [] : [];
   const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<Lane, number>;
+  // The chip: which product, and how many cards the board draws for it (the four lanes and stale; the
+  // list can briefly hold a card that just went to Done, which the board no longer shows). Then To send's packing line.
+  const filter = product && {
+    id: product,
+    name: productName(product),
+    count: orders.filter((o) => laneOf(o) !== 'done').length,
+    clear: (() => {
+      const rest = new URLSearchParams(location.search);
+      rest.delete('product');
+      const kept = rest.toString();
+      return `/admin/orders${kept ? `?${kept}` : ''}`;
+    })(),
+  };
+  const pack = product ? packsOf(orders.filter((o) => laneOf(o) === 'send'), product) : null;
+  const packHint = pack?.packs ? filterCopy.pack(pack.packs, productName(product!), pack.sizes) : undefined;
   const summary = [
     by.confirm.length > 0 && ['confirm', `${by.confirm.length} ${copy.toConfirm}`],
     by.send.length > 0 && ['send', `${by.send.length} ${copy.toSend}`],
@@ -205,7 +235,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     <div className="adm-page adm-orders">
       <div className="adm-orders__top">
         <div>
-          <h1 className="adm-title">{copy.title}</h1>
+          <h1 className="adm-title" ref={titleRef} tabIndex={-1}>{copy.title}</h1>
           {summary.length > 0 && (
             <p className="adm-orders__summary">
               {summary.map(([lane, text], i) => (
@@ -236,16 +266,27 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
         </div>
       )}
 
-      {list.error && !list.data && <LoadError onRetry={list.reload} />}
-      {list.loading && !list.data && <Skeleton />}
-      {empty && !q && !done.loading && <Empty first={!done.data?.orders.length} />}
+      {filter && (
+        <div className="adm-filter">
+          <AdminLink className="adm-filter__chip" to={filter.clear} aria-label={filterCopy.clear(filter.name)}
+            onClick={() => requestAnimationFrame(() => titleRef.current?.focus())}>
+            <Thumb id={filter.id} /><span>{filter.name}</span><X size={16} aria-hidden="true" />
+          </AdminLink>
+          {board && <span className="adm-filter__text">{filterCopy.count(filter.count, filter.name)}</span>}
+        </div>
+      )}
 
-      {list.data && !empty && (
+      {list.error && !board && <LoadError onRetry={list.reload} />}
+      {list.loading && !board && !list.error && <Skeleton />}
+      {/* Filtered to a product, an empty board keeps its lanes: "0 orders with …" says the rest. */}
+      {empty && !q && !product && !done.loading && <Empty first={!done.data?.orders.length} />}
+
+      {board && (!empty || product) && (
         <>
           {!q && <LaneJump counts={counts} money={money} />}
           <div className="adm-board">
             {LANES.map((lane) => (!q || hasHits(lane)) && (
-              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money}>
+              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money} hint={lane === 'send' ? packHint : undefined}>
                 {cards(lane)}
                 {/* Laptop: stale orders sit at the bottom of To confirm. Phone: their own group, below. */}
                 {lane === 'confirm' && laptop && by.stale.length > 0 && (
@@ -266,14 +307,14 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           {doneHits.map(card)}
         </LaneBlock>
       )}
-      {q.trim() && list.data && shown.length === 0 && settledQ && !done.loading && doneHits.length === 0 && (
+      {q.trim() && board && shown.length === 0 && settledQ && !done.loading && doneHits.length === 0 && (
         <div className="adm-card adm-stack">
           <p>{copy.empty.noMatch(q.trim())}</p>
           <AdminLink className="adm-btn adm-btn--tonal adm-btn--sm" to={`/admin/orders/new?code=${encodeURIComponent(q.trim())}`}>{copy.empty.addByHand}</AdminLink>
         </div>
       )}
 
-      {!q && list.data && (
+      {!q && board && (
         <AdminLink className="adm-donelink adm-phone-only" to="/admin/orders/done">
           <CheckCircle2 size={22} aria-hidden="true" />
           <span><b>{copy.doneLink}</b>{doneCounts && <small>{copy.doneSub(doneCounts.delivered_paid, doneCounts.cancelled)}</small>}</span>
@@ -287,11 +328,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           onClose={() => {
             navigate(`/admin/orders${location.search}`);
             // The card may have moved lanes while the popup was open, so find it again.
-            requestAnimationFrame(() => document.querySelector<HTMLElement>(`.adm-ocard__open[href="/admin/orders/${code}"]`)?.focus());
+            requestAnimationFrame(() => document.querySelector<HTMLElement>(`.adm-ocard__open[href="/admin/orders/${code}${location.search}"]`)?.focus());
           }} />
       )}
       <ConfirmSheet order={confirming} onClose={() => setConfirming(null)} onConfirm={(o, c) => void change(o, c)} />
-      <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} />
+      <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
     </div>
   );
 };

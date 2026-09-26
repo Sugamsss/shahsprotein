@@ -15,7 +15,7 @@ The site does two jobs:
 4. In the admin, Sunit finds the order by its code, adds the phone number and the total he quoted, and moves it along: **New → Confirmed → Sent → Delivered**. Paid is a separate switch, because some people pay on delivery.
 5. Orders that come in by WhatsApp, a call, Instagram or in person are added by hand.
 
-The admin also has a home screen ("waiting on you", this week, what's selling), a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.
+The admin's Home is different for each person. Pranjali (`home_view = cook`) sees what to make per product, in kilos and packs. Sunit and anyone else (`admin`) sees every order and rupee per product and stage. Each product card opens that product's orders. The admin also has a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.
 
 Pranjali and Sunit sign in with a username (`pranjali`, `sunit`) and a password. There's no email reset: Sugam sets or resets a password with `node scripts/set-admin-password.mjs <username>` (needs `supabase login`). How to add someone is in [supabase/README.md](supabase/README.md).
 

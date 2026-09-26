@@ -9,6 +9,8 @@ export interface AdminMe {
   id: string;
   email: string;
   display_name: string | null;
+  /** Which Home they see: 'cook' is Pranjali's; anything else, or missing, gets the full admin Home. */
+  home_view?: 'cook' | 'admin' | null;
 }
 
 export interface OrderLine {
@@ -60,6 +62,8 @@ export interface OrderFilters {
   to?: string;
   before?: string;
   limit?: number;
+  /** Only orders with this product, any size. */
+  product?: string;
 }
 
 export interface OrderPage {
@@ -126,6 +130,68 @@ export interface Overview {
   email: { active: number };
   /** All time. */
   done: { delivered_paid: number; cancelled: number };
+}
+
+/** get_admin_totals(): one pack size, lightest first, only sizes with packs. */
+export interface TotalsSize { size: string; grams_each: number; packs: number }
+
+/** One product in one stage: orders that contain it, and its packs and weight in them. */
+export interface TotalsCell { orders: number; packs: number; grams: number; by_size: TotalsSize[] }
+
+/** The stages, in Home's order. Every order is in at most one; cancelled and done orders in none. */
+export type TotalsStage = 'to_confirm' | 'to_send' | 'on_the_way' | 'to_collect' | 'stale';
+
+/** One stage across all products. Money is per order, so it's only here, never per product. */
+export interface TotalsOverall {
+  orders: number;
+  packs: number;
+  /** ₹ quoted on the stage's orders. */
+  amount: number;
+  /** Orders with no amount typed yet. */
+  without_amount: number;
+  paid: number;
+  /** ₹ on the ones not paid yet. */
+  unpaid_amount: number;
+}
+
+export interface TotalsWeek {
+  starts_at: string;
+  ends_at: string;
+  /** Real orders (confirmed, sent or delivered), by created_at. */
+  orders: number;
+  packs: number;
+  /** ₹ paid in the week, by paid_at. */
+  amount_in: number;
+  paid_orders: number;
+  paid_without_amount: number;
+}
+export interface TotalsDay { date: string; orders: number; packs: number }
+export interface TotalsWeekProduct { product_id: string; packs: number; orders: number }
+
+/** get_admin_totals(): the numbers behind both Homes (temp/home-totals.md, v2). Zeros, never null. */
+export interface Totals {
+  as_of: string;
+  /** The earliest real order, or null. After last week's start, there's no fair comparison yet. */
+  first_order_at: string | null;
+  /** Only products with lines in some stage; Home shows all three and uses zeros for the rest. */
+  products: { product_id: string; stages: Record<TotalsStage, TotalsCell> }[];
+  overall: {
+    to_confirm: TotalsOverall;
+    to_send: TotalsOverall;
+    /** First names, oldest first, at most 3. */
+    on_the_way: TotalsOverall & { unpaid_names: string[] };
+    to_collect: TotalsOverall & { without_amount_names: string[] };
+    /** They never came through, so no money. */
+    stale: { orders: number; packs: number };
+  };
+  weeks: {
+    /** Monday 00:00 India time up to now. */
+    this: TotalsWeek & { days: TotalsDay[]; by_product: TotalsWeekProduct[] };
+    /** The whole of last week. */
+    last: TotalsWeek & { days: TotalsDay[] };
+    /** Last week up to the same weekday and time, for a fair comparison. */
+    last_so_far: TotalsWeek & { by_product: TotalsWeekProduct[] };
+  };
 }
 
 export interface Customer {

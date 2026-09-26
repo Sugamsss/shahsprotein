@@ -6,7 +6,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { formatAge, formatDay, formatMoney, formatWhen } from '../format';
 import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
-import { laneOf, nextOf, productName, sortLines, thumbOf } from './model';
+import { laneOf, linesFirst, nextOf, pileOf, productName, thumbOf } from './model';
 
 const copy = adminCopy.orders;
 
@@ -81,10 +81,14 @@ export const OrderCard: React.FC<{
   mark?: string;
   /** It just landed in this lane: the site's order-flash tint. */
   flash?: boolean;
-}> = ({ order: o, onAction, dateTitle, selected, mark, flash }) => {
+  /** A board filtered to one product: its lines come first and its pouch on top; the rest are dimmed. */
+  product?: string | null;
+  /** The board's query (?product=…&q=…), kept on the link so the order opens over the same board. */
+  search?: string;
+}> = ({ order: o, onAction, dateTitle, selected, mark, flash, product, search = '' }) => {
   const lane = laneOf(o);
   const next = nextOf(o);
-  const ids = [...new Set(sortLines(o.lines).map((l) => l.product_id))];
+  const ids = pileOf(o.lines, product);
   const act = (a: CardAction) => () => onAction?.(o, a);
   const chips: React.ReactNode[] = [];
   if (lane === 'send' || lane === 'way') chips.push(<PaidChip key="p" order={o} onToggle={onAction && act('paid')} />);
@@ -100,17 +104,17 @@ export const OrderCard: React.FC<{
 
   return (
     <article className={`adm-ocard${lane === 'stale' ? ' adm-ocard--stale' : ''}${selected ? ' is-open' : ''}${flash ? ' is-flash' : ''}`}>
-      <AdminLink className="adm-ocard__open" to={`/admin/orders/${o.code}`} aria-label={copy.open(o.name ?? o.code, o.code)} />
+      <AdminLink className="adm-ocard__open" to={`/admin/orders/${o.code}${search}`} aria-label={copy.open(o.name ?? o.code, o.code)} />
       <span className={`adm-pile adm-pile--${Math.min(ids.length, 2)}`}>
-        {ids.slice(0, 2).map((id) => <Thumb key={id} id={id} />)}
+        {ids.map((id) => <Thumb key={id} id={id} />)}
       </span>
       <div className="adm-ocard__head">
         <span className="adm-ocard__name">{dateTitle ? formatDay(o.created_at) : o.name ?? o.phone}</span>
         {!dateTitle && <span className="adm-ocard__time">{formatWhen(o.created_at)}</span>}
       </div>
       <ul className="adm-ocard__items">
-        {sortLines(o.lines).map((l) => (
-          <li key={l.product_id + l.size}><b className="adm-pname">{productName(l.product_id)}</b>{l.size}<span>× {l.quantity}</span></li>
+        {linesFirst(o.lines, product).map((l) => (
+          <li key={l.product_id + l.size} className={product && l.product_id !== product ? 'is-other' : undefined}><b className="adm-pname">{productName(l.product_id)}</b>{l.size}<span>× {l.quantity}</span></li>
         ))}
       </ul>
       <div className="adm-ocard__extra">
