@@ -40,10 +40,14 @@ const CookLede: React.FC<{ totals: Totals }> = ({ totals }) => {
   }
   const maybe = productsData.filter((product) => totals.products.some((p) => p.product_id === product.id && p.stages.to_confirm.orders > 0));
   return (
-    <p className="adm-home__lede">
-      {copy.cookNothing}
-      {maybe.length > 0 && ` ${copy.cookMaybe(totals.overall.to_confirm.orders === 1, maybe.map((p) => p.name))}`}
-    </p>
+    <>
+      <p className="adm-home__lede">{copy.cookNothing}</p>
+      {maybe.length > 0 && (
+        <p className="adm-home__lede-more">
+          {copy.cookMaybe(totals.overall.to_confirm.orders === 1, maybe.map((p) => p.name), maybe.length === productsData.length)}
+        </p>
+      )}
+    </>
   );
 };
 
@@ -157,7 +161,7 @@ const Stock: React.FC<{ stock: StockRpc; always: boolean }> = ({ stock: { data, 
         <h2 id="adm-home-stock">{out.length ? copy.offTheSite : copy.stock}</h2>
         <AdminLink to="/admin/products" className="adm-text-btn">{copy.products}</AdminLink>
       </div>
-      {!out.length && <p className="adm-home__ok"><CheckCircle size={20} aria-hidden="true" />{copy.allOnSite}</p>}
+      {!out.length && <p className="adm-home__ok"><CheckCircle size={18} aria-hidden="true" />{copy.allOnSite}</p>}
       {out.map(({ product, sizes, item, since }) => (
         <div key={item} className="adm-home__stock">
           <OrderThumb product={product} className="adm-home__thumb" />
