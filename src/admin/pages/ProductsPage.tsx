@@ -53,7 +53,7 @@ const ProductsPage: React.FC = () => {
           <section key={product.id} className="adm-card adm-product" aria-labelledby={`adm-product-${product.id}`}>
             <div className="adm-product__head">
               <OrderThumb product={product} className="adm-product__thumb" />
-              <h2 id={`adm-product-${product.id}`} className="adm-product__name">{product.name}</h2>
+              <h2 id={`adm-product-${product.id}`}>{product.name}</h2>
             </div>
             {product.weightOptions.map((size) => {
               const on = !isOut(stock, product.id, size);

@@ -15,7 +15,7 @@
   width: 100%; max-width: 560px; max-height: 88vh; max-height: 88dvh; overflow: hidden;
   border: 1px solid var(--adm-edge); border-bottom: 0; border-radius: 28px 28px 0 0;
   background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
-  color: var(--color-text-primary); outline: none;
+  color: var(--adm-ink-1); outline: none;
   animation: sheet-up 0.32s var(--ease-glide) both;
 }
 .adm-sheet-layer.is-closing .adm-sheet { animation: sheet-down 0.24s cubic-bezier(0.32, 0, 0.67, 0) both; }
@@ -26,13 +26,12 @@
 }
 .adm-sheet__title {
   min-width: 0; padding-top: 8px; overflow-wrap: anywhere;
-  font: 700 1.375rem/1.2 var(--font-family-heading); letter-spacing: -0.01em;
 }
 .adm-sheet__title:focus { outline: none; }
 .adm-sheet__actions { display: flex; align-items: center; gap: 4px; }
 .adm-sheet__close {
   display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-full);
-  background: var(--adm-well); color: var(--color-text-secondary);
+  background: var(--adm-well); color: var(--adm-ink-2);
   transition: background-color var(--transition-fast), transform 120ms ease;
 }
 .adm-sheet__close:active { background: var(--adm-well-press); transform: scale(0.97); }
@@ -42,7 +41,7 @@
   border-top: 1px solid var(--adm-hairline); background: var(--adm-surface-solid);
 }
 @media (hover: hover) {
-  .adm-sheet__close:hover { background: var(--adm-well-press); color: var(--color-text-primary); }
+  .adm-sheet__close:hover { background: var(--adm-well-press); color: var(--adm-ink-1); }
 }
 
 /* ---- Laptop: centred popup over the frosted page ---------------------------- */

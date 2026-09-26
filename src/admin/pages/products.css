@@ -3,15 +3,14 @@
 .adm-card.adm-product { display: grid; padding: 16px 16px 4px; }
 .adm-product__head { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; }
 .adm-product__thumb { width: 56px; height: 56px; border-radius: 14px; }
-.adm-product__name { color: var(--color-product-name); font: 700 1.25rem/1.2 var(--font-family-serif); }
 /* 60px: the size over its status line, the switch on the right. */
 .adm-product__size {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'size switch' 'status switch';
   align-items: center; column-gap: 12px; min-height: 60px; padding: 10px 0; border-top: 1px solid var(--adm-hairline);
 }
-.adm-product__size-name { grid-area: size; font-size: 1rem; font-weight: 600; }
-.adm-product__status { grid-area: status; color: var(--color-text-muted); font-size: 0.875rem; }
-.adm-product__status.is-off { color: var(--color-text-secondary); font-weight: 600; }
+.adm-product__size-name { grid-area: size; font-weight: 600; }
+.adm-product__status { grid-area: status; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-product__status.is-off { color: var(--adm-ink-2); font-weight: 600; }
 .adm-product .adm-switch { grid-area: switch; }
 @media (min-width: 960px) {
   .adm-page--products { max-width: 1120px; margin-inline: auto; }

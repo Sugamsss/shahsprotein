@@ -99,7 +99,7 @@ export const OrderCard: React.FC<{
   if (o.source !== 'site') chips.push(<Via key="v" source={o.source} />);
   if (o.coupon) chips.push(<span key="c" className="adm-chip"><Ticket size={13} aria-hidden="true" />{o.coupon.code}</span>);
   if (o.customer && o.customer.order_number > 1) {
-    chips.push(<span key="r" className="adm-chip adm-chip--accent"><Repeat size={13} aria-hidden="true" />{copy.nthOrder(o.customer.order_number)}</span>);
+    chips.push(<span key="r" className="adm-chip adm-chip--strong"><Repeat size={13} aria-hidden="true" />{copy.nthOrder(o.customer.order_number)}</span>);
   }
 
   return (

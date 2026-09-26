@@ -8,12 +8,12 @@
 .adm-email .adm-list__icon { grid-row: span 2; }
 .adm-email .adm-list__main { min-width: 0; }
 /* Breaks before the @ first (the <wbr>), then anywhere, so a long address never runs past the card. */
-.adm-email__address { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
-.adm-email__status { display: inline-flex; align-items: center; gap: 4px; grid-column: 2; color: var(--color-text-muted); font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+.adm-email__address { min-width: 0; font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.adm-email__status { display: inline-flex; align-items: center; gap: 4px; grid-column: 2; color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 600; white-space: nowrap; }
 .adm-email__status.is-confirmed { color: var(--color-success-text); }
 
 @media (min-width: 600px) {
   .adm-email { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; }
   .adm-email .adm-list__icon { grid-row: auto; }
-  .adm-email__status { grid-column: auto; font-size: 0.9375rem; }
+  .adm-email__status { grid-column: auto; }
 }

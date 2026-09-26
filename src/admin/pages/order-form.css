@@ -2,24 +2,28 @@
 .adm-of { display: grid; gap: 24px; }
 .adm-of__intro { margin-top: -12px; }
 .adm-of__section { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
-.adm-of__h { display: flex; justify-content: space-between; gap: 12px; padding: 0; color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+/* A section's heading at head, with its count or hint small on the right. */
+.adm-of__h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0;
+  font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em;
+}
 .adm-of__h h2 { font: inherit; }
-.adm-of__h span { font-weight: 500; letter-spacing: 0; text-transform: none; }
-.adm-of__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); font-size: 0.9375rem; line-height: 1.45; }
+.adm-of__h span { color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; letter-spacing: 0; }
+.adm-of__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); }
 
 /* A row per product and size: thumb, name over size, then + Add or the stepper. */
 .adm-card.adm-of__packs { display: grid; padding: 4px 16px; list-style: none; }
 .adm-of__packs li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; }
 .adm-of__packs li + li { border-top: 1px solid var(--adm-hairline); }
 .adm-of__thumb { width: 44px; height: 44px; border-radius: 10px; }
-.adm-of__packs .adm-pname { display: block; font-size: 1.0625rem; line-height: 1.2; }
-.adm-of__packs small { color: var(--color-text-secondary); font-size: 0.875rem; }
-.adm-of__packs em { color: var(--color-text-muted); font-style: normal; }
+.adm-of__packs .adm-pname { display: block; font-size: var(--adm-text-head); line-height: 1.2; }
+.adm-of__packs small { color: var(--adm-ink-2); font-size: var(--adm-text-body); }
+.adm-of__packs em { color: var(--adm-ink-3); font-style: normal; }
 
 /* "Anjali Kulkarni · 2 orders before" with Use. */
 .adm-of__match { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--adm-accent-tint); }
-.adm-of__match small { color: var(--color-text-secondary); font-size: 0.8125rem; }
-.adm-of__initials { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: 0.875rem; font-weight: 700; }
+.adm-of__match small { color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; }
+.adm-of__initials { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: var(--adm-text-small); font-weight: 700; }
 
 /* Came via: 2×2 choices, native radios. */
 .adm-of__via { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -37,7 +41,7 @@
 .adm-of__paid .adm-paidrow { margin-top: 0; padding-top: 0; border-top: 0; }
 .adm-of__links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .adm-of__bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.adm-of__bar > span { color: var(--color-text-secondary); font-weight: 600; }
+.adm-of__bar > span { color: var(--adm-ink-2); font-weight: 600; }
 .adm-of__bar .adm-btn { flex: 1; max-width: 340px; }
 .adm-of__leave { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .adm-of-page .adm-title-row { align-items: flex-start; }
