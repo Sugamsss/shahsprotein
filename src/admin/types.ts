@@ -4,6 +4,8 @@
 export type OrderStatus = 'new' | 'confirmed' | 'sent' | 'delivered' | 'cancelled';
 export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_person';
 export type OrderView = 'todo' | 'done' | 'all';
+/** How a paid order was paid. Old paid orders have none (null). */
+export type PaidMethod = 'upi' | 'cash' | 'other';
 
 export interface AdminMe {
   id: string;
@@ -27,6 +29,10 @@ export interface Order {
   status: OrderStatus;
   paid: boolean;
   paid_at: string | null;
+  /** Only while paid; null on old paid orders. */
+  paid_method: PaidMethod | null;
+  /** Only with 'other': one line, up to 60 characters. */
+  paid_note: string | null;
   kept: boolean;
   stale: boolean;
   name: string | null;
@@ -75,6 +81,10 @@ export interface OrderPage {
 export interface OrderChanges {
   status?: OrderStatus;
   paid?: boolean;
+  /** Only with `paid: true` in the same call. */
+  paid_method?: PaidMethod;
+  /** Only with `paid_method: 'other'`. */
+  paid_note?: string;
   kept?: boolean;
   phone?: string | null;
   amount?: number | null;
@@ -96,6 +106,9 @@ export interface OrderInput {
   lines: OrderLine[];
   status?: OrderStatus;
   paid?: boolean;
+  /** New orders only, with `paid: true`; `paid_note` only with 'other'. */
+  paid_method?: PaidMethod;
+  paid_note?: string;
   created_at?: string;
 }
 

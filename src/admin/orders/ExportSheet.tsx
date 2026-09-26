@@ -5,7 +5,7 @@ import { downloadCsv, toCsv } from '../csv';
 import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
 import { Segmented, SheetForm } from '../parts';
-import { itemsText, productName } from './model';
+import { itemsText, paidByText, productName } from './model';
 
 const copy = adminCopy.exportOrders;
 type Range = keyof typeof copy.ranges;
@@ -23,7 +23,7 @@ const statusWord = (o: Order) =>
 const row = (o: Order) => [
   o.code, istDateValue(o.created_at), formatTime(o.created_at), o.name, o.phone && formatPhone(o.phone), o.pincode,
   itemsText(o), o.packs, o.coupon?.code, adminCopy.orders.via[o.source], statusWord(o),
-  o.paid ? adminCopy.orders.paid : adminCopy.orders.notPaid, o.paid_at && istDateValue(o.paid_at), o.amount, o.note,
+  o.paid ? adminCopy.orders.paid : adminCopy.orders.notPaid, o.paid_at && istDateValue(o.paid_at), paidByText(o), o.amount, o.note,
 ];
 
 /** Export orders (spec 2.5): every order in the range, newest first, paged with next_before. */

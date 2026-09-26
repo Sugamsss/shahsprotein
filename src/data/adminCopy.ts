@@ -181,12 +181,28 @@ export const adminCopy = {
       delivered: (n: string) => `${n}'s order is marked delivered`,
       new: (n: string) => `${n}'s order is back to New`,
       cancelled: (n: string) => `${n}'s order is cancelled`,
-      paid: (n: string) => `${n}'s order is marked paid`,
+      /** "Neha's order is marked paid · UPI". Undo and old orders have no method. */
+      paid: (n: string, how: string | null) => `${n}'s order is marked paid${how ? ` · ${how}` : ''}`,
       unpaid: (n: string) => `${n}'s order is marked not paid`,
       kept: (n: string) => `We'll check on ${n}'s order again in 2 days`,
       copied: 'Copied.',
       deleted: 'Order deleted.',
     },
+  },
+
+  /** How an order was paid: picked when it's marked paid (detail, cards, Done, Add order). */
+  paidBy: {
+    methods: { upi: 'UPI', cash: 'Cash', other: 'Other' },
+    /** "Other: bank transfer", in the detail, the toast and the CSV. */
+    other: (note: string) => `Other: ${note}`,
+    question: 'How did they pay?',
+    sheetTitle: (name: string) => `How did ${name} pay?`,
+    noteLabel: 'How, in a few words',
+    notePlaceholder: 'Like: bank transfer',
+    noteMissing: 'Say how they paid, in a few words.',
+    markPaid: 'Mark paid',
+    /** Add order, Save with Paid on and nothing picked. */
+    pickOne: 'Pick how they paid.',
   },
 
   /** Orders filtered to one product (a Home product card opens it). */
@@ -219,7 +235,8 @@ export const adminCopy = {
     notPaidYet: 'Not paid yet',
     payOnDelivery: 'Some pay on delivery.',
     turnOnWhenPaid: "Turn on when it's paid.",
-    paidOn: (day: string) => `Paid on ${day}`,
+    /** "Paid on 26 Sep · UPI"; old orders have no method, so just the day. */
+    paidOn: (day: string, how: string | null) => `Paid on ${day}${how ? ` · ${how}` : ''}`,
     packs: (n: number) => `${n} ${n === 1 ? 'pack' : 'packs'}`,
     edit: 'Edit',
     couponInvalid: '(not valid when sent)',
@@ -287,7 +304,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Total quoted', 'Note'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Note'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 

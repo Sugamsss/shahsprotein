@@ -10,6 +10,7 @@ import { useRpc } from '../useRpc';
 import { itemsText } from './model';
 import { Code, OrderCard, PaidChip } from './OrderCard';
 import { useLaptop } from './OrdersPage';
+import { PaidSheet } from './PaidMethod';
 import { useOrderChange } from './useOrderChange';
 
 const copy = adminCopy.done;
@@ -57,7 +58,9 @@ const DonePage: React.FC = () => {
 
   const orders = list.data?.orders ?? [];
   const days = byDay(oldestFirst ? [...orders].reverse() : orders);
-  const paidToggle = (o: Order) => () => void change(o, { paid: !o.paid });
+  // Not paid is one tap with Undo; paid asks how first.
+  const [paying, setPaying] = useState<Order | null>(null);
+  const paidToggle = (o: Order) => () => (o.paid ? void change(o, { paid: false }) : setPaying(o));
 
   return (
     <div className="adm-page adm-done">
@@ -113,6 +116,7 @@ const DonePage: React.FC = () => {
       {list.data?.next_before && (
         <button type="button" className="adm-btn adm-btn--quiet adm-done__more" disabled={more} onClick={older}>{copy.older}</button>
       )}
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
     </div>
   );
 };

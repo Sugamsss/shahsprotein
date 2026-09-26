@@ -38,8 +38,18 @@
 .adm-segmented input:checked + span { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
 .adm-segmented input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-segmented label:active span { transform: scale(0.97); }
+/* The same pill with buttons that act on tap, not radios (how an order was paid). */
+.adm-segmented--buttons > button {
+  position: relative; display: grid; place-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--radius-full);
+  color: var(--color-text-secondary); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; touch-action: manipulation;
+}
+.adm-segmented--buttons > button::after { content: ''; position: absolute; inset: -4px 0; } /* 48px to the finger */
+.adm-segmented--buttons > button.is-on { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
+.adm-segmented--buttons > button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-segmented--buttons > button:active { transform: scale(0.97); }
+@media (hover: hover) { .adm-segmented--buttons > button:not(.is-on):hover { color: var(--color-text-primary); } }
 /* The narrowest phones: four choices (Done's filter) fit 288px without scrolling sideways. */
-@media (max-width: 374px) { .adm-segmented span { padding: 0 6px; font-size: 0.875rem; } }
+@media (max-width: 374px) { .adm-segmented span, .adm-segmented--buttons > button { padding: 0 6px; font-size: 0.875rem; } }
 
 /* ---- The sentence under a page title ------------------------------------------ */
 .adm-intro { margin-top: -8px; color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; text-wrap: pretty; }

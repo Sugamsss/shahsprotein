@@ -6,11 +6,12 @@ import { AdminSheet } from '../AdminSheet';
 import { getOrder } from '../api';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
-import type { Order } from '../types';
+import type { Order, OrderChanges } from '../types';
 import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
 import { laneOf, nextOf } from './model';
-import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
+import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, type PaidRowHandle, PrimaryAction, StatusCard } from './OrderParts';
+import { PaidSheet } from './PaidMethod';
 import { useOrderChange } from './useOrderChange';
 
 const copy = adminCopy.order;
@@ -39,10 +40,11 @@ const OrderBody: React.FC<{
   change: ReturnType<typeof useOrderChange>;
   show: (o: Order) => void;
   phoneRef?: React.Ref<HTMLInputElement>;
-}> = ({ order, change, show, phoneRef }) => (
+  paidRef?: React.Ref<PaidRowHandle>;
+}> = ({ order, change, show, phoneRef, paidRef }) => (
   <>
     <OrderNotes order={order} />
-    <StatusCard order={order} change={change} />
+    <StatusCard key={order.id} order={order} change={change} paidRef={paidRef} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
       <DetailsCard order={order} onSaved={show} phoneRef={phoneRef} />
@@ -61,6 +63,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
   const board = `/admin/orders${useLocation().search}`;
   const { order, show, detail } = useOrder(code);
   const change = useOrderChange(show);
+  const [paying, setPaying] = useState<Order | null>(null);
 
   if (!order) {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
@@ -82,9 +85,11 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
       {next && (
         <div className="adm-od-bar">
           <ToastSlot />
-          <PrimaryAction order={order} change={change} />
+          {/* Mark paid asks how they paid first. */}
+          <PrimaryAction order={order} change={change} onNext={next.lane === 'collect' ? () => setPaying(order) : undefined} />
         </div>
       )}
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
     </div>
   );
 };
@@ -111,6 +116,8 @@ export const OrderPopup: React.FC<{
   const change = useOrderChange(show);
   const nameRef = useRef<HTMLSpanElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
+  const paidRef = useRef<PaidRowHandle>(null);
+  const [paying, setPaying] = useState<Order | null>(null);
 
   const at = fromList ? sequence.indexOf(fromList) : -1;
   const go = (step: number) => {
@@ -127,11 +134,13 @@ export const OrderPopup: React.FC<{
   // Enter (or the main button) does the next step, then moves on to the next
   // order in the lane this one came from, so To confirm is Enter, Enter, Enter.
   // The last one left in its lane stays open, showing where it went.
-  const doNext = () => {
+  // Mark paid first asks how they paid (the sheet), then moves on the same way.
+  const doNext = (changes?: OrderChanges) => {
     if (!order || !next || !fromList) return;
+    if (next.lane === 'collect' && !changes) return setPaying(order);
     const i = inLane.indexOf(fromList);
     const then = inLane[i + 1] ?? inLane[i - 1];
-    change(order, next.changes);
+    change(order, changes ?? next.changes);
     if (then) navigate(`/admin/orders/${then.code}${search}`, { replace: true });
   };
 
@@ -146,17 +155,22 @@ export const OrderPopup: React.FC<{
   });
 
   // Latest values for the key handler, which is set up once.
-  const keys = useRef({ go, order, doNext, change });
-  keys.current = { go, order, doNext, change };
+  const keys = useRef({ go, order, doNext, change, paidRef });
+  keys.current = { go, order, doNext, change, paidRef };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       // Only this popup's own keys: not while typing, and not when a sheet sits on top.
       if (!target.closest?.('.adm-od-popup') || isTyping(target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      const { go: move, order: o, doNext: step, change: run } = keys.current;
+      const { go: move, order: o, doNext: step, change: run, paidRef: paid } = keys.current;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1); }
       else if (e.key === 'Enter' && !target.closest('button, a, summary') && o) { e.preventDefault(); step(); }
-      else if (e.key.toLowerCase() === 'p' && o) { e.preventDefault(); run(o, { paid: !o.paid }); }
+      // P: paid → not paid at once; not paid → "How did they pay?" with focus on UPI.
+      else if (e.key.toLowerCase() === 'p' && o) {
+        e.preventDefault();
+        if (o.paid) run(o, { paid: false });
+        else paid.current?.choose();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -188,12 +202,13 @@ export const OrderPopup: React.FC<{
           <span className="adm-od-keys" aria-hidden="true">
             <span><kbd>Esc</kbd> {copy.keys[0]}</span> <span><kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}</span> <span><kbd>P</kbd> {copy.keys[2]}</span>
           </span>
-          <PrimaryAction order={order} change={change} onNext={doNext} />
+          <PrimaryAction order={order} change={change} onNext={() => doNext()} />
         </>
       )}
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
-      {order && <OrderBody order={order} change={change} show={show} phoneRef={phoneRef} />}
+      {order && <OrderBody order={order} change={change} show={show} phoneRef={phoneRef} paidRef={paidRef} />}
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(_, c) => doNext(c)} />
     </AdminSheet>
   );
 };

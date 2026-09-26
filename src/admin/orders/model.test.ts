@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Order, OrderLine } from '../types';
-import { linesFirst, namesOneOrder, packsOf, pileOf, productFilter, searchFor } from './model';
+import { applyLocal, linesFirst, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -76,5 +76,41 @@ describe('a card on a filtered board', () => {
     expect(pileOf(lines, 'bites')).toEqual(['raggi-jaggi', 'bites']);
     expect(pileOf(lines, 'raggi-jaggi')).toEqual(['muesli', 'raggi-jaggi']);
     expect(pileOf(lines)).toEqual(['raggi-jaggi', 'muesli']);
+  });
+});
+
+// Paid with a method (UPI, Cash, Other + note). Undo must send what the server accepts.
+
+const paidOrder = (paid_method: Order['paid_method'], paid_note: string | null = null) =>
+  ({ paid: true, paid_at: '2026-09-26T10:00:00Z', paid_method, paid_note } as Order);
+const unpaidOrder = { paid: false, paid_at: null, paid_method: null, paid_note: null } as Order;
+
+describe('paying with a method', () => {
+  it('undoing Not paid puts the method and note back', () => {
+    expect(reverseOf(paidOrder('upi'), { paid: false })).toEqual({ paid: true, paid_method: 'upi' });
+    expect(reverseOf(paidOrder('other', 'bank transfer'), { paid: false }))
+      .toEqual({ paid: true, paid_method: 'other', paid_note: 'bank transfer' });
+  });
+
+  it('undoing Not paid on an old order sends no method, since the server refuses a null one', () => {
+    expect(reverseOf(paidOrder(null), { paid: false })).toEqual({ paid: true });
+  });
+
+  it('undoing Paid just marks it not paid, which clears the method', () => {
+    expect(reverseOf(unpaidOrder, { paid: true, paid_method: 'cash' })).toEqual({ paid: false });
+  });
+
+  it('shows the method at once, and clears it on Not paid', () => {
+    const paid = applyLocal(unpaidOrder, { paid: true, paid_method: 'other', paid_note: 'bank transfer' });
+    expect([paid.paid, paid.paid_method, paid.paid_note]).toEqual([true, 'other', 'bank transfer']);
+    const unpaid = applyLocal(paidOrder('other', 'bank transfer'), { paid: false });
+    expect([unpaid.paid, unpaid.paid_at, unpaid.paid_method, unpaid.paid_note]).toEqual([false, null, null, null]);
+  });
+
+  it('reads as UPI, Cash or Other with its note, and nothing for an old order', () => {
+    expect(paidByText(paidOrder('upi'))).toBe('UPI');
+    expect(paidByText(paidOrder('cash'))).toBe('Cash');
+    expect(paidByText(paidOrder('other', 'bank transfer'))).toBe('Other: bank transfer');
+    expect(paidByText(paidOrder(null))).toBeNull();
   });
 });

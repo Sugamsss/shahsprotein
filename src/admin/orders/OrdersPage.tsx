@@ -15,6 +15,7 @@ import { ExportSheet } from './ExportSheet';
 import { type Lane, LANES, NEXT, laneOf, namesOneOrder, packsOf, productFilter, productName, searchFor } from './model';
 import { type CardAction, OrderCard, Thumb } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
+import { PaidSheet } from './PaidMethod';
 import { useOrderChange } from './useOrderChange';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -118,6 +119,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const product = productFilter(query.get('product'));
   const [searching, setSearching] = useState(false);
   const [confirming, setConfirming] = useState<Order | null>(null);
+  const [paying, setPaying] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null); // clearing the filter moves focus here
 
@@ -191,8 +193,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     if (action === 'next' && (lane === 'confirm' || lane === 'stale')) {
       if (laptop) navigate(`/admin/orders/${o.code}${location.search}`, { state: { focus: 'phone' } });
       else setConfirming(o);
-    } else if (action === 'next' && lane !== 'done') void change(o, NEXT[lane]);
-    else if (action === 'paid') void change(o, { paid: !o.paid });
+    } else if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
+    else if (action === 'next' && lane !== 'done') void change(o, NEXT[lane]);
+    else if (action === 'paid') {
+      if (o.paid) void change(o, { paid: false });
+      else setPaying(o);
+    }
     else if (action === 'keep') void change(o, { kept: true });
     else if (action === 'cancel') void change(o, { status: 'cancelled' });
   };
@@ -332,6 +338,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           }} />
       )}
       <ConfirmSheet order={confirming} onClose={() => setConfirming(null)} onConfirm={(o, c) => void change(o, c)} />
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
     </div>
   );
