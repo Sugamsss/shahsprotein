@@ -189,6 +189,16 @@ export const adminCopy = {
     },
   },
 
+  /** Orders filtered to one product (a Home product card opens it). */
+  ordersProduct: {
+    clear: (name: string) => `Showing ${name} orders. Clear the filter`,
+    count: (n: number, name: string) => `${n} ${n === 1 ? 'order' : 'orders'} with ${name}`,
+    /** To send's hint: "Pack 9 Raggi Jaggi: 250 g × 6 · 500 g × 3." */
+    pack: (packs: number, name: string, sizes: [string, number][]) =>
+      `Pack ${packs} ${name}: ${sizes.map(([size, n]) => `${size} × ${n}`).join(' · ')}.`,
+    exportOnly: (name: string) => `Only orders with ${name}.`,
+  },
+
   order: {
     back: 'Orders',
     notFound: (code: string) => `No order matches “${code}”. Check the code in the chat.`,

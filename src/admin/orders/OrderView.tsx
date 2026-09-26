@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
@@ -57,6 +57,8 @@ const isTyping = (el: EventTarget | null) =>
 /** Phone: the order as its own page, with the next step pinned above the tab bar. */
 export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
   const navigate = useNavigate();
+  // Back to the same board: a product filter or a search stays.
+  const board = `/admin/orders${useLocation().search}`;
   const { order, show, detail } = useOrder(code);
   const change = useOrderChange(show);
 
@@ -64,7 +66,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
     if (detail.loading) return <div className="adm-page"><Skeleton cards={3} rows={3} /></div>;
   }
-  const back = <AdminLink className="adm-back adm-back--start" to="/admin/orders"><ChevronLeft size={20} aria-hidden="true" />{copy.back}</AdminLink>;
+  const back = <AdminLink className="adm-back adm-back--start" to={board}><ChevronLeft size={20} aria-hidden="true" />{copy.back}</AdminLink>;
   if (!order) return <div className="adm-page">{back}<p className="adm-muted">{copy.notFound(code)}</p></div>;
   const next = nextOf(order);
 
@@ -72,7 +74,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
     <div className="adm-page adm-od">
       <div className="adm-od-top">
         {back}
-        <OrderMenu order={order} change={change} onDeleted={() => navigate('/admin/orders', { replace: true })} />
+        <OrderMenu order={order} change={change} onDeleted={() => navigate(board, { replace: true })} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
       <OrderBody order={order} change={change} show={show} />
@@ -102,6 +104,8 @@ export const OrderPopup: React.FC<{
   focusPhone?: boolean;
 }> = ({ code, sequence, putInList, onDeleted, onClose, focusPhone }) => {
   const navigate = useNavigate();
+  // Moving between orders keeps the board's query, so a filtered board stays filtered behind.
+  const { search } = useLocation();
   const fromList = sequence.find((o) => o.code === code);
   const { order, show, detail } = useOrder(code, fromList, putInList);
   const change = useOrderChange(show);
@@ -111,7 +115,7 @@ export const OrderPopup: React.FC<{
   const at = fromList ? sequence.indexOf(fromList) : -1;
   const go = (step: number) => {
     const to = sequence[at + step];
-    if (at >= 0 && to) navigate(`/admin/orders/${to.code}`, { replace: true });
+    if (at >= 0 && to) navigate(`/admin/orders/${to.code}${search}`, { replace: true });
   };
   // The board draws stale orders at the bottom of To confirm, and ← → walk
   // through them there, so the counter counts them as to confirm too.
@@ -128,7 +132,7 @@ export const OrderPopup: React.FC<{
     const i = inLane.indexOf(fromList);
     const then = inLane[i + 1] ?? inLane[i - 1];
     change(order, next.changes);
-    if (then) navigate(`/admin/orders/${then.code}`, { replace: true });
+    if (then) navigate(`/admin/orders/${then.code}${search}`, { replace: true });
   };
 
   // A deep link can open the popup before the order has loaded, so focus lands
