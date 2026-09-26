@@ -1,7 +1,7 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, Coupon, CouponInput, CustomerList, EmailList, Order, OrderChanges,
-  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, Totals,
 } from './types';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -86,6 +86,8 @@ export const saveOrder = (order: OrderInput, id?: string) => rpc<Order>('save_ad
 export const deleteOrder = (id: string) => rpc<void>('delete_admin_order', { id });
 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
+/** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */
+export const getTotals = () => rpc<Totals>('get_admin_totals');
 export const getCustomers = (search?: string) => rpc<CustomerList>('get_admin_customers', { search });
 
 export const getStock = () => rpc<OutOfStock>('get_product_stock');

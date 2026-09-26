@@ -90,6 +90,30 @@ export const formatLongDate = (value: string | number = Date.now()): string => {
 /** "₹1,240": whole rupees, Indian grouping. */
 export const formatMoney = (amount: number): string => `₹${Math.round(amount).toLocaleString('en-IN')}`;
 
+/**
+ * Money where space is tight (Home's week numbers): formatMoney up to ₹99,999, then
+ * lakhs to 2 decimals, rounded down so it never claims more: 1,24,599 → "₹1.24L".
+ * Pair it with formatMoney for the accessible name.
+ */
+export const formatMoneyShort = (amount: number): string => {
+  const rupees = Math.round(amount);
+  if (rupees < 100_000) return formatMoney(rupees);
+  return `₹${(Math.floor(rupees / 1000) / 100).toFixed(2)}L`;
+};
+
+const QUARTERS: Record<number, string> = { 0: '', 250: '¼', 500: '½', 750: '¾' };
+
+/**
+ * A weight the way a cook writes it: "750 g", "1 kg", "1¾ kg", "4¾ kg". Packs are
+ * 250 g and 500 g, so totals land on quarter kilos; anything else stays in whole
+ * grams ("1,100 g") rather than rounding to a weight nobody has to make.
+ */
+export const formatWeight = (grams: number): string => {
+  const g = Math.round(grams);
+  if (g < 1000 || g % 250 !== 0) return `${g.toLocaleString('en-IN')} g`;
+  return `${Math.floor(g / 1000)}${QUARTERS[g % 1000]} kg`;
+};
+
 /** "+91 98231 50764" for an Indian mobile; any other number as "+" and its digits. */
 export const formatPhone = (digits: string): string =>
   /^91\d{10}$/.test(digits) ? `+91 ${digits.slice(2, 7)} ${digits.slice(7)}` : `+${digits}`;

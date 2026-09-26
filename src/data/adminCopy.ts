@@ -3,6 +3,14 @@
 // Voice: plain, warm, short. Sentence case, no exclamation marks, no dashboard
 // words. See temp/admin-rebuild/design/direction.md.
 
+/** "Raggi Jaggi", "Raggi Jaggi and Muesli", "Tanvi, Asha and Meera". */
+const andList = (items: string[]) =>
+  (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+/** Names, then "and 2 more" for the ones not named (the RPC names at most 3, once each). */
+const namesAndMore = (names: string[], count: number) =>
+  (count > names.length ? `${names.join(', ')} and ${count - names.length} more` : andList(names));
+
 export const adminCopy = {
   brand: "Shah's Nutrition",
   /** The browser tab: "(3) Orders · Shah's". The count is the Orders badge's, shown only above 0. */
@@ -435,46 +443,112 @@ export const adminCopy = {
   homePage: {
     greeting: (part: 'morning' | 'afternoon' | 'evening', name: string) => `Good ${part}, ${name}`,
     addOrder: 'Add order',
+
+    // The three product cards (temp/home-totals/v2/README.md). Each is one link to that product's orders.
+    cards: {
+      cookTitle: 'What to make',
+      cookMeta: 'For confirmed orders',
+      adminTitle: 'By product',
+      adminMeta: 'Tap one to see its orders',
+      seeOrders: 'See its orders.',
+      // Pranjali: "Make 3 kg", "6 × 250 g · 3 × 500 g", "for 6 orders".
+      make: 'Make',
+      packsOf: (packs: number, size: string) => `${packs} × ${size}`,
+      forOrders: (n: number) => `for ${n} ${n === 1 ? 'order' : 'orders'}`,
+      nothingToMake: 'Nothing to make',
+      nothingYet: 'Nothing to make yet',
+      maybe: 'Maybe',
+      maybeMore: (orders: number) => `more, if ${orders === 1 ? 'a new order goes' : `${orders} new orders go`} ahead`,
+      offOnSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off on the site` : 'Off on the site'),
+      cookName: (product: string, main: string, maybe: string, off: string) =>
+        [`${product}: ${main}.`, maybe && `${maybe}.`, off && `${off}.`, 'See its orders.'].filter(Boolean).join(' '),
+      // Sunit: every stage, always in this order.
+      toConfirm: 'To confirm',
+      toPack: 'To pack',
+      onTheWay: 'On the way',
+      notPaid: 'Not paid yet',
+      pack: (n: number) => (n === 1 ? 'pack' : 'packs'),
+      sizeTimes: (size: string, packs: number) => `${size} × ${packs}`,
+      orders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
+      allClear: 'All clear',
+      stale: (n: number) => `${n} didn't come through`,
+      off: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off` : 'Off the site'),
+      adminName: (product: string, confirm: number, packs: number, way: number, notPaid: number) =>
+        `${product}: ${confirm} to confirm, ${packs} ${packs === 1 ? 'pack' : 'packs'} to pack, ${way} on the way, ${notPaid} not paid. See its orders.`,
+    },
+
+    // The line under the date.
+    cookLede: (weight: string, orders: number) => [weight, ` to make in all, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`] as const,
+    cookNothing: 'Nothing to make right now.',
+    cookMaybe: (oneOrder: boolean, products: string[]) => `${oneOrder ? 'A new order' : 'New orders'} might need some ${andList(products)}.`,
+    adminLede: (orders: number) => [`${orders} ${orders === 1 ? 'order' : 'orders'}`, ` ${orders === 1 ? 'needs' : 'need'} you`] as const,
+    adminNothing: 'Nothing needs you right now',
+    stillOut: [', and ', ' is still out'] as const,
+
     waiting: 'Waiting on you',
     allOrders: 'All orders',
     nothing: 'Nothing waiting. Every order is confirmed, sent or done. Enjoy the quiet.',
-    toConfirm: 'New orders to confirm',
+    toConfirm: (n: number) => (n === 1 ? 'New order to confirm' : 'New orders to confirm'),
     oldestFrom: (when: string) => `Oldest from ${when}`,
     toSend: 'To pack and send',
     paidSplit: (paid: number, notPaid: number) =>
       [paid ? `${paid} paid` : '', notPaid ? `${notPaid} not paid yet` : ''].filter(Boolean).join(', '),
+    packsThen: (packs: number, rest: string) => `${packs} ${packs === 1 ? 'pack' : 'packs'}${rest ? `. ${rest}` : ''}`,
     toCollect: (money: string) => `${money} to collect`,
     ordersToCollect: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} to collect`,
     deliveredBy: (name: string, when: string) => `${name}, delivered ${when}`,
     fromPeople: (n: number) => `From ${n} people`,
+    // "Tanvi's has no total yet", "Tanvi's and 2 more have no total yet"; a count when nobody is named.
+    noTotalYet: (names: string[], count: number) => `${names.length
+      ? namesAndMore(names.map((n) => `${n}'s`), count)
+      : count} ${count === 1 ? 'has' : 'have'} no total yet`,
     onTheWay: 'On the way',
     notPaidYet: (n: number) => `${n} not paid yet`,
+    namesNotPaid: (names: string[], count: number) => `${namesAndMore(names, count)} ${count === 1 ? "hasn't" : "haven't"} paid yet`,
     allPaid: 'All paid',
     stale: "Didn't come through?",
     staleFrom: (when: string) => `From ${when}. Still waiting, or cancel?`,
     staleHint: 'Still waiting, or cancel?',
+
+    // This week, Pranjali's: gentle, in packs, no money.
     week: 'This week',
-    weekRange: (from: string, to: string) => `${from} to ${to}`,
-    weekOrders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
-    weekPacks: (n: number) => `${n} ${n === 1 ? 'pack' : 'packs'}`,
-    weekSince: 'since Monday.',
-    // The site opened on this day: in that week, Home says it's the first week.
-    openedOn: '2026-09-23',
-    firstWeek: (weekday: string) => `We opened on ${weekday}, so this is the first week.`,
-    weekFoot: (delivered: number, cancelled: number, repeat: number) =>
-      [`${delivered} delivered`, `${cancelled} cancelled`, `${repeat} repeat ${repeat === 1 ? 'customer' : 'customers'}`],
+    weekSoFar: (orders: number) => `${orders} ${orders === 1 ? 'order' : 'orders'}`,
+    weekVs: (diff: number) => (diff > 0 ? ` so far, ${diff} more than this time last week.`
+      : diff < 0 ? ` so far, ${-diff} fewer than this time last week.` : ' so far, the same as this time last week.'),
+    // No real last week yet: say so instead of comparing.
+    weekFirst: (thisWeek: boolean) => (thisWeek ? " so far. It's our first week, so there's nothing to compare yet."
+      : ' so far. Last week was our first, so there\'s no fair comparison yet.'),
+    fastest: (many: boolean) => (many ? ' are going fastest.' : ' is going fastest.'),
+    packsHint: 'Packs going out, and the change from last week.',
+    packsHintFirst: 'Packs going out this week.',
+    packsThisWeek: (n: number) => (n ? `${n} ${n === 1 ? 'pack' : 'packs'} this week` : 'None yet this week'),
+    packsDiff: (diff: number) => (diff > 0 ? `${diff} more` : diff < 0 ? `${-diff} fewer` : 'Same'),
+    packsDiffName: (diff: number) => (diff > 0 ? `${diff} more than last week` : diff < 0 ? `${-diff} fewer than last week` : 'the same as last week'),
+
+    // This week vs last, Sunit's.
+    vsTitle: 'This week vs last',
+    vsMeta: 'By this time last week',
+    vsOrders: (n: number) => (n === 1 ? 'order' : 'orders'),
+    vsCameIn: 'came in',
+    vsUp: (last: string) => `Up from ${last}`,
+    vsDown: (last: string) => `Down from ${last}`,
+    vsSame: (last: string) => `Same as ${last}`,
+    vsFirst: 'Nothing to compare yet',
+    vsNoTotal: (n: number) => `+ ${n} paid with no total`,
+    vsBars: 'Orders each day, this week and last',
+    vsDay: (day: string, orders: number, last: number | null) =>
+      `${day}: ${orders} ${orders === 1 ? 'order' : 'orders'}${last === null ? '' : `, ${last} last week`}`,
+    vsDayAhead: (day: string, last: number | null) => `${day}: still to come${last === null ? '' : `, ${last} last week`}`,
+    thisWeek: 'This week',
+    lastWeek: 'Last week',
     dayLetters: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-    selling: "What's selling",
-    last30: 'Last 30 days',
-    sizes: (parts: string[]) => parts.join(' · '),
-    sizeCount: (size: string, n: number) => `${size} × ${n}`,
-    packs: 'packs',
-    pack: 'pack',
-    nothingSold: 'Nothing sold in the last 30 days yet.',
+
+    // Stock: Pranjali always sees it; Sunit only when something is off.
     stock: 'Stock',
+    offTheSite: 'Off the site',
     products: 'Products',
-    outOfStock: (item: string) => `${item} is out of stock`,
-    showsBackSoon: 'The site shows “Back soon”.',
+    allOnSite: "Everything's on the site.",
+    offSince: (when: string) => `Off since ${when}. The site shows “Back soon”.`,
     backInStock: 'Back in stock',
     coupons: 'Coupons used',
     couponsLink: 'Coupons',
