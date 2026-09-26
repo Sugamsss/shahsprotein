@@ -119,6 +119,19 @@
 .adm-orders__find { display: flex; gap: 8px; }
 .adm-orders__find .adm-input { border-radius: var(--radius-full); }
 
+/* Filtered to one product (?product=): the chip clears it. Other products in a card stay, dimmed. */
+.adm-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.adm-filter__chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 12px 4px 4px; border-radius: var(--radius-full);
+  background: var(--adm-accent-tint); color: var(--color-text-accent); font-size: 0.9375rem; font-weight: 600; text-decoration: none;
+}
+.adm-filter__chip .adm-thumb { width: 36px; height: 36px; border-radius: 50%; }
+.adm-filter__chip:active { background: var(--adm-accent-tint-press); }
+@media (hover: hover) { .adm-filter__chip:hover { background: var(--adm-accent-tint-press); } }
+.adm-filter__text { color: var(--color-text-muted); font-size: 0.875rem; }
+.adm-ocard__items li.is-other { opacity: 0.5; }
+.adm-title:focus { outline: none; }
+
 .adm-jump {
   position: sticky; top: 0; z-index: 3;
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;

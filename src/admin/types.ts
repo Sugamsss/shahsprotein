@@ -60,6 +60,8 @@ export interface OrderFilters {
   to?: string;
   before?: string;
   limit?: number;
+  /** Only orders with this product, any size. */
+  product?: string;
 }
 
 export interface OrderPage {
