@@ -219,7 +219,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
             <input className="adm-input" autoComplete="off" maxLength={60} value={name} placeholder={copy.namePlaceholder} onChange={(e) => edit(setName)(e.target.value)} />
           </Field>
           <Field label={copy.pincode} error={errors.pincode}>
-            <input className="adm-input" inputMode="numeric" maxLength={6} value={pincode} placeholder={copy.pincodePlaceholder}
+            <input className="adm-input" inputMode="numeric" maxLength={6} value={pincode}
+              placeholder={order?.source === 'site' ? copy.pincodePlaceholder : copy.pincodeSatara}
               onChange={(e) => edit(setPincode)(e.target.value.replace(/\D/g, ''))} />
           </Field>
         </div>

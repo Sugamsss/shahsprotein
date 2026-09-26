@@ -267,7 +267,7 @@ export const DetailsCard: React.FC<{
       )}
       <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} />
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
-      {o.pincode && <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode}</p>}
+      <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
       {o.phone && (
         <div className="adm-od-reach">
           <a className="adm-btn adm-btn--quiet adm-btn--sm" href={replyLink(o, me.display_name)} target="_blank" rel="noreferrer">
