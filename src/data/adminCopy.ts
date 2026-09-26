@@ -501,7 +501,6 @@ export const adminCopy = {
       toPack: 'To pack',
       onTheWay: 'On the way',
       notPaid: 'Not paid yet',
-      pack: (n: number) => (n === 1 ? 'pack' : 'packs'),
       sizeTimes: (size: string, packs: number) => `${size} × ${packs}`,
       orders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
       allClear: 'All clear',
