@@ -1,5 +1,6 @@
-/* Home (temp/home-totals/v2). The three product cards across the top (a shelf of
-   pouches on phones, wide product photos on a laptop), then per person: Pranjali
+/* Home (temp/home-totals/v2). The three product cards across the top (a row that
+   scrolls sideways on phones, a shelf of pouches on a tablet, wide product photos
+   on a laptop), then per person: Pranjali
    gets stock and a gentle week; Sunit gets Waiting on you, this week vs last,
    stock when something is off, and coupons. Phone: one column. Laptop: two. */
 .adm-home__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -29,6 +30,8 @@
 .adm-pulse--bars { display: block; width: 100%; height: 104px; border-radius: 12px; background: var(--adm-well); }
 
 /* ---- The product cards ------------------------------------------------------------ */
+/* The base rules are the tablet's shelf (640-959px): three pouches in a row. Phones
+   and laptops spell everything out (see the blocks at the end). */
 .adm-home__products { display: grid; gap: 12px; }
 .adm-home__head--products { padding: 0 4px; }
 .adm-home__head--products > span { font-size: 0.8125rem; }
@@ -162,20 +165,8 @@
 .adm-home__coupons li + li { border-top: 1px solid var(--adm-hairline); }
 .adm-home__coupons li > span:last-child { color: var(--color-text-secondary); }
 
-/* ---- Below 360px: Sunit's four stages don't fit three across, so his cards are rows.
-   Pranjali's shelf still fits at 320. ---------------------------------------------------- */
+/* ---- Below 360px ------------------------------------------------------------------------ */
 @media (max-width: 359px) {
-  .adm-pcards { gap: 6px; }
-  .adm-pcard__top .adm-pname { font-size: 0.875rem; white-space: normal; }
-  .adm-pcards--admin { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .adm-pcards--admin .adm-card.adm-pcard { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 10px 12px 12px 10px; }
-  .adm-pcards--admin .adm-pcard__photo { align-self: start; }
-  .adm-pcards--admin .adm-pcard__body { padding: 0; }
-  .adm-pcards--admin .adm-pcard__top .adm-pname { font-size: 1.0625rem; }
-  .adm-pcards--admin .adm-pcard__meta { display: inline; }
-  .adm-pcards--admin .adm-pcard__stages li { font-size: 0.8125rem; }
-  .adm-pcards--admin .adm-pcard__stages b { font-size: 1rem; }
-  .adm-pcards--admin .adm-pcard__stages b em, .adm-pcards--admin .adm-pcard__stages small { display: inline; }
   .adm-list.adm-home__rows > a { padding-inline: 16px; }
   .adm-home__vs b { font-size: 1.625rem; }
   .adm-home__bars { gap: 6px; }
@@ -187,7 +178,50 @@
   .adm-pulse { animation: none; }
 }
 
-/* ---- Laptop: the wide product photo on top, everything spelled out -------------------- */
+/* ---- Phones and laptops: the wide product photo on top, everything spelled out ---------- */
+/* The same breakpoints are in HomeProducts.tsx's <picture>. */
+@media (max-width: 639px), (min-width: 960px) {
+  .adm-pcard__photo { aspect-ratio: 16 / 10; }
+  .adm-pcard__meta, .adm-pcard__chev { display: inline; }
+  .adm-pcard__make { display: flex; gap: 6px; }
+  .adm-pcard__sizes { display: flex; flex-wrap: wrap; }
+  .adm-pcard__sizes i { display: inline; }
+  .adm-pcard__long { display: inline; }
+  .adm-pcard__short { display: none; }
+  .adm-pcard__stages b em { display: inline; }
+  .adm-pcard__stages small { display: block; }
+}
+
+/* ---- Phones: one row of same-width cards that scrolls sideways ---------------------------
+   The row bleeds to the screen edges but starts and ends on the page's gutter, and the
+   next card peeks in so it's clear there's more. Gentle snap to each card, no scrollbar.
+   The padding above and below leaves room for the focus ring and the shadow. */
+@media (max-width: 639px) {
+  .adm-pcards {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(272px, 82%); gap: 12px;
+    margin: -8px calc(-1 * var(--adm-gutter-r)) -24px calc(-1 * var(--adm-gutter-l));
+    padding: 8px var(--adm-gutter-r) 24px var(--adm-gutter-l);
+    overflow: auto hidden; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scroll-padding-inline: var(--adm-gutter-l) var(--adm-gutter-r);
+    scrollbar-width: none;
+  }
+  .adm-pcards::-webkit-scrollbar { display: none; }
+  .adm-card.adm-pcard { gap: 12px; padding: 6px 6px 14px; border-radius: 22px; scroll-snap-align: start; }
+  .adm-card.adm-pcard:focus-visible { border-radius: 22px; }
+  .adm-pcard__photo { border-radius: 16px; }
+  .adm-pcard__body { padding: 0 8px; }
+  .adm-pcard__top .adm-pname { font-size: 1.125rem; }
+  .adm-pcard__make span { font-size: 0.9375rem; }
+  .adm-pcard__make b { font-size: 1.75rem; }
+  .adm-pcard__sizes { font-size: 0.875rem; }
+  .adm-pcard__for, .adm-pcard__off { font-size: 0.8125rem; }
+  .adm-pcard__maybe { padding: 4px 9px; border-radius: 10px; font-size: 0.75rem; }
+  .adm-pcard__none { font-size: 0.875rem; }
+  .adm-pcard__stages li { padding: 4px 0; font-size: 0.8125rem; }
+  .adm-pcard__stages b { font-size: 1rem; }
+}
+
+/* ---- Laptop: two columns, and the cards get bigger ---------------------------------------- */
 @media (min-width: 960px) {
   .adm-home { max-width: 1120px; margin-inline: auto; }
   .adm-home__lede { font-size: 1.125rem; }
@@ -198,23 +232,16 @@
   .adm-pcards { gap: 24px; }
   .adm-card.adm-pcard { gap: 14px; padding: 8px 8px 18px; border-radius: 24px; }
   .adm-card.adm-pcard:focus-visible { border-radius: 24px; }
-  .adm-pcard__photo { aspect-ratio: 16 / 10; border-radius: 18px; }
+  .adm-pcard__photo { border-radius: 18px; }
   .adm-pcard__body { gap: 4px; padding: 0 12px; }
   .adm-pcard__top .adm-pname { font-size: 1.25rem; }
-  .adm-pcard__meta, .adm-pcard__chev { display: inline; }
-  .adm-pcard__make { display: flex; gap: 6px; }
   .adm-pcard__make span { font-size: 1rem; }
   .adm-pcard__make b { font-size: 1.875rem; }
-  .adm-pcard__sizes { display: flex; flex-wrap: wrap; font-size: 0.9375rem; }
-  .adm-pcard__sizes i { display: inline; }
+  .adm-pcard__sizes { font-size: 0.9375rem; }
   .adm-pcard__for, .adm-pcard__off { font-size: 0.875rem; }
   .adm-pcard__maybe { margin-top: 8px; padding: 5px 10px; border-radius: 12px; font-size: 0.8125rem; }
-  .adm-pcard__long { display: inline; }
-  .adm-pcard__short { display: none; }
   .adm-pcard__none { font-size: 0.9375rem; }
   .adm-pcard__none svg { width: 18px; height: 18px; }
   .adm-pcard__stages li { padding: 5px 0; font-size: 0.875rem; }
   .adm-pcard__stages b { font-size: 1.0625rem; }
-  .adm-pcard__stages b em { display: inline; }
-  .adm-pcard__stages small { display: block; }
 }
