@@ -153,7 +153,8 @@ select ok(
 
 select is(
   current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at'],
-  '{"source":"whatsapp","status":"confirmed","paid":false,"paid_at":null,"kept":false,"stale":false,
+  '{"source":"whatsapp","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+    "kept":false,"stale":false,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
     "lines":[{"product_id":"muesli","size":"250 g","quantity":99}],"packs":99,
     "customer":{"order_number":1,"orders":1}}'::jsonb,
@@ -172,7 +173,8 @@ select lives_ok(
 
 select is(
   current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
-  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","paid":true,"kept":false,
+  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","paid":true,
+    "paid_method":null,"paid_note":null,"kept":false,
     "stale":false,"name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
     "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
     "lines":[{"product_id":"date-bites","size":"250 g","quantity":2}],"packs":2}'::jsonb,
@@ -214,7 +216,8 @@ select is(
     "source":"call","code":"SN-22222","status":"cancelled","paid":true,"name":"Priya Example","phone":"9800000001",
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}]
   }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
-  '{"source":"call","status":"confirmed","paid":false,"paid_at":null,"kept":false,"stale":false,
+  '{"source":"call","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+    "kept":false,"stale":false,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}],"packs":3}'::jsonb,
   'edit: a full replace of fields and lines; code, status and paid are ignored; the note is cleared'
@@ -272,7 +275,7 @@ select is(
 select is(
   public.update_admin_order(current_setting('test.site_id')::uuid,
     '{"status":"confirmed","phone":"+91 98000 00002","amount":700}')::jsonb
-    - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'kept', 'stale', 'name', 'pincode', 'note',
+    - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'kept', 'stale', 'name', 'pincode', 'note',
             'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at'],
   '{"status":"confirmed","phone":"919800000002","amount":700}'::jsonb,
   'Confirm sheet: status, phone and amount change together'

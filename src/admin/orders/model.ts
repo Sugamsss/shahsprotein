@@ -30,6 +30,7 @@ export const NEXT: Record<Exclude<Lane, 'done'>, OrderChanges> = {
   stale: { status: 'confirmed' },
   send: { status: 'sent' },
   way: { status: 'delivered' },
+  // Every Mark paid asks how they paid first (PaidSheet), then sends paid_method too.
   collect: { paid: true },
 };
 
@@ -38,19 +39,33 @@ export const nextOf = (o: Order) => {
   return lane === 'done' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
 };
 
+/** "UPI", "Cash", "Bank transfer", "Other: paid by her brother", or null when there's no method (not paid, or an old order). */
+export const paidByText = (p: Pick<Order, 'paid_method' | 'paid_note'> | Pick<OrderChanges, 'paid_method' | 'paid_note'>): string | null => {
+  if (!p.paid_method) return null;
+  return p.paid_method === 'other' ? adminCopy.paidBy.other(p.paid_note ?? '') : adminCopy.paidBy.names[p.paid_method];
+};
+
 /** What the toast says about a change. */
 export const changeText = (o: Order, changes: OrderChanges): string => {
   const name = firstName(o.name) || o.code;
   const t = copy.toasts;
   if (changes.status) return t[changes.status](name);
-  if (changes.paid !== undefined) return changes.paid ? t.paid(name) : t.unpaid(name);
+  if (changes.paid !== undefined) return changes.paid ? t.paid(name, paidByText(changes)) : t.unpaid(name);
   return t.kept(name);
 };
 
-/** The keys that put a one-tap change back. Fields typed in (phone, total, note) stay. */
+/**
+ * The keys that put a one-tap change back. Fields typed in (phone, total, note) stay.
+ * Paid comes back with its method and note; an old paid order had none, so it
+ * gets plain `paid: true`, which leaves it with no method.
+ */
 export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
   ...(changes.status !== undefined && { status: o.status }),
   ...(changes.paid !== undefined && { paid: o.paid }),
+  ...(changes.paid !== undefined && o.paid && o.paid_method && {
+    paid_method: o.paid_method,
+    ...(o.paid_method === 'other' && o.paid_note && { paid_note: o.paid_note }),
+  }),
   ...(changes.kept !== undefined && { kept: false }),
 });
 
@@ -63,7 +78,13 @@ export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
 export const applyLocal = (o: Order, c: OrderChanges): Order => ({
   ...o,
   ...c,
-  ...(c.paid !== undefined && { paid: c.paid, paid_at: c.paid ? o.paid_at ?? new Date().toISOString() : null }),
+  // Paid keeps its day and, without a new method, its method; not paid clears all three.
+  ...(c.paid !== undefined && {
+    paid: c.paid,
+    paid_at: c.paid ? o.paid_at ?? new Date().toISOString() : null,
+    paid_method: c.paid ? c.paid_method ?? o.paid_method : null,
+    paid_note: c.paid ? (c.paid_method ? c.paid_note ?? null : o.paid_note) : null,
+  }),
   stale: c.status || c.kept ? false : o.stale,
   kept: c.kept ?? o.kept,
 } as Order);

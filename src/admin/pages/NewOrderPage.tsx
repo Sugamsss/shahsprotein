@@ -14,10 +14,11 @@ import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
-import type { Order, OrderInput, OrderSource } from '../types';
+import type { Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
 import { normalisePhone } from '../orders/model';
 import { PasteButton } from '../orders/OrderParts';
+import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
 
 const copy = adminCopy.orderForm;
@@ -38,8 +39,9 @@ type Step = (typeof STEPS)[number];
 const STATUSES = STEPS.map((value) => ({ value, label: orderCopy.steps[value] }));
 const PACKS = productsData.flatMap((p) => p.weightOptions.map((size) => ({ product: p, size, key: `${p.id}|${size}` })));
 const PINCODE = /^[1-9][0-9]{5}$/;
+const PAID_OPTIONS = PAID_METHODS.map((value) => ({ value, label: adminCopy.paidBy.methods[value] }));
 
-type Errors = Partial<Record<'lines' | 'name' | 'via' | 'pincode' | 'phone' | 'amount' | 'form', string>>;
+type Errors = Partial<Record<'lines' | 'name' | 'via' | 'pincode' | 'phone' | 'amount' | 'paidMethod' | 'paidNote' | 'form', string>>;
 
 const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order, typedCode }) => {
   const id = useId();
@@ -57,6 +59,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [via, setVia] = useState<OrderSource | null>(order?.source ?? null);
   const [status, setStatus] = useState<Step>('confirmed');
   const [paid, setPaid] = useState(false);
+  // Nothing picked until they pick: '' is "not yet".
+  const [paidMethod, setPaidMethod] = useState<PaidMethod | ''>('');
+  const [paidNote, setPaidNote] = useState('');
   const [amount, setAmount] = useState(order?.amount != null ? String(order.amount) : '');
   const [note, setNote] = useState(order?.note ?? '');
   const [code, setCode] = useState(typedCode.toUpperCase().replace(/^(#|SN-)/, ''));
@@ -112,6 +117,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   if (pincode.trim() && !PINCODE.test(pincode.trim())) problems.pincode = copy.errors.pincode;
   if (phone.trim() && !digits) problems.phone = orderCopy.phoneError;
   if (amount.trim() && !/^\d+$/.test(amount.replace(/[₹,\s]/g, ''))) problems.amount = orderCopy.totalError;
+  if (!order && paid && !paidMethod) problems.paidMethod = adminCopy.paidBy.pickOne;
+  if (!order && paid && paidMethod === 'other' && !paidNote.trim()) problems.paidNote = adminCopy.paidBy.noteMissing;
   const errors: Errors = attempt ? { ...problems, form: formError || undefined } : {};
 
   const save = async () => {
@@ -130,6 +137,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         ? { coupon: order.coupon?.code ?? null }
         : {
             status, paid,
+            ...(paid && paidMethod && { paid_method: paidMethod }),
+            ...(paid && paidMethod === 'other' && { paid_note: paidNote.trim() }),
             ...(code && { code: `SN-${code}` }),
             ...(shown.earlier && when.date && { created_at: `${when.date}T${when.time || '12:00'}:00+05:30` }),
           }),
@@ -249,10 +258,25 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     <section className="adm-of__section adm-of--where" aria-labelledby={`${id}-where`}>
       <h2 id={`${id}-where`} className="adm-of__h">{copy.where}</h2>
       <Segmented label={copy.where} options={STATUSES} value={status} onChange={edit(setStatus)} />
-      <div className="adm-card adm-paidrow">
-        <span className={`adm-paidrow__icon${paid ? ' is-paid' : ''}`} aria-hidden="true"><IndianRupee size={18} /></span>
-        <span><b>{paid ? adminCopy.orders.paid : orderCopy.notPaidYet}</b><small>{copy.paidHint}</small></span>
-        <Switch checked={paid} label={adminCopy.orders.paid} onChange={edit(setPaid)} />
+      <div className="adm-card adm-of__paid">
+        <div className="adm-paidrow">
+          <span className={`adm-paidrow__icon${paid ? ' is-paid' : ''}`} aria-hidden="true"><IndianRupee size={18} /></span>
+          <span><b>{paid ? adminCopy.orders.paid : orderCopy.notPaidYet}</b><small>{paid ? adminCopy.paidBy.question : copy.paidHint}</small></span>
+          <Switch checked={paid} label={adminCopy.orders.paid} onChange={edit(setPaid)} />
+        </div>
+        {/* A plain choice saved with the form, so radios fit here (the order itself uses buttons that save). */}
+        {paid && (
+          <div className="adm-paychoose adm-stack" data-error={errors.paidMethod ? '' : undefined}>
+            {errors.paidMethod && <p className="adm-field__error">{errors.paidMethod}</p>}
+            <Segmented label={adminCopy.paidBy.question} options={PAID_OPTIONS} value={paidMethod} onChange={edit(setPaidMethod)} />
+            {paidMethod === 'other' && (
+              <Field label={adminCopy.paidBy.noteLabel} error={errors.paidNote}>
+                <input className="adm-input" maxLength={60} autoComplete="off" value={paidNote} placeholder={adminCopy.paidBy.notePlaceholder}
+                  onChange={(e) => edit(setPaidNote)(e.target.value)} />
+              </Field>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

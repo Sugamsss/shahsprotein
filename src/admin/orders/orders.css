@@ -219,6 +219,11 @@
 .adm-paidrow__icon.is-paid { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
 .adm-paidrow b { display: block; line-height: 1.3; }
 .adm-paidrow small { display: block; color: var(--color-text-muted); font-size: 0.8125rem; }
+/* How they paid: under the Paid row once it's switched on, and in the sheet. */
+.adm-paypick { display: grid; gap: 14px; }
+.adm-paychoose { margin-top: 12px; animation: adm-paychoose-in 200ms var(--ease-glide) backwards; }
+@keyframes adm-paychoose-in { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .adm-paychoose { animation: none; } }
 
 .adm-card__h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .adm-card__h h2 { font-size: 1.125rem; font-weight: 600; }

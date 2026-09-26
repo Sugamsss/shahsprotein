@@ -83,7 +83,7 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 
 | Table | What |
 |---|---|
-| `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`new`, `confirmed`, `sent`, `delivered`, `cancelled`), `paid_at` (null = not paid), `kept_at` ("Still waiting"), name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
+| `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`new`, `confirmed`, `sent`, `delivered`, `cancelled`), `paid_at` (null = not paid), `paid_method` (`upi`, `cash`, `bank`, `other`; null when not paid, and on orders marked paid before `20260926000007`), `paid_note` (only with `other`: one line, 1 to 60 characters), `kept_at` ("Still waiting"), name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
 | `order_lines` | Product id, size and quantity per order. Checked for shape only; names come from `src/data/products.ts`. |
 | `order_events` | History, written only by a trigger: created, each status, paid/unpaid, kept/unkept, with who did it. |
 | `product_stock` | Product and size that are off the site. A missing row means in stock. |
@@ -101,8 +101,8 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 | `get_admin_users()` | Who has access |
 | `get_admin_orders(p_view, p_status, p_paid, p_search, p_phone, p_source, p_from, p_to, p_before, p_limit, p_product)` | Orders with their lines. Views `todo`, `done`, `all`. Search by code, name or phone. `p_product` (e.g. `raggi-jaggi`) keeps orders containing that product, any size. `p_from` inclusive, `p_to` exclusive. Page with `next_before`; a page can run slightly over `p_limit` so it never splits orders saved at the same moment. |
 | `get_admin_order(p_code)` | One order with history and a phone suggestion; null if none |
-| `update_admin_order(p_id, p_changes)` | Quick changes: status, paid, kept, phone, amount, note, name, pincode (only the keys sent change). Also Undo. |
-| `save_admin_order(p_id, p_order)` | Add by hand (`p_id` null) or a full edit. Call with named arguments. |
+| `update_admin_order(p_id, p_changes)` | Quick changes: status, paid, kept, phone, amount, note, name, pincode (only the keys sent change). Also Undo. `paid_method` and `paid_note` go only with `paid: true` in the same call: `{ paid: true, paid_method: 'upi' }` marks paid or changes the method, and `other` needs a note. `paid: true` alone keeps the method, `paid_method: null` clears it, and `paid: false` clears both. |
+| `save_admin_order(p_id, p_order)` | Add by hand (`p_id` null) or a full edit. Call with named arguments. On add, `paid_method` and `paid_note` work as in `update_admin_order` (sent empty with paid off is fine); an edit ignores them, like `paid`. |
 | `delete_admin_order(p_id)` | Deletes one order for good |
 | `get_admin_overview()` | Home and the badge: what's waiting, this week (Monday start, India time), what's selling and coupons (30 days, confirmed and later), done counts, email count |
 | `get_admin_totals()` | Home's per-product numbers: each product's orders, packs, grams and packs by size in each stage; the same stages overall with money (amount, without amount, paid, unpaid); this week, last week and last week so far (orders, packs, money in), with 7 days on this and last week, per-product packs on this week and last week so far, `first_order_at`, and up to 3 first names waiting on a total or a payment |
@@ -116,7 +116,7 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 - **Stages (`get_admin_totals()`)**: `to_confirm` is New and not stale, `to_send` Confirmed, `on_the_way` Sent, `to_collect` Delivered and not paid, `stale` is `order_is_stale()`; cancelled and done orders are in none. Weight comes from the size (`1 kg` is 1000 g). Money is per order, so it's only in `overall`, and stale orders carry none. Weeks start Monday 00:00 IST; their orders and packs are confirmed, sent or delivered orders by `created_at`, money in is `amount` on not-cancelled orders by `paid_at`. Empty means zeros, not nulls.
 - **`get_waitlist_count_stats()` is internal.** No role can call it through the API (migration `20260926000005`); `get_admin_email_list()` uses it inside the database for its counts.
 
-**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview, the Home totals and their week boundaries, the product filter, and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
+**Testing locally.** `supabase start`, `supabase db reset`, then `supabase test db` runs the pgTAP files in `supabase/tests/`. They cover grants, rate limits, repeat saves, clashes, the stale rule, the overview, the Home totals and their week boundaries, the product filter, how an order was paid (`20260926000007`), and every admin RPC. Each test file clears the order tables inside its own transaction and rolls back, so local test data survives. To add a migration without wiping local data, use `supabase migration up`.
 
 ## WhatsApp order click tracking
 

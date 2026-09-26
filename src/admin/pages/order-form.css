@@ -33,7 +33,8 @@
 .adm-of__via input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-of__via label:active span { transform: scale(0.97); }
 
-.adm-card.adm-paidrow { margin-top: 0; padding: 14px 16px; border-top: 1px solid var(--adm-edge); }
+.adm-card.adm-of__paid { padding: 14px 16px; }
+.adm-of__paid .adm-paidrow { margin-top: 0; padding-top: 0; border-top: 0; }
 .adm-of__links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .adm-of__bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .adm-of__bar > span { color: var(--color-text-secondary); font-weight: 600; }
