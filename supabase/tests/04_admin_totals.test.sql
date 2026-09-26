@@ -319,18 +319,31 @@ reset role;
 
 delete from public.orders;
 insert into public.orders (code, source, status, name, pincode, phone, amount, paid_at, created_at) values
-  -- Delivered, not paid, no total: five, one with no name.
+  -- Delivered, not paid, no total: six, one with no name and a second
+  -- "tanvi". Delivered in a different order from created (set below).
   ('SN-NMA22', 'site',     'delivered', 'Tanvi Example',  '415001', null, null, null, now() - interval '9 microseconds'),
   ('SN-NMB22', 'call',     'delivered', null,             null, '919800000091', null, null, now() - interval '8 microseconds'),
   ('SN-NMC22', 'site',     'delivered', 'Farah Q Example', '415001', null, null, null, now() - interval '7 microseconds'),
   ('SN-NMD22', 'site',     'delivered', 'Meera',          '415001', null, null, null, now() - interval '6 microseconds'),
   ('SN-NME22', 'site',     'delivered', 'Kiran Example',  '415001', null, null, null, now() - interval '5 microseconds'),
+  ('SN-NMK22', 'site',     'delivered', 'tanvi Other',    '415001', null, null, null, now() - interval '12 microseconds'),
   -- Delivered, not paid, with a total: not named.
   ('SN-NMF22', 'site',     'delivered', 'Zara Example',   '415001', null, 100,  null, now() - interval '10 microseconds'),
-  -- Sent: two not paid, one paid.
+  -- Sent: three not paid (Neha twice), one paid.
   ('SN-NMG22', 'site',     'sent',      'Neha Example',   '415001', null, null, null,  now() - interval '4 microseconds'),
   ('SN-NMH22', 'site',     'sent',      'Asha Example',   '415001', null, null, now(), now() - interval '11 microseconds'),
-  ('SN-NMJ22', 'site',     'sent',      'Ravi Example',   '415001', null, null, null,  now() - interval '3 microseconds');
+  ('SN-NMJ22', 'site',     'sent',      'Ravi Example',   '415001', null, null, null,  now() - interval '3 microseconds'),
+  ('SN-NMM22', 'site',     'sent',      'Neha Other',     '415001', null, null, null,  now() - interval '2 microseconds');
+
+-- When each was delivered or sent. to_collect names follow delivery;
+-- on_the_way names follow created_at, so Ravi's earlier send doesn't move him.
+update public.orders o set status_changed_at = now() - d.ago
+from (values
+  ('SN-NMD22', interval '7 days'), ('SN-NMB22', interval '6 days'), ('SN-NMA22', interval '5 days'),
+  ('SN-NMK22', interval '4 days'), ('SN-NMC22', interval '2 days'), ('SN-NME22', interval '1 day'),
+  ('SN-NMJ22', interval '3 days'), ('SN-NMG22', interval '1 day')
+) as d(code, ago)
+where o.code = d.code;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
@@ -341,11 +354,12 @@ select is(
   jsonb_build_object(
     'to_collect', current_setting('test.names')::jsonb #> '{overall,to_collect}',
     'on_the_way', current_setting('test.names')::jsonb #> '{overall,on_the_way}'),
-  '{"to_collect": {"orders":6,"packs":0,"amount":100,"without_amount":5,"paid":0,"unpaid_amount":100,
-                   "without_amount_names":["Tanvi","Farah","Meera"]},
-    "on_the_way": {"orders":3,"packs":0,"amount":0,"without_amount":3,"paid":1,"unpaid_amount":0,
+  '{"to_collect": {"orders":7,"packs":0,"amount":100,"without_amount":6,"paid":0,"unpaid_amount":100,
+                   "without_amount_names":["Meera","Tanvi","Farah"]},
+    "on_the_way": {"orders":4,"packs":0,"amount":0,"without_amount":4,"paid":1,"unpaid_amount":0,
                    "unpaid_names":["Neha","Ravi"]}}'::jsonb,
-  'names: first names, at most 3, oldest first; no-name orders are counted but not named'
+  'names: first names, each once (first spelling wins), at most 3; to_collect by delivery date, '
+  'on_the_way by created_at; counts stay per order and include the unnamed one'
 );
 
 -- ─── 6. Week boundaries ─────────────────────────────────

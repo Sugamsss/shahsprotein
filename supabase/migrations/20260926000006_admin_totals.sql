@@ -23,8 +23,9 @@
 -- the label is '<n> g', or '<n> kg' for whole kilos. Sizes with no packs are
 -- left out. Money exists per order, so it's only in "overall", never per
 -- product, and never on stale orders (they never came through). Overall
--- to_collect and on_the_way also name up to 3 people (first names, oldest
--- order first) with no total yet / not paid yet. Everything is zeros and
+-- to_collect and on_the_way also name up to 3 people with no total yet / not
+-- paid yet: first names, each once, oldest first (to_collect by when it was
+-- delivered, on_the_way by when it was ordered). Everything is zeros and
 -- empty arrays, never null, except first_order_at (null with no real order).
 --
 -- Weeks start on Monday, India time. A week's orders and packs are real
@@ -67,7 +68,7 @@ begin
       values ('to_confirm', 1), ('to_send', 2), ('on_the_way', 3), ('to_collect', 4), ('stale', 5)
     ),
     staged as (
-      select o.id, o.amount, o.paid_at, o.name, o.created_at,
+      select o.id, o.amount, o.paid_at, o.name, o.created_at, o.status_changed_at,
         case
           when public.order_is_stale(o) then 'stale'
           when o.status = 'new' then 'to_confirm'
@@ -122,9 +123,28 @@ begin
         where sl.product_id = p.product_id and sl.stage = st.stage
       ) a
     ),
-    -- Stale orders never came through, so they carry no money. Two stages
-    -- also name who they're waiting on: first names, at most 3, oldest
-    -- first; an order with no name is counted but not named.
+    -- Who two stages are waiting on, as first names. A name shows once, where
+    -- it first appears (ignoring case); an order with no name is counted in
+    -- the totals but not named. to_collect goes by when it was delivered
+    -- (status_changed_at, as the overview's oldest owed order), on_the_way by
+    -- when it was ordered.
+    waiting_names as (
+      select n.list, (array_agg(n.first_name order by n.rn))[1] as first_name, min(n.rn) as rn
+      from (
+        select 'without_amount_names' as list, split_part(btrim(x.name), ' ', 1) as first_name,
+          row_number() over (order by x.status_changed_at, x.created_at, x.id) as rn
+        from staged x
+        where x.stage = 'to_collect' and x.amount is null and nullif(btrim(x.name), '') is not null
+        union all
+        select 'unpaid_names', split_part(btrim(x.name), ' ', 1),
+          row_number() over (order by x.created_at, x.id)
+        from staged x
+        where x.stage = 'on_the_way' and x.paid_at is null and nullif(btrim(x.name), '') is not null
+      ) n
+      group by n.list, lower(n.first_name)
+    ),
+    -- Stale orders never came through, so they carry no money. to_collect
+    -- and on_the_way add up to 3 waiting names.
     overall as (
       select st.stage, st.position,
         jsonb_build_object(
@@ -139,27 +159,20 @@ begin
           'paid', count(s.id) filter (where s.paid_at is not null),
           'unpaid_amount', coalesce(sum(s.amount) filter (where s.paid_at is null), 0)
         ) end
-        || case st.stage
-          when 'to_collect' then jsonb_build_object('without_amount_names', (
-            select coalesce(jsonb_agg(n.first_name order by n.created_at, n.id), '[]'::jsonb)
+        || case
+          when st.stage in ('to_collect', 'on_the_way') then (
+            select jsonb_build_object(
+              case st.stage when 'to_collect' then 'without_amount_names' else 'unpaid_names' end,
+              coalesce(jsonb_agg(w.first_name order by w.rn), '[]'::jsonb)
+            )
             from (
-              select split_part(btrim(x.name), ' ', 1) as first_name, x.created_at, x.id
-              from staged x
-              where x.stage = st.stage and x.amount is null and nullif(btrim(x.name), '') is not null
-              order by x.created_at, x.id
+              select wn.first_name, wn.rn
+              from waiting_names wn
+              where wn.list = case st.stage when 'to_collect' then 'without_amount_names' else 'unpaid_names' end
+              order by wn.rn
               limit 3
-            ) n
-          ))
-          when 'on_the_way' then jsonb_build_object('unpaid_names', (
-            select coalesce(jsonb_agg(n.first_name order by n.created_at, n.id), '[]'::jsonb)
-            from (
-              select split_part(btrim(x.name), ' ', 1) as first_name, x.created_at, x.id
-              from staged x
-              where x.stage = st.stage and x.paid_at is null and nullif(btrim(x.name), '') is not null
-              order by x.created_at, x.id
-              limit 3
-            ) n
-          ))
+            ) w
+          )
           else '{}'::jsonb
         end as totals
       from stages st
