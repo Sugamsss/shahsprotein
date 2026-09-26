@@ -38,6 +38,12 @@ It asks for the new password twice (hidden), needs at least 10 characters, fetch
    on conflict (id) do nothing;
    ```
 3. Set their password: `node scripts/set-admin-password.mjs owner`.
+4. Their Home: everyone gets the full `admin` Home by default. For the cook's Home ("what do I need to make?"), set it by user id:
+
+   ```sql
+   update public.admin_users set home_view = 'cook' where id = '<their auth user id>';
+   ```
+   Switch back with `home_view = 'admin'`. It takes effect the next time they open the admin.
 
 Removing someone: delete their `admin_users` row (they can no longer open the admin), or the auth user as well.
 
