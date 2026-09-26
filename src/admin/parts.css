@@ -17,7 +17,7 @@
 .adm-switch:disabled { opacity: 0.5; cursor: default; }
 
 /* ---- A screen that couldn't load, and loading placeholders ------------------- */
-.adm-load-error { display: grid; justify-items: start; gap: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+.adm-load-error { display: grid; justify-items: start; gap: 12px; color: var(--adm-ink-2); }
 .adm-skeleton { display: grid; gap: 10px; }
 .adm-skeleton span { display: block; height: 14px; border-radius: 7px; background: var(--adm-well); animation: adm-pulse 1.2s ease-in-out infinite; }
 .adm-skeleton span:first-child { width: 45%; height: 18px; }
@@ -33,7 +33,7 @@
 .adm-segmented input { position: absolute; opacity: 0; pointer-events: none; }
 .adm-segmented span {
   display: grid; place-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--radius-full);
-  color: var(--color-text-secondary); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+  color: var(--adm-ink-2); font-weight: 600; white-space: nowrap; cursor: pointer;
 }
 .adm-segmented input:checked + span { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
 .adm-segmented input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
@@ -41,19 +41,19 @@
 /* The same pill with buttons that act on tap, not radios (how an order was paid). */
 .adm-segmented--buttons > button {
   position: relative; display: grid; place-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--radius-full);
-  color: var(--color-text-secondary); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; touch-action: manipulation;
+  color: var(--adm-ink-2); font-weight: 600; white-space: nowrap; touch-action: manipulation;
 }
 .adm-segmented--buttons > button::after { content: ''; position: absolute; inset: -4px 0; } /* 48px to the finger */
 .adm-segmented--buttons > button.is-on { background: var(--color-choice-selected-bg); color: var(--color-choice-selected-text); box-shadow: var(--shadow-choice-selected); }
 .adm-segmented--buttons > button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-segmented--buttons > button:active { transform: scale(0.97); }
-@media (hover: hover) { .adm-segmented--buttons > button:not(.is-on):hover { color: var(--color-text-primary); } }
+@media (hover: hover) { .adm-segmented--buttons > button:not(.is-on):hover { color: var(--adm-ink-1); } }
 /* The narrowest phones: four choices (Done's filter) fit 288px without scrolling sideways. */
-@media (max-width: 374px) { .adm-segmented span, .adm-segmented--buttons > button { padding: 0 6px; font-size: 0.875rem; } }
+@media (max-width: 374px) { .adm-segmented span, .adm-segmented--buttons > button { padding: 0 6px; font-size: var(--adm-text-small); } }
 
 /* ---- The sentence under a page title ------------------------------------------ */
-.adm-intro { margin-top: -8px; color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; text-wrap: pretty; }
-.adm-intro strong { color: var(--color-text-primary); font-weight: 600; }
+.adm-intro { margin-top: -8px; color: var(--adm-ink-2); text-wrap: pretty; }
+.adm-intro :is(strong, b) { color: var(--adm-ink-1); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   .adm-switch, .adm-switch::before { transition: none; }
@@ -73,20 +73,20 @@
 .adm-text-btn:active { opacity: 0.7; }
 .adm-pill {
   display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: var(--radius-full);
-  background: var(--adm-well); color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 600;
+  background: var(--adm-well); color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; letter-spacing: 0;
 }
 .adm-pill--on { background: color-mix(in srgb, var(--color-success) 16%, transparent); color: var(--color-success-text); }
-.adm-empty { color: var(--color-text-secondary); line-height: 1.5; }
+.adm-empty { color: var(--adm-ink-2); }
 .adm-form { display: grid; gap: 18px; }
 .adm-form__pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-.adm-form__error { color: var(--color-error-text); font-size: 0.9375rem; line-height: 1.45; }
+.adm-form__error { color: var(--color-error-text); }
 .adm-field__control { position: relative; display: flex; align-items: center; gap: 8px; }
 .adm-field__control > :is(input, textarea, select) { flex: 1; min-width: 0; }
-.adm-field__prefix { position: absolute; left: 16px; color: var(--color-text-muted); pointer-events: none; }
+.adm-field__prefix { position: absolute; left: 16px; color: var(--adm-ink-2); font-size: 1rem; pointer-events: none; }
 .adm-field--prefix .adm-input { padding-left: 34px; }
-.adm-field__label small { margin-left: 4px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; }
-.adm-field__hint, .adm-field__error { color: var(--color-text-muted); font-size: 0.875rem; line-height: 1.45; }
+.adm-field__label small { margin-left: 4px; color: var(--adm-ink-3); font-size: inherit; font-weight: 400; }
+.adm-field__hint, .adm-field__error { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-field__error { color: var(--color-error-text); }
 .adm-input--mono { font-family: var(--font-family-mono); letter-spacing: 0.06em; text-transform: uppercase; }
-.adm-input[readonly] { background: var(--adm-well); color: var(--color-text-secondary); }
+.adm-input[readonly] { background: var(--adm-well); color: var(--adm-ink-2); }
 @media (min-width: 960px) { .adm-page--list { max-width: 720px; margin-inline: auto; } }

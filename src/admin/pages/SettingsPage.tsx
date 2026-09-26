@@ -56,7 +56,7 @@ const SettingsPage: React.FC = () => {
   else {
     access = (
       <section className="adm-card adm-settings" aria-labelledby="adm-access">
-        <h2 id="adm-access" className="adm-settings__title">{copy.access}</h2>
+        <h2 id="adm-access">{copy.access}</h2>
         <ul className="adm-list">
           {users.data.map((user) => (
             <li key={user.email} className="adm-settings__row">
@@ -64,7 +64,7 @@ const SettingsPage: React.FC = () => {
               <span className="adm-list__main">
                 <span className="adm-list__title">
                   {firstName(user.display_name) || emailToUsername(user.email)}
-                  {user.is_me && <span className="adm-pill adm-pill--accent">{copy.you}</span>}
+                  {user.is_me && <span className="adm-pill">{copy.you}</span>}
                 </span>
                 <span className="adm-list__sub">{copy.since(emailToUsername(user.email), formatDay(user.created_at))}</span>
               </span>
@@ -81,11 +81,11 @@ const SettingsPage: React.FC = () => {
       <h1 className="adm-title">{copy.title}</h1>
       {access}
       <section className="adm-card adm-settings" aria-labelledby="adm-appearance">
-        <h2 id="adm-appearance" className="adm-settings__title">{copy.appearance}</h2>
+        <h2 id="adm-appearance">{copy.appearance}</h2>
         <Segmented<ThemeMode> label={copy.appearance} options={THEMES} value={mode} onChange={setMode} />
       </section>
       <section className="adm-card adm-settings" aria-labelledby="adm-you">
-        <h2 id="adm-you" className="adm-settings__title">{copy.youTitle}</h2>
+        <h2 id="adm-you">{copy.youTitle}</h2>
         <div className="adm-list">
           <div className="adm-settings__row">
             <AtSign size={22} strokeWidth={1.75} aria-hidden="true" />

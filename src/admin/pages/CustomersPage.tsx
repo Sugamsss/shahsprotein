@@ -58,7 +58,7 @@ const CustomersPage: React.FC = () => {
               <span className="adm-list__main">
                 <span className="adm-list__title">
                   {c.name ?? c.phone}
-                  {c.orders > 1 && <span className="adm-chip adm-chip--accent"><Repeat size={12} aria-hidden="true" />{copy.again}</span>}
+                  {c.orders > 1 && <span className="adm-chip adm-chip--strong"><Repeat size={12} aria-hidden="true" />{copy.again}</span>}
                 </span>
                 <span className="adm-list__sub">
                   {[c.pincode, `${copy.orders(c.orders)}, ${copy.last(lastWhen(c.last_order_at))}`].filter(Boolean).join(' · ')}

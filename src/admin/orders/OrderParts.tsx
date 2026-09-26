@@ -41,7 +41,7 @@ export const OrderNotes: React.FC<{ order: Order }> = ({ order: o }) => {
   if (!nth && o.code === o.message_code) return null;
   return (
     <p className="adm-od-notes">
-      {nth && <span className="adm-chip adm-chip--accent">{adminCopy.orders.nthOrder(o.customer!.order_number)}</span>}
+      {nth && <span className="adm-chip adm-chip--strong">{adminCopy.orders.nthOrder(o.customer!.order_number)}</span>}
       {o.code !== o.message_code && <span>{copy.messageSays(o.message_code)}</span>}
     </p>
   );

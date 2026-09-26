@@ -1,10 +1,10 @@
 /* Sign in (spec 2.14): the error and "You were signed out" lines, with their icon. */
 .adm-login__error, .adm-login__note { display: flex; align-items: flex-start; gap: 8px; }
 .adm-login__error svg, .adm-login__note svg { flex: 0 0 auto; margin-top: 1px; }
-.adm-login__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); color: var(--color-text-primary); font-size: 0.9375rem; line-height: 1.45; }
+.adm-login__note { padding: 10px 12px; border-radius: 12px; background: var(--adm-accent-tint); color: var(--adm-ink-1); }
 .adm-login__note svg { color: var(--color-text-accent); }
 .adm-splash > .adm-back { margin-top: -8px; color: var(--color-text-accent); }
 /* After a failed sign-in: a quiet line, not a link. */
-.adm-login__hint { margin-top: -4px; padding-left: 26px; color: var(--color-text-muted); font-size: 0.875rem; line-height: 1.4; }
+.adm-login__hint { margin-top: -4px; padding-left: 26px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 /* Busy: looks disabled but keeps focus (LoginPage uses aria-disabled). */
 .adm-login .adm-btn[aria-disabled='true'] { opacity: 0.55; cursor: default; transform: none; }
