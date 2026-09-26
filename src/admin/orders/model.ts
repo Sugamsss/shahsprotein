@@ -57,7 +57,7 @@ export const changeText = (o: Order, changes: OrderChanges): string => {
 /**
  * The keys that put a one-tap change back. Fields typed in (phone, total, note) stay.
  * Paid comes back with its method and note; an old paid order had none, so it
- * gets plain `paid: true` (the server can't take a null method).
+ * gets plain `paid: true`, which leaves it with no method.
  */
 export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
   ...(changes.status !== undefined && { status: o.status }),
