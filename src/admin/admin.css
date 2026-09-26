@@ -73,10 +73,13 @@
    which is --color-bg-main (set by admin.html's script, then ThemeContext). So
    --adm-page must equal --color-bg-main, and the page's top edge must be that
    flat colour, or the bar shows as a strip above the app. The first layer fades
-   the glow in below the edge. */
+   the glow in below the edge.
+   The side gutters are variables so a row can bleed to the screen edge. */
 .adm {
+  --adm-gutter-l: max(16px, env(safe-area-inset-left));
+  --adm-gutter-r: max(16px, env(safe-area-inset-right));
   min-height: 100vh;
-  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) calc(112px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) var(--adm-gutter-r) calc(112px + env(safe-area-inset-bottom)) var(--adm-gutter-l);
   background: linear-gradient(var(--adm-page), transparent), var(--adm-page-glow), var(--adm-page);
   background-repeat: no-repeat;
   background-size: 100% 72px, 100% 520px, auto;
@@ -226,10 +229,14 @@
 .adm-list__sub { color: var(--color-text-muted); font-size: 0.875rem; }
 .adm-list__end { color: var(--color-text-muted); }
 
-@media (min-width: 375px) { .adm { padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right)); } }
+@media (min-width: 375px) { .adm { --adm-gutter-l: max(20px, env(safe-area-inset-left)); --adm-gutter-r: max(20px, env(safe-area-inset-right)); } }
 
 @media (min-width: 960px) {
-  .adm { padding: env(safe-area-inset-top) max(32px, env(safe-area-inset-right)) 48px max(32px, env(safe-area-inset-left)); }
+  .adm {
+    --adm-gutter-l: max(32px, env(safe-area-inset-left));
+    --adm-gutter-r: max(32px, env(safe-area-inset-right));
+    padding-bottom: 48px;
+  }
   .adm-main { max-width: 1280px; }
   .adm-tabbar { display: none; }
 

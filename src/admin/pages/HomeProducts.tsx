@@ -41,8 +41,9 @@ const offSizes = (product: Product, stock: OutOfStock | null): string[] | null |
 const Pulse: React.FC<{ className?: string }> = ({ className = '' }) => <span className={`adm-pulse ${className}`} aria-hidden="true" />;
 
 /**
- * The pouch: the 4:5 tile on phones, the wide product photo on a laptop. The
- * <picture> means each size downloads only its own file. Above the fold, so not lazy.
+ * The wide product photo on phones (the row that scrolls) and laptops; the 4:5
+ * pouch tile on a tablet's three-across shelf. The media query matches home.css.
+ * The <picture> means each size downloads only its own file. Above the fold, so not lazy.
  */
 const Photo: React.FC<{ product: Product }> = ({ product }) => {
   const dark = useTheme().theme === 'dark';
@@ -50,8 +51,8 @@ const Photo: React.FC<{ product: Product }> = ({ product }) => {
   return (
     <span className={`adm-pcard__photo adm-pcard__photo--${product.id}`}>
       <picture>
-        <source media="(min-width: 960px)" srcSet={dark ? product.imageDark : product.image} />
-        <img src={tile.src} srcSet={tile.srcSet} sizes="34vw" width={360} height={450} decoding="async" alt="" />
+        <source media="(max-width: 639px), (min-width: 960px)" srcSet={dark ? product.imageDark : product.image} />
+        <img src={tile.src} srcSet={tile.srcSet} sizes="210px" width={360} height={450} decoding="async" alt="" />
       </picture>
     </span>
   );
@@ -140,12 +141,22 @@ const spokenName = (cook: boolean, product: Product, stages: ProductStages | und
   return copy.cookName(product.name, main, maybeText, off !== undefined ? copy.offOnSite(off) : '');
 };
 
+/**
+ * On phones the row scrolls sideways. A browser doesn't scroll a card that only
+ * peeks in when it gets keyboard focus, so bring it fully into view (the row's
+ * scroll-padding keeps it on the page's gutter). Taps don't need it.
+ */
+const revealFocused = (event: React.FocusEvent<HTMLDivElement>) => {
+  const card = event.target;
+  if (card instanceof HTMLElement && card.matches(':focus-visible')) card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+};
+
 export const ProductCards: React.FC<{
   cook: boolean;
   totals: Totals | null | undefined;
   stock: OutOfStock | null;
 }> = ({ cook, totals, stock }) => (
-  <div className={`adm-pcards adm-pcards--${cook ? 'cook' : 'admin'}`}>
+  <div className={`adm-pcards adm-pcards--${cook ? 'cook' : 'admin'}`} onFocus={revealFocused}>
     {productsData.map((product) => {
       const stages = totals ? stagesOf(totals, product.id) : undefined;
       const off = offSizes(product, stock);
