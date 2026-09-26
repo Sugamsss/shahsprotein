@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en-IN" data-theme="dark">
+  <head>
+    <!-- The admin's own page (Vercel serves it for /admin and /admin/*; vite.config.ts
+         does the same in dev). Same app bundle as index.html, but this head is the
+         "Shah's Orders" home-screen app's: browsers read the manifest, icon and
+         app tags from the HTML before any JS runs, so they must be here, not added
+         later. Safari fetches the first manifest it sees and never looks again. -->
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: the admin keeps clear of the notch and home indicator
+         with env(safe-area-inset-*), which only has values with cover. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Shah's Orders</title>
+
+    <link rel="manifest" href="/admin.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/admin-app/shahs-orders-any-192-v2.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/admin-app/shahs-orders-apple-180-v2.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- iOS labels the home-screen icon with this. "Orders" (like short_name in the
+         manifest) fits under the icon on every phone; "Shah's Orders" gets cut on some. -->
+    <meta name="apple-mobile-web-app-title" content="Orders" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="application-name" content="Shah's Orders" />
+
+    <!-- The toolbar and status bar follow the admin's page colour (--adm-page).
+         The script points both at the saved theme; ThemeContext keeps them in step. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef4fc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
+    <script>
+      (function () {
+        // Same rule as index.html: blocked site storage throws, so fall back to the OS.
+        let saved = null;
+        try { saved = localStorage.getItem('shahsnutrition_theme'); } catch (e) {}
+        const theme = saved === 'light' || saved === 'dark'
+          ? saved
+          : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+        const bar = theme === 'light' ? '#eef4fc' : '#1f1f1f';
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) { meta.setAttribute('content', bar); });
+      })();
+    </script>
+
+    <link rel="preload" href="/assets/fonts/inter-latin-v1.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/outfit-latin-v1.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

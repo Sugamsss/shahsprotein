@@ -3,6 +3,7 @@ import { ChevronLeft, Info, X } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
 import { client } from '../api';
 import { forgetSessionEnded, sessionEnded as endedBefore } from '../auth';
+import { isInstalledApp } from '../homeScreenApp';
 import { Splash } from '../Splash';
 import { usernameToEmail } from '../username';
 
@@ -22,6 +23,7 @@ const LoginPage: React.FC = () => {
   const [busy, setBusy] = useState(false);
   // The last session ended by itself (spec 2.14 "Session ended"): say so once.
   const [sessionEnded] = useState(endedBefore);
+  const [installed] = useState(isInstalledApp);
   useEffect(forgetSessionEnded, []);
   useEffect(() => { document.title = copy.tabTitle(copy.tabPages.signIn, 0); }, []);
   const usernameInput = useRef<HTMLInputElement>(null);
@@ -64,7 +66,9 @@ const LoginPage: React.FC = () => {
   const errorProps = error ? { 'aria-invalid': true, 'aria-describedby': 'adm-login-error' } : {};
 
   return (
-    <Splash footer={<a className="adm-back" href="/"><ChevronLeft size={18} aria-hidden="true" />{copy.login.back}</a>}>
+    // No way back to the website inside the installed app: iOS has no back
+    // button there, so the site would strand them outside the admin.
+    <Splash footer={installed ? undefined : <a className="adm-back" href="/"><ChevronLeft size={18} aria-hidden="true" />{copy.login.back}</a>}>
       <form className="adm-login" onSubmit={onSubmit} noValidate>
         <h1 className="adm-login__title">{copy.login.title}</h1>
         <p className="adm-login__sub">{copy.login.sub}</p>
