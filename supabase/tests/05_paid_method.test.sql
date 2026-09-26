@@ -1,4 +1,4 @@
--- 20260926000007: how an order was paid (Cash, UPI, or Other with a note).
+-- 20260926000007: how an order was paid (UPI, Cash, Bank transfer, or Other with a note).
 -- update_admin_order() and save_admin_order() with paid_method and
 -- paid_note, the table checks, who can call it, and that paid is still paid
 -- for get_admin_totals(). Test data is fake (9198000000xx, example.com) and
@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(35);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
@@ -75,6 +75,12 @@ select is(
 );
 
 select is(
+  pg_temp.how(public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"bank"}')),
+  '{"paid":true,"paid_method":"bank","paid_note":null}'::jsonb,
+  'Bank transfer marks it paid, no note needed'
+);
+
+select is(
   pg_temp.how(public.update_admin_order('00000000-0000-4000-a000-00000000000a',
     '{"paid":true,"paid_method":"other","paid_note":"  bank transfer  "}')),
   '{"paid":true,"paid_method":"other","paid_note":"bank transfer"}'::jsonb,
@@ -117,8 +123,12 @@ select throws_ok(
   '22023', 'A note goes only with Other.', 'a note with UPI is refused'
 );
 select throws_ok(
+  $$select public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"bank","paid_note":"hdfc"}')$$,
+  '22023', 'A note goes only with Other.', 'a note with Bank is refused'
+);
+select throws_ok(
   $$select public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"card"}')$$,
-  '22023', 'Choose Cash, UPI or Other.', 'an unknown method is refused'
+  '22023', 'Choose UPI, Cash, Bank transfer or Other.', 'an unknown method is refused'
 );
 select throws_ok(
   $$select public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid_method":"upi"}')$$,

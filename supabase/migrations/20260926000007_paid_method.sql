@@ -1,8 +1,8 @@
 -- Migration: 20260926000007_paid_method.sql
--- How an order was paid: Cash, UPI or Other with a short note. Admin only;
+-- How an order was paid: Cash, UPI, Bank transfer, or Other with a short note. Admin only;
 -- nothing public changes, and no existing key changes shape.
 --
--- 1. orders gains paid_method ('cash', 'upi', 'other') and paid_note (only
+-- 1. orders gains paid_method ('cash', 'upi', 'bank', 'other') and paid_note (only
 --    with 'other': trimmed, one line, 1 to 60 characters). A not-paid order
 --    has neither. Orders marked paid before this have no method and stay
 --    valid.
@@ -24,7 +24,7 @@
 
 alter table public.orders
   add column paid_method text
-    constraint orders_paid_method_check check (paid_method in ('cash', 'upi', 'other')),
+    constraint orders_paid_method_check check (paid_method in ('cash', 'upi', 'bank', 'other')),
   -- Trimmed, one line, 1 to 60 characters.
   add column paid_note text
     constraint orders_paid_note_check check (
@@ -35,7 +35,7 @@ alter table public.orders
   -- A not-paid order has no method and no note.
   add constraint orders_paid_method_needs_paid
     check (paid_at is not null or (paid_method is null and paid_note is null)),
-  -- Other always has a note; Cash, UPI and no method never do.
+  -- Other always has a note; Cash, UPI, Bank and no method never do.
   add constraint orders_paid_note_only_with_other
     check ((paid_method is not distinct from 'other') = (paid_note is not null));
 
@@ -43,7 +43,7 @@ alter table public.orders
 -- 2. Shared checks (internal, not callable from the API)
 -- ═══════════════════════════════════════════════════════
 
--- 'cash', 'upi' or 'other'; JSON null means no method.
+-- 'cash', 'upi', 'bank' or 'other'; JSON null means no method.
 create or replace function public.order_check_paid_method(p_value jsonb)
 returns text
 language plpgsql
@@ -55,8 +55,8 @@ begin
     return null;
   end if;
 
-  if jsonb_typeof(p_value) <> 'string' or (p_value #>> '{}') not in ('cash', 'upi', 'other') then
-    raise exception using message = 'Choose Cash, UPI or Other.', errcode = '22023';
+  if jsonb_typeof(p_value) <> 'string' or (p_value #>> '{}') not in ('cash', 'upi', 'bank', 'other') then
+    raise exception using message = 'Choose UPI, Cash, Bank transfer or Other.', errcode = '22023';
   end if;
 
   return p_value #>> '{}';
@@ -136,7 +136,7 @@ as $$
     'status', p_order.status,
     'paid', p_order.paid_at is not null,
     'paid_at', p_order.paid_at,
-    -- 'cash', 'upi', 'other', or null (not paid, or paid before methods).
+    -- 'cash', 'upi', 'bank', 'other', or null (not paid, or paid before methods).
     'paid_method', p_order.paid_method,
     'paid_note', p_order.paid_note,
     'kept', p_order.kept_at is not null,

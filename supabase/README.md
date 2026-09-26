@@ -83,7 +83,7 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 
 | Table | What |
 |---|---|
-| `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`new`, `confirmed`, `sent`, `delivered`, `cancelled`), `paid_at` (null = not paid), `paid_method` (`cash`, `upi`, `other`; null when not paid, and on orders marked paid before `20260926000007`), `paid_note` (only with `other`: one line, 1 to 60 characters), `kept_at` ("Still waiting"), name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
+| `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`new`, `confirmed`, `sent`, `delivered`, `cancelled`), `paid_at` (null = not paid), `paid_method` (`upi`, `cash`, `bank`, `other`; null when not paid, and on orders marked paid before `20260926000007`), `paid_note` (only with `other`: one line, 1 to 60 characters), `kept_at` ("Still waiting"), name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
 | `order_lines` | Product id, size and quantity per order. Checked for shape only; names come from `src/data/products.ts`. |
 | `order_events` | History, written only by a trigger: created, each status, paid/unpaid, kept/unkept, with who did it. |
 | `product_stock` | Product and size that are off the site. A missing row means in stock. |
