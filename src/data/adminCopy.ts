@@ -237,6 +237,8 @@ export const adminCopy = {
     optional: 'optional',
     saved: 'Saved',
     deliverTo: 'Deliver to',
+    /** An order made in the admin with no pincode is for Satara. Site orders always have one. */
+    deliverToSatara: 'Satara · free delivery',
     useSuggestion: (phone: string, day: string) => `Use ${phone} from their order on ${day}`,
     whatsapp: 'Reply on WhatsApp',
     /**
@@ -419,6 +421,8 @@ export const adminCopy = {
     namePlaceholder: 'Their name',
     pincode: 'Pincode',
     pincodePlaceholder: '6 digits',
+    /** Admin-made orders only: an empty pincode means Satara. A site order must keep its pincode. */
+    pincodeSatara: 'Skip: Satara',
     ordersBefore: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} before`,
     use: 'Use',
     useLabel: (name: string) => `Use ${name}'s name and pincode`,
