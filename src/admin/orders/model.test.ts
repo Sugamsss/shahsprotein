@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Order, OrderLine } from '../types';
-import { applyLocal, linesFirst, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
+import { applyLocal, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -114,5 +114,31 @@ describe('paying with a method', () => {
     expect(paidByText(paidOrder('bank'))).toBe('Bank transfer');
     expect(paidByText(paidOrder('other', 'bank transfer'))).toBe('Other: bank transfer');
     expect(paidByText(paidOrder(null))).toBeNull();
+  });
+});
+
+// Home's ₹ came in, by how it was paid. The sums are the server's; this only orders, labels and hides zeros.
+
+describe('money by method', () => {
+  const none = { upi: 0, cash: 0, bank: 0, other: 0, not_recorded: 0 };
+
+  it('lists UPI, Cash, Bank, Other, then Not recorded, with the server amounts', () => {
+    expect(moneyByMethod({ upi: 800, cash: 200, bank: 1000, other: 150, not_recorded: 400 })).toEqual([
+      { key: 'upi', label: 'UPI', amount: 800 },
+      { key: 'cash', label: 'Cash', amount: 200 },
+      { key: 'bank', label: 'Bank', amount: 1000 },
+      { key: 'other', label: 'Other', amount: 150 },
+      { key: 'not_recorded', label: 'Not recorded', amount: 400 },
+    ]);
+  });
+
+  it('leaves out zeros, so one method is one line and Not recorded only shows while it has money', () => {
+    expect(moneyByMethod({ ...none, cash: 500 })).toEqual([{ key: 'cash', label: 'Cash', amount: 500 }]);
+    expect(moneyByMethod({ ...none, upi: 300, not_recorded: 100 }).map((r) => r.key)).toEqual(['upi', 'not_recorded']);
+  });
+
+  it('shows nothing when no money came in, or on a database without the split', () => {
+    expect(moneyByMethod(none)).toEqual([]);
+    expect(moneyByMethod(undefined)).toEqual([]);
   });
 });

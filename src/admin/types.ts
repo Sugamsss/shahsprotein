@@ -179,6 +179,12 @@ export interface TotalsWeek {
   paid_without_amount: number;
 }
 export interface TotalsDay { date: string; orders: number; packs: number }
+/**
+ * This week's amount_in by how it was paid, zeros included. not_recorded is orders
+ * marked paid before methods existed. Paid orders with no amount add nothing, so
+ * the five add up to amount_in.
+ */
+export type TotalsByMethod = Record<PaidMethod | 'not_recorded', number>;
 export interface TotalsWeekProduct { product_id: string; packs: number; orders: number }
 
 /** get_admin_totals(): the numbers behind both Homes (temp/home-totals.md, v2). Zeros, never null. */
@@ -199,7 +205,12 @@ export interface Totals {
   };
   weeks: {
     /** Monday 00:00 India time up to now. */
-    this: TotalsWeek & { days: TotalsDay[]; by_product: TotalsWeekProduct[] };
+    this: TotalsWeek & {
+      days: TotalsDay[];
+      by_product: TotalsWeekProduct[];
+      /** From 20260926000008; missing on a database without it. */
+      amount_by_method?: TotalsByMethod;
+    };
     /** The whole of last week. */
     last: TotalsWeek & { days: TotalsDay[] };
     /** Last week up to the same weekday and time, for a fair comparison. */

@@ -124,6 +124,15 @@
 .adm-home__vs em svg { flex: 0 0 auto; }
 .adm-home__vs em.is-up { color: var(--color-success-text); }
 .adm-home__vs small { color: var(--color-text-muted); font-size: 0.75rem; }
+/* ₹ came in by how it was paid: label, then the amount, the amounts lined up. */
+.adm-home__methods {
+  display: grid; grid-template-columns: minmax(0, max-content) max-content; gap: 2px 10px; margin: 8px 0 2px; padding: 0;
+  list-style: none; font-size: 0.8125rem; line-height: 1.35;
+}
+/* A subgrid, not display: contents, so each row stays a list item for screen readers. */
+.adm-home__methods li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.adm-home__methods li > span:first-child { color: var(--color-text-muted); }
+.adm-home__methods li > span:last-child { color: var(--color-text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .adm-home__bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
 .adm-home__bars li { display: grid; grid-template-rows: 104px auto; justify-items: center; gap: 8px; min-width: 0; }
 .adm-home__slot { position: relative; width: 100%; max-width: 36px; height: 100%; }

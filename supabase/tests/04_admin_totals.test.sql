@@ -84,7 +84,7 @@ select is(
 );
 
 select is(
-  (select jsonb_object_agg(w.key, w.value - array['starts_at', 'ends_at', 'days', 'by_product'])
+  (select jsonb_object_agg(w.key, w.value - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'])
    from jsonb_each(current_setting('test.empty')::jsonb -> 'weeks') w),
   (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0}'::jsonb)
    from unnest(array['this', 'last', 'last_so_far']) k),
@@ -262,7 +262,7 @@ select is(
 );
 
 select is(
-  (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product'],
+  (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
   '{"orders":6,"packs":20,"amount_in":1700,"paid_orders":2,"paid_without_amount":0}'::jsonb,
   'this week: real orders only (not new, stale or cancelled); money in skips the cancelled order'
 );
