@@ -63,7 +63,7 @@
 /* ---- Shared page, form and list bits (lane A screens; B may use them) ------- */
 :root { --font-family-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 .adm-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.adm-btn--tonal { background: var(--adm-accent-tint); color: var(--color-text-accent); }
+.adm-btn--tonal { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
 .adm-btn--tonal:active { background: var(--adm-accent-tint-press); }
 .adm-text-btn {
   position: relative; display: inline-flex; align-items: center; gap: 6px; justify-self: start;

@@ -1,7 +1,8 @@
 /* Customers and one customer (spec 2.10). Rows are the More page's .adm-list. */
 .adm-customers__find { border-radius: var(--radius-full); }
 .adm-list__icon.adm-avatar-mark { background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: var(--adm-text-small); font-weight: 700; }
-.adm-customers .adm-list__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.adm-customers .adm-list__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.adm-customers .adm-list__title .adm-chip { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .adm-customers__end { display: inline-flex; align-items: center; gap: 6px; color: var(--adm-ink-2); font-weight: 600; }
 .adm-customer b { color: var(--adm-ink-1); font-weight: 600; }
 
