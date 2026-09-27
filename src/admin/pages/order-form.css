@@ -33,7 +33,7 @@
   display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid var(--adm-edge);
   border-radius: 14px; background: var(--adm-surface); font-weight: 600; cursor: pointer;
 }
-.adm-of__via input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--color-text-accent); }
+.adm-of__via input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
 .adm-of__via input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-of__via label:active span { transform: scale(0.97); }
 

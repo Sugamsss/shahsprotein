@@ -35,6 +35,8 @@
   --adm-shadow-lift: 0 12px 40px rgba(10, 20, 60, 0.16);
   --adm-accent-tint: rgba(59, 130, 246, 0.1);
   --adm-accent-tint-press: rgba(59, 130, 246, 0.18);
+  --adm-accent-text: #1d4ed8; /* text/icons on --adm-accent-tint: 5.4-5.9:1, --color-text-accent alone was ~4.2-4.5:1 */
+  --adm-success-text: #0f612d; /* darker than --color-success-text for the "To collect" lane count chip: ~5.9:1 there, vs ~4.3:1 */
   --adm-frost: rgba(238, 244, 252, 0.45);
   --adm-scrim: rgba(15, 23, 42, 0.32);
   --adm-track-off: rgba(15, 23, 42, 0.12);
@@ -61,6 +63,8 @@
   --adm-shadow-lift: 0 16px 48px rgba(0, 0, 0, 0.55);
   --adm-accent-tint: rgba(212, 175, 55, 0.12);
   --adm-accent-tint-press: rgba(212, 175, 55, 0.2);
+  --adm-accent-text: var(--color-text-accent); /* already passes on the gold tint; unchanged */
+  --adm-success-text: var(--color-success-text); /* already ~7-8:1 on the "To collect" chip; unchanged */
   --adm-frost: rgba(20, 20, 20, 0.5);
   --adm-scrim: rgba(0, 0, 0, 0.55);
   --adm-track-off: rgba(255, 255, 255, 0.14);
@@ -202,7 +206,7 @@
   font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.01em;
 }
 .adm-tabbar a:active { background: var(--adm-well-press); }
-.adm-tabbar a[aria-current] { color: var(--color-text-accent); background: var(--adm-accent-tint); }
+.adm-tabbar a[aria-current] { color: var(--adm-accent-text); background: var(--adm-accent-tint); }
 .adm-tabbar .adm-badge {
   position: absolute; top: 5px; left: calc(50% + 5px);
   min-width: 18px; height: 18px; padding: 0 5px; font-size: 0.6875rem; line-height: 18px;
@@ -285,7 +289,7 @@
     border-radius: var(--radius-full); color: var(--adm-ink-2);
     font-size: var(--adm-text-body); font-weight: 600; white-space: nowrap;
   }
-  .adm-header__nav a[aria-current] { color: var(--color-text-accent); background: var(--adm-accent-tint); }
+  .adm-header__nav a[aria-current] { color: var(--adm-accent-text); background: var(--adm-accent-tint); }
 
   .adm-search { position: relative; display: flex; align-items: center; flex: 0 1 260px; min-width: 150px; }
   .adm-search svg { position: absolute; left: 14px; color: var(--adm-ink-3); pointer-events: none; }

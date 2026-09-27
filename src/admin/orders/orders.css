@@ -128,7 +128,7 @@
 .adm-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .adm-filter__chip {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 12px 4px 4px; border-radius: var(--radius-full);
-  background: var(--adm-accent-tint); color: var(--color-text-accent); font-weight: 600; text-decoration: none;
+  background: var(--adm-accent-tint); color: var(--adm-accent-text); font-weight: 600; text-decoration: none;
 }
 .adm-filter__chip .adm-thumb { width: 36px; height: 36px; border-radius: 50%; }
 .adm-filter__chip:active { background: var(--adm-accent-tint-press); }
@@ -158,7 +158,7 @@
 .adm-lane { display: grid; gap: 8px; scroll-margin-top: 72px; }
 .adm-lane__head { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
 .adm-lane--confirm .adm-lane__head .adm-count { background: var(--color-accent-gradient); color: var(--color-btn-text); }
-.adm-lane--collect .adm-lane__head .adm-count { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
+.adm-lane--collect .adm-lane__head .adm-count { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--adm-success-text); }
 .adm-lane--stale .adm-count, .adm-lane__sub .adm-count { background: transparent; box-shadow: inset 0 0 0 1px var(--adm-track-off); }
 .adm-lane__hint, .adm-lane__empty { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-lane__hint { margin: -6px 4px 2px; }
