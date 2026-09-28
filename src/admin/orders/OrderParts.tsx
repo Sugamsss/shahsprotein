@@ -220,7 +220,10 @@ const AutoField: React.FC<{
       optional={field === 'phone' ? undefined : copy.optional}
       prefix={field === 'amount' ? '₹' : undefined}
       error={isError ? status : null}
-      hint={status || (field === 'amount' ? copy.totalHint : undefined)}
+      // With money already in, the total says so, so a new total never surprises (due or extra).
+      hint={status || (field === 'amount'
+        ? (order.amount_paid > 0 ? `${adminCopy.payments.paidSoFar(formatMoney(order.amount_paid))}. ${copy.totalHint}` : copy.totalHint)
+        : undefined)}
       action={field === 'phone' && (order.phone
         ? <CopyButton text={formatPhone(order.phone)} />
         : <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />)}
