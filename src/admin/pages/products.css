@@ -12,6 +12,59 @@
 .adm-product__status { grid-area: status; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-product__status.is-off { color: var(--adm-ink-2); font-weight: 600; }
 .adm-product .adm-switch { grid-area: switch; }
+
+/* Prices (admin only). A row with a price: size over status, then the price, then the switch. */
+.adm-product__size.has-price {
+  grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'size price switch' 'status price switch'; column-gap: 16px;
+}
+.adm-pread { grid-area: price; font-size: var(--adm-text-head); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.adm-pread.is-none { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; letter-spacing: 0; }
+.adm-pfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; border-top: 1px solid var(--adm-hairline); }
+.adm-pfoot small { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; text-align: end; }
+.adm-pfoot .adm-text-btn { min-height: 44px; }
+
+/* The prices sheet: a label column, then one ₹ box per size. */
+.adm-psheet { display: grid; gap: 20px; }
+.adm-pgrid {
+  --cell: 96px;
+  display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--cols, 2), var(--cell));
+  align-items: center; gap: 8px;
+}
+.adm-pgrid[hidden] { display: none; }
+.adm-pgrid__col { padding-left: 12px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; }
+.adm-pgrid__label { font-weight: 600; }
+.adm-psheet__base .adm-pgrid__label { font-size: var(--adm-text-head); letter-spacing: -0.01em; }
+.adm-psheet__coupons { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--adm-hairline); }
+.adm-psheet__coupons h3 { font-size: var(--adm-text-head); font-weight: 600; }
+.adm-phint { margin-top: -6px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+@media (max-width: 374px) { .adm-pgrid { --cell: 82px; } }
+@media (min-width: 960px) { .adm-pgrid { --cell: 120px; } }
+
+/* One ₹ box. The base price keeps the full field; coupon cells are quiet wells, so the grid isn't a wall of boxes. */
+.adm-price { position: relative; display: block; min-width: 0; }
+.adm-price > span {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--adm-ink-2); font-size: 1rem; line-height: 1; pointer-events: none;
+}
+.adm-price .adm-input { min-height: 44px; padding: 0 10px 0 28px; border-radius: 12px; font-variant-numeric: tabular-nums; }
+.adm-price .adm-input::placeholder { color: var(--adm-ink-3); }
+.adm-pgrid:not(.adm-psheet__base) .adm-price .adm-input:not(:focus):not([aria-invalid='true']) { border-color: transparent; background: var(--adm-well); }
+
+/* A coupon code as a row label: small mono, so FRIENDS10 fits a 320px phone. */
+.adm-pcode { display: grid; gap: 1px; min-width: 0; }
+.adm-pcode b { overflow-wrap: anywhere; font-family: var(--font-family-mono); font-size: var(--adm-text-small); font-weight: 600; letter-spacing: 0.04em; line-height: 1.3; }
+.adm-pcode small { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.is-idle .adm-pcode b { color: var(--adm-ink-2); }
+
+/* "Not in use · 2": a quiet disclosure. */
+.adm-ptoggle {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+  min-height: 44px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600;
+}
+.adm-ptoggle svg { color: var(--adm-ink-3); transform: rotate(90deg); }
+.adm-ptoggle[aria-expanded='true'] svg { transform: rotate(-90deg); }
+.adm-ptoggle:active { opacity: 0.7; }
+
 @media (min-width: 960px) {
   .adm-page--products { max-width: 1120px; margin-inline: auto; }
   .adm-products { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }

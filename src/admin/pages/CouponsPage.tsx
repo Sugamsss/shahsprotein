@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Pencil, Plus } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { createCoupon, getCoupons, setCouponActive, updateCoupon } from '../api';
@@ -123,6 +124,7 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
 const CouponsPage: React.FC = () => {
   const { data: coupons, error, loading, reload, setData } = useRpc(getCoupons, []);
   const toast = useToast();
+  const navigate = useNavigate();
   const run = useUndoable();
   // The sheet: null is closed; `coupon` null is a new one. `key` gives each opening fresh fields.
   const [sheet, setSheet] = useState<{ coupon: Coupon | null; key: number } | null>(null);
@@ -180,8 +182,12 @@ const CouponsPage: React.FC = () => {
           coupon={sheet.coupon}
           onClose={() => setSheet(null)}
           onSaved={() => {
+            // A new coupon's prices are set per product, on Products.
+            const isNew = !sheet.coupon;
             setSheet(null);
-            toast.show({ text: copy.saved });
+            toast.show(isNew
+              ? { text: copy.savedNew, action: { label: copy.toProducts, onAction: () => navigate('/admin/products') } }
+              : { text: copy.saved });
             void reload();
           }}
         />
