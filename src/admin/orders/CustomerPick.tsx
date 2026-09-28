@@ -9,7 +9,7 @@ import type { Customer } from '../types';
 import { contactNumbers } from './model';
 
 // Filling "Who it's for" on Add order: past customers under the name box, and
-// "From contacts" where the phone has a contact picker (Android Chrome only).
+// a contacts button beside Paste where the phone has a contact picker (Android Chrome only).
 
 const copy = adminCopy.orderForm;
 
@@ -98,7 +98,7 @@ export const useNameSuggestions = (name: string, onPick: (p: Picked) => void) =>
 interface ContactsManager { select: (props: ('name' | 'tel')[], options?: { multiple?: boolean }) => Promise<{ name?: string[]; tel?: string[] }[]> }
 const contacts = typeof navigator !== 'undefined' ? (navigator as Navigator & { contacts?: ContactsManager }).contacts : undefined;
 
-/** "From contacts": only where the phone has a contact picker, so nobody taps a button that can't work. */
+/** Pick from contacts, a round button beside Paste: only where the phone has a contact picker, so nobody taps a button that can't work. */
 export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPick }) => {
   const toast = useToast();
   const [choosing, setChoosing] = useState<{ name: string; phones: string[] } | null>(null);
@@ -128,8 +128,8 @@ export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPi
 
   return (
     <>
-      <button type="button" className="adm-text-btn adm-of__contacts" onClick={() => void open()}>
-        <BookUser size={16} strokeWidth={1.75} aria-hidden="true" />{copy.fromContacts}
+      <button type="button" className="adm-round-btn" aria-label={copy.pickContact} title={copy.pickContact} onClick={() => void open()}>
+        <BookUser size={18} strokeWidth={1.75} aria-hidden="true" />
       </button>
       <AdminSheet isOpen={!!choosing} onClose={() => setChoosing(null)} title={copy.whichNumber(choosing?.name ?? '')} closeLabel={adminCopy.close}>
         <div className="adm-of__numbers">

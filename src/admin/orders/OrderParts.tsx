@@ -144,13 +144,20 @@ export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
 
 const canPaste = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText;
 
-export const PasteButton: React.FC<{ onPaste: (text: string) => void }> = ({ onPaste }) =>
-  canPaste ? (
-    <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs"
-      onClick={() => navigator.clipboard.readText().then(onPaste, () => {})}>
+export const PasteButton: React.FC<{ onPaste: (text: string) => void; round?: boolean }> = ({ onPaste, round }) => {
+  if (!canPaste) return null;
+  const paste = () => navigator.clipboard.readText().then(onPaste, () => {});
+  // Round and icon-only on Add order, where it shares the row with the contacts button.
+  return round ? (
+    <button type="button" className="adm-round-btn" aria-label={adminCopy.orderForm.pasteNumber} title={adminCopy.orderForm.pasteNumber} onClick={paste}>
+      <ClipboardPaste size={18} strokeWidth={1.75} aria-hidden="true" />
+    </button>
+  ) : (
+    <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" onClick={paste}>
       <ClipboardPaste size={16} aria-hidden="true" />{copy.paste}
     </button>
-  ) : null;
+  );
+};
 
 /** Copies the saved phone, for pasting into WhatsApp or the dialler. */
 const CopyButton: React.FC<{ text: string }> = ({ text }) => {

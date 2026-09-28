@@ -216,12 +216,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   const who = (
     <section className="adm-of__section adm-of--who" aria-labelledby={`${id}-who`}>
-      <div className="adm-of__h">
-        <h2 id={`${id}-who`}>{copy.who}</h2>
-        <ContactsButton onPick={fill} />
-      </div>
+      <h2 id={`${id}-who`} className="adm-of__h">{copy.who}</h2>
       <div className="adm-card adm-form">
-        <Field label={copy.phone} error={errors.phone} action={<PasteButton onPaste={edit(setPhone)} />}>
+        <Field label={copy.phone} error={errors.phone} action={<><PasteButton round onPaste={edit(setPhone)} /><ContactsButton onPick={fill} /></>}>
           <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={orderCopy.phonePlaceholder}
             onChange={(e) => edit(setPhone)(e.target.value)} onBlur={() => digits && setPhone(formatPhone(digits))} />
         </Field>

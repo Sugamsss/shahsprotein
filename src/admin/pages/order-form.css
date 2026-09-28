@@ -41,9 +41,6 @@
 .adm-of__suggest li[aria-selected='true'] { background: var(--adm-accent-tint); }
 .adm-of__suggest li:active { background: var(--adm-accent-tint-press); }
 
-/* "From contacts" beside Who it's for, at the button size rather than the heading's. */
-.adm-of__h .adm-of__contacts { margin-block: -6px; font-size: var(--adm-text-body); letter-spacing: 0; }
-
 /* Which of a contact's numbers: plain rows. */
 .adm-of__numbers { display: grid; }
 .adm-of__numbers button { min-height: 56px; padding: 0 4px; color: var(--adm-ink-1); text-align: left; font-size: var(--adm-text-head); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -81,6 +78,8 @@
   border-top: 1px solid var(--adm-hairline); background: var(--adm-page);
 }
 
+/* Under 360px the form's cards take the packs card's 16px sides, so Phone keeps room for a whole number beside its two round buttons. */
+@media (max-width: 359px) { .adm-of .adm-card.adm-form { padding-inline: 16px; } }
 @media (min-width: 375px) { .adm-of-page__bar { margin-inline: -20px; padding-inline: 20px; } }
 
 @media (min-width: 960px) {
