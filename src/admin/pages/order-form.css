@@ -49,16 +49,20 @@
 @media (hover: hover) { .adm-of__contacts:hover { background: var(--adm-accent-tint-press); } }
 .adm-of__contacts:active { background: var(--adm-accent-tint-press); transform: scale(0.94); }
 
-/* "Use ₹1,180 from your prices" belongs to the total above it. */
-.adm-of__use-total { margin-top: -8px; }
-
-/* Remove the coupon: a quiet round button after the code, clears it in one tap. */
-.adm-of__clear {
-  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
-  color: var(--adm-ink-2);
+/* The coupon picker: a native select in code type. Its chevron is a mask, so it takes the theme's ink.
+   "No coupon" reads as plain text. */
+.adm-select {
+  appearance: none; -webkit-appearance: none; padding-right: 44px; cursor: pointer;
+  font-family: var(--font-family-mono); letter-spacing: 0.06em;
 }
-@media (hover: hover) { .adm-of__clear:hover { background: var(--adm-well); } }
-.adm-of__clear:active { background: var(--adm-well); transform: scale(0.94); }
+.adm-select.is-none { font-family: inherit; letter-spacing: 0; color: var(--adm-ink-3); }
+.adm-select option, .adm-select optgroup { font-family: var(--font-family-mono); color: var(--adm-ink-1); }
+.adm-field__control:has(> .adm-select)::after {
+  content: ''; position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; margin-top: -9px;
+  background: var(--adm-ink-2); pointer-events: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 
 /* Which of a contact's numbers: plain rows. */
 .adm-of__numbers { display: grid; }

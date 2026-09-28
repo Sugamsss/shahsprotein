@@ -112,11 +112,34 @@ export const adminCopy = {
   products: {
     title: 'Products',
     intro: 'Turn a pack off and the site shows “Back soon” instead of Add.',
+    /** Once prices are set up (20260928000001). Before that, `intro` as it always was. */
+    introPrices: 'Prices only show in here, never on the site. Turn a pack off and the site shows “Back soon”.',
     on: 'On the site',
     off: 'Shows “Back soon”',
     switchLabel: (item: string) => `${item} on the site`,
     turnedOff: (item: string) => `${item} now shows “Back soon” on the site.`,
     turnedOn: (item: string) => `${item} is back on the site.`,
+    // Prices (admin only): read on the card, set in a sheet per product.
+    noPrice: 'No price yet',
+    editPrices: 'Edit prices',
+    addPrices: 'Add prices',
+    editPricesLabel: (name: string) => `Edit ${name} prices`,
+    addPricesLabel: (name: string) => `Add ${name} prices`,
+    /** Only coupons in use that price at least one of its packs. */
+    couponsOwn: (n: number) => `${n} ${n === 1 ? 'coupon has' : 'coupons have'} their own`,
+    sheetTitle: (name: string) => `${name} prices`,
+    base: 'Base price',
+    couponPrices: 'Coupon prices',
+    couponPricesHint: 'Leave one empty and they pay the base price.',
+    notInUse: (n: number) => `Not in use · ${n}`,
+    couponOff: 'Off',
+    couponEnded: (day: string) => `Ended ${day}`,
+    baseCell: (item: string) => `${item} base price`,
+    couponCell: (item: string, code: string) => `${item} with ${code}`,
+    priceError: 'Just the number, like 240.',
+    savePrices: 'Save prices',
+    saving: 'Saving…',
+    pricesSaved: (name: string) => `${name} prices saved.`,
   },
 
   // ---- Lane B: Orders (spec 2.3, 2.5 to 2.7, 2.15, 2.16) ----
@@ -360,12 +383,16 @@ export const adminCopy = {
     totalHint: 'Only you two see this. It never shows on the site.',
     totalError: 'Just the number, like 1180.',
     // The worked-out total (admin only): packs × the coupon's price, else the base price.
-    /** Under a total that filled itself in. */
-    totalWorkedOut: "Worked out from your prices. Delivery isn't in it.",
-    /** A tap to put the worked-out total in, when the field says something else. */
+    /** Under a total that filled itself in. The code, when there is one, shows in bold. */
+    workedFrom: (code: string | null) => `From ${code ? `${code} prices` : 'your prices'}, before delivery.`,
+    /** They typed their own number (Edit: the saved one), and the worked-out total is different. */
+    workedIs: (amount: string, editing: boolean) => `From your prices it's ${editing ? 'now ' : ''}${amount}`,
+    useThat: 'Use that',
+    useThatLabel: (amount: string) => `Use the worked-out total, ${amount}`,
+    /** The order page's total saves as you type, so it only ever offers the worked-out one. */
     useTotal: (amount: string) => `Use ${amount} from your prices`,
-    /** When a pack has no price, so there's no total rather than a wrong one. */
-    noPrice: (item: string) => `No price for ${item} yet, so no total.`,
+    /** When a pack has no base price, so there's no total rather than a wrong one. */
+    noPrice: (item: string) => `No base price for ${item} yet, so type the total.`,
     note: 'Note',
     notePlaceholder: 'Anything to remember',
     optional: 'optional',
@@ -444,6 +471,9 @@ export const adminCopy = {
     turnedOff: (code: string) => `${code} is off. People can't use it now.`,
     turnedOn: (code: string) => `${code} is on again.`,
     saved: 'Coupon saved.',
+    /** After a new coupon: its prices are set per product. */
+    savedNew: 'Coupon saved. Set its prices on Products.',
+    toProducts: 'Products',
     sheetNew: 'New coupon',
     sheetEdit: 'Edit coupon',
     code: 'Code',
@@ -575,14 +605,14 @@ export const adminCopy = {
     addCode: 'Use a code from their message',
     addCoupon: 'Add a coupon',
     coupon: 'Coupon',
-    couponClear: 'Remove the coupon',
-    couponError: 'A coupon code is 3 to 24 letters, numbers or dashes.',
-    /** One quiet line under the coupon when it won't take anything off. */
-    couponState: {
-      off: 'This coupon is off, so nothing comes off.',
-      expired: 'This coupon has expired, so nothing comes off.',
-      unknown: "There's no coupon with this code, so nothing comes off.",
-    },
+    noCoupon: 'No coupon',
+    /** The picker's group for coupons that are off or ended. */
+    notInUse: 'Not in use',
+    /** One quiet line under the coupon when it won't use its own prices. */
+    couponOff: (code: string) => `${code} is off, so it's base prices.`,
+    couponEnded: (code: string, day: string) => `${code} ended on ${day}, so it's base prices.`,
+    /** A saved code that isn't in the list (deleted, or typed on the site). Kept as it is. */
+    couponUnknown: (code: string) => `${code} isn't one of your coupons, so it's base prices.`,
     codeLabel: 'Code from their message',
     codeHint: "Only if their WhatsApp message has a code that isn't in the list. Leave it empty and we'll make one.",
     earlier: 'It was ordered earlier',

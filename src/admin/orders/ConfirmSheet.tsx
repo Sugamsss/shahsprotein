@@ -7,7 +7,9 @@ import { getOrders } from '../api';
 import { firstName, formatDay, formatPhone } from '../format';
 import type { Order, OrderChanges } from '../types';
 import { normalisePhone, productName, sortLines } from './model';
+import { couponState } from './quote';
 import { usePriceBook } from './usePriceBook';
+import { WorkedFrom } from './Worked';
 
 /** "1,200" or "₹ 1200" → "1200", as the order page's Total takes it. */
 const totalDigits = (raw: string) => raw.replace(/[₹,\s]/g, '');
@@ -100,7 +102,9 @@ export const ConfirmSheet: React.FC<{
   };
 
   const name = order ? firstName(order.name) || order.code : '';
-  const totalHint = workedTotal != null && amount === String(workedTotal) ? copy.totalWorkedOut
+  const code = order?.coupon?.code ?? null;
+  const live = code && book.coupons && couponState(code, book.coupons, new Date()) === 'live' ? code : null;
+  const totalHint = workedTotal != null && amount === String(workedTotal) ? <WorkedFrom code={live} />
     : !amount.trim() && missing ? copy.noPrice(`${productName(missing.product_id)} ${missing.size}`)
     : copy.totalHint;
   return (
@@ -118,7 +122,7 @@ export const ConfirmSheet: React.FC<{
     >
       {order && (
         <EnterConfirms run={confirm}>
-          <p className="adm-muted">{[order.code, copy.packs(order.packs), order.pincode].filter(Boolean).join(' · ')}</p>
+          <p className="adm-muted">{[order.code, copy.packs(order.packs), order.coupon?.code, order.pincode].filter(Boolean).join(' · ')}</p>
           <Field label={copy.phone} error={errors.phone} hint={match || undefined} action={<PasteButton onPaste={setPhone} />}>
             <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={copy.phonePlaceholder}
               onChange={(e) => { setPhone(e.target.value); setErrors((x) => ({ ...x, phone: undefined })); }} onBlur={() => digits && setPhone(formatPhone(digits))} />
