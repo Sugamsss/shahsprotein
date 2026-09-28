@@ -37,7 +37,7 @@ Database tests use pgTAP and need a local Supabase: `supabase test db`. Backend 
 
 ## Stack
 
-React 18, TypeScript, Vite, plain CSS and Lucide icons. Supabase handles the database, admin sign-in and the RPCs for orders, stock, coupons and the email list. Loops runs the email list and Resend sends the owners' sign-up alerts. Vercel hosts the site, with Vercel Web Analytics for page views.
+React 18, TypeScript, Vite, plain CSS and Lucide icons. Supabase handles the database, admin sign-in and the RPCs for orders, stock, coupons and the email list. Loops runs the email list and Resend sends the owners' sign-up alerts. Vercel hosts the site.
 
 ## Deploys
 
