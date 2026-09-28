@@ -48,6 +48,9 @@ export const localPayment = (amount: number | null, method: PaidMethod, note?: s
   return { id: `local-${now}`, amount, method, note: method === 'other' ? note ?? null : null, paid_at: now, created_at: now, by_name: null };
 };
 
+/** False for a payment shown before the server answered: it can't be removed yet. */
+export const isSaved = (p: Payment): boolean => !p.id.startsWith('local-');
+
 /** What "Mark paid" records: whatever is left, or no amount when there's no total. */
 export const restOf = (o: Order): number | null => (o.amount == null ? null : o.amount_due ?? o.amount);
 

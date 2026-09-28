@@ -24,12 +24,12 @@ export const paidWith = (method: PaidMethod, note?: string): OrderChanges =>
  */
 export const PaidChoices: React.FC<{
   onPick: (changes: OrderChanges) => void;
-  /** Move focus to UPI when shown (the P key). */
-  focusFirst?: boolean;
   /** UPI's button, e.g. for a sheet's initialFocus. */
   firstRef?: React.RefObject<HTMLButtonElement>;
   label?: string;
-}> = ({ onPick, focusFirst, firstRef, label = copy.question }) => {
+  /** Other's button, "Mark paid" unless this pick does something else (a part payment's "Save"). */
+  submitLabel?: string;
+}> = ({ onPick, firstRef, label = copy.question, submitLabel = copy.markPaid }) => {
   const [other, setOther] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -37,7 +37,6 @@ export const PaidChoices: React.FC<{
   const first = firstRef ?? ownFirst;
   const noteRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (focusFirst) first.current?.focus(); }, [focusFirst, first]);
   // They tapped Other to type, so the note takes focus (and the phone keyboard comes up).
   useEffect(() => { if (other) noteRef.current?.focus(); }, [other]);
 
@@ -67,7 +66,7 @@ export const PaidChoices: React.FC<{
       {other && (
         <form className="adm-paypick__other" noValidate onSubmit={submit}>
           <Field label={copy.noteLabel} error={error || null}
-            action={<button type="submit" className="adm-btn adm-btn--primary adm-btn--sm">{copy.markPaid}</button>}>
+            action={<button type="submit" className="adm-btn adm-btn--primary adm-btn--sm">{submitLabel}</button>}>
             <input ref={noteRef} className="adm-input" maxLength={60} autoComplete="off" enterKeyHint="done"
               value={note} placeholder={copy.notePlaceholder}
               onChange={(e) => { setNote(e.target.value); setError(''); }} />
