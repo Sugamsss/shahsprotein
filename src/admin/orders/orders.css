@@ -303,6 +303,8 @@
 
 .adm-od-cols { display: grid; gap: 12px; }
 .adm-field__control textarea.adm-input { min-height: 96px; padding: 12px 16px; resize: vertical; }
+/* "Use ₹1,180 from your prices" under the total it would fill. */
+.adm-od-use-total { margin-top: -6px; }
 .adm-od-fact { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
 .adm-od-fact span { color: var(--adm-ink-3); }
 .adm-od-reach { display: flex; flex-wrap: wrap; gap: 8px; }
