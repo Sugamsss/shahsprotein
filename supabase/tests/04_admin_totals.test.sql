@@ -71,9 +71,9 @@ select is(
     "to_confirm": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
     "to_send":    {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
     "on_the_way": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
-                   "unpaid_names":[]},
+                   "unpaid_names":[],"part_paid_names":[]},
     "to_collect": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
-                   "without_amount_names":[]},
+                   "without_amount_names":[],"part_paid_names":[]},
     "stale":      {"orders":0,"packs":0}
   }'::jsonb,
   'empty: every overall stage is zeros, the name lists are empty, and stale has no money keys'
@@ -88,7 +88,7 @@ select is(
 select is(
   (select jsonb_object_agg(w.key, w.value - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'])
    from jsonb_each(current_setting('test.empty')::jsonb -> 'weeks') w),
-  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0}'::jsonb)
+  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0,"part_payments":0}'::jsonb)
    from unnest(array['this', 'last', 'last_so_far']) k),
   'empty: every week is zeros'
 );
@@ -241,9 +241,9 @@ select is(
     "to_send":    {"orders":2,"packs":5,"amount":800,"without_amount":1,"paid":1,"unpaid_amount":0,
                    "amount_due":0,"part_paid":0},
     "on_the_way": {"orders":1,"packs":2,"amount":500,"without_amount":0,"paid":0,"unpaid_amount":500,
-                   "amount_due":500,"part_paid":0,"unpaid_names":["Sent"]},
+                   "amount_due":500,"part_paid":0,"unpaid_names":["Sent"],"part_paid_names":[]},
     "to_collect": {"orders":2,"packs":4,"amount":600,"without_amount":1,"paid":0,"unpaid_amount":600,
-                   "amount_due":600,"part_paid":0,"without_amount_names":["Owed"]},
+                   "amount_due":600,"part_paid":0,"without_amount_names":["Owed"],"part_paid_names":[]},
     "stale":      {"orders":1,"packs":9}
   }'::jsonb,
   'overall: orders, packs, amount, without amount, paid and unpaid amount per stage; no money on stale'
@@ -267,7 +267,7 @@ select is(
 
 select is(
   (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
-  '{"orders":6,"packs":20,"amount_in":1700,"paid_orders":2,"paid_without_amount":0}'::jsonb,
+  '{"orders":6,"packs":20,"amount_in":1700,"paid_orders":2,"paid_without_amount":0,"part_payments":0}'::jsonb,
   'this week: real orders only (not new, stale or cancelled); money in skips the cancelled order'
 );
 
@@ -359,9 +359,9 @@ select is(
     'to_collect', current_setting('test.names')::jsonb #> '{overall,to_collect}',
     'on_the_way', current_setting('test.names')::jsonb #> '{overall,on_the_way}'),
   '{"to_collect": {"orders":7,"packs":0,"amount":100,"without_amount":6,"paid":0,"unpaid_amount":100,
-                   "amount_due":100,"part_paid":0,"without_amount_names":["Meera","Tanvi","Farah"]},
+                   "amount_due":100,"part_paid":0,"without_amount_names":["Meera","Tanvi","Farah"],"part_paid_names":[]},
     "on_the_way": {"orders":4,"packs":0,"amount":0,"without_amount":4,"paid":1,"unpaid_amount":0,
-                   "amount_due":0,"part_paid":0,"unpaid_names":["Neha","Ravi"]}}'::jsonb,
+                   "amount_due":0,"part_paid":0,"unpaid_names":["Neha","Ravi"],"part_paid_names":[]}}'::jsonb,
   'names: first names, each once (first spelling wins), at most 3; to_collect by delivery date, '
   'on_the_way by created_at; counts stay per order and include the unnamed one'
 );

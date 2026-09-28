@@ -1277,6 +1277,12 @@ grant execute on function public.get_admin_overview() to authenticated;
 --   overall.<stage>.amount_due   ₹ still owed on the stage's orders that have
 --                                a total (0 for paid ones).
 --   overall.<stage>.part_paid    orders with a payment but not paid in full.
+--   overall.to_collect/on_the_way.part_paid_names
+--                                up to 3 first names of those, oldest first.
+--   weeks.*.part_payments        payments in the week that were part of a
+--                                split (the order isn't paid in full, or took
+--                                more than one payment). Home notes that part
+--                                payments count on the day they came in.
 -- Unchanged: paid_orders and paid_without_amount still count orders that
 -- became paid in full in the week (by orders.paid_at), and the stages, where
 -- "paid" means paid in full. So to_collect already holds every delivered
@@ -1380,6 +1386,17 @@ begin
           row_number() over (order by x.created_at, x.id)
         from staged x
         where x.stage = 'on_the_way' and x.paid_at is null and nullif(btrim(x.name), '') is not null
+        union all
+        -- Part paid: some money in, not all. Same order as the lists above.
+        select 'to_collect:part', split_part(btrim(x.name), ' ', 1),
+          row_number() over (order by x.status_changed_at, x.created_at, x.id)
+        from staged x
+        where x.stage = 'to_collect' and x.payments > 0 and nullif(btrim(x.name), '') is not null
+        union all
+        select 'on_the_way:part', split_part(btrim(x.name), ' ', 1),
+          row_number() over (order by x.created_at, x.id)
+        from staged x
+        where x.stage = 'on_the_way' and x.paid_at is null and x.payments > 0 and nullif(btrim(x.name), '') is not null
       ) n
       group by n.list, lower(n.first_name)
     ),
@@ -1416,6 +1433,20 @@ begin
             ) w
           )
           else '{}'::jsonb
+        end
+        -- Who of them paid part, so Home can say "Riya paid part."
+        || case
+          when st.stage in ('to_collect', 'on_the_way') then (
+            select jsonb_build_object('part_paid_names', coalesce(jsonb_agg(w.first_name order by w.rn), '[]'::jsonb))
+            from (
+              select wn.first_name, wn.rn
+              from waiting_names wn
+              where wn.list = st.stage || ':part'
+              order by wn.rn
+              limit 3
+            ) w
+          )
+          else '{}'::jsonb
         end as totals
       from stages st
       left join staged s on s.stage = st.stage
@@ -1442,7 +1473,11 @@ begin
     ),
     -- Money in: every payment on a not-cancelled order, by its own date.
     payments_in as (
-      select p.paid_at, coalesce(p.amount, 0) as amount, p.method
+      select p.paid_at, coalesce(p.amount, 0) as amount, p.method,
+        -- A part payment: its order isn't paid in full, or took more than one payment.
+        (o.paid_at is null or exists (
+          select 1 from public.order_payments q where q.order_id = p.order_id and q.id <> p.id
+        )) as part
       from public.order_payments p
       join public.orders o on o.id = p.order_id
       where o.status <> 'cancelled'
@@ -1500,6 +1535,11 @@ begin
               select count(*) from paid pd
               where pd.amount is null
                 and pd.paid_at >= w.starts_at and (w.ends_at is null or pd.paid_at < w.ends_at)
+            ),
+            'part_payments', (
+              select count(*) from payments_in pi
+              where pi.part
+                and pi.paid_at >= w.starts_at and (w.ends_at is null or pi.paid_at < w.ends_at)
             )
           )
           -- This week and last: the 7 days, Monday to Sunday, same rule.

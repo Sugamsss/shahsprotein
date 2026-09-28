@@ -237,6 +237,8 @@ export interface TotalsWeek {
   /** Orders paid in full in the week (by when the payments covered the total). */
   paid_orders: number;
   paid_without_amount: number;
+  /** Payments in the week that were part of a split. Home notes "Part payments count on the day they came in." */
+  part_payments: number;
 }
 export interface TotalsDay { date: string; orders: number; packs: number }
 /**
@@ -258,8 +260,9 @@ export interface Totals {
     to_confirm: TotalsOverall;
     to_send: TotalsOverall;
     /** First names, oldest first, at most 3. */
-    on_the_way: TotalsOverall & { unpaid_names: string[] };
-    to_collect: TotalsOverall & { without_amount_names: string[] };
+    /** unpaid_names includes the part paid; part_paid_names is just those (first names, oldest first, at most 3). */
+    on_the_way: TotalsOverall & { unpaid_names: string[]; part_paid_names: string[] };
+    to_collect: TotalsOverall & { without_amount_names: string[]; part_paid_names: string[] };
     /** They never came through, so no money. */
     stale: { orders: number; packs: number };
   };

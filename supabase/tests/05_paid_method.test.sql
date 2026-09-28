@@ -274,7 +274,7 @@ insert into public.orders (code, source, status, paid_at, paid_method, name, amo
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
 select is(
-  (public.get_admin_totals()::jsonb #> '{overall,on_the_way}') - array['unpaid_names'],
+  (public.get_admin_totals()::jsonb #> '{overall,on_the_way}') - array['unpaid_names', 'part_paid_names'],
   '{"orders":1,"packs":0,"amount":300,"without_amount":0,"paid":1,"unpaid_amount":0,"amount_due":0,"part_paid":0}'::jsonb,
   'totals: an order paid by cash counts as paid'
 );

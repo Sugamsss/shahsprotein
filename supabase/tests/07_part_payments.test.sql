@@ -163,8 +163,10 @@ select is(
 
 select is(current_setting('test.a1')::jsonb -> 'paid_at', 'null'::jsonb, 'part: not paid yet, so no paid_at');
 
+-- Dated, because everything in this test runs at one now(): two undated
+-- payments would tie, and ties fall back to the id.
 select set_config('test.a2', public.pay_admin_order_rest('00000000-0000-4000-a000-00000000000a',
-  '{"method":"cash"}')::text, true);
+  '{"method":"cash","paid_at":"2026-09-25T10:00:00+05:30"}')::text, true);
 
 select is(
   pg_temp.money(current_setting('test.a2')::json),
@@ -189,7 +191,7 @@ select throws_ok(
 -- ─── 4. Paying more than the total ──────────────────────
 
 select set_config('test.a3', public.add_admin_payment('00000000-0000-4000-a000-00000000000a',
-  '{"amount":"50","method":"other","note":" Tip "}')::text, true);
+  '{"amount":"50","method":"other","note":" Tip ","paid_at":"2026-09-26T10:00:00+05:30"}')::text, true);
 
 select is(
   pg_temp.money(current_setting('test.a3')::json),
@@ -438,16 +440,17 @@ select is(
   jsonb_build_object(
     'this', (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'orders', 'packs'],
     'last', (current_setting('test.totals')::jsonb #> '{weeks,last}') - array['starts_at', 'ends_at', 'days', 'orders', 'packs']),
-  '{"this": {"amount_in":1050,"paid_orders":2,"paid_without_amount":0,
+  '{"this": {"amount_in":1050,"paid_orders":2,"paid_without_amount":0,"part_payments":2,
              "amount_by_method":{"upi":300,"cash":250,"bank":500,"other":0,"not_recorded":0}},
-    "last": {"amount_in":750,"paid_orders":0,"paid_without_amount":0}}'::jsonb,
-  'weeks: each payment counts in its own week and by its own method; the cancelled advance is out'
+    "last": {"amount_in":750,"paid_orders":0,"paid_without_amount":0,"part_payments":1}}'::jsonb,
+  'weeks: each payment counts in its own week and by its own method; the cancelled advance is out; split payments count as part payments'
 );
 
 select is(
   (current_setting('test.totals')::jsonb #> '{overall,to_collect}') - 'without_amount_names',
-  '{"orders":2,"packs":0,"amount":1250,"without_amount":0,"paid":0,"unpaid_amount":1250,"amount_due":950,"part_paid":1}'::jsonb,
-  'to collect: the part-paid delivered order is in, with ₹600 of the ₹950 due on it'
+  '{"orders":2,"packs":0,"amount":1250,"without_amount":0,"paid":0,"unpaid_amount":1250,"amount_due":950,"part_paid":1,
+    "part_paid_names":["Ravi"]}'::jsonb,
+  'to collect: the part-paid delivered order is in, with ₹600 of the ₹950 due on it, and named'
 );
 
 select is(
