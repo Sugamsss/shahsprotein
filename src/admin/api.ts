@@ -1,6 +1,6 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
-  AdminMe, AdminUser, Coupon, CouponInput, CustomerList, EmailList, Order, OrderChanges,
+  AdminMe, AdminUser, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Order, OrderChanges,
   OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, PaymentInput, PayRestInput,
   PriceChange, Prices, RestorePayment, Totals,
 } from './types';
@@ -127,6 +127,8 @@ export const updateCoupon = (id: string, active: boolean, coupon: CouponInput) =
   rpc<Coupon>('update_admin_coupon', { id, active, ...coupon });
 export const setCouponActive = (id: string, active: boolean) =>
   rpc<Coupon>('set_admin_coupon_active', { id, active });
+/** One number's coupon orders (Add order's fill-in and one-time warning). Needs 20260928000002. */
+export const getCouponUses = (phone: string) => rpc<CouponUse[]>('get_admin_coupon_uses', { phone });
 
 export const getEmailList = () => rpc<EmailList>('get_admin_email_list');
 

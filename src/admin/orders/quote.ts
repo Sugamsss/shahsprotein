@@ -1,4 +1,4 @@
-import type { Coupon, OrderLine, Prices } from '../types';
+import type { Coupon, CouponUse, OrderLine, Prices } from '../types';
 
 // The worked-out "Total you quoted" (temp/prices-grid-plan.md, "How the total works").
 // Admin only: nothing here ever reaches the site, the order popup or the message.
@@ -43,4 +43,37 @@ export const quote = (
     total += quantity * price;
   }
   return { total };
+};
+
+// Coupon kinds (20260928000002): Repeat is a standing offer, One-time is once per phone number.
+
+/** The database has kinds: every coupon it lists carries one. False until the list loads, and on an older database. */
+export const hasKinds = (coupons: Coupon[] | null): boolean => !!coupons?.some((c) => c.kind);
+
+const find = (code: string, coupons: Coupon[]) => coupons.find((c) => c.code.toUpperCase() === code.trim().toUpperCase());
+
+/**
+ * What a new order for a returning number fills in: the coupon on their latest order that had a
+ * Repeat coupon, if it's live now. An older Repeat coupon never stands in for one that's off or
+ * ended. One-time coupons never fill in. `uses` newest first, as the server sends them.
+ */
+export const repeatCoupon = (uses: CouponUse[], coupons: Coupon[], now: Date): string | null => {
+  for (const use of uses) {
+    const coupon = find(use.coupon_code, coupons);
+    if (coupon?.kind === 'repeat') return couponState(coupon.code, coupons, now) === 'live' ? coupon.code : null;
+  }
+  return null;
+};
+
+/**
+ * The order where this number already used a One-time coupon (the latest), or null. Editing an
+ * order counts only other orders made before it, so the first use is never the one warned about.
+ */
+export const usedBefore = (
+  uses: CouponUse[], code: string, coupons: Coupon[], editing?: { id: string; created_at: string },
+): CouponUse | null => {
+  if (!code || find(code, coupons)?.kind !== 'one_time') return null;
+  const wanted = code.trim().toUpperCase();
+  return uses.find((u) => u.coupon_code.toUpperCase() === wanted
+    && (!editing || (u.order_id !== editing.id && Date.parse(u.created_at) < Date.parse(editing.created_at)))) ?? null;
 };

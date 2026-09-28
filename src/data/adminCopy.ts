@@ -487,6 +487,12 @@ export const adminCopy = {
     note: 'Note',
     noteOnlyYou: 'only you',
     notePlaceholder: 'Like: 2 packs or more',
+    kind: 'Kind',
+    kinds: { one_time: 'One-time', repeat: 'Repeat' },
+    kindHints: {
+      one_time: "Once per phone number. Add order tells you if a number uses it again.",
+      repeat: 'A standing offer. Add order fills it in for people who used it before.',
+    },
     save: 'Save coupon',
     saving: 'Saving…',
   },
@@ -613,6 +619,12 @@ export const adminCopy = {
     couponEnded: (code: string, day: string) => `${code} ended on ${day}, so it's base prices.`,
     /** A saved code that isn't in the list (deleted, or typed on the site). Kept as it is. */
     couponUnknown: (code: string) => `${code} isn't one of your coupons, so it's base prices.`,
+    /** A returning number's Repeat coupon, filled in by itself (new orders only). */
+    couponFilled: "Filled in: they've used it before.",
+    removeCoupon: 'Remove',
+    removeCouponLabel: (code: string) => `Remove ${code}`,
+    /** A One-time coupon this number already used. A heads-up only: saving still works. */
+    couponUsed: (day: string, orderCode: string) => `One-time, and this number used it on ${day} (${orderCode}).`,
     codeLabel: 'Code from their message',
     codeHint: "Only if their WhatsApp message has a code that isn't in the list. Leave it empty and we'll make one.",
     earlier: 'It was ordered earlier',
