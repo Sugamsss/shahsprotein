@@ -12,6 +12,7 @@ import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, Thumb, Via } from './OrderCard';
 import { itemsText, nextOf, normalisePhone, productName, sortLines } from './model';
 import { PaymentsBlock } from './PaymentsBlock';
+import { usePriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
 
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
@@ -160,7 +161,9 @@ const shownValue = (o: Order, key: FieldKey) =>
 /** A detail field that saves 600ms after typing stops, and on leaving it. Key it by order id. */
 const AutoField: React.FC<{
   order: Order; field: FieldKey; onSaved: (o: Order) => void; inputRef?: React.Ref<HTMLInputElement>;
-}> = ({ order, field, onSaved, inputRef }) => {
+  /** The total: the worked-out one, offered as a tap. Never filled in by itself, since this field saves. */
+  worked?: number | null;
+}> = ({ order, field, onSaved, inputRef, worked }) => {
   const [value, setValue] = useState(() => shownValue(order, field));
   const [status, setStatus] = useState('');
   const latest = useRef(order);
@@ -207,6 +210,8 @@ const AutoField: React.FC<{
     timer.current = window.setTimeout(() => void save(next), 600);
   };
   const isError = status !== '' && status !== copy.saved;
+  const shown = parseField(field, value);
+  const offer = worked != null && !('value' in shown && shown.value === worked);
   const common = {
     value, className: 'adm-input',
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
@@ -215,6 +220,7 @@ const AutoField: React.FC<{
   };
 
   return (
+    <>
     <Field
       label={{ phone: copy.phone, amount: copy.total, note: copy.note }[field]}
       optional={field === 'phone' ? undefined : copy.optional}
@@ -233,6 +239,14 @@ const AutoField: React.FC<{
         : <input {...common} ref={inputRef} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
             placeholder={field === 'phone' ? copy.phonePlaceholder : copy.totalPlaceholder} />}
     </Field>
+    {offer && (
+      // mousedown keeps the focus in the field, so its blur doesn't save what was typed first.
+      <button type="button" className="adm-text-btn adm-od-use-total" onMouseDown={(e) => e.preventDefault()}
+        onClick={() => { setValue(String(worked)); void save(String(worked)); }}>
+        {copy.useTotal(formatMoney(worked))}
+      </button>
+    )}
+    </>
   );
 };
 
@@ -257,6 +271,9 @@ export const DetailsCard: React.FC<{
   const me = useAdminMe();
   const suggestion = !o.phone && o.phone_suggestion;
   const [busy, setBusy] = useState(false);
+  // Prices in their own quiet calls: on an old database there's just no "Use ₹X".
+  const book = usePriceBook();
+  const worked = book.workOut(sortLines(o.lines), o.coupon?.code ?? null);
   const useSuggestion = async () => {
     if (!suggestion) return;
     setBusy(true);
@@ -271,7 +288,7 @@ export const DetailsCard: React.FC<{
           {copy.useSuggestion(formatPhone(suggestion.phone), formatDay(suggestion.created_at))}
         </button>
       )}
-      <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} />
+      <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
       <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
       {o.phone && (

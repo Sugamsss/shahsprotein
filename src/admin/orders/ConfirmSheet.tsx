@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDialogClose } from '../../components/ui/useDialog';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
@@ -6,7 +6,10 @@ import { Field } from '../parts';
 import { getOrders } from '../api';
 import { firstName, formatDay, formatPhone } from '../format';
 import type { Order, OrderChanges } from '../types';
-import { normalisePhone } from './model';
+import { normalisePhone, productName, sortLines } from './model';
+import { couponState } from './quote';
+import { usePriceBook } from './usePriceBook';
+import { WorkedFrom } from './Worked';
 
 /** "1,200" or "₹ 1200" → "1200", as the order page's Total takes it. */
 const totalDigits = (raw: string) => raw.replace(/[₹,\s]/g, '');
@@ -48,12 +51,25 @@ export const ConfirmSheet: React.FC<{
   const [amount, setAmount] = useState('');
   const [errors, setErrors] = useState<{ phone?: string; amount?: string }>({});
   const [match, setMatch] = useState('');
+  /** Typed in the total (even cleared it): the worked-out total stays out. */
+  const typed = useRef(false);
 
   useEffect(() => {
     setPhone(order?.phone ? formatPhone(order.phone) : '');
     setAmount(order?.amount != null ? String(order.amount) : '');
     setErrors({});
+    typed.current = false;
   }, [order]);
+
+  // The worked-out total fills in only when the order has none; a saved total is never touched.
+  // Loaded each time the sheet opens, in its own quiet calls.
+  const book = usePriceBook(!!order);
+  const worked = order && order.amount == null ? book.workOut(sortLines(order.lines), order.coupon?.code ?? null) : null;
+  const workedTotal = worked && 'total' in worked ? worked.total : null;
+  const missing = worked && 'missing' in worked ? worked.missing : null;
+  useEffect(() => {
+    if (workedTotal != null && !typed.current) setAmount(String(workedTotal));
+  }, [workedTotal]);
 
   // "Same number as Neha's order on Wed 23 Sep", 300ms after typing stops.
   const digits = normalisePhone(phone);
@@ -86,6 +102,11 @@ export const ConfirmSheet: React.FC<{
   };
 
   const name = order ? firstName(order.name) || order.code : '';
+  const code = order?.coupon?.code ?? null;
+  const live = code && book.coupons && couponState(code, book.coupons, new Date()) === 'live' ? code : null;
+  const totalHint = workedTotal != null && amount === String(workedTotal) ? <WorkedFrom code={live} />
+    : !amount.trim() && missing ? copy.noPrice(`${productName(missing.product_id)} ${missing.size}`)
+    : copy.totalHint;
   return (
     <AdminSheet
       isOpen={!!order}
@@ -101,14 +122,14 @@ export const ConfirmSheet: React.FC<{
     >
       {order && (
         <EnterConfirms run={confirm}>
-          <p className="adm-muted">{[order.code, copy.packs(order.packs), order.pincode].filter(Boolean).join(' · ')}</p>
+          <p className="adm-muted">{[order.code, copy.packs(order.packs), order.coupon?.code, order.pincode].filter(Boolean).join(' · ')}</p>
           <Field label={copy.phone} error={errors.phone} hint={match || undefined} action={<PasteButton onPaste={setPhone} />}>
             <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={copy.phonePlaceholder}
               onChange={(e) => { setPhone(e.target.value); setErrors((x) => ({ ...x, phone: undefined })); }} onBlur={() => digits && setPhone(formatPhone(digits))} />
           </Field>
-          <Field label={copy.total} optional={copy.optional} prefix="₹" error={errors.amount} hint={copy.totalHint}>
+          <Field label={copy.total} optional={copy.optional} prefix="₹" error={errors.amount} hint={totalHint}>
             <input className="adm-input" inputMode="numeric" enterKeyHint="go" autoComplete="off" value={amount} placeholder={copy.totalPlaceholder}
-              onChange={(e) => { setAmount(e.target.value); setErrors((x) => ({ ...x, amount: undefined })); }} />
+              onChange={(e) => { typed.current = true; setAmount(e.target.value); setErrors((x) => ({ ...x, amount: undefined })); }} />
           </Field>
         </EnterConfirms>
       )}

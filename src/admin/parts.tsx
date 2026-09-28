@@ -14,7 +14,8 @@ import { toAdminError } from './api';
 export const Field: React.FC<{
   label: string;
   children: React.ReactElement;
-  hint?: string;
+  /** Usually a sentence; the total's worked-out line also carries a bold code and a button. */
+  hint?: React.ReactNode;
   error?: string | null;
   /** A quiet word after the label: "optional", "only you". */
   optional?: string;

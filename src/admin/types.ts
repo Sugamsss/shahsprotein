@@ -316,6 +316,15 @@ export interface Coupon {
   last_used_at?: string | null;
 }
 
+/** A base price: one pack size of one product, whole rupees (20260928000001). */
+export interface PriceRow { product_id: string; size: string; price: number }
+/** A coupon's own price for a pack. No row: that pack uses the base price. */
+export interface CouponPriceRow extends PriceRow { coupon_id: string }
+/** get_admin_prices / set_admin_prices. Lists are [] when empty, never null. */
+export interface Prices { base: PriceRow[]; coupons: CouponPriceRow[] }
+/** One row to set: `coupon_id` null is the base price; `price` null deletes that row. */
+export interface PriceChange { coupon_id: string | null; product_id: string; size: string; price: number | null }
+
 export interface CouponInput {
   description: string;
   expires_at: string | null;

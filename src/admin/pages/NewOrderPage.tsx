@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IndianRupee, Instagram, Minus, Phone, Plus, Trash2, User, X } from 'lucide-react';
+// Not Undo2: the site's order popup uses it, and sharing it would move it out of the popup's chunk.
+import { IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { adminCopy } from '../../data/adminCopy';
@@ -8,7 +9,7 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
 import { getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
-import { formatMoney, istDateValue } from '../format';
+import { formatDay, formatMoney, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
@@ -16,7 +17,10 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
-import { cleanPastedPhone, normalisePhone, plainPhone } from '../orders/model';
+import { cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
+import { couponState } from '../orders/quote';
+import { usePriceBook } from '../orders/usePriceBook';
+import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
 import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
@@ -50,6 +54,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const toast = useToast();
   const { reload: reloadCounts } = useOverview();
   const stock = useRpc(getStock, []);
+  // Its own quiet calls: without them (an old database, a failure) there's no coupon picker and the
+  // total is typed, as before. Edit still sends the order's coupon back unchanged.
+  const book = usePriceBook();
 
   const [qty, setQty] = useState<Record<string, number>>(() =>
     Object.fromEntries((order?.lines ?? []).map((l) => [`${l.product_id}|${l.size}`, l.quantity])));
@@ -63,10 +70,15 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [paidMethod, setPaidMethod] = useState<PaidMethod | ''>('');
   const [paidNote, setPaidNote] = useState('');
   const [amount, setAmount] = useState(order?.amount != null ? String(order.amount) : '');
+  // 'auto' follows the worked-out total; any typing makes it 'manual' for good. Edit keeps what was saved.
+  const [totalMode, setTotalMode] = useState<'auto' | 'manual'>(order ? 'manual' : 'auto');
+  // '' is no coupon. A saved code stays as it was, even one that's no longer in the list.
+  const [coupon, setCoupon] = useState(order?.coupon?.code ?? '');
+  const couponInput = useRef<HTMLSelectElement>(null);
   const [note, setNote] = useState(order?.note ?? '');
   const [code, setCode] = useState(typedCode.toUpperCase().replace(/^(#|SN-)/, ''));
   const [when, setWhen] = useState({ date: '', time: '' });
-  const [shown, setShown] = useState({ note: !!order?.note, code: !!typedCode, earlier: false });
+  const [shown, setShown] = useState({ note: !!order?.note, code: !!typedCode, earlier: false, coupon: !!order?.coupon });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -77,6 +89,14 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
   const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);
+  const lines = PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
+
+  const worked = book.workOut(lines, coupon || null);
+  const workedTotal = worked && 'total' in worked ? worked.total : null;
+  const missing = worked && 'missing' in worked ? worked.missing : null;
+  const total = totalMode === 'auto' ? (workedTotal != null ? String(workedTotal) : '') : amount;
+  const typedTotal = /^\d+$/.test(total.replace(/[₹,\s]/g, '')) ? Number(total.replace(/\D/g, '')) : null;
+  const couponNow = coupon && book.coupons ? couponState(coupon, book.coupons, new Date()) : null;
   const linesChanged = order !== null && PACKS.some(({ key }) =>
     (qty[key] ?? 0) !== (order.lines.find((l) => `${l.product_id}|${l.size}` === key)?.quantity ?? 0));
 
@@ -125,7 +145,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   if (!via) problems.via = copy.errors.via;
   if (pincode.trim() && !PINCODE.test(pincode.trim())) problems.pincode = copy.errors.pincode;
   if (phone.trim() && !digits) problems.phone = orderCopy.phoneError;
-  if (amount.trim() && !/^\d+$/.test(amount.replace(/[₹,\s]/g, ''))) problems.amount = orderCopy.totalError;
+  if (total.trim() && typedTotal == null) problems.amount = orderCopy.totalError;
   if (!order && paid && !paidMethod) problems.paidMethod = adminCopy.paidBy.pickOne;
   if (!order && paid && paidMethod === 'other' && !paidNote.trim()) problems.paidNote = adminCopy.paidBy.noteMissing;
   const errors: Errors = attempt ? { ...problems, form: formError || undefined } : {};
@@ -140,11 +160,13 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       phone: digits,
       pincode: pincode.trim() || null,
       note: note.trim() || null,
-      amount: amount.trim() ? Number(amount.replace(/\D/g, '')) : null,
-      lines: PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] })),
+      amount: typedTotal,
+      lines,
+      // save_admin_order has always taken `coupon`, so this works on the old database too.
       ...(order
-        ? { coupon: order.coupon?.code ?? null }
+        ? { coupon: coupon || null }
         : {
+            ...(coupon && { coupon }),
             status, paid,
             ...(paid && paidMethod && { paid_method: paidMethod }),
             ...(paid && paidMethod === 'other' && { paid_note: paidNote.trim() }),
@@ -299,8 +321,44 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     </section>
   );
 
+  // Coupons page order: in use first, then off and ended under "Not in use".
+  const inUse = (book.coupons ?? []).filter((c) => couponState(c.code, book.coupons ?? [], new Date()) === 'live');
+  const notInUse = (book.coupons ?? []).filter((c) => !inUse.includes(c));
+  const picked = book.coupons?.find((c) => c.code.toUpperCase() === coupon.toUpperCase());
+  const couponHint = couponNow === 'off' ? copy.couponOff(coupon)
+    : couponNow === 'expired' && picked?.expires_at ? copy.couponEnded(coupon, formatDay(picked.expires_at))
+    : couponNow === 'unknown' ? copy.couponUnknown(coupon)
+    : undefined;
+
+  // Under Total: how it was worked out, or the worked-out total to go back to, or why there's none.
+  const paidSoFar = order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : '';
+  let workedLine: React.ReactNode = null;
+  if (totalMode === 'auto' && workedTotal != null) {
+    workedLine = <WorkedFrom code={couponNow === 'live' ? coupon : null} />;
+  } else if (totalMode === 'manual' && workedTotal != null && workedTotal !== typedTotal) {
+    const money = formatMoney(workedTotal);
+    const [before] = orderCopy.workedIs(money, !!order).split(money);
+    workedLine = (
+      <span className="adm-worked">
+        {before}<b>{money}</b>
+        <button type="button" className="adm-text-btn" aria-label={orderCopy.useThatLabel(money)}
+          onClick={() => { dirty.current = true; setTotalMode('auto'); }}>
+          <RotateCcw size={14} strokeWidth={2} aria-hidden="true" />{orderCopy.useThat}
+        </button>
+      </span>
+    );
+  } else if (!total.trim() && missing) {
+    workedLine = orderCopy.noPrice(`${productName(missing.product_id)} ${missing.size}`);
+  }
+  // Without prices this is exactly the old hint: "₹750 paid so far", or nothing.
+  const totalHint = workedLine ? <>{paidSoFar && `${paidSoFar}. `}{workedLine}</> : paidSoFar || undefined;
+
   const more = (key: keyof typeof shown, label: string) => !shown[key] && (
-    <button type="button" className="adm-text-btn" onClick={() => setShown({ ...shown, [key]: true })}>
+    <button type="button" className="adm-text-btn" onClick={() => {
+      setShown({ ...shown, [key]: true });
+      // The link goes away, so the coupon field takes the focus (the code is all it's for).
+      if (key === 'coupon') requestAnimationFrame(() => couponInput.current?.focus());
+    }}>
       <Plus size={16} strokeWidth={1.75} aria-hidden="true" />{label}
     </button>
   );
@@ -308,10 +366,26 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     <section className="adm-of__section adm-of--extras" aria-labelledby={`${id}-extras`}>
       <h2 id={`${id}-extras`} className="adm-of__h">{copy.ifYouHave}</h2>
       <div className="adm-card adm-form">
+        {/* The cause above the effect: the coupon sits over the total it changes. */}
+        {book.ready && shown.coupon && (
+          <Field label={copy.coupon} hint={couponHint}>
+            <select ref={couponInput} className={`adm-input adm-select${coupon ? '' : ' is-none'}`} value={coupon}
+              onChange={(e) => edit(setCoupon)(e.target.value)}>
+              <option value="">{copy.noCoupon}</option>
+              {couponNow === 'unknown' && <option value={coupon}>{coupon}</option>}
+              {inUse.map((c) => <option key={c.id} value={c.code}>{c.code}</option>)}
+              {notInUse.length > 0 && (
+                <optgroup label={copy.notInUse}>
+                  {notInUse.map((c) => <option key={c.id} value={c.code}>{c.code}</option>)}
+                </optgroup>
+              )}
+            </select>
+          </Field>
+        )}
         {/* Editing an order with money in: say how much, so a new total's due or extra is no surprise. */}
-        <Field label={orderCopy.total} prefix="₹" error={errors.amount}
-          hint={order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : undefined}>
-          <input className="adm-input" inputMode="numeric" autoComplete="off" value={amount} placeholder={orderCopy.totalPlaceholder} onChange={(e) => edit(setAmount)(e.target.value)} />
+        <Field label={orderCopy.total} prefix="₹" error={errors.amount} hint={totalHint}>
+          <input className="adm-input" inputMode="numeric" autoComplete="off" value={total} placeholder={orderCopy.totalPlaceholder}
+            onChange={(e) => { setTotalMode('manual'); edit(setAmount)(e.target.value); }} />
         </Field>
         {shown.note && (
           <Field label={orderCopy.note}>
@@ -331,6 +405,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           </div>
         )}
         <div className="adm-of__links">
+          {book.ready && more('coupon', copy.addCoupon)}
           {more('note', copy.addNote)}
           {!order && more('code', copy.addCode)}
           {!order && more('earlier', copy.earlier)}

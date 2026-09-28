@@ -65,10 +65,12 @@
 .adm-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .adm-btn--tonal { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
 .adm-btn--tonal:active { background: var(--adm-accent-tint-press); }
+/* Left-aligned text: a label that wraps on a 320px phone stays beside its icon, not centred under it. */
 .adm-text-btn {
   position: relative; display: inline-flex; align-items: center; gap: 6px; justify-self: start;
-  min-height: 36px; color: var(--color-text-accent); font-weight: 600;
+  min-height: 36px; color: var(--color-text-accent); font-weight: 600; text-align: start;
 }
+.adm-text-btn > svg { flex: none; }
 .adm-text-btn::after { content: ''; position: absolute; inset: -4px -8px; }
 .adm-text-btn:active { opacity: 0.7; }
 .adm-pill {
@@ -87,6 +89,12 @@
 .adm-field__label small { margin-left: 4px; color: var(--adm-ink-3); font-size: inherit; font-weight: 400; }
 .adm-field__hint, .adm-field__error { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-field__error { color: var(--color-error-text); }
+/* The total's worked-out line (admin prices): "From FAMILY prices, before delivery." or "… it's ₹890 · Use that". */
+.adm-worked svg { display: inline; margin: -2px 6px 0 0; vertical-align: middle; }
+.adm-worked b { color: var(--adm-ink-2); font-weight: 600; }
+.adm-worked .adm-text-btn { display: inline-flex; gap: 4px; min-height: 0; margin-left: 10px; font-size: var(--adm-text-small); vertical-align: baseline; white-space: nowrap; }
+.adm-worked .adm-text-btn svg { margin: 0; }
+.adm-worked .adm-text-btn::after { inset: -12px -8px; }
 .adm-input--mono { font-family: var(--font-family-mono); letter-spacing: 0.06em; text-transform: uppercase; }
 .adm-input[readonly] { background: var(--adm-well); color: var(--adm-ink-2); }
 @media (min-width: 960px) { .adm-page--list { max-width: 720px; margin-inline: auto; } }
