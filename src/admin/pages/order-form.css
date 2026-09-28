@@ -49,6 +49,17 @@
 @media (hover: hover) { .adm-of__contacts:hover { background: var(--adm-accent-tint-press); } }
 .adm-of__contacts:active { background: var(--adm-accent-tint-press); transform: scale(0.94); }
 
+/* "Use ₹1,180 from your prices" belongs to the total above it. */
+.adm-of__use-total { margin-top: -8px; }
+
+/* Remove the coupon: a quiet round button after the code, clears it in one tap. */
+.adm-of__clear {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
+  color: var(--adm-ink-2);
+}
+@media (hover: hover) { .adm-of__clear:hover { background: var(--adm-well); } }
+.adm-of__clear:active { background: var(--adm-well); transform: scale(0.94); }
+
 /* Which of a contact's numbers: plain rows. */
 .adm-of__numbers { display: grid; }
 .adm-of__numbers button { min-height: 56px; padding: 0 4px; color: var(--adm-ink-1); text-align: left; font-size: var(--adm-text-head); font-weight: 600; font-variant-numeric: tabular-nums; }

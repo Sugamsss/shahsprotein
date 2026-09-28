@@ -359,6 +359,13 @@ export const adminCopy = {
     totalPlaceholder: 'What you told them',
     totalHint: 'Only you two see this. It never shows on the site.',
     totalError: 'Just the number, like 1180.',
+    // The worked-out total (admin only): packs × the coupon's price, else the base price.
+    /** Under a total that filled itself in. */
+    totalWorkedOut: "Worked out from your prices. Delivery isn't in it.",
+    /** A tap to put the worked-out total in, when the field says something else. */
+    useTotal: (amount: string) => `Use ${amount} from your prices`,
+    /** When a pack has no price, so there's no total rather than a wrong one. */
+    noPrice: (item: string) => `No price for ${item} yet, so no total.`,
     note: 'Note',
     notePlaceholder: 'Anything to remember',
     optional: 'optional',
@@ -566,6 +573,16 @@ export const adminCopy = {
     ifYouHave: 'If you have them',
     addNote: 'Add a note',
     addCode: 'Use a code from their message',
+    addCoupon: 'Add a coupon',
+    coupon: 'Coupon',
+    couponClear: 'Remove the coupon',
+    couponError: 'A coupon code is 3 to 24 letters, numbers or dashes.',
+    /** One quiet line under the coupon when it won't take anything off. */
+    couponState: {
+      off: 'This coupon is off, so nothing comes off.',
+      expired: 'This coupon has expired, so nothing comes off.',
+      unknown: "There's no coupon with this code, so nothing comes off.",
+    },
     codeLabel: 'Code from their message',
     codeHint: "Only if their WhatsApp message has a code that isn't in the list. Leave it empty and we'll make one.",
     earlier: 'It was ordered earlier',
