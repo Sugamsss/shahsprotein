@@ -212,6 +212,98 @@ export const adminCopy = {
     pickOne: 'Pick how they paid.',
   },
 
+  /**
+   * Part payments (design B, temp/part-payments-brief.md). Money in the admin is
+   * private, so ₹ is fine here. Amounts arrive already formatted ("₹750").
+   */
+  payments: {
+    // The order page's money block.
+    notPaidYet: 'Not paid yet',
+    due: (amount: string) => `${amount} due`,
+    paidInFull: 'Paid in full',
+    /** "₹750 paid" in bold, then "of ₹1,000" quieter. */
+    paid: (amount: string) => `${amount} paid`,
+    ofTotal: (total: string) => `of ${total}`,
+    /** Paid over the total: "✓ Paid ₹50 extra" … "₹1,050 of ₹1,000". */
+    paidShort: 'Paid',
+    extra: (amount: string) => `${amount} extra`,
+    paidOfTotal: (paid: string, total: string) => `${paid} of ${total}`,
+    /** Under the bar of an order paid once: "Paid on Sat 26 Sep · UPI". */
+    paidOn: (day: string, how: string | null) => `Paid on ${day}${how ? ` · ${how}` : ''}`,
+    /** A receipt row: "UPI · Thu 24 Sep". */
+    row: (how: string, day: string) => `${how} · ${day}`,
+    /** A payment from before methods were recorded. */
+    noMethod: 'Not recorded',
+    removeLabel: (amount: string, how: string) => `Remove ${amount} ${how} payment`,
+    partPayment: 'Part payment',
+    markPaid: 'Mark paid',
+    markNotPaid: 'Mark not paid',
+    /** Screen reader name of the bar. */
+    barLabel: (paid: string, total: string) => `${paid} paid of ${total}`,
+    /** The status card's hint on a delivered, part-paid order. */
+    restToCome: 'Delivered. The rest is still to come.',
+
+    // "Part payment from Riya".
+    partTitle: (name: string) => `Part payment from ${name}`,
+    partSubNone: (code: string, total: string) => `${code} · ${total} in all, nothing paid yet`,
+    partSubSome: (code: string, paid: string, total: string) => `${code} · ${paid} of ${total} paid already`,
+    amountLabel: 'How much came in?',
+    stillDue: (amount: string) => `${amount} will still be due.`,
+    allOfIt: "That's all of it.",
+    over: (amount: string) => `That's ${amount} more than the total.`,
+    /** A quick pick: "½ · ₹500". */
+    pick: (fraction: string, amount: string) => `${fraction} · ${amount}`,
+    pickLabel: 'Quick amounts',
+    howPaidAmount: (amount: string) => `How did they pay the ${amount}?`,
+    amountMissing: 'Add an amount first.',
+    amountWrong: 'Just the number, like 500.',
+
+    // "Mark paid" = pay the rest.
+    restTitle: (name: string, due: string) => `How did ${name} pay the ${due}?`,
+    restSub: (code: string, paid: string, total: string) => `${code} · ${paid} of ${total} paid already`,
+
+    // Toasts, each with Undo.
+    toasts: {
+      /** "₹500 from Riya · UPI. ₹500 still due." */
+      part: (amount: string, name: string, how: string | null, due: string | null) =>
+        `${amount} from ${name}${how ? ` · ${how}` : ''}.${due ? ` ${due} still due.` : ''}`,
+      /** "Riya's order is paid in full · Cash" */
+      paidInFull: (name: string, how: string | null) => `${name}'s order is paid in full${how ? ` · ${how}` : ''}`,
+      /** "Removed ₹250 · Cash" */
+      removed: (amount: string | null, how: string | null) =>
+        ['Removed', [amount, how].filter(Boolean).join(' · ')].filter(Boolean).join(' '),
+      /** "Riya's order is marked not paid. 2 payments removed." */
+      notPaid: (name: string, removed: number) =>
+        `${name}'s order is marked not paid.${removed > 1 ? ` ${removed} payments removed.` : ''}`,
+    },
+
+    // Cards and lists.
+    chip: {
+      /** "₹900 · Not paid" */
+      notPaid: (total: string | null) => [total, 'Not paid'].filter(Boolean).join(' · '),
+      /** "₹1,200 · ₹600 due" */
+      partPaid: (total: string, due: string) => `${total} · ${due} due`,
+      /** "₹1,180 · Paid" */
+      paid: (total: string | null) => [total, 'Paid'].filter(Boolean).join(' · '),
+      /** "₹1,000 · Paid, ₹50 extra" */
+      extra: (total: string, extra: string) => `${total} · Paid, ${extra} extra`,
+      /** To collect: "₹640 to collect" / "₹250 left to collect". */
+      toCollect: (amount: string) => `${amount} to collect`,
+      leftToCollect: (amount: string) => `${amount} left to collect`,
+    },
+    /** Done: "Delivered · Paid, ₹50 extra" */
+    doneExtra: (extra: string) => `Delivered · Paid, ${extra} extra`,
+    /** The To collect lane's line. */
+    collectHint: 'Delivered, not paid in full yet.',
+
+    // Home.
+    /** "Riya paid part." / "Riya and Om paid part." */
+    paidPart: (names: string[]) => `${names.join(' and ')} paid part.`,
+    /** "Aarav hasn't paid." / "Aarav and Om haven't paid." */
+    hasntPaid: (names: string[]) => `${names.join(' and ')} ${names.length > 1 ? "haven't" : "hasn't"} paid.`,
+    weekNote: 'Part payments count on the day they came in.',
+  },
+
   /** Orders filtered to one product (a Home product card opens it). */
   ordersProduct: {
     clear: (name: string) => `Showing ${name} orders. Clear the filter`,
