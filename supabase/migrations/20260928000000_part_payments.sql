@@ -27,8 +27,11 @@
 --    part-paid orders. One existing key changes meaning, as the brief asks:
 --    get_admin_totals() weeks.*.amount_in (and amount_by_method) now count
 --    each payment in the week it came in, not the order's whole amount on the
---    day it was marked paid. Until someone records a part payment, the two
---    give the same numbers (the backfill copies the old ones exactly).
+--    day it was marked paid. Right after the migration the two give the same
+--    numbers (the backfill copies the old ones exactly). They part ways when
+--    someone records a part payment, or changes the total of a paid order:
+--    the payments keep what actually came in, so a lower total shows as extra
+--    and a higher one leaves money due (the order goes back to To collect).
 --
 -- The rules the triggers keep:
 --   - An order with no total can have only payments with no amount. Typing a
@@ -284,8 +287,10 @@ $$;
 
 revoke all on function public.order_check_payment_amount(jsonb) from public, anon, authenticated;
 
--- When the money came in: an ISO timestamp, or null for now. Back-dating is
--- fine; the future isn't (five minutes of slack for a fast phone clock).
+-- When the money came in: an ISO date-time (2026-09-24T10:00:00+05:30), or
+-- null for now. Back-dating is fine; the future isn't (five minutes of slack
+-- for a fast phone clock). Only real dates: the words Postgres also reads as
+-- times ('yesterday', 'epoch', '-infinity') are refused.
 create or replace function public.order_check_payment_date(p_value jsonb)
 returns timestamptz
 language plpgsql
@@ -299,14 +304,17 @@ begin
     return timezone('utc', now());
   end if;
 
-  begin
-    v_at := (p_value #>> '{}')::timestamptz;
-  exception
-    when others then
-      v_at := null;
-  end;
+  if jsonb_typeof(p_value) = 'string'
+     and (p_value #>> '{}') ~ '^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}(:?\d{2})?)?$' then
+    begin
+      v_at := (p_value #>> '{}')::timestamptz;
+    exception
+      when others then
+        v_at := null;
+    end;
+  end if;
 
-  if jsonb_typeof(p_value) <> 'string' or v_at is null then
+  if v_at is null or not isfinite(v_at) then
     raise exception using message = 'That date doesn''t look right.', errcode = '22023';
   end if;
 
@@ -1028,6 +1036,9 @@ begin
       end if;
       -- 0 is allowed back: it's the rest of a ₹0 order.
       v_amount := public.order_check_amount(v_item -> 'amount');
+      if v_amount is null then
+        raise exception using message = 'Type how much they paid.', errcode = '22023';
+      end if;
     end if;
 
     v_method := public.order_check_paid_method(v_item -> 'method');

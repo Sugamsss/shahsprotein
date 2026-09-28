@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(56);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
@@ -299,6 +299,13 @@ select throws_ok(
 select throws_ok(
   $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":100,"method":"upi","paid_at":"soon"}')$$,
   '22023', 'That date doesn''t look right.', 'refused: a date that isn''t one');
+select throws_ok(
+  $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":100,"method":"upi","paid_at":"-infinity"}')$$,
+  '22023', 'That date doesn''t look right.', 'refused: a word Postgres reads as a time, not a date');
+select throws_ok(
+  $$select public.restore_admin_payments('00000000-0000-4000-a000-00000000000a',
+    '[{"id":"00000000-0000-4000-b000-000000000008","amount":"","method":"upi","paid_at":"2026-09-01T00:00:00Z"}]')$$,
+  '22023', 'Type how much they paid.', 'refused: putting back an empty amount on an order with a total');
 select throws_ok(
   $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":100,"method":"upi","by":"x"}')$$,
   '22023', 'Unknown field: by.', 'refused: an unknown key');
