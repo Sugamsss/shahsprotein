@@ -5,7 +5,7 @@ import { downloadCsv, toCsv } from '../csv';
 import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
 import { Segmented, SheetForm } from '../parts';
-import { itemsText, paidByText, productName } from './model';
+import { itemsText, paymentsByText, productName } from './model';
 
 const copy = adminCopy.exportOrders;
 type Range = keyof typeof copy.ranges;
@@ -20,10 +20,17 @@ const fromOf = (range: Range): string | undefined => {
 const statusWord = (o: Order) =>
   o.status === 'cancelled' ? adminCopy.orders.cancelled : adminCopy.order.steps[o.status];
 
+const paidWord = { paid: adminCopy.orders.paid, part_paid: adminCopy.orders.partPaid, not_paid: adminCopy.orders.notPaid };
+
+/**
+ * Paid on is when it was paid in full. Amount paid and Due are blank when there's no
+ * total (an order paid with no total is still Paid); paying over shows as more paid than quoted.
+ */
 const row = (o: Order) => [
   o.code, istDateValue(o.created_at), formatTime(o.created_at), o.name, o.phone && formatPhone(o.phone), o.pincode,
   itemsText(o), o.packs, o.coupon?.code, adminCopy.orders.via[o.source], statusWord(o),
-  o.paid ? adminCopy.orders.paid : adminCopy.orders.notPaid, o.paid_at && istDateValue(o.paid_at), paidByText(o), o.amount, o.note,
+  paidWord[o.payment_state], o.paid_at && istDateValue(o.paid_at), paymentsByText(o),
+  o.amount, o.amount != null ? o.amount_paid : null, o.amount_due, o.note,
 ];
 
 /** Export orders (spec 2.5): every order in the range, newest first, paged with next_before. */

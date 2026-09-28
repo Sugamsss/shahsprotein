@@ -101,7 +101,7 @@ select is(
 
 select is(
   (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
-  '{"orders":1,"packs":0,"amount_in":2550,"paid_orders":7,"paid_without_amount":1}'::jsonb,
+  '{"orders":1,"packs":0,"amount_in":2550,"paid_orders":7,"paid_without_amount":1,"part_payments":0}'::jsonb,
   'this week''s other keys keep their meaning: the no-amount order is still in paid_orders and paid_without_amount'
 );
 
@@ -116,7 +116,7 @@ select is(
 select is(
   (select array_agg(k order by k) from jsonb_object_keys(current_setting('test.totals')::jsonb #> '{weeks,this}') k),
   array['amount_by_method', 'amount_in', 'by_product', 'days', 'ends_at', 'orders', 'packs',
-        'paid_orders', 'paid_without_amount', 'starts_at'],
+        'paid_orders', 'paid_without_amount', 'part_payments', 'starts_at'],
   'this week: the keys from 20260926000006, plus amount_by_method'
 );
 

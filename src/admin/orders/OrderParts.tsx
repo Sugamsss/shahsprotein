@@ -1,5 +1,5 @@
-import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Check, ClipboardPaste, Copy, Globe, IndianRupee, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, ClipboardPaste, Copy, Globe, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
@@ -7,12 +7,12 @@ import { useAdminMe } from '../auth';
 import { firstName, formatAgo, formatDay, formatMoney, formatPhone, formatTime } from '../format';
 import { AdminLink } from '../router';
 import { Field } from '../parts';
-import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, Thumb, Via } from './OrderCard';
-import { itemsText, nextOf, normalisePhone, paidByText, productName, sortLines } from './model';
-import { PaidChoices } from './PaidMethod';
+import { itemsText, nextOf, normalisePhone, productName, sortLines } from './model';
+import { PaymentsBlock } from './PaymentsBlock';
+import type { PaymentActions } from './usePayments';
 
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
@@ -51,32 +51,26 @@ const STEPS: Exclude<OrderStatus, 'cancelled'>[] = ['new', 'confirmed', 'sent', 
 
 const hintOf = (o: Order) => {
   if (o.stale) return copy.staleHint(formatAgo(o.created_at));
-  if (o.status === 'delivered') return o.paid ? copy.hints.done : copy.hints.delivered;
+  if (o.status === 'delivered') {
+    if (o.paid) return copy.hints.done;
+    return o.payment_state === 'part_paid' ? adminCopy.payments.restToCome : copy.hints.delivered;
+  }
   return copy.hints[o.status as keyof typeof copy.hints];
 };
 
-/** What the P key does in the popup: shows "How did they pay?" with focus on UPI. */
-export interface PaidRowHandle { choose: () => void }
-
-/**
- * Steps, the hint under them, and the Paid switch. Switching Paid on shows how
- * they paid and saves nothing until one is picked; off (or Esc) hides it again.
- * Key it by order id, so the choices never carry over to another order.
- */
-export const StatusCard: React.FC<{ order: Order; change: Change; paidRef?: React.Ref<PaidRowHandle> }> = ({ order: o, change, paidRef }) => {
-  const [choosing, setChoosing] = useState<false | 'shown' | 'focus'>(false);
-  const card = useRef<HTMLElement>(null);
-  useImperativeHandle(paidRef, () => ({ choose: () => setChoosing('focus') }), []);
-  const open = !!choosing && !o.paid;
-  const hide = () => {
-    setChoosing(false);
-    card.current?.querySelector<HTMLElement>('.adm-paidrow .adm-switch')?.focus();
-  };
+/** Steps, the hint under them, and the order's money. Key it by order id. */
+export const StatusCard: React.FC<{
+  order: Order;
+  change: Change;
+  payments: PaymentActions;
+  /** Opens "How did they pay?" for whatever is left. */
+  onPayRest: (order: Order) => void;
+}> = ({ order: o, change, payments, onPayRest }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
   const lastChange = o.status_changed_at;
   return (
-    <section className="adm-card adm-od-status" ref={card}>
+    <section className="adm-card adm-od-status">
       <div className={`adm-steps${cancelled ? ' is-off' : ''}`} data-at={Math.max(at, 0)} role="group" aria-label={copy.stepsLabel}>
         <span className="adm-steps__fill" aria-hidden="true" />
         {STEPS.map((s, i) => (
@@ -97,24 +91,7 @@ export const StatusCard: React.FC<{ order: Order; change: Change; paidRef?: Reac
       ) : (
         <p className="adm-steps__hint">{hintOf(o)}</p>
       )}
-      <div className="adm-paidrow">
-        <span className={`adm-paidrow__icon${o.paid ? ' is-paid' : ''}`} aria-hidden="true"><IndianRupee size={18} /></span>
-        <span>
-          <b>{o.paid ? adminCopy.orders.paid : copy.notPaidYet}</b>
-          <small>
-            {o.paid && o.paid_at ? copy.paidOn(formatDay(o.paid_at), paidByText(o))
-              : open ? adminCopy.paidBy.question : o.status === 'new' ? copy.payOnDelivery : copy.turnOnWhenPaid}
-          </small>
-        </span>
-        <Switch checked={o.paid || open} label={adminCopy.orders.paid}
-          onChange={(on) => (o.paid ? change(o, { paid: false }) : setChoosing(on && 'shown'))} />
-      </div>
-      {open && (
-        <div className="adm-paychoose"
-          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); hide(); } }}>
-          <PaidChoices focusFirst={choosing === 'focus'} onPick={(changes) => { setChoosing(false); change(o, changes); }} />
-        </div>
-      )}
+      <PaymentsBlock order={o} payments={payments} onPayRest={onPayRest} />
     </section>
   );
 };
@@ -243,7 +220,10 @@ const AutoField: React.FC<{
       optional={field === 'phone' ? undefined : copy.optional}
       prefix={field === 'amount' ? '₹' : undefined}
       error={isError ? status : null}
-      hint={status || (field === 'amount' ? copy.totalHint : undefined)}
+      // With money already in, the total says so, so a new total never surprises (due or extra).
+      hint={status || (field === 'amount'
+        ? (order.amount_paid > 0 ? `${adminCopy.payments.paidSoFar(formatMoney(order.amount_paid))}. ${copy.totalHint}` : copy.totalHint)
+        : undefined)}
       action={field === 'phone' && (order.phone
         ? <CopyButton text={formatPhone(order.phone)} />
         : <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />)}
@@ -341,8 +321,10 @@ export const PrimaryAction: React.FC<{ order: Order; change: Change; onNext?: ()
   );
 };
 
-/** ⋯: edit, copy, cancel, delete (with its own confirm). */
-export const OrderMenu: React.FC<{ order: Order; change: Change; onDeleted: () => void; up?: boolean }> = ({ order: o, change, onDeleted, up }) => {
+/** ⋯: edit, copy, mark not paid (when money came in), cancel, delete (with its own confirm). */
+export const OrderMenu: React.FC<{
+  order: Order; change: Change; payments: PaymentActions; onDeleted: () => void; up?: boolean;
+}> = ({ order: o, change, payments, onDeleted, up }) => {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -381,6 +363,11 @@ export const OrderMenu: React.FC<{ order: Order; change: Change; onDeleted: () =
       <div className="adm-menu" hidden={!open}>
         <AdminLink className="adm-menu__item" to={`/admin/orders/${o.code}/edit`}><Pencil size={18} aria-hidden="true" />{copy.menu.edit}</AdminLink>
         <button type="button" className="adm-menu__item" onClick={copyDetails}><Copy size={18} aria-hidden="true" />{copy.menu.copy}</button>
+        {o.payments.length > 0 && (
+          <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); void payments.markNotPaid(o); }}>
+            {adminCopy.payments.markNotPaid}
+          </button>
+        )}
         {o.status !== 'cancelled' && (
           <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); change(o, { status: 'cancelled' }); }}>{copy.menu.cancel}</button>
         )}

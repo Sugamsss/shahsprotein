@@ -146,6 +146,8 @@
 .adm-home__methods li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
 .adm-home__methods li > span:first-child { color: var(--adm-ink-3); }
 .adm-home__methods li > span:last-child { color: var(--adm-ink-1); font-weight: 600; text-align: right; }
+/* Under the money, only in a week with a part payment: why ₹ came in can differ from the totals. */
+.adm-home__vsnote { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; text-wrap: pretty; }
 .adm-home__bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
 .adm-home__bars li { display: grid; grid-template-rows: 104px auto; justify-items: center; gap: 8px; min-width: 0; }
 .adm-home__slot { position: relative; width: 100%; max-width: 36px; height: 100%; }

@@ -5,6 +5,7 @@ import { AdminSheet } from '../AdminSheet';
 import { firstName, formatMoney } from '../format';
 import { Field } from '../parts';
 import type { Order, OrderChanges, PaidMethod } from '../types';
+import type { HowPaid } from './usePayments';
 
 // How an order was paid, picked as it's marked paid. Styles: orders.css (.adm-paypick).
 
@@ -23,12 +24,12 @@ export const paidWith = (method: PaidMethod, note?: string): OrderChanges =>
  */
 export const PaidChoices: React.FC<{
   onPick: (changes: OrderChanges) => void;
-  /** Move focus to UPI when shown (the P key). */
-  focusFirst?: boolean;
   /** UPI's button, e.g. for a sheet's initialFocus. */
   firstRef?: React.RefObject<HTMLButtonElement>;
   label?: string;
-}> = ({ onPick, focusFirst, firstRef, label = copy.question }) => {
+  /** Other's button, "Mark paid" unless this pick does something else (a part payment's "Save"). */
+  submitLabel?: string;
+}> = ({ onPick, firstRef, label = copy.question, submitLabel = copy.markPaid }) => {
   const [other, setOther] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -36,7 +37,6 @@ export const PaidChoices: React.FC<{
   const first = firstRef ?? ownFirst;
   const noteRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (focusFirst) first.current?.focus(); }, [focusFirst, first]);
   // They tapped Other to type, so the note takes focus (and the phone keyboard comes up).
   useEffect(() => { if (other) noteRef.current?.focus(); }, [other]);
 
@@ -66,7 +66,7 @@ export const PaidChoices: React.FC<{
       {other && (
         <form className="adm-paypick__other" noValidate onSubmit={submit}>
           <Field label={copy.noteLabel} error={error || null}
-            action={<button type="submit" className="adm-btn adm-btn--primary adm-btn--sm">{copy.markPaid}</button>}>
+            action={<button type="submit" className="adm-btn adm-btn--primary adm-btn--sm">{submitLabel}</button>}>
             <input ref={noteRef} className="adm-input" maxLength={60} autoComplete="off" enterKeyHint="done"
               value={note} placeholder={copy.notePlaceholder}
               onChange={(e) => { setNote(e.target.value); setError(''); }} />
@@ -77,30 +77,41 @@ export const PaidChoices: React.FC<{
   );
 };
 
+/** A picker's keys as the payment RPCs take them. */
+export const howOf = (changes: OrderChanges): HowPaid =>
+  ({ method: changes.paid_method as PaidMethod, ...(changes.paid_note && { note: changes.paid_note }) });
+
 /** Inside the sheet, so a pick closes it the way × does and the exit plays. */
-const PickAndClose: React.FC<{ onPick: (changes: OrderChanges) => void; firstRef: React.RefObject<HTMLButtonElement> }> = ({ onPick, firstRef }) => {
+const PickAndClose: React.FC<{ onPick: (how: HowPaid) => void; firstRef: React.RefObject<HTMLButtonElement> }> = ({ onPick, firstRef }) => {
   const close = useDialogClose();
-  return <PaidChoices firstRef={firstRef} onPick={(changes) => { onPick(changes); close(); }} />;
+  return <PaidChoices firstRef={firstRef} onPick={(changes) => { onPick(howOf(changes)); close(); }} />;
 };
 
 /**
- * "How did Neha pay?": marking paid from a card, Done, or the order's Mark paid
- * button. Marking not paid never comes here; it stays one tap with Undo.
+ * "Mark paid" = pay the rest: from a card, Done, the pinned button, P, or the
+ * order's own Mark paid. "How did Neha pay?", or on a part-paid order "How did
+ * Riya pay the ₹250?". The caller records it with usePayments().payTheRest.
+ * Marking not paid never comes here; it's one tap with Undo.
  */
 export const PaidSheet: React.FC<{
   order: Order | null;
   onClose: () => void;
-  onPick: (order: Order, changes: OrderChanges) => void;
+  onPick: (order: Order, how: HowPaid) => void;
 }> = ({ order, onClose, onPick }) => {
   // Focus starts on UPI: a tap or Enter there saves, so it's one step from the card.
   const upi = useRef<HTMLButtonElement>(null);
+  const name = order ? firstName(order.name) || order.code : '';
+  const part = order?.payment_state === 'part_paid' && order.amount != null && order.amount_due != null;
   return (
     <AdminSheet isOpen={!!order} onClose={onClose} closeLabel={adminCopy.close} initialFocus={upi}
-      title={order ? copy.sheetTitle(firstName(order.name) || order.code) : ''}>
+      title={!order ? '' : part ? adminCopy.payments.restTitle(name, formatMoney(order.amount_due!)) : copy.sheetTitle(name)}>
       {order && (
         <div className="adm-stack">
-          <p className="adm-muted">{[order.code, order.amount != null && formatMoney(order.amount)].filter(Boolean).join(' · ')}</p>
-          <PickAndClose firstRef={upi} onPick={(changes) => onPick(order, changes)} />
+          <p className="adm-muted">
+            {part ? adminCopy.payments.restSub(order.code, formatMoney(order.amount_paid), formatMoney(order.amount!))
+              : [order.code, order.amount != null && formatMoney(order.amount)].filter(Boolean).join(' · ')}
+          </p>
+          <PickAndClose firstRef={upi} onPick={(how) => onPick(order, how)} />
         </div>
       )}
     </AdminSheet>

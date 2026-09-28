@@ -6,13 +6,14 @@ import { AdminSheet } from '../AdminSheet';
 import { getOrder } from '../api';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
-import type { Order, OrderChanges } from '../types';
+import type { Order } from '../types';
 import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
 import { laneOf, nextOf } from './model';
-import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, type PaidRowHandle, PrimaryAction, StatusCard } from './OrderParts';
+import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
 import { PaidSheet } from './PaidMethod';
 import { useOrderChange } from './useOrderChange';
+import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 
 const copy = adminCopy.order;
 
@@ -39,12 +40,13 @@ const OrderBody: React.FC<{
   order: NonNullable<ReturnType<typeof useOrder>['order']>;
   change: ReturnType<typeof useOrderChange>;
   show: (o: Order) => void;
+  payments: PaymentActions;
+  onPayRest: (o: Order) => void;
   phoneRef?: React.Ref<HTMLInputElement>;
-  paidRef?: React.Ref<PaidRowHandle>;
-}> = ({ order, change, show, phoneRef, paidRef }) => (
+}> = ({ order, change, show, payments, onPayRest, phoneRef }) => (
   <>
     <OrderNotes order={order} />
-    <StatusCard key={order.id} order={order} change={change} paidRef={paidRef} />
+    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
       <DetailsCard order={order} onSaved={show} phoneRef={phoneRef} />
@@ -63,6 +65,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
   const board = `/admin/orders${useLocation().search}`;
   const { order, show, detail } = useOrder(code);
   const change = useOrderChange(show);
+  const payments = usePayments(show);
   const [paying, setPaying] = useState<Order | null>(null);
 
   if (!order) {
@@ -77,10 +80,10 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
     <div className="adm-page adm-od">
       <div className="adm-od-top">
         {back}
-        <OrderMenu order={order} change={change} onDeleted={() => navigate(board, { replace: true })} />
+        <OrderMenu order={order} change={change} payments={payments} onDeleted={() => navigate(board, { replace: true })} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -89,7 +92,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
           <PrimaryAction order={order} change={change} onNext={next.lane === 'collect' ? () => setPaying(order) : undefined} />
         </div>
       )}
-      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
     </div>
   );
 };
@@ -97,7 +100,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
 /**
  * Laptop: the order as a centred popup over the frosted board. ‹ › and ← → walk
  * through the board in order, lane into lane; Enter does the next step and P
- * flips Paid, both only when focus isn't in a field.
+ * pays the rest (or marks a paid order not paid), both only when focus isn't in a field.
  */
 export const OrderPopup: React.FC<{
   code: string;
@@ -114,10 +117,12 @@ export const OrderPopup: React.FC<{
   const fromList = sequence.find((o) => o.code === code);
   const { order, show, detail } = useOrder(code, fromList, putInList);
   const change = useOrderChange(show);
+  const payments = usePayments(show);
   const nameRef = useRef<HTMLSpanElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
-  const paidRef = useRef<PaidRowHandle>(null);
-  const [paying, setPaying] = useState<Order | null>(null);
+  // Mark paid asks how first. From the pinned button (or Enter) it then moves on
+  // to the next order, like every next step; from the money block or P it stays.
+  const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
 
   const at = fromList ? sequence.indexOf(fromList) : -1;
   const go = (step: number) => {
@@ -135,12 +140,13 @@ export const OrderPopup: React.FC<{
   // order in the lane this one came from, so To confirm is Enter, Enter, Enter.
   // The last one left in its lane stays open, showing where it went.
   // Mark paid first asks how they paid (the sheet), then moves on the same way.
-  const doNext = (changes?: OrderChanges) => {
+  const doNext = (how?: HowPaid) => {
     if (!order || !next || !fromList) return;
-    if (next.lane === 'collect' && !changes) return setPaying(order);
+    if (next.lane === 'collect' && !how) return setPaying({ order, moveOn: true });
     const i = inLane.indexOf(fromList);
     const then = inLane[i + 1] ?? inLane[i - 1];
-    change(order, changes ?? next.changes);
+    if (how) void payments.payTheRest(order, how);
+    else change(order, next.changes);
     if (then) navigate(`/admin/orders/${then.code}${search}`, { replace: true });
   };
 
@@ -155,21 +161,22 @@ export const OrderPopup: React.FC<{
   });
 
   // Latest values for the key handler, which is set up once.
-  const keys = useRef({ go, order, doNext, change, paidRef });
-  keys.current = { go, order, doNext, change, paidRef };
+  const keys = useRef({ go, order, doNext, payments, setPaying });
+  keys.current = { go, order, doNext, payments, setPaying };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       // Only this popup's own keys: not while typing, and not when a sheet sits on top.
       if (!target.closest?.('.adm-od-popup') || isTyping(target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      const { go: move, order: o, doNext: step, change: run, paidRef: paid } = keys.current;
+      const { go: move, order: o, doNext: step, payments: pay, setPaying: ask } = keys.current;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1); }
       else if (e.key === 'Enter' && !target.closest('button, a, summary') && o) { e.preventDefault(); step(); }
-      // P: paid → not paid at once; not paid → "How did they pay?" with focus on UPI.
+      // P: paid → not paid at once (Undo); not or part paid → pay the rest, focus on UPI.
+      // A cancelled order takes no new money, the same as its money block.
       else if (e.key.toLowerCase() === 'p' && o) {
         e.preventDefault();
-        if (o.paid) run(o, { paid: false });
-        else paid.current?.choose();
+        if (o.paid) void pay.markNotPaid(o);
+        else if (o.status !== 'cancelled') ask({ order: o, moveOn: false });
       }
     };
     document.addEventListener('keydown', onKey);
@@ -198,7 +205,7 @@ export const OrderPopup: React.FC<{
       bar={order && (
         <>
           <ToastSlot />
-          <OrderMenu order={order} change={change} onDeleted={() => { onDeleted(order); onClose(); }} up />
+          <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted(order); onClose(); }} up />
           <span className="adm-od-keys" aria-hidden="true">
             <span><kbd>Esc</kbd> {copy.keys[0]}</span> <span><kbd>←</kbd><kbd>→</kbd> {copy.keys[1]}</span> <span><kbd>P</kbd> {copy.keys[2]}</span>
           </span>
@@ -207,8 +214,10 @@ export const OrderPopup: React.FC<{
       )}
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
-      {order && <OrderBody order={order} change={change} show={show} phoneRef={phoneRef} paidRef={paidRef} />}
-      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(_, c) => doNext(c)} />
+      {order && <OrderBody order={order} change={change} show={show} payments={payments}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} phoneRef={phoneRef} />}
+      <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
+        onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
     </AdminSheet>
   );
 };

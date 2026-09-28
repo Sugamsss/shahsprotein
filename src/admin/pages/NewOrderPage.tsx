@@ -8,7 +8,7 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
 import { getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
-import { istDateValue } from '../format';
+import { formatMoney, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
@@ -308,7 +308,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     <section className="adm-of__section adm-of--extras" aria-labelledby={`${id}-extras`}>
       <h2 id={`${id}-extras`} className="adm-of__h">{copy.ifYouHave}</h2>
       <div className="adm-card adm-form">
-        <Field label={orderCopy.total} prefix="₹" error={errors.amount}>
+        {/* Editing an order with money in: say how much, so a new total's due or extra is no surprise. */}
+        <Field label={orderCopy.total} prefix="₹" error={errors.amount}
+          hint={order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : undefined}>
           <input className="adm-input" inputMode="numeric" autoComplete="off" value={amount} placeholder={orderCopy.totalPlaceholder} onChange={(e) => edit(setAmount)(e.target.value)} />
         </Field>
         {shown.note && (

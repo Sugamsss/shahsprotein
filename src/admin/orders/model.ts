@@ -46,6 +46,16 @@ export const paidByText = (p: Pick<Order, 'paid_method' | 'paid_note'> | Pick<Or
 };
 
 /**
+ * How every payment was made, each method once, oldest first: "UPI + Cash". Null when
+ * there are no payments or none has a method (an old order). For the CSV's Paid by.
+ */
+export const paymentsByText = (o: Pick<Order, 'payments'>): string | null => {
+  const names = new Set(o.payments.map((p) => paidByText({ paid_method: p.method, paid_note: p.note })));
+  names.delete(null);
+  return names.size ? [...names].join(adminCopy.paidBy.joiner) : null;
+};
+
+/**
  * Home's ₹ came in, by how it was paid: UPI, Cash, Bank, Other, then Not recorded,
  * leaving out zeros. The sums come from get_admin_totals(); nothing is added up here.
  */

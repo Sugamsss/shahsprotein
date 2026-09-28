@@ -17,6 +17,7 @@ import { ProductCards } from './HomeProducts';
 import { AdminWeek, CookWeek } from './HomeWeek';
 
 const copy = adminCopy.homePage;
+const payCopy = adminCopy.payments;
 
 // Home (temp/home-totals/v2): three product cards at the top, then a Home per
 // person. get_admin_me's home_view picks it: 'cook' is Pranjali's ("what do I
@@ -53,7 +54,8 @@ const CookLede: React.FC<{ totals: Totals }> = ({ totals }) => {
 
 const AdminLede: React.FC<{ totals: Totals }> = ({ totals: { overall } }) => {
   const need = overall.to_confirm.orders + overall.to_send.orders;
-  const out = overall.to_collect.unpaid_amount;
+  // What's still owed on delivered orders, not their quoted totals: part payments are already in.
+  const out = overall.to_collect.amount_due;
   const [count, verb] = copy.adminLede(need);
   return (
     <p className="adm-home__lede">
@@ -75,6 +77,30 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
   </AdminLink>
 );
 
+/**
+ * On the way: who hasn't paid. With part payments it's two sentences, "Aarav hasn't paid.
+ * Snehal paid part.", since the server's unpaid names include the part paid.
+ */
+const wayHint = (way: Overview['queue']['on_the_way'], names: Totals['overall']['on_the_way'] | undefined): string => {
+  if (!way.not_paid) return copy.allPaid;
+  const unpaid = names?.unpaid_names ?? [];
+  if (!way.part_paid) return unpaid.length ? copy.namesNotPaid(unpaid, way.not_paid) : copy.notPaidYet(way.not_paid);
+  const part = names?.part_paid_names ?? [];
+  // Take each part-paid name out once, so two people with the same first name both stay right.
+  const left = [...part];
+  const none = unpaid.filter((n) => {
+    const at = left.indexOf(n);
+    if (at < 0) return true;
+    left.splice(at, 1);
+    return false;
+  });
+  const noneCount = way.not_paid - way.part_paid;
+  return [
+    noneCount > 0 && payCopy.hasntPaid(none.slice(0, noneCount), noneCount),
+    payCopy.paidPart(part, way.part_paid),
+  ].filter(Boolean).join(' ');
+};
+
 /** The overview gives the counts and dates; the totals add packs and names once they're in. */
 const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
   const collect = q.to_collect;
@@ -84,19 +110,19 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     (collect.people ?? 1) > 1 || !collect.oldest ? copy.fromPeople(collect.people ?? collect.count)
       : copy.deliveredBy(collect.oldest.name ?? collect.oldest.code, formatDayInSentence(collect.oldest.since)),
     collect.without_amount > 0 && copy.noTotalYet(overall?.to_collect.without_amount_names ?? [], collect.without_amount),
+    // Last, so the line ends on its full stop: "From 2 people. Riya paid part."
+    collect.part_paid > 0 && payCopy.paidPart(overall?.to_collect.part_paid_names ?? [], collect.part_paid),
   ].filter(Boolean).join('. ');
-  const wayNames = overall?.on_the_way.unpaid_names ?? [];
   const rows = [
     q.to_confirm > 0 && <Row key="c" lane="confirm" circle={q.to_confirm} tone="accent" title={copy.toConfirm(q.to_confirm)}
       hint={q.to_confirm_oldest ? copy.oldestFrom(whenIn(q.to_confirm_oldest)) : ''} />,
     q.to_send.count > 0 && <Row key="s" lane="send" circle={q.to_send.count} title={copy.toSend}
       hint={overall ? copy.packsThen(overall.to_send.packs, paidSplit) : paidSplit} />,
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
-      title={collect.amount > 0 ? copy.toCollect(formatMoney(collect.amount)) : copy.ordersToCollect(collect.count)}
+      title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
     q.on_the_way.count > 0 && <Row key="w" lane="way" circle={q.on_the_way.count} title={copy.onTheWay}
-      hint={!q.on_the_way.not_paid ? copy.allPaid
-        : wayNames.length ? copy.namesNotPaid(wayNames, q.on_the_way.not_paid) : copy.notPaidYet(q.on_the_way.not_paid)} />,
+      hint={wayHint(q.on_the_way, overall?.on_the_way)} />,
     q.stale > 0 && <Row key="x" lane="stale" circle={q.stale} title={copy.stale}
       hint={q.stale_oldest ? copy.staleFrom(formatDayInSentence(q.stale_oldest)) : copy.staleHint} />,
   ].filter(Boolean);

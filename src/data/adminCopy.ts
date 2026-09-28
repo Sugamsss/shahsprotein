@@ -130,7 +130,7 @@ export const adminCopy = {
       confirm: ['To confirm', 'Reply with the total on WhatsApp, then confirm.'],
       send: ['To send', 'Confirmed. Pack them and send them.'],
       way: ['On the way', 'Mark delivered once it reaches them.'],
-      collect: ['To collect', 'Delivered, not paid yet.'],
+      collect: ['To collect', 'Delivered, not paid in full yet.'],
       stale: ["Didn't come through?", 'Sent from the site, but no message came yet. Still waiting, or cancel it?'],
       done: ['Done', ''],
     },
@@ -157,9 +157,9 @@ export const adminCopy = {
     deliveredPaid: 'Delivered · Paid',
     cancelled: 'Cancelled',
     paid: 'Paid',
+    /** Some money in, not the whole total. */
+    partPaid: 'Part paid',
     notPaid: 'Not paid',
-    paidLabel: (name: string, paid: boolean) =>
-      `${name}: ${paid ? 'paid' : 'not paid'}. Tap to mark ${paid ? 'not paid' : 'paid'}`,
     /** The stale card's chip: "No message in 5 days". */
     noMessage: (age: string) => `No message in ${age}`,
     nthOrder: (n: number) => {
@@ -198,6 +198,8 @@ export const adminCopy = {
     names: { upi: 'UPI', cash: 'Cash', bank: 'Bank transfer' },
     /** "Other: bank transfer", in the detail, the toast and the CSV. */
     other: (note: string) => `Other: ${note}`,
+    /** Between methods when an order was paid in parts: "UPI + Cash". */
+    joiner: ' + ',
     question: 'How did they pay?',
     sheetTitle: (name: string) => `How did ${name} pay?`,
     noteLabel: 'How, in a few words',
@@ -206,6 +208,114 @@ export const adminCopy = {
     markPaid: 'Mark paid',
     /** Add order, Save with Paid on and nothing picked. */
     pickOne: 'Pick how they paid.',
+  },
+
+  /**
+   * Part payments (design B, temp/part-payments-brief.md). Money in the admin is
+   * private, so ₹ is fine here. Amounts arrive already formatted ("₹750").
+   */
+  payments: {
+    // The order page's money block.
+    notPaidYet: 'Not paid yet',
+    due: (amount: string) => `${amount} due`,
+    paidInFull: 'Paid in full',
+    /** "₹750 paid" in bold, then "of ₹1,000" quieter. */
+    paid: (amount: string) => `${amount} paid`,
+    ofTotal: (total: string) => `of ${total}`,
+    /** Paid over the total: "✓ Paid ₹50 extra" … "₹1,050 of ₹1,000". */
+    paidShort: 'Paid',
+    extra: (amount: string) => `${amount} extra`,
+    paidOfTotal: (paid: string, total: string) => `${paid} of ${total}`,
+    /** Under the bar of an order paid once: "Paid on Sat 26 Sep · UPI". */
+    paidOn: (day: string, how: string | null) => `Paid on ${day}${how ? ` · ${how}` : ''}`,
+    /** A receipt row: "UPI · Thu 24 Sep". */
+    row: (how: string, day: string) => `${how} · ${day}`,
+    /** A payment from before methods were recorded. */
+    noMethod: 'Not recorded',
+    removeLabel: (amount: string, how: string) => `Remove ${amount} ${how} payment`,
+    partPayment: 'Part payment',
+    markPaid: 'Mark paid',
+    markNotPaid: 'Mark not paid',
+    /** Screen reader name of the bar. */
+    barLabel: (paid: string, total: string) => `${paid} paid of ${total}`,
+    /** The status card's hint on a delivered, part-paid order. */
+    restToCome: 'Delivered. The rest is still to come.',
+    /** Under "Not paid yet" when the order has no total: a part payment needs one. */
+    noTotal: 'Add the total to take a part payment.',
+    /** Screen reader name of the receipt rows. */
+    listLabel: 'Payments',
+
+    // "Part payment from Riya".
+    partTitle: (name: string) => `Part payment from ${name}`,
+    partSubNone: (code: string, total: string) => `${code} · ${total} in all, nothing paid yet`,
+    partSubSome: (code: string, paid: string, total: string) => `${code} · ${paid} of ${total} paid already`,
+    amountLabel: 'How much came in?',
+    stillDue: (amount: string) => `${amount} will still be due.`,
+    allOfIt: "That's all of it.",
+    over: (amount: string) => `That's ${amount} more than the total.`,
+    /** A quick pick: "½ · ₹500". */
+    pick: (fraction: string, amount: string) => `${fraction} · ${amount}`,
+    pickLabel: 'Quick amounts',
+    howPaidAmount: (amount: string) => `How did they pay the ${amount}?`,
+    amountMissing: 'Add an amount first.',
+    amountWrong: 'Just the number, like 500.',
+    /** Other's button in this popup: it adds a payment, it doesn't mark the order paid. */
+    save: 'Save',
+
+    // "Mark paid" = pay the rest.
+    restTitle: (name: string, due: string) => `How did ${name} pay the ${due}?`,
+    restSub: (code: string, paid: string, total: string) => `${code} · ${paid} of ${total} paid already`,
+
+    // Toasts, each with Undo.
+    toasts: {
+      /** "₹500 from Riya · UPI. ₹500 still due." */
+      part: (amount: string, name: string, how: string | null, due: string | null) =>
+        `${amount} from ${name}${how ? ` · ${how}` : ''}.${due ? ` ${due} still due.` : ''}`,
+      /** "Riya's order is paid in full · Cash" */
+      paidInFull: (name: string, how: string | null) => `${name}'s order is paid in full${how ? ` · ${how}` : ''}`,
+      /** "Removed ₹250 · Cash" */
+      removed: (amount: string | null, how: string | null) =>
+        ['Removed', [amount, how].filter(Boolean).join(' · ')].filter(Boolean).join(' '),
+      /** "Riya's order is marked not paid. 2 payments removed." */
+      notPaid: (name: string, removed: number) =>
+        `${name}'s order is marked not paid.${removed > 1 ? ` ${removed} payments removed.` : ''}`,
+    },
+
+    // Cards and lists.
+    chip: {
+      /** "₹900 · Not paid" */
+      notPaid: (total: string | null) => [total, 'Not paid'].filter(Boolean).join(' · '),
+      /** "₹1,200 · ₹600 due" */
+      partPaid: (total: string, due: string) => `${total} · ${due} due`,
+      /** "₹1,180 · Paid" */
+      paid: (total: string | null) => [total, 'Paid'].filter(Boolean).join(' · '),
+      /** "₹1,000 · Paid, ₹50 extra" */
+      extra: (total: string, extra: string) => `${total} · Paid, ${extra} extra`,
+      /** To collect: "₹640 to collect" / "₹250 left to collect". */
+      toCollect: (amount: string) => `${amount} to collect`,
+      leftToCollect: (amount: string) => `${amount} left to collect`,
+      /**
+       * The paid chip's screen reader name: its words, the state when it's part paid,
+       * then what a tap does. "Snehal: ₹1,200 · ₹600 due, part paid. Tap to mark paid"
+       */
+      label: (name: string, words: string, part: boolean, paid: boolean) =>
+        `${name}: ${words}${part ? ', part paid' : ''}. Tap to mark ${paid ? 'not paid' : 'paid'}`,
+    },
+    /** Done: "Delivered · Paid, ₹50 extra" */
+    doneExtra: (extra: string) => `Delivered · Paid, ${extra} extra`,
+    /** The To collect lane's line. */
+    collectHint: 'Delivered, not paid in full yet.',
+    /** Edit order, under "Total you quoted" once money has come in: "₹750 paid so far". */
+    paidSoFar: (amount: string) => `${amount} paid so far`,
+
+    // Home. The server names at most 3 people; the rest are "and 2 more".
+    /** "Riya paid part." / "Riya and Om paid part." / "2 part paid." when nobody is named. */
+    paidPart: (names: string[], count: number) =>
+      (names.length ? `${namesAndMore(names, count)} paid part.` : `${count} part paid.`),
+    /** "Aarav hasn't paid." / "Aarav and Om haven't paid." / "2 not paid yet." when nobody is named. */
+    hasntPaid: (names: string[], count: number) =>
+      (names.length ? `${namesAndMore(names, count)} ${count === 1 ? "hasn't" : "haven't"} paid.` : `${count} not paid yet.`),
+    weekNote: 'Part payments count on the day they came in.',
   },
 
   /** Orders filtered to one product (a Home product card opens it). */
@@ -236,10 +346,6 @@ export const adminCopy = {
     cancelledOn: (day: string) => `Cancelled on ${day}.`,
     bringBack: 'Bring it back',
     notPaidYet: 'Not paid yet',
-    payOnDelivery: 'Some pay on delivery.',
-    turnOnWhenPaid: "Turn on when it's paid.",
-    /** "Paid on 26 Sep · UPI"; old orders have no method, so just the day. */
-    paidOn: (day: string, how: string | null) => `Paid on ${day}${how ? ` · ${how}` : ''}`,
     packs: (n: number) => `${n} ${n === 1 ? 'pack' : 'packs'}`,
     edit: 'Edit',
     couponInvalid: '(not valid when sent)',
@@ -307,7 +413,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Note'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 
