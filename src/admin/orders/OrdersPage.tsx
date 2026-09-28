@@ -172,7 +172,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const shown = q.trim() ? orders.filter((o) => matches(o, q)) : orders;
   const by: Record<Lane, Order[]> = { confirm: [], send: [], way: [], collect: [], stale: [], done: [] };
   shown.forEach((o) => by[laneOf(o)].push(o));
-  const money = by.collect.reduce((sum, o) => sum + (o.amount ?? 0), 0);
+  // What's still owed, not the totals quoted: part payments are already in.
+  const money = by.collect.reduce((sum, o) => sum + (o.amount_due ?? 0), 0);
   const sequence = [...by.confirm, ...by.stale, ...by.send, ...by.way, ...by.collect, ...by.done];
 
   const [findText, setFindText] = useQueryText('/admin/orders');
@@ -294,7 +295,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           {!q && <LaneJump counts={counts} money={money} />}
           <div className="adm-board">
             {LANES.map((lane) => (!q || hasHits(lane)) && (
-              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money} hint={lane === 'send' ? packHint : undefined}>
+              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money} hint={lane === 'send' ? packHint : lane === 'collect' ? adminCopy.payments.collectHint : undefined}>
                 {cards(lane)}
                 {/* Laptop: stale orders sit at the bottom of To confirm. Phone: their own group, below. */}
                 {lane === 'confirm' && laptop && by.stale.length > 0 && (

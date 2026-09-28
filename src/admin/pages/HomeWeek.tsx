@@ -129,6 +129,7 @@ export const AdminWeek: React.FC<{ totals: Totals | null | undefined }> = ({ tot
           {w && w.this.paid_without_amount > 0 && <small>{copy.vsNoTotal(w.this.paid_without_amount)}</small>}
         </div>
       </div>
+      {w && w.this.part_payments > 0 && <p className="adm-home__vsnote">{adminCopy.payments.weekNote}</p>}
       {w ? (
         <ol className="adm-home__bars" aria-label={copy.vsBars}>
           {days.map((d, i) => {

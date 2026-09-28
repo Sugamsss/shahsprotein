@@ -35,6 +35,17 @@ const byDay = (orders: Order[]) => {
   return days;
 };
 
+/**
+ * The table's Total: the total quoted, and under it what's come in when that isn't the
+ * total ("₹600 paid"), on its own line so the column stays narrow. The Paid chip next
+ * to it says what's due or extra.
+ */
+const Total: React.FC<{ order: Order }> = ({ order: o }) => {
+  if (o.amount == null) return null;
+  const differs = o.payments.length > 0 && o.amount_paid !== o.amount;
+  return <>{formatMoney(o.amount)}{differs && <small className="adm-table__sub">{adminCopy.payments.paid(formatMoney(o.amount_paid))}</small>}</>;
+};
+
 /** Done (spec 2.5): delivered and paid, and cancelled. A table on the laptop, cards on the phone. */
 const DonePage: React.FC = () => {
   const laptop = useLaptop();
@@ -96,7 +107,7 @@ const DonePage: React.FC = () => {
                   <td>{itemsText(o)}</td>
                   <td>{o.pincode}</td>
                   <td>{o.phone && formatPhone(o.phone)}</td>
-                  <td>{o.amount != null && formatMoney(o.amount)}</td>
+                  <td><Total order={o} /></td>
                   <td className={o.status === 'cancelled' ? 'is-cancelled' : undefined}>
                     {o.status === 'cancelled' ? adminCopy.orders.cancelled : adminCopy.order.steps[o.status]}
                   </td>

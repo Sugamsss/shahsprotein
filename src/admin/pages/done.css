@@ -3,3 +3,5 @@
    Kept apart from orders.css. Column 4 is Items. */
 .adm-table thead th, .adm-table tbody td:not(:nth-child(4)) { white-space: nowrap; }
 .adm-table tbody td:nth-child(4) { width: 100%; }
+/* Total: "₹600 paid" under the total when part of it (or more) has come in. */
+.adm-table__sub { display: block; color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; }

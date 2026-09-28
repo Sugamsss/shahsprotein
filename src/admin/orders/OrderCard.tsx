@@ -7,8 +7,10 @@ import { formatAge, formatDay, formatMoney, formatWhen } from '../format';
 import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
 import { laneOf, linesFirst, nextOf, pileOf, productName, thumbOf } from './model';
+import { paidShare } from './payments';
 
 const copy = adminCopy.orders;
+const chipCopy = adminCopy.payments.chip;
 
 /** SN-7KQ4M: "SN-" quiet, the characters bold. `mark` highlights a search match. */
 export const Code: React.FC<{ code: string; mark?: string }> = ({ code, mark }) => {
@@ -46,23 +48,45 @@ const VIA_ICON: Record<Exclude<OrderSource, 'site'>, React.ReactNode> = {
 export const Via: React.FC<{ source: OrderSource }> = ({ source }) =>
   source === 'site' ? null : <span className="adm-chip">{VIA_ICON[source]}{copy.via[source]}</span>;
 
-/** Paid, as a switch you tap; plain text where there's nothing to change it (a customer's page). */
+/** How much of the total is in, for a chip's fill: `--p` from 0% to 100%. */
+const fillOf = (o: Order) => ({ '--p': `${Math.round(paidShare(o) * 100)}%` }) as React.CSSProperties;
+
+/** The paid chip's words: "₹900 · Not paid", "₹1,200 · ₹600 due", "₹1,180 · Paid", "₹1,000 · Paid, ₹50 extra". */
+const paidWords = (o: Order): string => {
+  const total = o.amount != null ? formatMoney(o.amount) : null;
+  if (o.payment_state === 'part_paid' && total && o.amount_due != null) return chipCopy.partPaid(total, formatMoney(o.amount_due));
+  if (!o.paid) return chipCopy.notPaid(total);
+  if (total && o.amount_extra) return chipCopy.extra(total, formatMoney(o.amount_extra));
+  return chipCopy.paid(total);
+};
+
+/**
+ * Paid, as a toggle you tap; plain text where there's nothing to change it (a customer's page).
+ * Part paid fills with the success tint from the left, as far as the money has come in.
+ */
 export const PaidChip: React.FC<{ order: Order; onToggle?: () => void }> = ({ order, onToggle }) => {
-  const amount = order.amount != null ? `${formatMoney(order.amount)} · ` : '';
-  if (!onToggle) {
-    return (
-      <span className={`adm-paid adm-paid--static${order.paid ? ' is-paid' : ''}`}>
-        {order.paid ? <Check size={13} aria-hidden="true" /> : <i aria-hidden="true" />}
-        {amount}{order.paid ? copy.paid : copy.notPaid}
-      </span>
-    );
-  }
+  const part = order.payment_state === 'part_paid';
+  const words = paidWords(order);
+  const className = `adm-paid${order.paid ? ' is-paid' : ''}${part ? ' adm-fill' : ''}`;
+  const style = part ? fillOf(order) : undefined;
+  const icon = order.paid ? <Check size={13} aria-hidden="true" /> : !part && <i aria-hidden="true" />;
+  if (!onToggle) return <span className={`${className} adm-paid--static`} style={style}>{icon}{words}</span>;
   return (
-    <button type="button" className={`adm-paid${order.paid ? ' is-paid' : ''}`} aria-pressed={order.paid}
-      aria-label={copy.paidLabel(order.name ?? order.code, order.paid)} onClick={onToggle}>
-      {order.paid ? <Check size={13} aria-hidden="true" /> : <i aria-hidden="true" />}
-      {amount}{order.paid ? copy.paid : copy.notPaid}
+    <button type="button" className={className} style={style} aria-pressed={part ? 'mixed' : order.paid}
+      aria-label={chipCopy.label(order.name ?? order.code, words, part, order.paid)} onClick={onToggle}>
+      {icon}{words}
     </button>
+  );
+};
+
+/** To collect: "₹640 to collect", or "₹250 left to collect" with the fill once part of it is in. */
+const CollectChip: React.FC<{ order: Order }> = ({ order }) => {
+  const part = order.payment_state === 'part_paid';
+  const due = formatMoney(order.amount_due ?? order.amount ?? 0);
+  return (
+    <span className={`adm-chip adm-chip--money${part ? ' adm-fill' : ''}`} style={part ? fillOf(order) : undefined}>
+      <IndianRupee size={13} aria-hidden="true" />{part ? chipCopy.leftToCollect(due) : chipCopy.toCollect(due)}
+    </span>
   );
 };
 
@@ -93,7 +117,7 @@ export const OrderCard: React.FC<{
   const chips: React.ReactNode[] = [];
   if (lane === 'send' || lane === 'way') chips.push(<PaidChip key="p" order={o} onToggle={onAction && act('paid')} />);
   if (lane === 'collect' && o.amount != null) {
-    chips.push(<span key="m" className="adm-chip adm-chip--money"><IndianRupee size={13} aria-hidden="true" />{copy.toCollect(formatMoney(o.amount))}</span>);
+    chips.push(<CollectChip key="m" order={o} />);
   }
   if (lane === 'stale') chips.push(<span key="s" className="adm-chip">{copy.noMessage(formatAge(o.created_at))}</span>);
   if (o.source !== 'site') chips.push(<Via key="v" source={o.source} />);
@@ -141,7 +165,7 @@ export const OrderCard: React.FC<{
         {dateTitle && lane !== 'done' && <span className="adm-ocard__word is-open">{adminCopy.order.steps[o.status as keyof typeof adminCopy.order.steps]}</span>}
         {lane === 'done' && (
           <span className={`adm-ocard__word${o.status === 'cancelled' ? ' is-cancelled' : ''}`}>
-            {o.status === 'cancelled' ? copy.cancelled : <><Check size={14} aria-hidden="true" />{copy.deliveredPaid}</>}
+            {o.status === 'cancelled' ? copy.cancelled : <><Check size={14} aria-hidden="true" />{o.amount_extra ? adminCopy.payments.doneExtra(formatMoney(o.amount_extra)) : copy.deliveredPaid}</>}
           </span>
         )}
       </div>
