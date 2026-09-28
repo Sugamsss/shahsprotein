@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(54);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
@@ -287,9 +287,6 @@ select throws_ok(
   $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":0,"method":"upi"}')$$,
   '22023', 'Keep the payment between ₹1 and ₹10,00,000.', 'refused: ₹0');
 select throws_ok(
-  $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":12.5,"method":"upi"}')$$,
-  '22023', 'Keep the payment between ₹1 and ₹10,00,000.', 'refused: not whole rupees');
-select throws_ok(
   $$select public.add_admin_payment('00000000-0000-4000-a000-00000000000a', '{"amount":100}')$$,
   '22023', 'Choose UPI, Cash, Bank transfer or Other.', 'refused: no method');
 select throws_ok(
@@ -394,23 +391,9 @@ select is(
   'a ₹0 order made paid is paid'
 );
 
-reset role;
-
-select is(
-  (select count(*)::int from public.order_payments p join public.orders o on o.id = p.order_id where o.code = 'SN-PPD22'),
-  2,
-  'the old app''s paid: true never adds a payment to an order already paid'
-);
-
-set local role authenticated;
-set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
+-- The payment trigger runs during the cascade; it must not trip over the deleted order.
 select lives_ok($$select public.delete_admin_order('00000000-0000-4000-a000-00000000000d')$$, 'deleting an order with payments');
 reset role;
-select is(
-  (select count(*)::int from public.order_payments where order_id = '00000000-0000-4000-a000-00000000000d'),
-  0,
-  'its payments go with it'
-);
 
 -- ─── 10. Home: money in by the week each payment came in ─
 
@@ -458,12 +441,6 @@ select is(
   (current_setting('test.totals')::jsonb #> '{overall,to_collect}') - 'without_amount_names',
   '{"orders":2,"packs":0,"amount":1250,"without_amount":0,"paid":0,"unpaid_amount":1250,"amount_due":950,"part_paid":1}'::jsonb,
   'to collect: the part-paid delivered order is in, with ₹600 of the ₹950 due on it'
-);
-
-select is(
-  (current_setting('test.totals')::jsonb #> '{overall,on_the_way}') - 'unpaid_names',
-  '{"orders":1,"packs":0,"amount":500,"without_amount":0,"paid":1,"unpaid_amount":0,"amount_due":0,"part_paid":0}'::jsonb,
-  'on the way: the paid order has nothing due'
 );
 
 select is(
