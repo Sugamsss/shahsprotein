@@ -2,7 +2,7 @@ import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, Coupon, CouponInput, CustomerList, EmailList, Order, OrderChanges,
   OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, PaymentInput, PayRestInput,
-  RestorePayment, Totals,
+  PriceChange, Prices, RestorePayment, Totals,
 } from './types';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -26,7 +26,8 @@ export const setAccessToken = (token: string | null): void => { listenerToken = 
 
 export const hasSupabaseConfig = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-export type AdminErrorKind = 'unauthorized' | 'message' | 'rate' | 'network' | 'unknown';
+/** 'missing': the RPC isn't on this database yet (a migration that isn't live). */
+export type AdminErrorKind = 'unauthorized' | 'message' | 'rate' | 'network' | 'missing' | 'unknown';
 
 export class AdminError extends Error {
   constructor(readonly kind: AdminErrorKind, message: string = copy.errors[kind as Exclude<AdminErrorKind, 'message'>]) {
@@ -49,6 +50,8 @@ export const toAdminError = (error: unknown, status?: number): AdminError => {
   if (message === 'Unauthorized' || status === 401 || status === 403) return new AdminError('unauthorized');
   if (code === '22023' && message) return new AdminError('message', message);
   if (code === 'PT429' || status === 429) return new AdminError('rate');
+  // PostgREST's "no such function": an RPC whose migration isn't live yet.
+  if (code === 'PGRST202' || status === 404) return new AdminError('missing');
   const offline = typeof navigator !== 'undefined' && !navigator.onLine;
   if (status === 0 || offline || error instanceof TypeError) return new AdminError('network');
   return new AdminError('unknown');
@@ -109,6 +112,13 @@ export const getCustomers = (search?: string) => rpc<CustomerList>('get_admin_cu
 export const getStock = () => rpc<OutOfStock>('get_product_stock');
 export const setStock = (productId: string, size: string, inStock: boolean) =>
   rpc<OutOfStock>('set_admin_stock', { product_id: productId, size, in_stock: inStock });
+
+/**
+ * Admin only: the site, the order popup and the message never see a price. On a
+ * database without the prices migration these fail with kind 'missing'.
+ */
+export const getPrices = () => rpc<Prices>('get_admin_prices');
+export const setPrices = (changes: PriceChange[]) => rpc<Prices>('set_admin_prices', { prices: changes });
 
 export const getCoupons = () => rpc<Coupon[]>('get_admin_coupons');
 export const createCoupon = (code: string, coupon: CouponInput) =>

@@ -90,6 +90,7 @@ export const adminCopy = {
     network: "That didn't go through. Check your connection and try again.",
     rate: 'Too many tries. Wait a minute, then try again.',
     unauthorized: "This account can't open the admin. Ask Sugam to add you.",
+    missing: "This isn't set up yet. Ask Sugam.",
     unknown: 'Something went wrong. Please try again.',
   },
 
