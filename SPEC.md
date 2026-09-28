@@ -120,7 +120,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
 - Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
-- `weightOptions` holds pack sizes. Prices are not published yet. When they are, cards and the popup can read them from here.
+- `weightOptions` holds pack sizes. The site shows no prices. The owners' prices live only in Supabase and only the admin reads them (see §7).
 - **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, then `muesli-v3.webp`, and `date-bites-v2.webp`). The site loads a copy exported at 216px per tile (3x the 72px tile), named `-648w.webp` (e.g. `muesli-v3-648w.webp`). Keep the full-size sprite as the master.
 - **Card images** (`image`) are per-product crops in `public/assets/product-cards/`, cut at the card's 1.3 ratio from `english-product-portfolio.png`. Image rules for the whole site are in `AGENTS.md` under "Images, fonts and bundle size".
 
@@ -165,6 +165,7 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 - **Add or edit an order** by hand, for orders that came by WhatsApp, a call, Instagram or in person ("Came via").
 - **Products** (stock switches), **Customers** (grouped by phone, with their orders), **Coupons** (add, edit, on/off, how often used), **Email list** (with CSV), **Settings** (who has access, appearance, password, sign out).
 - The amount Sunit quoted is private to the admin. ₹ amounts are fine there; the "no prices" rule is for the public site.
+- Prices: a base price per product and pack size, and optionally a set price per coupon per pack size, edited on Products ("Edit prices", one sheet per product). A blank coupon price means the base price. The order total fills in from them (before delivery) and stays editable.
 
 ## 8. Meta
 
