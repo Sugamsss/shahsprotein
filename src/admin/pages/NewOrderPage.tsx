@@ -18,6 +18,7 @@ import type { Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
 import { normalisePhone } from '../orders/model';
 import { PasteButton } from '../orders/OrderParts';
+import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
 import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
 
@@ -79,6 +80,15 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);
   const linesChanged = order !== null && PACKS.some(({ key }) =>
     (qty[key] ?? 0) !== (order.lines.find((l) => `${l.product_id}|${l.size}` === key)?.quantity ?? 0));
+
+  // A past customer or a contact: their name and number, and their last pincode if none is typed.
+  const fill = ({ name: pickedName, phone: pickedPhone, pincode: pickedPincode }: Picked) => {
+    dirty.current = true;
+    if (pickedName) setName(pickedName);
+    if (pickedPhone) setPhone(formatPhone(pickedPhone));
+    if (pickedPincode && !pincode.trim()) setPincode(pickedPincode);
+  };
+  const suggest = useNameSuggestions(name, fill);
 
   // "Anjali Kulkarni · 2 orders before", 300ms after the phone stops changing.
   const digits = normalisePhone(phone);
@@ -206,13 +216,17 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   const who = (
     <section className="adm-of__section adm-of--who" aria-labelledby={`${id}-who`}>
-      <h2 id={`${id}-who`} className="adm-of__h">{copy.who}</h2>
+      <div className="adm-of__h">
+        <h2 id={`${id}-who`}>{copy.who}</h2>
+        <ContactsButton onPick={fill} />
+      </div>
       <div className="adm-card adm-form">
         <Field label={copy.phone} error={errors.phone} action={<PasteButton onPaste={edit(setPhone)} />}>
           <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={orderCopy.phonePlaceholder}
             onChange={(e) => edit(setPhone)(e.target.value)} onBlur={() => digits && setPhone(formatPhone(digits))} />
         </Field>
-        {match && (
+        {/* Hidden once Use would change nothing, e.g. right after picking them from the suggestions. */}
+        {match && (match.name !== name.trim() || (!!match.pincode && match.pincode !== pincode.trim())) && (
           <div className="adm-of__match">
             <span className="adm-of__initials" aria-hidden="true">{initials(match.name)}</span>
             <span className="adm-list__main">
@@ -225,8 +239,10 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         )}
         <div className="adm-form__pair">
           <Field label={copy.name} error={errors.name}>
-            <input className="adm-input" autoComplete="off" maxLength={60} value={name} placeholder={copy.namePlaceholder} onChange={(e) => edit(setName)(e.target.value)} />
+            <input className="adm-input" autoComplete="off" maxLength={60} value={name} placeholder={copy.namePlaceholder}
+              {...suggest.inputProps} onChange={(e) => edit(setName)(e.target.value)} />
           </Field>
+          {suggest.list}
           <Field label={copy.pincode} error={errors.pincode}>
             <input className="adm-input" inputMode="numeric" maxLength={6} value={pincode}
               placeholder={order?.source === 'site' ? copy.pincodePlaceholder : copy.pincodeSatara}

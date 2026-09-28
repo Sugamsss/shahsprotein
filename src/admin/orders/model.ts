@@ -132,6 +132,16 @@ export const normalisePhone = (raw: string): string | null => {
   return /^[1-9]\d{10,14}$/.test(d) ? d : null;
 };
 
+/**
+ * A picked contact's numbers, as the server stores them: each one once, in the
+ * phone's order, without the ones that can't be a phone. Contacts sometimes keep
+ * the trunk 0 after +91 ("+91 (0) 98765 43210"), which would otherwise read as 12 digits.
+ */
+export const contactNumbers = (tels: readonly string[]): string[] => [...new Set(
+  tels.map((t) => normalisePhone(t.replace(/^\s*(?:\+|00)\s*91[\s-]*\(?0\)?/, '+91')))
+    .filter((d): d is string => d !== null),
+)];
+
 const product = (id: string) => productsData.find((p) => p.id === id);
 export const productName = (id: string) => product(id)?.name ?? id;
 export const thumbOf = (id: string, dark: boolean) => {

@@ -25,6 +25,31 @@
 .adm-of__match small { color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; }
 .adm-of__initials { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent-gradient); color: var(--color-btn-text); font-size: var(--adm-text-small); font-weight: 700; }
 
+/* Under the name box: people who ordered before, a quiet list (a listbox). Tap one, or ↓ ↑ then Enter.
+   It sits between Name and Pincode across the pair, so it's right under Name on a phone;
+   where the two sit side by side, dense flow keeps Pincode beside Name and the list below both. */
+.adm-of .adm-form__pair { grid-auto-flow: row dense; }
+.adm-of__suggest { display: grid; grid-column: 1 / -1; margin: -4px 0 0; padding: 0; list-style: none; }
+.adm-of__suggest[hidden] { display: none; }
+.adm-of__suggest li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px; padding: 13px 4px;
+  border-top: 1px solid var(--adm-hairline); cursor: pointer;
+}
+.adm-of__suggest b { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.adm-of__suggest small { flex: none; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .adm-of__suggest li:hover { background: var(--adm-well); } }
+.adm-of__suggest li[aria-selected='true'] { background: var(--adm-accent-tint); }
+.adm-of__suggest li:active { background: var(--adm-accent-tint-press); }
+
+/* "From contacts" beside Who it's for, at the button size rather than the heading's. */
+.adm-of__h .adm-of__contacts { margin-block: -6px; font-size: var(--adm-text-body); letter-spacing: 0; }
+
+/* Which of a contact's numbers: plain rows. */
+.adm-of__numbers { display: grid; }
+.adm-of__numbers button { min-height: 56px; padding: 0 4px; color: var(--adm-ink-1); text-align: left; font-size: var(--adm-text-head); font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-of__numbers button + button { border-top: 1px solid var(--adm-hairline); }
+.adm-of__numbers button:active { background: var(--adm-well-press); }
+
 /* Came via: 2×2 choices, native radios. */
 .adm-of__via { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .adm-of__via label { position: relative; display: grid; }

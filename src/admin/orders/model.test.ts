@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Order, OrderLine } from '../types';
-import { applyLocal, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
+import { applyLocal, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -140,5 +140,26 @@ describe('money by method', () => {
   it('shows nothing when no money came in, or on a database without the split', () => {
     expect(moneyByMethod(none)).toEqual([]);
     expect(moneyByMethod(undefined)).toEqual([]);
+  });
+});
+
+// "Add from contacts": a phone's address book keeps numbers every which way.
+
+describe('contactNumbers', () => {
+  it('reads the usual ways a mobile is saved as the same number', () => {
+    expect(contactNumbers(['+91 98765 43210'])).toEqual(['919876543210']);
+    expect(contactNumbers(['098765-43210'])).toEqual(['919876543210']);
+    expect(contactNumbers(['(987) 654-3210'])).toEqual(['919876543210']);
+    expect(contactNumbers(['0091 98765 43210'])).toEqual(['919876543210']);
+    expect(contactNumbers(['+91 (0) 98765 43210'])).toEqual(['919876543210']);
+    expect(contactNumbers(['+91-098765-43210'])).toEqual(['919876543210']);
+  });
+
+  it('keeps each number once, in the phone\'s order', () => {
+    expect(contactNumbers(['98765 43210', '+44 7700 900123', '+919876543210'])).toEqual(['919876543210', '447700900123']);
+  });
+
+  it('leaves out what cannot be a phone', () => {
+    expect(contactNumbers(['', '12345', 'none'])).toEqual([]);
   });
 });
