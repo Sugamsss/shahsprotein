@@ -152,6 +152,27 @@ select pg_temp.demo_pay('SN-E4F5G', 900, 'bank', null, '8 days');
 -- An advance on an order that was cancelled later.
 select pg_temp.demo_pay('SN-H6J7K', 200, 'upi', null, '6 days');
 
+-- ─── Prices ─────────────────────────────────────────────
+
+-- Made-up prices, not the real ones. One demo coupon: its price for two
+-- packs, and base prices for the rest. Safe to run again on its own.
+insert into public.coupons (id, code, description, internal_note) values
+  ('00000000-0000-4000-c000-00000000d010', 'EXAMPLE10', '10% off your order', 'Local demo code')
+on conflict do nothing;
+
+insert into public.product_prices (product_id, size, price, updated_by) values
+  ('raggi-jaggi', '250 g', 260, '00000000-0000-4000-8000-00000000d001'),
+  ('raggi-jaggi', '500 g', 480, '00000000-0000-4000-8000-00000000d001'),
+  ('muesli', '250 g', 240, '00000000-0000-4000-8000-00000000d001'),
+  ('muesli', '500 g', 450, '00000000-0000-4000-8000-00000000d001'),
+  ('bites', '250 g', 180, '00000000-0000-4000-8000-00000000d001')
+on conflict do nothing;
+
+insert into public.coupon_prices (coupon_id, product_id, size, price, updated_by) values
+  ('00000000-0000-4000-c000-00000000d010', 'raggi-jaggi', '250 g', 235, '00000000-0000-4000-8000-00000000d001'),
+  ('00000000-0000-4000-c000-00000000d010', 'muesli', '250 g', 215, '00000000-0000-4000-8000-00000000d001')
+on conflict do nothing;
+
 -- What you should see.
 select o.code, o.status, o.amount,
   (public.admin_order_json(o) ->> 'payment_state') as state,
