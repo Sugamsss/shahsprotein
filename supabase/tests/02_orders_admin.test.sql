@@ -154,6 +154,7 @@ select ok(
 select is(
   current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at'],
   '{"source":"whatsapp","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+    "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "kept":false,"stale":false,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
     "lines":[{"product_id":"muesli","size":"250 g","quantity":99}],"packs":99,
@@ -172,9 +173,10 @@ select lives_ok(
 );
 
 select is(
-  current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
+  current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer', 'payments'],
   '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","paid":true,
     "paid_method":null,"paid_note":null,"kept":false,
+    "payment_state":"paid","amount_paid":690,"amount_due":0,"amount_extra":0,
     "stale":false,"name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
     "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
     "lines":[{"product_id":"date-bites","size":"250 g","quantity":2}],"packs":2}'::jsonb,
@@ -217,6 +219,7 @@ select is(
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}]
   }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
   '{"source":"call","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+    "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "kept":false,"stale":false,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}],"packs":3}'::jsonb,
@@ -276,8 +279,9 @@ select is(
   public.update_admin_order(current_setting('test.site_id')::uuid,
     '{"status":"confirmed","phone":"+91 98000 00002","amount":700}')::jsonb
     - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'kept', 'stale', 'name', 'pincode', 'note',
-            'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at'],
-  '{"status":"confirmed","phone":"919800000002","amount":700}'::jsonb,
+            'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at',
+            'payment_state', 'payments', 'amount_paid', 'amount_extra'],
+  '{"status":"confirmed","phone":"919800000002","amount":700,"amount_due":700}'::jsonb,
   'Confirm sheet: status, phone and amount change together'
 );
 
@@ -486,10 +490,10 @@ select is(
 select is(
   ((current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}')
     - array['to_confirm_oldest', 'stale_oldest'],
-  '{"to_confirm":1,"to_send":{"count":1,"paid":0},
-    "to_collect":{"count":3,"amount":500,"without_amount":2,"people":2,
+  '{"to_confirm":1,"to_send":{"count":1,"paid":0,"part_paid":0},
+    "to_collect":{"count":3,"amount":500,"amount_due":500,"part_paid":0,"without_amount":2,"people":2,
                   "oldest":{"code":"SN-DDDDD","name":"Week D"}},
-    "on_the_way":{"count":0,"not_paid":0},"stale":1}'::jsonb,
+    "on_the_way":{"count":0,"not_paid":0,"part_paid":0},"stale":1}'::jsonb,
   'queue: the five groups; money to collect from 2 people (by phone, else by name)'
 );
 select is(

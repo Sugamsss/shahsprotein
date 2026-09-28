@@ -68,10 +68,12 @@ select is(current_setting('test.empty')::jsonb -> 'products', '[]'::jsonb, 'empt
 select is(
   current_setting('test.empty')::jsonb -> 'overall',
   '{
-    "to_confirm": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0},
-    "to_send":    {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0},
-    "on_the_way": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"unpaid_names":[]},
-    "to_collect": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"without_amount_names":[]},
+    "to_confirm": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
+    "to_send":    {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
+    "on_the_way": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
+                   "unpaid_names":[]},
+    "to_collect": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
+                   "without_amount_names":[]},
     "stale":      {"orders":0,"packs":0}
   }'::jsonb,
   'empty: every overall stage is zeros, the name lists are empty, and stale has no money keys'
@@ -234,12 +236,14 @@ select is(
 select is(
   current_setting('test.totals')::jsonb -> 'overall',
   '{
-    "to_confirm": {"orders":1,"packs":2,"amount":300,"without_amount":0,"paid":0,"unpaid_amount":300},
-    "to_send":    {"orders":2,"packs":5,"amount":800,"without_amount":1,"paid":1,"unpaid_amount":0},
+    "to_confirm": {"orders":1,"packs":2,"amount":300,"without_amount":0,"paid":0,"unpaid_amount":300,
+                   "amount_due":300,"part_paid":0},
+    "to_send":    {"orders":2,"packs":5,"amount":800,"without_amount":1,"paid":1,"unpaid_amount":0,
+                   "amount_due":0,"part_paid":0},
     "on_the_way": {"orders":1,"packs":2,"amount":500,"without_amount":0,"paid":0,"unpaid_amount":500,
-                   "unpaid_names":["Sent"]},
+                   "amount_due":500,"part_paid":0,"unpaid_names":["Sent"]},
     "to_collect": {"orders":2,"packs":4,"amount":600,"without_amount":1,"paid":0,"unpaid_amount":600,
-                   "without_amount_names":["Owed"]},
+                   "amount_due":600,"part_paid":0,"without_amount_names":["Owed"]},
     "stale":      {"orders":1,"packs":9}
   }'::jsonb,
   'overall: orders, packs, amount, without amount, paid and unpaid amount per stage; no money on stale'
@@ -355,9 +359,9 @@ select is(
     'to_collect', current_setting('test.names')::jsonb #> '{overall,to_collect}',
     'on_the_way', current_setting('test.names')::jsonb #> '{overall,on_the_way}'),
   '{"to_collect": {"orders":7,"packs":0,"amount":100,"without_amount":6,"paid":0,"unpaid_amount":100,
-                   "without_amount_names":["Meera","Tanvi","Farah"]},
+                   "amount_due":100,"part_paid":0,"without_amount_names":["Meera","Tanvi","Farah"]},
     "on_the_way": {"orders":4,"packs":0,"amount":0,"without_amount":4,"paid":1,"unpaid_amount":0,
-                   "unpaid_names":["Neha","Ravi"]}}'::jsonb,
+                   "amount_due":0,"part_paid":0,"unpaid_names":["Neha","Ravi"]}}'::jsonb,
   'names: first names, each once (first spelling wins), at most 3; to_collect by delivery date, '
   'on_the_way by created_at; counts stay per order and include the unnamed one'
 );

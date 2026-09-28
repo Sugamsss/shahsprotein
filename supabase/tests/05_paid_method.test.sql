@@ -69,7 +69,8 @@ select is(pg_temp.how(current_setting('test.a')::json),
 select is(
   public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"cash"}')::jsonb
     - array['id', 'code', 'message_code', 'source', 'status', 'paid', 'kept', 'stale', 'name', 'pincode', 'phone',
-            'note', 'amount', 'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at'],
+            'note', 'amount', 'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at',
+            'payment_state', 'payments', 'amount_paid', 'amount_due', 'amount_extra'],
   jsonb_build_object('paid_at', current_setting('test.a')::jsonb -> 'paid_at', 'paid_method', 'cash', 'paid_note', null),
   'Cash on a paid order changes the method and keeps paid_at'
 );
@@ -245,17 +246,23 @@ reset role;
 
 -- ─── 6. The table checks ────────────────────────────────
 
-select throws_ok(
-  $$update public.orders set paid_at = null, paid_method = 'upi' where code = 'SN-22222'$$,
-  '23514', null, 'table: a not-paid order has no method'
+-- Since 20260928000000 the order's paid fields follow its payments (a
+-- trigger), and the method and note checks live on order_payments too.
+update public.orders set paid_at = null, paid_method = 'upi' where code = 'SN-22222';
+select is(
+  (select jsonb_build_object('paid', paid_at is not null, 'paid_method', paid_method) from public.orders where code = 'SN-22222'),
+  '{"paid":true,"paid_method":null}'::jsonb,
+  'table: paid_at and the method follow the payments, whatever an update says'
 );
 select throws_ok(
-  $$update public.orders set paid_note = 'gpay' where code = 'SN-33333'$$,
-  '23514', null, 'table: a note needs Other'
+  $$insert into public.order_payments (order_id, amount, method, note)
+    values ('00000000-0000-4000-a000-00000000000a', 1, 'upi', 'gpay')$$,
+  '23514', null, 'table: a payment note needs Other'
 );
 select throws_ok(
-  $$update public.orders set paid_method = 'other', paid_note = ' bank ' where code = 'SN-33333'$$,
-  '23514', null, 'table: the note is stored trimmed'
+  $$insert into public.order_payments (order_id, amount, method, note)
+    values ('00000000-0000-4000-a000-00000000000a', 1, 'other', ' bank ')$$,
+  '23514', null, 'table: a payment note is stored trimmed'
 );
 
 -- ─── 7. Paid is still paid for get_admin_totals() ───────
@@ -268,7 +275,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
 select is(
   (public.get_admin_totals()::jsonb #> '{overall,on_the_way}') - array['unpaid_names'],
-  '{"orders":1,"packs":0,"amount":300,"without_amount":0,"paid":1,"unpaid_amount":0}'::jsonb,
+  '{"orders":1,"packs":0,"amount":300,"without_amount":0,"paid":1,"unpaid_amount":0,"amount_due":0,"part_paid":0}'::jsonb,
   'totals: an order paid by cash counts as paid'
 );
 reset role;
