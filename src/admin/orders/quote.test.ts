@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Coupon, OrderLine, Prices } from '../types';
-import { couponState, quote } from './quote';
+import type { Coupon, CouponKind, CouponUse, OrderLine, Prices } from '../types';
+import { couponState, hasKinds, quote, repeatCoupon, usedBefore } from './quote';
 
 // Made-up prices and codes only: the repo is public.
 
@@ -76,5 +76,56 @@ describe('couponState', () => {
     ['GONE99', 'unknown'],
   ])('%s is %s', (code, state) => {
     expect(couponState(code, COUPONS, NOW)).toBe(state);
+  });
+});
+
+describe('coupon kinds', () => {
+  const kind = (c: Coupon, k: CouponKind) => ({ ...c, kind: k });
+  const REPEAT = kind(coupon('r-live', 'FAMILY-EX', true), 'repeat');
+  const REPEAT_OFF = kind(coupon('r-off', 'FRIENDS-EX', false), 'repeat');
+  const REPEAT_ENDED = kind(coupon('r-old', 'OLDFRIEND', true, '2026-09-01T00:00:00Z'), 'repeat');
+  const ONCE = kind(coupon('o-live', 'WELCOME-EX', true), 'one_time');
+  const KINDS = [REPEAT, REPEAT_OFF, REPEAT_ENDED, ONCE];
+  // Newest first, as get_admin_coupon_uses sends them.
+  const use = (order: string, code: string, created_at: string): CouponUse =>
+    ({ order_id: `id-${order}`, order_code: order, coupon_code: code, created_at });
+
+  it('knows kinds are on only when the list carries them', () => {
+    expect(hasKinds(null)).toBe(false);
+    expect(hasKinds(COUPONS)).toBe(false);
+    expect(hasKinds(KINDS)).toBe(true);
+  });
+
+  it("fills in the latest Repeat coupon while it's live, skipping One-time ones and matching any case", () => {
+    const uses = [use('SN-3', 'WELCOME-EX', '2026-09-20T00:00:00Z'), use('SN-2', 'family-ex', '2026-09-10T00:00:00Z')];
+    expect(repeatCoupon(uses, KINDS, NOW)).toBe('FAMILY-EX');
+  });
+
+  it('fills in nothing when their latest Repeat coupon is off or ended, even with an older live one', () => {
+    const older = use('SN-1', 'FAMILY-EX', '2026-08-01T00:00:00Z');
+    expect(repeatCoupon([use('SN-2', 'FRIENDS-EX', '2026-09-10T00:00:00Z'), older], KINDS, NOW)).toBeNull();
+    expect(repeatCoupon([use('SN-2', 'OLDFRIEND', '2026-09-10T00:00:00Z'), older], KINDS, NOW)).toBeNull();
+  });
+
+  it('never fills in a One-time coupon, an unknown code, or a coupon without a kind', () => {
+    expect(repeatCoupon([use('SN-1', 'WELCOME-EX', '2026-09-10T00:00:00Z')], KINDS, NOW)).toBeNull();
+    expect(repeatCoupon([use('SN-1', 'GONE-CODE', '2026-09-10T00:00:00Z')], KINDS, NOW)).toBeNull();
+    expect(repeatCoupon([use('SN-1', 'EXAMPLE10', '2026-09-10T00:00:00Z')], COUPONS, NOW)).toBeNull();
+  });
+
+  it('warns about a One-time coupon this number used before, naming the latest order', () => {
+    const uses = [use('SN-3', 'WELCOME-EX', '2026-09-20T00:00:00Z'), use('SN-1', 'WELCOME-EX', '2026-09-01T00:00:00Z')];
+    expect(usedBefore(uses, 'welcome-ex', KINDS)?.order_code).toBe('SN-3');
+    // Repeat coupons are meant to be used again.
+    expect(usedBefore([use('SN-2', 'FAMILY-EX', '2026-09-10T00:00:00Z')], 'FAMILY-EX', KINDS)).toBeNull();
+    expect(usedBefore(uses, '', KINDS)).toBeNull();
+  });
+
+  it('in Edit, counts only other orders made before this one', () => {
+    const uses = [use('SN-3', 'WELCOME-EX', '2026-09-20T00:00:00Z'), use('SN-1', 'WELCOME-EX', '2026-09-01T00:00:00Z')];
+    // The first use: the later order is the repeat, not this one.
+    expect(usedBefore(uses, 'WELCOME-EX', KINDS, { id: 'id-SN-1', created_at: '2026-09-01T00:00:00Z' })).toBeNull();
+    // The second use: warned, about the first.
+    expect(usedBefore(uses, 'WELCOME-EX', KINDS, { id: 'id-SN-3', created_at: '2026-09-20T00:00:00Z' })?.order_code).toBe('SN-1');
   });
 });

@@ -301,11 +301,16 @@ export interface CustomerList {
 /** Only products and sizes that are out. [] means everything is in stock. */
 export type OutOfStock = { product_id: string; size: string; since: string }[];
 
+/** Repeat: a standing offer. One-time: once per phone number (20260928000002). */
+export type CouponKind = 'repeat' | 'one_time';
+
 export interface Coupon {
   id: string;
   code: string;
   description: string;
   active: boolean;
+  /** Missing on a database without 20260928000002: kinds are off there. */
+  kind?: CouponKind;
   expires_at: string | null;
   minimum_note: string | null;
   internal_note: string | null;
@@ -330,6 +335,16 @@ export interface CouponInput {
   expires_at: string | null;
   minimum_note: string | null;
   internal_note: string | null;
+  /** Only sent where kinds are on; left out, create makes One-time and update keeps the kind. */
+  kind?: CouponKind;
+}
+
+/** get_admin_coupon_uses: one number's orders that carried a coupon, not cancelled, newest first. */
+export interface CouponUse {
+  order_id: string;
+  order_code: string;
+  coupon_code: string;
+  created_at: string;
 }
 
 export interface EmailList {

@@ -1,24 +1,24 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Not Undo2: the site's order popup uses it, and sharing it would move it out of the popup's chunk.
-import { IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
+import { History, IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
-import { getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
+import { getCouponUses, getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
 import { formatDay, formatMoney, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
-import type { Order, OrderInput, OrderSource, PaidMethod } from '../types';
+import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
 import { cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
-import { couponState } from '../orders/quote';
+import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
@@ -72,8 +72,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [amount, setAmount] = useState(order?.amount != null ? String(order.amount) : '');
   // 'auto' follows the worked-out total; any typing makes it 'manual' for good. Edit keeps what was saved.
   const [totalMode, setTotalMode] = useState<'auto' | 'manual'>(order ? 'manual' : 'auto');
-  // '' is no coupon. A saved code stays as it was, even one that's no longer in the list.
-  const [coupon, setCoupon] = useState(order?.coupon?.code ?? '');
+  // Sunit's own pick ('' is no coupon). A saved code stays as it was, even one that's no longer in
+  // the list. Null only on a new order he hasn't picked or cleared in yet: a returning number's
+  // Repeat coupon may fill in there, and once he picks or clears, nothing fills in again.
+  const [couponPick, setCouponPick] = useState<string | null>(order ? order.coupon?.code ?? '' : null);
+  // The typed number's coupon orders, with the number they're for, so a slow answer never lands on another.
+  const [uses, setUses] = useState<{ phone: string; list: CouponUse[] } | null>(null);
   const couponInput = useRef<HTMLSelectElement>(null);
   const [note, setNote] = useState(order?.note ?? '');
   const [code, setCode] = useState(typedCode.toUpperCase().replace(/^(#|SN-)/, ''));
@@ -91,6 +95,11 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);
   const lines = PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
 
+  // Filled in by itself: only on a new order, only while he hasn't picked, only with the coupon list shown.
+  const digits = normalisePhone(phone);
+  const phoneUses = uses && uses.phone === digits ? uses.list : null;
+  const filled = couponPick === null && book.ready && phoneUses ? repeatCoupon(phoneUses, book.coupons ?? [], new Date()) : null;
+  const coupon = couponPick ?? filled ?? '';
   const worked = book.workOut(lines, coupon || null);
   const workedTotal = worked && 'total' in worked ? worked.total : null;
   const missing = worked && 'missing' in worked ? worked.missing : null;
@@ -110,7 +119,6 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const suggest = useNameSuggestions(name, fill);
 
   // "Anjali Kulkarni · 2 orders before", 300ms after the phone stops changing.
-  const digits = normalisePhone(phone);
   useEffect(() => {
     setMatch(null);
     if (!digits) return;
@@ -122,6 +130,18 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     }, 300);
     return () => { live = false; clearTimeout(timer); };
   }, [digits, order?.id]);
+
+  // Their coupon orders, for the fill-in and the one-time note. Only where the database has kinds, so an
+  // older one is never asked; a failure just leaves both off.
+  const kinds = hasKinds(book.coupons);
+  useEffect(() => {
+    if (!digits || !kinds) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      getCouponUses(digits).then((list) => { if (live) setUses({ phone: digits, list }); }, () => {});
+    }, 300);
+    return () => { live = false; clearTimeout(timer); };
+  }, [digits, kinds]);
 
   // After a failed Save, show the first problem.
   useEffect(() => {
@@ -325,10 +345,29 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const inUse = (book.coupons ?? []).filter((c) => couponState(c.code, book.coupons ?? [], new Date()) === 'live');
   const notInUse = (book.coupons ?? []).filter((c) => !inUse.includes(c));
   const picked = book.coupons?.find((c) => c.code.toUpperCase() === coupon.toUpperCase());
-  const couponHint = couponNow === 'off' ? copy.couponOff(coupon)
+  const stateHint = couponNow === 'off' ? copy.couponOff(coupon)
     : couponNow === 'expired' && picked?.expires_at ? copy.couponEnded(coupon, formatDay(picked.expires_at))
     : couponNow === 'unknown' ? copy.couponUnknown(coupon)
-    : undefined;
+    : '';
+  // His pick keeps the field open, even when it clears a coupon that opened it by filling in.
+  const pickCoupon = (code: string) => { edit(setCouponPick)(code); setShown((s) => ({ ...s, coupon: true })); };
+  // A heads-up, never a block. In Edit it counts only orders made before this one.
+  const usedOn = phoneUses && book.coupons ? usedBefore(phoneUses, coupon, book.coupons, order ?? undefined) : null;
+  const usedHint = usedOn ? copy.couponUsed(formatDay(usedOn.created_at), usedOn.order_code) : '';
+  const usedNote = usedHint && (
+    <span className="adm-worked"><History size={14} strokeWidth={1.75} aria-hidden="true" />{usedHint}</span>
+  );
+  const couponHint = filled ? (
+    <span className="adm-worked">
+      {copy.couponFilled}
+      <button type="button" className="adm-text-btn" aria-label={copy.removeCouponLabel(filled)}
+        onClick={() => { pickCoupon(''); couponInput.current?.focus(); }}>
+        <X size={14} strokeWidth={2} aria-hidden="true" />{copy.removeCoupon}
+      </button>
+    </span>
+  ) : usedNote ? <>{stateHint && `${stateHint} `}{usedNote}</> : stateHint || undefined;
+  // A filled-in coupon opens the field by itself, so it's never applied out of sight.
+  const couponShown = shown.coupon || !!filled;
 
   // Under Total: how it was worked out, or the worked-out total to go back to, or why there's none.
   const paidSoFar = order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : '';
@@ -367,10 +406,10 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       <h2 id={`${id}-extras`} className="adm-of__h">{copy.ifYouHave}</h2>
       <div className="adm-card adm-form">
         {/* The cause above the effect: the coupon sits over the total it changes. */}
-        {book.ready && shown.coupon && (
+        {book.ready && couponShown && (
           <Field label={copy.coupon} hint={couponHint}>
             <select ref={couponInput} className={`adm-input adm-select${coupon ? '' : ' is-none'}`} value={coupon}
-              onChange={(e) => edit(setCoupon)(e.target.value)}>
+              onChange={(e) => pickCoupon(e.target.value)}>
               <option value="">{copy.noCoupon}</option>
               {couponNow === 'unknown' && <option value={coupon}>{coupon}</option>}
               {inUse.map((c) => <option key={c.id} value={c.code}>{c.code}</option>)}
@@ -405,7 +444,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           </div>
         )}
         <div className="adm-of__links">
-          {book.ready && more('coupon', copy.addCoupon)}
+          {book.ready && !couponShown && more('coupon', copy.addCoupon)}
           {more('note', copy.addNote)}
           {!order && more('code', copy.addCode)}
           {!order && more('earlier', copy.earlier)}

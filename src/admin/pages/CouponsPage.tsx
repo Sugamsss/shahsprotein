@@ -2,17 +2,19 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Pencil, Plus } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
-import { createCoupon, getCoupons, setCouponActive, updateCoupon } from '../api';
+import { AdminError, createCoupon, getCoupons, setCouponActive, updateCoupon } from '../api';
 import { endOfDayIst, formatDay, formatDayInSentence, istDateValue } from '../format';
-import { Field, LoadError, SheetForm, Skeleton } from '../parts';
+import { Field, LoadError, Segmented, SheetForm, Skeleton } from '../parts';
 import { Switch } from '../Switch';
 import { useToast } from '../toast';
-import type { Coupon } from '../types';
+import { hasKinds } from '../orders/quote';
+import type { Coupon, CouponKind } from '../types';
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 
 const copy = adminCopy.coupons;
 const CODE = /^[A-Z0-9-]{3,24}$/;
+const KINDS = (['one_time', 'repeat'] as const).map((value) => ({ value, label: copy.kinds[value] }));
 
 // Coupons (spec 2.11). On/off is one tap with Undo; new and edit use a sheet.
 // End dates are whole days in India time (saved as the last second of the day).
@@ -26,8 +28,8 @@ const CouponCard: React.FC<{ coupon: Coupon; onActive: (active: boolean) => void
   const live = coupon.active && !ended;
   const count = coupon.order_count ?? 0;
   const ends = coupon.expires_at ? (ended ? copy.endedOn : copy.ends)(formatDay(coupon.expires_at)) : copy.noEnd;
-  // The old admin's minimum note, if any, shows beside the private note.
-  const notes = [ends, coupon.minimum_note, coupon.internal_note].filter(Boolean).join(' · ');
+  // The kind leads, quietly. The old admin's minimum note, if any, shows beside the private note.
+  const notes = [coupon.kind && copy.kinds[coupon.kind], ends, coupon.minimum_note, coupon.internal_note].filter(Boolean).join(' · ');
   return (
     <section className={`adm-card adm-coupon${live ? '' : ' is-off'}`} aria-labelledby={`adm-coupon-${coupon.id}`}>
       <div className="adm-coupon__head">
@@ -49,14 +51,19 @@ const CouponCard: React.FC<{ coupon: Coupon; onActive: (active: boolean) => void
   );
 };
 
-/** New coupon (no `coupon`) or edit. Server messages show as they come. */
-const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSaved: () => void }> = ({
-  coupon, onClose, onSaved,
+/**
+ * New coupon (no `coupon`) or edit. Server messages show as they come. `kinds`: the database has
+ * coupon kinds (20260928000002); without them there's no choice and none is sent.
+ */
+const CouponSheet: React.FC<{ coupon: Coupon | null; kinds: boolean; onClose: () => void; onSaved: () => void }> = ({
+  coupon, kinds, onClose, onSaved,
 }) => {
   const [code, setCode] = useState(coupon?.code ?? '');
   const [gives, setGives] = useState(coupon?.description ?? '');
   const [ends, setEnds] = useState(coupon?.expires_at ? istDateValue(coupon.expires_at) : '');
   const [note, setNote] = useState(coupon?.internal_note ?? '');
+  // New coupons start One-time, like the database's default: nothing fills in unless they choose to.
+  const [kind, setKind] = useState<CouponKind>(coupon?.kind ?? 'one_time');
   const [problem, setProblem] = useState<{ field: 'code' | 'gives'; text: string } | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   const givesRef = useRef<HTMLInputElement>(null);
@@ -76,9 +83,17 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
       expires_at: ends ? endOfDayIst(ends) : null,
       minimum_note: coupon?.minimum_note ?? null, // kept as it was
       internal_note: note.trim() || null,
+      ...(kinds && { kind }),
     };
     if (coupon) await updateCoupon(coupon.id, coupon.active, fields);
-    else await createCoupon(code, fields);
+    else {
+      // With no coupons yet, kinds can't be told from the list, so the choice shows; an older
+      // database answers 'missing' to the kind, and the coupon is made without it (One-time there).
+      await createCoupon(code, fields).catch((error: unknown) => {
+        if (!(error instanceof AdminError && error.kind === 'missing' && fields.kind)) throw error;
+        return createCoupon(code, { ...fields, kind: undefined });
+      });
+    }
     onSaved();
   };
 
@@ -109,6 +124,14 @@ const CouponSheet: React.FC<{ coupon: Coupon | null; onClose: () => void; onSave
       <Field label={copy.gives} hint={copy.givesHint} error={errorFor('gives')}>
         <input ref={givesRef} className="adm-input" value={gives} maxLength={120} onChange={(event) => setGives(event.target.value)} />
       </Field>
+      {kinds && (
+        <div className="adm-field">
+          {/* The legend inside names the choice for screen readers; this is the label people see. */}
+          <span className="adm-field__label" aria-hidden="true">{copy.kind}</span>
+          <Segmented label={copy.kind} options={KINDS} value={kind} onChange={setKind} />
+          <span className="adm-field__hint">{copy.kindHints[kind]}</span>
+        </div>
+      )}
       <div className="adm-form__pair">
         <Field label={copy.endsOn} optional={copy.optional}>
           <input className="adm-input" type="date" value={ends} min={istDateValue()} onChange={(event) => setEnds(event.target.value)} />
@@ -180,6 +203,7 @@ const CouponsPage: React.FC = () => {
         <CouponSheet
           key={sheet.key}
           coupon={sheet.coupon}
+          kinds={hasKinds(coupons) || coupons?.length === 0}
           onClose={() => setSheet(null)}
           onSaved={() => {
             // A new coupon's prices are set per product, on Products.

@@ -82,7 +82,8 @@
 .adm-form { display: grid; gap: 18px; }
 .adm-form__pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .adm-form__error { color: var(--color-error-text); }
-.adm-field__control { position: relative; display: flex; align-items: center; gap: 8px; }
+/* min-width 0: a date input won't shrink below its fields in Chrome, and would spill out of a half-width column (Ends on). */
+.adm-field__control { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .adm-field__control > :is(input, textarea, select) { flex: 1; min-width: 0; }
 .adm-field__prefix { position: absolute; left: 16px; color: var(--adm-ink-2); font-size: 1rem; pointer-events: none; }
 .adm-field--prefix .adm-input { padding-left: 34px; }
