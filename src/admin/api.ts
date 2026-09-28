@@ -1,7 +1,8 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, Coupon, CouponInput, CustomerList, EmailList, Order, OrderChanges,
-  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, Totals,
+  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, PaymentInput, PayRestInput,
+  RestorePayment, Totals,
 } from './types';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -84,6 +85,21 @@ export const updateOrder = (id: string, changes: OrderChanges) =>
 /** Creates an order when `id` is left out; otherwise a full edit. */
 export const saveOrder = (order: OrderInput, id?: string) => rpc<Order>('save_admin_order', { id, order });
 export const deleteOrder = (id: string) => rpc<void>('delete_admin_order', { id });
+
+// Payments. Each returns the whole order, so a screen just swaps it in.
+/** "Part payment…": needs the order's total first. */
+export const addPayment = (orderId: string, payment: PaymentInput) =>
+  rpc<Order>('add_admin_payment', { order_id: orderId, payment });
+/** "Mark paid": one payment for whatever is left. */
+export const payRest = (orderId: string, payment: PayRestInput) =>
+  rpc<Order>('pay_admin_order_rest', { order_id: orderId, payment });
+export const deletePayment = (id: string) => rpc<Order>('delete_admin_payment', { id });
+/** Undo for deletePayment and for `paid: false`: pass the payments as the order listed them. Repeats are skipped. */
+export const restorePayments = (orderId: string, payments: RestorePayment[]) =>
+  rpc<Order>('restore_admin_payments', {
+    order_id: orderId,
+    payments: payments.map(({ id, amount, method, note, paid_at }) => ({ id, amount, method, note, paid_at })),
+  });
 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
 /** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Order, OrderLine } from '../types';
-import { applyLocal, cleanPastedPhone, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, phoneInText, pileOf, plainPhone, productFilter, reverseOf, searchFor } from './model';
+import type { Order, OrderLine, Payment } from '../types';
+import { applyLocal, cleanPastedPhone, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter, reverseOf, searchFor } from './model';
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -114,6 +114,17 @@ describe('paying with a method', () => {
     expect(paidByText(paidOrder('bank'))).toBe('Bank transfer');
     expect(paidByText(paidOrder('other', 'bank transfer'))).toBe('Other: bank transfer');
     expect(paidByText(paidOrder(null))).toBeNull();
+  });
+});
+
+describe('paid in parts, in the CSV', () => {
+  const pay = (method: Payment['method'], note: string | null = null) => ({ method, note }) as Payment;
+
+  it("lists each method once, oldest first, with Other's note, and skips payments with no method", () => {
+    expect(paymentsByText({ payments: [pay('upi'), pay(null), pay('cash'), pay('upi'), pay('other', 'a friend')] }))
+      .toBe('UPI + Cash + Other: a friend');
+    expect(paymentsByText({ payments: [pay(null)] })).toBeNull();
+    expect(paymentsByText({ payments: [] })).toBeNull();
   });
 });
 

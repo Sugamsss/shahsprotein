@@ -6,6 +6,25 @@ export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_perso
 export type OrderView = 'todo' | 'done' | 'all';
 /** How a paid order was paid. Old paid orders have none (null). */
 export type PaidMethod = 'upi' | 'cash' | 'bank' | 'other';
+/** Paid means paid in full: the payments cover the total, or the order has no total. */
+export type PaymentState = 'not_paid' | 'part_paid' | 'paid';
+
+/** One payment on an order (20260928000000). Oldest first in `Order.payments`. */
+export interface Payment {
+  id: string;
+  /** Whole rupees. Null only while the order has no total ("paid in full, total not typed"); typing the total fills it in. */
+  amount: number | null;
+  /** Null only on payments copied from orders paid before methods existed. */
+  method: PaidMethod | null;
+  /** Only with 'other'. */
+  note: string | null;
+  /** When the money came in. Home counts it in that week. */
+  paid_at: string;
+  /** When it was typed in. */
+  created_at: string;
+  /** Who added it: display name, else email; null when unknown. */
+  by_name: string | null;
+}
 
 export interface AdminMe {
   id: string;
@@ -27,12 +46,22 @@ export interface Order {
   message_code: string;
   source: OrderSource;
   status: OrderStatus;
+  /** Paid in full. A part-paid order is not paid. */
   paid: boolean;
+  /** When the payments first covered the total; null while not paid in full. */
   paid_at: string | null;
-  /** Only while paid; null on old paid orders. */
+  /** The method of the payment that completed it; null while not paid in full, and on old paid orders. */
   paid_method: PaidMethod | null;
   /** Only with 'other': one line, up to 60 characters. */
   paid_note: string | null;
+  payment_state: PaymentState;
+  payments: Payment[];
+  /** Sum of the payments' amounts (0 with none). */
+  amount_paid: number;
+  /** What's left of the total, never negative; null when there's no total. */
+  amount_due: number | null;
+  /** Paid over the total; 0 when not over, null when there's no total. */
+  amount_extra: number | null;
   kept: boolean;
   stale: boolean;
   name: string | null;
@@ -80,6 +109,7 @@ export interface OrderPage {
 /** update_admin_order: only the keys present change; null clears where allowed. */
 export interface OrderChanges {
   status?: OrderStatus;
+  /** true records one payment for whatever is left; false removes every payment (Undo: restorePayments). */
   paid?: boolean;
   /** Only with `paid: true` in the same call. */
   paid_method?: PaidMethod;
@@ -93,6 +123,23 @@ export interface OrderChanges {
   pincode?: string | null;
 }
 
+/** add_admin_payment: "Part payment…". The order needs a total first. */
+export interface PaymentInput {
+  /** Whole rupees, 1 to 10,00,000. More than what's due is fine (it shows as extra). */
+  amount: number;
+  method: PaidMethod;
+  /** Only with 'other'. */
+  note?: string;
+  /** ISO timestamp; left out means now. Not in the future. */
+  paid_at?: string;
+}
+
+/** pay_admin_order_rest: "Mark paid", one payment for whatever is left. */
+export type PayRestInput = Omit<PaymentInput, 'amount'>;
+
+/** restore_admin_payments (Undo): payments as the order listed them, same ids. */
+export type RestorePayment = Pick<Payment, 'id' | 'amount' | 'method' | 'note' | 'paid_at'>;
+
 /** save_admin_order's p_order. On edit, code, status, paid and created_at are ignored. */
 export interface OrderInput {
   source: OrderSource;
@@ -105,6 +152,7 @@ export interface OrderInput {
   coupon?: string | null;
   lines: OrderLine[];
   status?: OrderStatus;
+  /** New orders only: one payment for the whole total (or none typed), dated now. */
   paid?: boolean;
   /** New orders only, with `paid: true`; `paid_note` only with 'other'. */
   paid_method?: PaidMethod;
@@ -115,15 +163,21 @@ export interface OrderInput {
 export interface Overview {
   queue: {
     to_confirm: number;
-    to_send: { count: number; paid: number };
+    /** paid is paid in full; part_paid has a payment but not enough (20260928000000). */
+    to_send: { count: number; paid: number; part_paid: number };
     to_collect: {
       count: number;
+      /** The totals quoted on these orders. */
       amount: number;
+      /** What's still owed on them (orders with a total). Use this for "₹X to collect". */
+      amount_due: number;
+      part_paid: number;
       without_amount: number;
       oldest: { code: string; name: string | null; since: string } | null;
       people: number;
     };
-    on_the_way: { count: number; not_paid: number };
+    /** not_paid counts part-paid orders too. */
+    on_the_way: { count: number; not_paid: number; part_paid: number };
     stale: number;
     to_confirm_oldest: string | null;
     stale_oldest: string | null;
@@ -162,9 +216,14 @@ export interface TotalsOverall {
   amount: number;
   /** Orders with no amount typed yet. */
   without_amount: number;
+  /** Paid in full. */
   paid: number;
-  /** ₹ on the ones not paid yet. */
+  /** ₹ quoted on the ones not paid in full. */
   unpaid_amount: number;
+  /** ₹ still owed on the stage's orders that have a total (20260928000000). */
+  amount_due: number;
+  /** Orders with a payment that's not the whole total. */
+  part_paid: number;
 }
 
 export interface TotalsWeek {
@@ -173,16 +232,17 @@ export interface TotalsWeek {
   /** Real orders (confirmed, sent or delivered), by created_at. */
   orders: number;
   packs: number;
-  /** ₹ paid in the week, by paid_at. */
+  /** ₹ that came in during the week: each payment on its own date (20260928000000). */
   amount_in: number;
+  /** Orders paid in full in the week (by when the payments covered the total). */
   paid_orders: number;
   paid_without_amount: number;
 }
 export interface TotalsDay { date: string; orders: number; packs: number }
 /**
- * This week's amount_in by how it was paid, zeros included. not_recorded is orders
- * marked paid before methods existed. Paid orders with no amount add nothing, so
- * the five add up to amount_in.
+ * This week's amount_in by how each payment was made, zeros included. not_recorded is
+ * payments from orders marked paid before methods existed. Payments with no amount add
+ * nothing, so the five add up to amount_in.
  */
 export type TotalsByMethod = Record<PaidMethod | 'not_recorded', number>;
 export interface TotalsWeekProduct { product_id: string; packs: number; orders: number }

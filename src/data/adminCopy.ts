@@ -157,6 +157,8 @@ export const adminCopy = {
     deliveredPaid: 'Delivered · Paid',
     cancelled: 'Cancelled',
     paid: 'Paid',
+    /** Some money in, not the whole total. */
+    partPaid: 'Part paid',
     notPaid: 'Not paid',
     paidLabel: (name: string, paid: boolean) =>
       `${name}: ${paid ? 'paid' : 'not paid'}. Tap to mark ${paid ? 'not paid' : 'paid'}`,
@@ -198,6 +200,8 @@ export const adminCopy = {
     names: { upi: 'UPI', cash: 'Cash', bank: 'Bank transfer' },
     /** "Other: bank transfer", in the detail, the toast and the CSV. */
     other: (note: string) => `Other: ${note}`,
+    /** Between methods when an order was paid in parts: "UPI + Cash". */
+    joiner: ' + ',
     question: 'How did they pay?',
     sheetTitle: (name: string) => `How did ${name} pay?`,
     noteLabel: 'How, in a few words',
@@ -307,7 +311,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Note'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 
