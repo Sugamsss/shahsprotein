@@ -14,7 +14,6 @@ import { Footer } from './components/layout/Footer';
 import { Toast } from './components/ui/Toast';
 import { OrderDialog } from './components/order/OrderDialog';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { AnalyticsService } from './services/analyticsService';
 import { useSectionSettle } from './hooks/useSectionSettle';
 import './styles/global.css';
 import { NotFound } from './components/pages/NotFound';
@@ -22,12 +21,6 @@ import { siteConfig } from './data/siteConfig';
 
 // The admin is loaded on demand, so landing visitors never download it or Supabase.
 const AdminApp = React.lazy(() => import('./admin/AdminApp'));
-
-// Page views (Vercel Web Analytics), landing page only.
-const PageViews: React.FC = () => {
-  React.useEffect(() => AnalyticsService.startPageViews(), []);
-  return null;
-};
 
 // Desktop sections settle into place after a scroll (see the hook).
 const SectionSettle: React.FC = () => {
@@ -37,7 +30,6 @@ const SectionSettle: React.FC = () => {
 
 const LandingPage: React.FC = () => (
   <>
-    <PageViews />
     <SectionSettle />
     <WaitlistProvider>
       <OrderProvider>
