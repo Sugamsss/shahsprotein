@@ -5,6 +5,7 @@ import { AdminSheet } from '../AdminSheet';
 import { firstName, formatMoney } from '../format';
 import { Field } from '../parts';
 import type { Order, OrderChanges, PaidMethod } from '../types';
+import type { HowPaid } from './usePayments';
 
 // How an order was paid, picked as it's marked paid. Styles: orders.css (.adm-paypick).
 
@@ -77,30 +78,41 @@ export const PaidChoices: React.FC<{
   );
 };
 
+/** A picker's keys as the payment RPCs take them. */
+export const howOf = (changes: OrderChanges): HowPaid =>
+  ({ method: changes.paid_method as PaidMethod, ...(changes.paid_note && { note: changes.paid_note }) });
+
 /** Inside the sheet, so a pick closes it the way × does and the exit plays. */
-const PickAndClose: React.FC<{ onPick: (changes: OrderChanges) => void; firstRef: React.RefObject<HTMLButtonElement> }> = ({ onPick, firstRef }) => {
+const PickAndClose: React.FC<{ onPick: (how: HowPaid) => void; firstRef: React.RefObject<HTMLButtonElement> }> = ({ onPick, firstRef }) => {
   const close = useDialogClose();
-  return <PaidChoices firstRef={firstRef} onPick={(changes) => { onPick(changes); close(); }} />;
+  return <PaidChoices firstRef={firstRef} onPick={(changes) => { onPick(howOf(changes)); close(); }} />;
 };
 
 /**
- * "How did Neha pay?": marking paid from a card, Done, or the order's Mark paid
- * button. Marking not paid never comes here; it stays one tap with Undo.
+ * "Mark paid" = pay the rest: from a card, Done, the pinned button, P, or the
+ * order's own Mark paid. "How did Neha pay?", or on a part-paid order "How did
+ * Riya pay the ₹250?". The caller records it with usePayments().payTheRest.
+ * Marking not paid never comes here; it's one tap with Undo.
  */
 export const PaidSheet: React.FC<{
   order: Order | null;
   onClose: () => void;
-  onPick: (order: Order, changes: OrderChanges) => void;
+  onPick: (order: Order, how: HowPaid) => void;
 }> = ({ order, onClose, onPick }) => {
   // Focus starts on UPI: a tap or Enter there saves, so it's one step from the card.
   const upi = useRef<HTMLButtonElement>(null);
+  const name = order ? firstName(order.name) || order.code : '';
+  const part = order?.payment_state === 'part_paid' && order.amount != null && order.amount_due != null;
   return (
     <AdminSheet isOpen={!!order} onClose={onClose} closeLabel={adminCopy.close} initialFocus={upi}
-      title={order ? copy.sheetTitle(firstName(order.name) || order.code) : ''}>
+      title={!order ? '' : part ? adminCopy.payments.restTitle(name, formatMoney(order.amount_due!)) : copy.sheetTitle(name)}>
       {order && (
         <div className="adm-stack">
-          <p className="adm-muted">{[order.code, order.amount != null && formatMoney(order.amount)].filter(Boolean).join(' · ')}</p>
-          <PickAndClose firstRef={upi} onPick={(changes) => onPick(order, changes)} />
+          <p className="adm-muted">
+            {part ? adminCopy.payments.restSub(order.code, formatMoney(order.amount_paid), formatMoney(order.amount!))
+              : [order.code, order.amount != null && formatMoney(order.amount)].filter(Boolean).join(' · ')}
+          </p>
+          <PickAndClose firstRef={upi} onPick={(how) => onPick(order, how)} />
         </div>
       )}
     </AdminSheet>

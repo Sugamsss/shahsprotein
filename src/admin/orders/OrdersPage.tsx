@@ -17,6 +17,7 @@ import { type CardAction, OrderCard, Thumb } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { PaidSheet } from './PaidMethod';
 import { useOrderChange } from './useOrderChange';
+import { usePayments } from './usePayments';
 import { useTheme } from '../../context/ThemeContext';
 
 const copy = adminCopy.orders;
@@ -151,6 +152,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   }, [hasData, location.hash]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
   const change = useOrderChange(put);
+  const payments = usePayments(put);
 
   // Search also looks through Done, and an empty board asks whether anything was ever done.
   const settledQ = useSettled(q.trim());
@@ -196,7 +198,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     } else if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
     else if (action === 'next' && lane !== 'done') void change(o, NEXT[lane]);
     else if (action === 'paid') {
-      if (o.paid) void change(o, { paid: false });
+      if (o.paid) void payments.markNotPaid(o);
       else setPaying(o);
     }
     else if (action === 'keep') void change(o, { kept: true });
@@ -338,7 +340,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           }} />
       )}
       <ConfirmSheet order={confirming} onClose={() => setConfirming(null)} onConfirm={(o, c) => void change(o, c)} />
-      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
     </div>
   );

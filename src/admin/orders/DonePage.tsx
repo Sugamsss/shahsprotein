@@ -11,7 +11,7 @@ import { itemsText } from './model';
 import { Code, OrderCard, PaidChip } from './OrderCard';
 import { useLaptop } from './OrdersPage';
 import { PaidSheet } from './PaidMethod';
-import { useOrderChange } from './useOrderChange';
+import { usePayments } from './usePayments';
 
 const copy = adminCopy.done;
 type Filter = keyof typeof copy.filters;
@@ -43,7 +43,7 @@ const DonePage: React.FC = () => {
   const [more, setMore] = useState(false);
   const list = useRpc(() => getOrders({ ...FILTERS[filter], limit: PAGE }), [filter]);
   const put = useCallback((o: Order) => list.setData((d) => d && { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
-  const change = useOrderChange(put);
+  const payments = usePayments(put);
 
   const older = async () => {
     const before = list.data?.next_before;
@@ -60,7 +60,7 @@ const DonePage: React.FC = () => {
   const days = byDay(oldestFirst ? [...orders].reverse() : orders);
   // Not paid is one tap with Undo; paid asks how first.
   const [paying, setPaying] = useState<Order | null>(null);
-  const paidToggle = (o: Order) => () => (o.paid ? void change(o, { paid: false }) : setPaying(o));
+  const paidToggle = (o: Order) => () => (o.paid ? void payments.markNotPaid(o) : setPaying(o));
 
   return (
     <div className="adm-page adm-done">
@@ -116,7 +116,7 @@ const DonePage: React.FC = () => {
       {list.data?.next_before && (
         <button type="button" className="adm-btn adm-btn--quiet adm-done__more" disabled={more} onClick={older}>{copy.older}</button>
       )}
-      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, c) => void change(o, c)} />
+      <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
     </div>
   );
 };
