@@ -142,6 +142,31 @@ export const contactNumbers = (tels: readonly string[]): string[] => [...new Set
     .filter((d): d is string => d !== null),
 )];
 
+/** How Add order shows a number: an Indian mobile as its 10 digits, anything else as + and its digits. Null if it can't be a phone. */
+export const plainPhone = (raw: string): string | null => {
+  const d = normalisePhone(raw);
+  return d && (/^91\d{10}$/.test(d) ? d.slice(2) : `+${d}`);
+};
+
+/** The one number in some text ("Call me on +91 98765-43210"), as the server stores it. Null if there's none, or two different ones. */
+export const phoneInText = (text: string): string | null => {
+  const found = contactNumbers(text.match(/\+?\d[\d\s().-]{7,}\d/g) ?? []);
+  return found.length === 1 ? found[0] : null;
+};
+
+/**
+ * After an edit to Phone: the plain number when the edit looks pasted and holds one
+ * number, else null (leave the text alone). Pasted means a paste or drop, a keyboard's
+ * clipboard chip or suggestion (insertReplacementText), or several characters at once;
+ * key-by-key typing is left for blur, so the cursor is never fought.
+ */
+export const cleanPastedPhone = (before: string, after: string, inputType?: string): string | null => {
+  const pasted = inputType === 'insertFromPaste' || inputType === 'insertFromDrop' || inputType === 'insertReplacementText'
+    || after.length - before.length > 1;
+  const found = pasted ? phoneInText(after) : null;
+  return found && plainPhone(found);
+};
+
 const product = (id: string) => productsData.find((p) => p.id === id);
 export const productName = (id: string) => product(id)?.name ?? id;
 export const thumbOf = (id: string, dark: boolean) => {

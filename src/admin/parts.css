@@ -71,22 +71,6 @@
 }
 .adm-text-btn::after { content: ''; position: absolute; inset: -4px -8px; }
 .adm-text-btn:active { opacity: 0.7; }
-/* A round, icon-only tonal button beside a field (Paste, contacts). 44px, so no hit-area trick. */
-.adm-round-btn {
-  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
-  background: var(--adm-accent-tint); color: var(--adm-accent-text);
-}
-@media (hover: hover) { .adm-round-btn:hover { background: var(--adm-accent-tint-press); } }
-.adm-round-btn:active { background: var(--adm-accent-tint-press); transform: scale(0.94); }
-/* Two of them beside a field on a phone under 360px: a little tighter, so a whole
-   "+91 98765 43210" still shows. They draw at 40px but stay 44px to the finger. */
-@media (max-width: 359px) {
-  .adm-field__control:has(.adm-round-btn + .adm-round-btn) { gap: 6px; }
-  /* Proportional digits here: a phone number isn't a column, and tabular ones need ~10px more. */
-  .adm-field__control:has(.adm-round-btn + .adm-round-btn) .adm-input { padding-inline: 12px; font-variant-numeric: proportional-nums; }
-  .adm-field__control:has(.adm-round-btn + .adm-round-btn) .adm-round-btn { position: relative; width: 40px; height: 40px; }
-  .adm-field__control:has(.adm-round-btn + .adm-round-btn) .adm-round-btn::after { content: ''; position: absolute; inset: -2px; }
-}
 .adm-pill {
   display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: var(--radius-full);
   background: var(--adm-well); color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; letter-spacing: 0;

@@ -3,13 +3,12 @@ import { BookUser } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { getCustomers } from '../api';
-import { formatPhone } from '../format';
 import { useToast } from '../toast';
 import type { Customer } from '../types';
-import { contactNumbers } from './model';
+import { contactNumbers, plainPhone } from './model';
 
 // Filling "Who it's for" on Add order: past customers under the name box, and
-// a contacts button beside Paste where the phone has a contact picker (Android Chrome only).
+// a contacts button beside Phone where the phone has a contact picker (Android Chrome only).
 
 const copy = adminCopy.orderForm;
 
@@ -17,6 +16,8 @@ const copy = adminCopy.orderForm;
 export interface Picked { name: string; phone: string; pincode?: string | null }
 
 const MAX = 5;
+/** Numbers the way this form's Phone box shows them: 9876543210, or +447700900456. */
+const plain = (digits: string) => plainPhone(digits) ?? digits;
 
 /**
  * The name box as a combobox: typing 2+ letters (or 3+ digits) lists up to five
@@ -84,8 +85,8 @@ export const useNameSuggestions = (name: string, onPick: (p: Picked) => void) =>
         // Options aren't focusable: pressing one keeps focus in the name box, so it doesn't blur shut first.
         <li key={c.phone} id={optionId(i)} role="option" aria-selected={i === active}
           onMouseDown={(e) => e.preventDefault()} onClick={() => pick(c)}>
-          <b>{c.name ?? formatPhone(c.phone)}</b>
-          {c.name && <small>{formatPhone(c.phone)}</small>}
+          <b>{c.name ?? plain(c.phone)}</b>
+          {c.name && <small>{plain(c.phone)}</small>}
         </li>
       ))}
     </ul>
@@ -98,7 +99,7 @@ export const useNameSuggestions = (name: string, onPick: (p: Picked) => void) =>
 interface ContactsManager { select: (props: ('name' | 'tel')[], options?: { multiple?: boolean }) => Promise<{ name?: string[]; tel?: string[] }[]> }
 const contacts = typeof navigator !== 'undefined' ? (navigator as Navigator & { contacts?: ContactsManager }).contacts : undefined;
 
-/** Pick from contacts, a round button beside Paste: only where the phone has a contact picker, so nobody taps a button that can't work. */
+/** Pick from contacts, a round button beside Phone: only where the phone has a contact picker, so nobody taps a button that can't work. */
 export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPick }) => {
   const toast = useToast();
   const [choosing, setChoosing] = useState<{ name: string; phones: string[] } | null>(null);
@@ -128,13 +129,13 @@ export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPi
 
   return (
     <>
-      <button type="button" className="adm-round-btn" aria-label={copy.pickContact} title={copy.pickContact} onClick={() => void open()}>
+      <button type="button" className="adm-of__contacts" aria-label={copy.pickContact} title={copy.pickContact} onClick={() => void open()}>
         <BookUser size={18} strokeWidth={1.75} aria-hidden="true" />
       </button>
       <AdminSheet isOpen={!!choosing} onClose={() => setChoosing(null)} title={copy.whichNumber(choosing?.name ?? '')} closeLabel={adminCopy.close}>
         <div className="adm-of__numbers">
           {choosing?.phones.map((phone) => (
-            <button key={phone} type="button" onClick={() => choose(phone)}>{formatPhone(phone)}</button>
+            <button key={phone} type="button" onClick={() => choose(phone)}>{plain(phone)}</button>
           ))}
         </div>
       </AdminSheet>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Order, OrderLine } from '../types';
-import { applyLocal, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, pileOf, productFilter, reverseOf, searchFor } from './model';
+import { applyLocal, cleanPastedPhone, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, phoneInText, pileOf, plainPhone, productFilter, reverseOf, searchFor } from './model';
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -161,5 +161,55 @@ describe('contactNumbers', () => {
 
   it('leaves out what cannot be a phone', () => {
     expect(contactNumbers(['', '12345', 'none'])).toEqual([]);
+  });
+});
+
+// Add order shows numbers plainly: 10 digits for India, + and digits otherwise.
+
+describe('plainPhone', () => {
+  it.each(['+91 98765 43210', '098765 43210', '0091 98765 43210', '98765-43210', '919876543210', '9876543210'])('%s shows as 9876543210', (raw) => {
+    expect(plainPhone(raw)).toBe('9876543210');
+  });
+
+  it('keeps + and the digits for a foreign number', () => {
+    expect(plainPhone('+44 7700 900456')).toBe('+447700900456');
+    expect(plainPhone('447700900456')).toBe('+447700900456');
+  });
+
+  it('is null for what cannot be a phone', () => {
+    expect(plainPhone('12345')).toBeNull();
+  });
+});
+
+describe('phoneInText', () => {
+  it('finds the number in a sentence', () => {
+    expect(phoneInText('Call me on +91 98765-43210, thanks')).toBe('919876543210');
+    expect(phoneInText('Order code: SN-7KQ4M. Number 98765 43210.')).toBe('919876543210');
+  });
+
+  it('is null with no number, or two different ones', () => {
+    expect(phoneInText('Pincode 415001, see you 28-09')).toBeNull();
+    expect(phoneInText('98765 43210 or 98000 00011')).toBeNull();
+  });
+});
+
+describe('cleanPastedPhone', () => {
+  it('cleans a paste, a keyboard chip or a drop', () => {
+    expect(cleanPastedPhone('', '+91 98765 43210', 'insertFromPaste')).toBe('9876543210');
+    expect(cleanPastedPhone('', 'Call me on +91 98765-43210', 'insertFromPaste')).toBe('9876543210');
+    expect(cleanPastedPhone('98', '+91 98765 43210', 'insertReplacementText')).toBe('9876543210');
+    expect(cleanPastedPhone('', '+44 7700 900456', 'insertFromDrop')).toBe('+447700900456');
+  });
+
+  it('cleans several characters arriving at once, whatever the input type', () => {
+    expect(cleanPastedPhone('', '098765 43210', 'insertText')).toBe('9876543210');
+  });
+
+  it('leaves key-by-key typing alone, even when it makes a whole number', () => {
+    expect(cleanPastedPhone('+91 98765 4321', '+91 98765 43210', 'insertText')).toBeNull();
+  });
+
+  it('leaves a paste it cannot read, so the error can show', () => {
+    expect(cleanPastedPhone('', 'call me', 'insertFromPaste')).toBeNull();
   });
 });

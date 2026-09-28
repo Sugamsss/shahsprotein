@@ -41,6 +41,14 @@
 .adm-of__suggest li[aria-selected='true'] { background: var(--adm-accent-tint); }
 .adm-of__suggest li:active { background: var(--adm-accent-tint-press); }
 
+/* Pick from contacts: a round tonal button after Phone (Android only). */
+.adm-of__contacts {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--adm-accent-tint); color: var(--adm-accent-text);
+}
+@media (hover: hover) { .adm-of__contacts:hover { background: var(--adm-accent-tint-press); } }
+.adm-of__contacts:active { background: var(--adm-accent-tint-press); transform: scale(0.94); }
+
 /* Which of a contact's numbers: plain rows. */
 .adm-of__numbers { display: grid; }
 .adm-of__numbers button { min-height: 56px; padding: 0 4px; color: var(--adm-ink-1); text-align: left; font-size: var(--adm-text-head); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -78,8 +86,6 @@
   border-top: 1px solid var(--adm-hairline); background: var(--adm-page);
 }
 
-/* Under 360px the form's cards take the packs card's 16px sides, so Phone keeps room for a whole number beside its two round buttons. */
-@media (max-width: 359px) { .adm-of .adm-card.adm-form { padding-inline: 16px; } }
 @media (min-width: 375px) { .adm-of-page__bar { margin-inline: -20px; padding-inline: 20px; } }
 
 @media (min-width: 960px) {

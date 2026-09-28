@@ -448,8 +448,7 @@ export const adminCopy = {
     useLabel: (name: string) => `Use ${name}'s name and pincode`,
     /** Under the name box: people who ordered before. */
     suggestions: 'People who ordered before',
-    /** The round buttons beside Phone. Contacts is Android only (the phone's contact picker). */
-    pasteNumber: 'Paste number',
+    /** The round button after Phone, Android only (the phone's contact picker). */
     pickContact: 'Pick from contacts',
     whichNumber: (name: string) => (name ? `Which number for ${name}?` : 'Which number?'),
     noNumber: (name: string) => (name ? `No phone number for ${name}. Type it in.` : 'That contact has no phone number.'),

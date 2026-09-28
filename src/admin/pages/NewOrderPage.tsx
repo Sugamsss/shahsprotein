@@ -8,7 +8,7 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
 import { getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
-import { formatPhone, istDateValue } from '../format';
+import { istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
@@ -16,8 +16,7 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
-import { normalisePhone } from '../orders/model';
-import { PasteButton } from '../orders/OrderParts';
+import { cleanPastedPhone, normalisePhone, plainPhone } from '../orders/model';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
 import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
@@ -54,7 +53,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   const [qty, setQty] = useState<Record<string, number>>(() =>
     Object.fromEntries((order?.lines ?? []).map((l) => [`${l.product_id}|${l.size}`, l.quantity])));
-  const [phone, setPhone] = useState(order?.phone ? formatPhone(order.phone) : '');
+  const [phone, setPhone] = useState(order?.phone ? plainPhone(order.phone) ?? order.phone : '');
   const [name, setName] = useState(order?.name ?? '');
   const [pincode, setPincode] = useState(order?.pincode ?? '');
   const [via, setVia] = useState<OrderSource | null>(order?.source ?? null);
@@ -85,7 +84,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const fill = ({ name: pickedName, phone: pickedPhone, pincode: pickedPincode }: Picked) => {
     dirty.current = true;
     if (pickedName) setName(pickedName);
-    if (pickedPhone) setPhone(formatPhone(pickedPhone));
+    if (pickedPhone) setPhone(plainPhone(pickedPhone) ?? pickedPhone);
     if (pickedPincode && !pincode.trim()) setPincode(pickedPincode);
   };
   const suggest = useNameSuggestions(name, fill);
@@ -218,9 +217,15 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     <section className="adm-of__section adm-of--who" aria-labelledby={`${id}-who`}>
       <h2 id={`${id}-who`} className="adm-of__h">{copy.who}</h2>
       <div className="adm-card adm-form">
-        <Field label={copy.phone} error={errors.phone} action={<><PasteButton round onPaste={edit(setPhone)} /><ContactsButton onPick={fill} /></>}>
+        <Field label={copy.phone} error={errors.phone} action={<ContactsButton onPick={fill} />}>
           <input className="adm-input" inputMode="tel" autoComplete="off" value={phone} placeholder={orderCopy.phonePlaceholder}
-            onChange={(e) => edit(setPhone)(e.target.value)} onBlur={() => digits && setPhone(formatPhone(digits))} />
+            onChange={(e) => {
+              // Shown plainly (9876543210). A paste, a keyboard's clipboard chip or autofill is cleaned
+              // at once, even out of a sentence; typing is cleaned on blur, so the cursor isn't fought.
+              const text = e.target.value;
+              edit(setPhone)(cleanPastedPhone(phone, text, (e.nativeEvent as InputEvent).inputType) ?? text);
+            }}
+            onBlur={() => digits && setPhone(plainPhone(digits) ?? phone)} />
         </Field>
         {/* Hidden once Use would change nothing, e.g. right after picking them from the suggestions. */}
         {match && (match.name !== name.trim() || (!!match.pincode && match.pincode !== pincode.trim())) && (
