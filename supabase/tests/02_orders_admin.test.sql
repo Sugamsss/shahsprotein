@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(88);
+select plan(87);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
@@ -136,7 +136,7 @@ select throws_ok(
   '22023', 'Unknown field: colour.', 'create: unknown keys are refused'
 );
 
--- A plain create: fresh code, confirmed, not paid, lines merged.
+-- A plain create: fresh code, Cooking, not paid, lines merged.
 select lives_ok(
   $$select set_config('test.fresh', public.save_admin_order(null, '{
       "source":"whatsapp","phone":"98000 00001","note":"  Leave at the gate  ",
@@ -153,13 +153,13 @@ select ok(
 
 select is(
   current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at'],
-  '{"source":"whatsapp","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+  '{"source":"whatsapp","status":"cooking","free_sample":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
-    "kept":false,"stale":false,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
-    "lines":[{"product_id":"muesli","size":"250 g","quantity":99}],"packs":99,
+    "lines":[{"product_id":"muesli","size":"250 g","quantity":99,"grams_each":250}],"packs":99,"samples":0,
+    "kitchen":[{"product_id":"muesli","need":24750,"covered":0,"by_hand":0,"waiting":true}],
     "customer":{"order_number":1,"orders":1}}'::jsonb,
-  'create: confirmed, not paid, phone normalised, note trimmed, lines merged and capped at 99'
+  'create: Cooking and waiting, not paid, phone normalised, note trimmed, lines merged and capped at 99'
 );
 
 -- A code typed from a WhatsApp message, then the same code again.
@@ -174,13 +174,14 @@ select lives_ok(
 
 select is(
   current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer', 'payments'],
-  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","paid":true,
-    "paid_method":null,"paid_note":null,"kept":false,
+  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","free_sample":false,"paid":true,
+    "paid_method":null,"paid_note":null,
     "payment_state":"paid","amount_paid":690,"amount_due":0,"amount_extra":0,
-    "stale":false,"name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
+    "name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
     "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
-    "lines":[{"product_id":"date-bites","size":"250 g","quantity":2}],"packs":2}'::jsonb,
-  'create: the typed code is used as is, the coupon is matched'
+    "lines":[{"product_id":"date-bites","size":"250 g","quantity":2,"grams_each":250}],"packs":2,"samples":0,
+    "kitchen":[{"product_id":"date-bites","need":500,"covered":500,"by_hand":500,"waiting":false}]}'::jsonb,
+  'create: the typed code is used as is, the coupon is matched, a delivered order is covered by hand'
 );
 
 select ok(
@@ -218,11 +219,11 @@ select is(
     "source":"call","code":"SN-22222","status":"cancelled","paid":true,"name":"Priya Example","phone":"9800000001",
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}]
   }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
-  '{"source":"call","status":"confirmed","paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+  '{"source":"call","status":"cooking","free_sample":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
-    "kept":false,"stale":false,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
-    "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}],"packs":3}'::jsonb,
+    "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3,"grams_each":500}],"packs":3,"samples":0,
+    "kitchen":[{"product_id":"raggi-jaggi","need":1500,"covered":0,"by_hand":0,"waiting":true}]}'::jsonb,
   'edit: a full replace of fields and lines; code, status and paid are ignored; the note is cleared'
 );
 
@@ -265,24 +266,25 @@ select results_eq(
 );
 
 select throws_ok(
-  $$select public.update_admin_order(current_setting('test.site_id')::uuid, '{"status":"confirmed","phone":"123","amount":700}')$$,
-  '22023', 'That phone number doesn''t look right.', 'Confirm sheet: a bad phone refuses the whole change'
+  $$select public.update_admin_order(current_setting('test.site_id')::uuid, '{"status":"packing","phone":"123","amount":700}')$$,
+  '22023', 'That phone number doesn''t look right.', 'a bad phone refuses the whole change'
 );
 
 select is(
   public.update_admin_order(current_setting('test.site_id')::uuid, '{}')::jsonb ->> 'status',
-  'new',
-  'Confirm sheet: after the refusal the status is unchanged'
+  'cooking',
+  'after the refusal the status is unchanged'
 );
 
 select is(
   public.update_admin_order(current_setting('test.site_id')::uuid,
-    '{"status":"confirmed","phone":"+91 98000 00002","amount":700}')::jsonb
-    - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'kept', 'stale', 'name', 'pincode', 'note',
-            'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at',
+    '{"status":"packing","phone":"+91 98000 00002","amount":700}')::jsonb
+    - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'name', 'pincode', 'note',
+            'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'free_sample', 'customer',
+            'created_at', 'updated_at', 'status_changed_at',
             'payment_state', 'payments', 'amount_paid', 'amount_extra'],
-  '{"status":"confirmed","phone":"919800000002","amount":700,"amount_due":700}'::jsonb,
-  'Confirm sheet: status, phone and amount change together'
+  '{"status":"packing","phone":"919800000002","amount":700,"amount_due":700}'::jsonb,
+  'status, phone and amount change together'
 );
 
 select throws_ok(
@@ -311,7 +313,7 @@ select throws_ok(
   '22023', 'Unknown status.', 'update: unknown status'
 );
 select throws_ok(
-  $$select public.update_admin_order(gen_random_uuid(), '{"status":"sent"}')$$,
+  $$select public.update_admin_order(gen_random_uuid(), '{"status":"ready"}')$$,
   '22023', 'That order is gone.', 'update: a missing order'
 );
 
@@ -333,18 +335,18 @@ $$;
 
 delete from public.orders;
 insert into public.orders (code, source, status, paid_at, name, pincode, phone, created_at) values
-  ('SN-7KQ4M',   'site',     'new',       null,  'Neha Example', '415001', '919800000001', now() - interval '1 hour'),
-  ('SN-7KQ4M-2', 'site',     'confirmed', null,  'Asha Example', '411001', null,           now() - interval '2 hours'),
+  ('SN-7KQ4M',   'site',     'cooking',   null,  'Neha Example', '415001', '919800000001', now() - interval '1 hour'),
+  ('SN-7KQ4M-2', 'site',     'packing',   null,  'Asha Example', '411001', null,           now() - interval '2 hours'),
   ('SN-22222',   'whatsapp', 'delivered', null,  'Ravi Example', null,     null,           now() - interval '3 hours'),
   ('SN-33333',   'call',     'delivered', now(), 'Meera Example', null,    null,           now() - interval '4 hours'),
   ('SN-44444',   'whatsapp', 'cancelled', null,  'Kiran Example', null,    null,           now() - interval '5 hours'),
-  ('SN-55555',   'site',     'sent',      null,  'Neha Example', '415001', null,           now() - interval '6 hours');
+  ('SN-55555',   'site',     'ready',     null,  'Neha Example', '415001', null,           now() - interval '6 hours');
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
 select is(pg_temp.codes(public.get_admin_orders()),
-  array['SN-7KQ4M', 'SN-7KQ4M-2', 'SN-22222', 'SN-55555'], 'todo: new, confirmed, delivered and not paid, sent');
+  array['SN-7KQ4M', 'SN-7KQ4M-2', 'SN-22222', 'SN-55555'], 'todo: cooking, packing, delivered and not paid, ready');
 select is(pg_temp.codes(public.get_admin_orders(p_view => 'done')),
   array['SN-33333', 'SN-44444'], 'done: delivered and paid, cancelled');
 select is(pg_temp.codes(public.get_admin_orders(p_view => 'all', p_status => array['delivered'], p_paid => false)),
@@ -427,13 +429,13 @@ select set_config(
 -- B: Sunday 23:30 India time → last week. Same phone as A.
 -- C: this week but cancelled → not counted.
 -- D, E: delivered, not paid, long ago → money to collect.
--- F: a site order, New for days → stale (created long before last week).
+-- F: a site order, in Cooking for days (created long before last week).
 -- G: delivered, not paid, same person as D by name (no phone).
 -- H: delivered and paid, long ago → done.
 insert into public.orders (id, code, source, status, name, phone, amount, coupon_code, coupon_id, created_at, paid_at) values
-  ('00000000-0000-4000-a000-00000000000a', 'SN-AAAAA', 'call', 'new', 'Week A', '919800000011', null, null, null,
+  ('00000000-0000-4000-a000-00000000000a', 'SN-AAAAA', 'call', 'cooking', 'Week A', '919800000011', null, null, null,
     current_setting('test.week_start')::timestamptz + interval '30 minutes', null),
-  ('00000000-0000-4000-a000-00000000000b', 'SN-BBBBB', 'call', 'confirmed', 'Week B', '919800000011', null,
+  ('00000000-0000-4000-a000-00000000000b', 'SN-BBBBB', 'call', 'packing', 'Week B', '919800000011', null,
     'EXAMPLE10', '00000000-0000-4000-9000-000000000010',
     current_setting('test.week_start')::timestamptz - interval '30 minutes', null),
   ('00000000-0000-4000-a000-00000000000c', 'SN-CCCCC', 'call', 'cancelled', 'Week C', null, null, null, null,
@@ -442,7 +444,7 @@ insert into public.orders (id, code, source, status, name, phone, amount, coupon
     current_setting('test.week_start')::timestamptz - interval '20 days', null),
   ('00000000-0000-4000-a000-00000000000e', 'SN-EEEEE', 'call', 'delivered', 'Week E', null, null, null, null,
     current_setting('test.week_start')::timestamptz - interval '20 days', null),
-  ('00000000-0000-4000-a000-00000000000f', 'SN-FFFFF', 'call', 'new', 'Week F', null, null, null, null,
+  ('00000000-0000-4000-a000-00000000000f', 'SN-FFFFF', 'call', 'cooking', 'Week F', null, null, null, null,
     current_setting('test.week_start')::timestamptz - interval '10 days', null),
   ('00000000-0000-4000-a000-000000000009', 'SN-GGGGG', 'call', 'delivered', 'WEEK D', null, null, null, null,
     current_setting('test.week_start')::timestamptz - interval '19 days', null),
@@ -450,7 +452,6 @@ insert into public.orders (id, code, source, status, name, phone, amount, coupon
     current_setting('test.week_start')::timestamptz - interval '30 days', now());
 
 update public.orders set pincode = '411038' where code = 'SN-BBBBB';
--- Only site orders go stale (20260926000005), so F came from the site.
 update public.orders set source = 'site', pincode = '415001', status_changed_at = now() - interval '3 days'
 where code = 'SN-FFFFF';
 
@@ -488,28 +489,23 @@ select is(
   'week: totals, a repeat customer, and Sunday 23:30 counted in last week'
 );
 select is(
-  ((current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}')
-    - array['to_confirm_oldest', 'stale_oldest'],
-  '{"to_confirm":1,"to_send":{"count":1,"paid":0,"part_paid":0},
+  ((current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}') #- '{cooking,oldest}',
+  '{"cooking":{"count":2},"packing":{"count":1,"paid":0,"part_paid":0},
+    "ready":{"count":0,"not_paid":0,"part_paid":0,"oldest_since":null},
     "to_collect":{"count":3,"amount":500,"amount_due":500,"part_paid":0,"without_amount":2,"people":2,
                   "oldest":{"code":"SN-DDDDD","name":"Week D"}},
-    "on_the_way":{"count":0,"not_paid":0,"part_paid":0},"stale":1}'::jsonb,
-  'queue: the five groups; money to collect from 2 people (by phone, else by name)'
+    "free_samples":{"open":0,"sent_this_month":0}}'::jsonb,
+  'queue: the stages; money to collect from 2 people (by phone, else by name)'
 );
 select is(
   current_setting('test.overview')::jsonb -> 'done',
-  '{"delivered_paid":1,"cancelled":1}'::jsonb,
+  '{"delivered_paid":1,"free_samples":0,"cancelled":1}'::jsonb,
   'done: all-time delivered and paid, and cancelled, as in the done view'
 );
 select ok(
-  (current_setting('test.overview')::jsonb #>> '{queue,to_confirm_oldest}')::timestamptz
-    = current_setting('test.week_start')::timestamptz + interval '30 minutes',
-  'queue: to_confirm_oldest is the oldest New, not-stale order'
-);
-select ok(
-  (current_setting('test.overview')::jsonb #>> '{queue,stale_oldest}')::timestamptz
+  (current_setting('test.overview')::jsonb #>> '{queue,cooking,oldest}')::timestamptz
     = current_setting('test.week_start')::timestamptz - interval '10 days',
-  'queue: stale_oldest is the oldest stale order'
+  'queue: cooking.oldest is the oldest order in Cooking'
 );
 
 -- ─── 8. Customers, stock, coupons, email list, delete ──
@@ -517,7 +513,7 @@ select ok(
 select is(
   (select jsonb_agg(c - 'first_order_at' - 'last_order_at')
    from jsonb_array_elements(public.get_admin_customers()::jsonb -> 'customers') c),
-  '[{"phone":"919800000011","name":"Week A","pincode":"411038","orders":2,"delivered":0,"open":2,"amount_total":0}]'::jsonb,
+  '[{"phone":"919800000011","name":"Week A","pincode":"411038","orders":2,"delivered":0,"open":2,"samples":0,"amount_total":0}]'::jsonb,
   'customers: grouped by phone, latest name, latest known pincode, not-cancelled orders'
 );
 select is(
@@ -548,7 +544,7 @@ select is(
   (select jsonb_build_object('code', c ->> 'code', 'order_count', c -> 'order_count', 'used', c ->> 'last_used_at' is not null)
    from jsonb_array_elements(public.get_admin_coupons()::jsonb) c),
   '{"code":"EXAMPLE10","order_count":1,"used":true}'::jsonb,
-  'coupons: usage counts confirmed-and-later orders'
+  'coupons: usage counts orders that are not cancelled'
 );
 
 reset role;

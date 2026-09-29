@@ -130,11 +130,11 @@ insert into public.orders (id, code, source, status, name, pincode, phone, coupo
   -- The number we look up: a website order, a hand-made one, one cancelled
   -- and one with no coupon.
   ('00000000-0000-4000-a000-000000000001', 'SN-22A22', 'site',     'delivered', 'Asha Example', '415001', '919800000001', 'EXAMPLE20', '00000000-0000-4000-c000-000000000002', now() - interval '20 days'),
-  ('00000000-0000-4000-a000-000000000002', 'SN-22B22', 'whatsapp', 'confirmed', 'Asha Example', null,     '919800000001', 'EXAMPLE10', '00000000-0000-4000-c000-000000000001', now() - interval '5 days'),
+  ('00000000-0000-4000-a000-000000000002', 'SN-22B22', 'whatsapp', 'packing',   'Asha Example', null,     '919800000001', 'EXAMPLE10', '00000000-0000-4000-c000-000000000001', now() - interval '5 days'),
   ('00000000-0000-4000-a000-000000000003', 'SN-22C22', 'call',     'cancelled', 'Asha Example', null,     '919800000001', 'EXAMPLE-ONE', null,                                 now() - interval '2 days'),
-  ('00000000-0000-4000-a000-000000000004', 'SN-22D22', 'call',     'new',       'Asha Example', null,     '919800000001', null,        null,                                   now() - interval '1 day'),
+  ('00000000-0000-4000-a000-000000000004', 'SN-22D22', 'call',     'cooking',   'Asha Example', null,     '919800000001', null,        null,                                   now() - interval '1 day'),
   -- Someone else, with a coupon.
-  ('00000000-0000-4000-a000-000000000005', 'SN-22E22', 'call',     'new',       'Neha Example', null,     '919800000002', 'EXAMPLE10', '00000000-0000-4000-c000-000000000001', now() - interval '1 day');
+  ('00000000-0000-4000-a000-000000000005', 'SN-22E22', 'call',     'cooking',   'Neha Example', null,     '919800000002', 'EXAMPLE10', '00000000-0000-4000-c000-000000000001', now() - interval '1 day');
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
