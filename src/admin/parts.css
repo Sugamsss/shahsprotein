@@ -48,6 +48,23 @@
 .adm-segmented--buttons > button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-segmented--buttons > button:active { transform: scale(0.97); }
 @media (hover: hover) { .adm-segmented--buttons > button:not(.is-on):hover { color: var(--adm-ink-1); } }
+/* Sliding: one thumb (::before) glides to the checked choice, moved by --i and sized by --n,
+   both set with :has(). The checked label's own background steps aside for it. */
+.adm-segmented--slide { --n: 2; --i: 0; position: relative; isolation: isolate; }
+.adm-segmented--slide:has(> label:nth-of-type(3)) { --n: 3; }
+.adm-segmented--slide:has(> label:nth-of-type(4)) { --n: 4; }
+.adm-segmented--slide:has(> label:nth-of-type(2) > input:checked) { --i: 1; }
+.adm-segmented--slide:has(> label:nth-of-type(3) > input:checked) { --i: 2; }
+.adm-segmented--slide:has(> label:nth-of-type(4) > input:checked) { --i: 3; }
+.adm-segmented--slide::before {
+  content: ''; position: absolute; z-index: -1; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n));
+  border-radius: var(--radius-full); background: var(--color-choice-selected-bg); box-shadow: var(--shadow-choice-selected);
+  transform: translateX(calc(100% * var(--i))); transition: transform 260ms var(--ease-glide);
+}
+.adm-segmented--slide input:checked + span { background: none; box-shadow: none; }
+.adm-segmented--slide span { transition: color 200ms ease; }
+@media (hover: hover) { .adm-segmented--slide input:not(:checked) + span:hover { color: var(--adm-ink-1); } }
+@media (prefers-reduced-motion: reduce) { .adm-segmented--slide::before, .adm-segmented--slide span { transition: none; } }
 /* The narrowest phones: four choices (Done's filter) fit 288px without scrolling sideways. */
 @media (max-width: 374px) { .adm-segmented span, .adm-segmented--buttons > button { padding: 0 6px; font-size: var(--adm-text-small); } }
 

@@ -48,6 +48,10 @@
   --adm-ink-1: #0f172a;
   --adm-ink-2: #475569; /* 6.9:1 on the page, 7.4:1 on a card, 6.8:1 on a chip */
   --adm-ink-3: #5b6980; /* 5.0:1 on the page, 5.5:1 on a card */
+  /* Warning (spare getting old): amber-brown. Text 6.8:1 on a card, 6.1:1 on the tint there, 5.6:1 on the tint on the page. */
+  --adm-warn-text: #8a4b08;
+  --adm-warn-tint: rgba(245, 158, 11, 0.14);
+  --adm-warn-edge: rgba(217, 119, 6, 0.35);
 }
 
 [data-theme='dark'] {
@@ -76,6 +80,10 @@
   --adm-ink-1: #ffffff;
   --adm-ink-2: #a3adbd; /* a step lighter than the site's: 4.7:1 on a chip on a laptop lane */
   --adm-ink-3: #8f9bad; /* 5.9:1 on the page, 5.2:1 on a card, 4.3:1 on a chip: never on a chip */
+  /* Warning: orange (hue 25°), well away from the gold tap colour (46°). Text 7.0:1 on a card, 5.5:1 on the tint there, 6.3:1 on the tint on the page. */
+  --adm-warn-text: #fb9d5b;
+  --adm-warn-tint: rgba(251, 146, 60, 0.13);
+  --adm-warn-edge: rgba(251, 146, 60, 0.38);
 }
 
 /* ---- Type: Inter only, four sizes --------------------------------------------
