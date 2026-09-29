@@ -4,13 +4,17 @@ import { ChevronRight } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import type { Product } from '../../types/product';
 import { AdminSheet } from '../AdminSheet';
-import { setPrices, toAdminError } from '../api';
+import { setKitchenProduct, setPrices, toAdminError } from '../api';
 import { formatDay } from '../format';
 import { couponState } from '../orders/quote';
+import { keepChanges, keepDraft, type KeepDraft } from '../orders/samples';
+import { Segmented } from '../parts';
 import { useToast } from '../toast';
-import type { Coupon, PriceChange, Prices } from '../types';
+import type { Coupon, Kitchen, KitchenProduct, PriceChange, Prices, ShelfLifeUnit } from '../types';
 
 const copy = adminCopy.products;
+const kx = adminCopy.kitchenForms;
+const UNITS = (['days', 'months'] as const).map((value) => ({ value, label: kx.units[value] }));
 const formCopy = adminCopy.orderForm;
 
 /** A cell's key: '' is the base price, else the coupon's id. */
@@ -38,20 +42,36 @@ const PriceCell: React.FC<{
   </label>
 );
 
+/** A server refusal in its own words (22023), else the usual "couldn't save". */
+const why = (err: unknown) => {
+  const e = toAdminError(err);
+  return e.kind === 'message' ? e.message : adminCopy.toast.failed;
+};
+
 /**
- * "{Product} prices": base price per size, then each coupon's own. One Save sends
- * only the cells that changed (null for a cleared one) in one setPrices call.
+ * One product, titled with its name: base price per size, its sample and shelf life,
+ * then each coupon's own prices. Each part shows only when it loaded (`prices`, `keep`).
+ * One Save sends only what changed: the price cells in one setPrices call, the sample and
+ * shelf life in one setKitchenProduct call. If one of them fails, it says which; the part
+ * that saved is passed up at once, so trying again only sends the rest.
  */
-export const ProductPricesSheet: React.FC<{
+export const ProductSheet: React.FC<{
   product: Product;
-  prices: Prices;
-  coupons: Coupon[];
+  /** Null when prices (or the coupon list) didn't load: no price parts then. */
+  prices: Prices | null;
+  coupons: Coupon[] | null;
+  /** Null when the kitchen didn't load: no sample and shelf life part then. */
+  keep: Pick<KitchenProduct, 'sample_grams' | 'shelf_life'> | null;
   onClose: () => void;
-  onSaved: (prices: Prices) => void;
-}> = ({ product, prices, coupons, onClose, onSaved }) => {
+  onPrices: (prices: Prices) => void;
+  onKeep: (kitchen: Kitchen) => void;
+}> = ({ product, prices: loadedPrices, coupons: loadedCoupons, keep, onClose, onPrices, onKeep }) => {
   const id = useId();
   const toast = useToast();
   const sizes = product.weightOptions;
+  const hasPrices = !!loadedPrices && !!loadedCoupons;
+  const prices = hasPrices ? loadedPrices : { base: [], coupons: [] };
+  const coupons = hasPrices ? loadedCoupons : [];
   const saved = (couponId: string | null, size: string) => {
     const row = couponId
       ? prices.coupons.find((r) => r.coupon_id === couponId && r.product_id === product.id && r.size === size)
@@ -61,7 +81,15 @@ export const ProductPricesSheet: React.FC<{
   const [cells, setCells] = useState<Record<string, string>>(() => Object.fromEntries([null, ...coupons.map((c) => c.id)]
     .flatMap((couponId) => sizes.map((size) => [cellKey(couponId, size), saved(couponId, size)]))));
   const [bad, setBad] = useState<string | null>(null);
+  const [draft, setDraft] = useState<KeepDraft>(() => keepDraft(keep?.sample_grams ?? 0, keep?.shelf_life ?? null));
+  const [keepBad, setKeepBad] = useState<'sample' | 'shelf' | null>(null);
+  const sampleInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
+  // A refusal shows at the top of the form, which may be scrolled away by now.
+  const errorLine = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (error) errorLine.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [error]);
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [idleOpen, setIdleOpen] = useState(false);
@@ -84,10 +112,15 @@ export const ProductPricesSheet: React.FC<{
     if (next === null || String(next) === before) return [];
     return [{ coupon_id: couponId || null, product_id: product.id, size, price: next === '' ? null : next }];
   });
+  const keepNow = keep ? keepChanges(keep, draft) : { settings: null };
   const dirty = Object.entries(cells).some(([key, value]) => {
     const [couponId, size] = key.split('|');
     return value.trim() !== saved(couponId || null, size);
-  });
+  }) || !('settings' in keepNow) || keepNow.settings !== null;
+  const setKeep = (change: Partial<KeepDraft>) => {
+    setDraft((d) => ({ ...d, ...change }));
+    setKeepBad(null);
+  };
 
   const set = (key: string) => (value: string) => {
     setCells((c) => ({ ...c, [key]: value }));
@@ -104,18 +137,31 @@ export const ProductPricesSheet: React.FC<{
       setAttempt((n) => n + 1);
       return;
     }
-    if (!changes.length) return onClose();
+    if ('bad' in keepNow) {
+      setKeepBad(keepNow.bad);
+      setAttempt((n) => n + 1);
+      return;
+    }
+    const settings = keepNow.settings;
+    if (!changes.length && !settings) return onClose();
     setBusy(true);
     setError('');
-    try {
-      const next = await setPrices(changes);
-      toast.show({ text: copy.pricesSaved(product.name) });
-      onSaved(next);
-    } catch (err) {
-      const e = toAdminError(err);
-      setError(e.kind === 'message' ? e.message : adminCopy.toast.failed);
-      setBusy(false);
+    const [priced, kept] = await Promise.allSettled([
+      changes.length ? setPrices(changes) : Promise.resolve(null),
+      settings ? setKitchenProduct(product.id, settings) : Promise.resolve(null),
+    ]);
+    if (priced.status === 'fulfilled' && priced.value) onPrices(priced.value);
+    if (kept.status === 'fulfilled' && kept.value) onKeep(kept.value);
+    if (priced.status === 'fulfilled' && kept.status === 'fulfilled') {
+      toast.show({ text: kx.saved(product.name) });
+      onClose();
+      return;
     }
+    // Say which part didn't save when the other did; otherwise just why.
+    if (priced.status === 'rejected' && kept.status === 'fulfilled' && settings) setError(kx.pricesFailed(why(priced.reason)));
+    else if (kept.status === 'rejected' && priced.status === 'fulfilled' && changes.length) setError(kx.keepFailed(why(kept.reason)));
+    else setError(why(priced.status === 'rejected' ? priced.reason : (kept as PromiseRejectedResult).reason));
+    setBusy(false);
   };
 
   const basePlaceholder = (size: string) => {
@@ -148,11 +194,11 @@ export const ProductPricesSheet: React.FC<{
   return (
     <>
       <AdminSheet isOpen onClose={onClose} canClose={() => { if (dirty) setLeaving(true); return !dirty; }}
-        title={copy.sheetTitle(product.name)} closeLabel={adminCopy.close} initialFocus={firstBase}
-        bar={<button type="submit" form={id} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>{busy ? copy.saving : copy.savePrices}</button>}>
+        title={product.name} closeLabel={adminCopy.close} initialFocus={hasPrices ? firstBase : sampleInput}
+        bar={<button type="submit" form={id} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>{busy ? copy.saving : kx.save}</button>}>
         <form id={id} ref={form} className="adm-psheet" noValidate onSubmit={(e) => { e.preventDefault(); void save(); }}>
-          {error && <p className="adm-form__error" role="alert">{error}</p>}
-          <div className="adm-pgrid adm-psheet__base" style={cols}>
+          {error && <p ref={errorLine} className="adm-form__error" role="alert">{error}</p>}
+          {hasPrices && <div className="adm-pgrid adm-psheet__base" style={cols}>
             {head}
             <span className="adm-pgrid__label">{copy.base}</span>
             {sizes.map((size, i) => {
@@ -162,7 +208,34 @@ export const ProductPricesSheet: React.FC<{
                   label={copy.baseCell(`${product.name} ${size}`)} inputRef={i === 0 ? firstBase : undefined} />
               );
             })}
-          </div>
+          </div>}
+          {keep && (
+            <div className="adm-pkeep">
+              <h3>{kx.keepTitle}</h3>
+              <p className="adm-phint">{kx.keepHint}</p>
+              <div className="adm-pkeep__row">
+                <label htmlFor={`${id}-sample`}>{kx.sampleField}</label>
+                <span className="adm-unitbox">
+                  <input ref={sampleInput} id={`${id}-sample`} className="adm-input" inputMode="numeric" enterKeyHint="done" autoComplete="off"
+                    maxLength={3} value={draft.sample} aria-invalid={keepBad === 'sample' || undefined}
+                    aria-describedby={keepBad === 'sample' ? `${id}-keep-error` : undefined}
+                    onChange={(e) => setKeep({ sample: e.target.value })} />
+                  <span aria-hidden="true">{kx.sampleUnit}</span>
+                </span>
+              </div>
+              <div className="adm-pkeep__row">
+                <label htmlFor={`${id}-keeps`}>{kx.keepsFor}</label>
+                <span className="adm-pkeep__pair">
+                  <input id={`${id}-keeps`} className="adm-input adm-pkeep__n" inputMode="numeric" enterKeyHint="done" autoComplete="off"
+                    maxLength={3} value={draft.amount} aria-invalid={keepBad === 'shelf' || undefined}
+                    aria-describedby={keepBad === 'shelf' ? `${id}-keep-error` : undefined}
+                    onChange={(e) => setKeep({ amount: e.target.value })} />
+                  <Segmented<ShelfLifeUnit> label={kx.unitLabel} options={UNITS} value={draft.unit} onChange={(unit) => setKeep({ unit })} slide />
+                </span>
+              </div>
+              {keepBad && <p id={`${id}-keep-error`} className="adm-field__error" role="alert">{keepBad === 'sample' ? kx.sampleError : kx.shelfError}</p>}
+            </div>
+          )}
           {coupons.length > 0 && (
             <div className="adm-psheet__coupons">
               <h3>{copy.couponPrices}</h3>
