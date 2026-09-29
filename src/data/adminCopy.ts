@@ -750,8 +750,9 @@ export const adminCopy = {
     loggedTitle: 'Logged this week',
     loggedMeta: 'Tap one to fix it',
     batchTitle: (product: string, weight: string) => `${product} · ${weight}`,
-    batchParts: (toOrders: string | null, spare: string | null, off: string | null) =>
-      [toOrders && `${toOrders} to orders`, spare && `${spare} spare`, off && `${off} off the shelf`].filter(Boolean) as string[],
+    /** "500 g to 2 orders, 200 g spare". */
+    batchParts: (toOrders: string | null, orders: number, spare: string | null, off: string | null) =>
+      [toOrders && `${toOrders} to ${orders === 1 ? '1 order' : `${orders} orders`}`, spare && `${spare} spare`, off && `${off} off the shelf`].filter(Boolean) as string[],
     fixName: (product: string, weight: string, day: string) => `Fix ${weight} ${product}, made ${day}`,
 
     // Spare on the shelf: the foot of a product card, the warning line, the sheet.
@@ -895,7 +896,9 @@ export const adminCopy = {
     nothing: 'Nothing to pack, drop off or collect. Enjoy the quiet.',
     toPack: 'To pack',
     toDropOff: 'To drop off',
-    waited: (age: string, n: number) => (n === 1 ? `Waiting ${age}.` : `The oldest has waited ${age}.`),
+    /** "Farah's has waited 4 days." With no name, as before. */
+    waited: (age: string, n: number, name?: string | null) =>
+      (name ? `${name}'s has waited ${age}.` : n === 1 ? `Waiting ${age}.` : `The oldest has waited ${age}.`),
     paidSplit: (paid: number, notPaid: number) =>
       [paid ? `${paid} paid` : '', notPaid ? `${notPaid} not paid yet` : ''].filter(Boolean).join(', '),
     packsThen: (packs: number, rest: string) => `${packs} ${packs === 1 ? 'pack' : 'packs'}${rest ? `. ${rest}` : ''}`,

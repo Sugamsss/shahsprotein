@@ -79,6 +79,7 @@ const Header: React.FC<{ badge: number }> = ({ badge }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const search = useRef<HTMLInputElement>(null);
+  const cook = useAdminMe().home_view === 'cook';
   const [query, setQuery] = useState('');
   const [boardQuery, setBoardQuery] = useQueryText('/admin/orders');
   // On the board the field filters it live, through ?q=. Elsewhere Enter takes you there.
@@ -139,9 +140,12 @@ const Header: React.FC<{ badge: number }> = ({ badge }) => {
           onKeyDown={(e) => e.key === 'Escape' && value && (onBoard ? setBoardQuery : setQuery)('')} />
         <kbd aria-hidden="true">/</kbd>
       </form>
-      <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--primary adm-btn--sm">
-        <Plus size={18} aria-hidden="true" /><span className="adm-btn__text">{copy.header.addOrder}</span>
-      </AdminLink>
+      {/* The cook adds orders from the Orders page; her one action is Log cooking on Home. */}
+      {!cook && (
+        <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--primary adm-btn--sm">
+          <Plus size={18} aria-hidden="true" /><span className="adm-btn__text">{copy.header.addOrder}</span>
+        </AdminLink>
+      )}
       <AccountMenu />
     </header>
   );

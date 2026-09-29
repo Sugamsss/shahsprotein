@@ -34,6 +34,7 @@ export const LoggedList: React.FC<{ kitchen: Kitchen; onFix: (batch: KitchenBatc
           const weight = formatWeight(b.grams);
           const parts = copy.batchParts(
             b.to_orders ? formatWeight(b.to_orders) : null,
+            b.orders,
             b.spare ? formatWeight(b.spare) : null,
             b.written_off ? formatWeight(b.written_off) : null,
           );

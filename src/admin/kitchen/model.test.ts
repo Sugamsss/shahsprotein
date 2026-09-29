@@ -157,7 +157,7 @@ describe('what a log does', () => {
 describe('what a fix does', () => {
   const logged = (): Kitchen => ({
     ...seed(),
-    batches: [{ id: 'mu', product_id: 'muesli', grams: 1000, made_on: '2026-09-29', created_at: '2026-09-29T08:00:00Z', by_name: 'Cook', to_orders: 750, spare: 250, written_off: 0 }],
+    batches: [{ id: 'mu', product_id: 'muesli', grams: 1000, made_on: '2026-09-29', created_at: '2026-09-29T08:00:00Z', by_name: 'Cook', to_orders: 750, orders: 2, spare: 250, written_off: 0 }],
   });
 
   it('a smaller batch takes the spare off the shelf and moves no order', () => {
@@ -203,7 +203,7 @@ describe('spare and its dates', () => {
 
   it('"Logged this week" leaves out batches logged and made over a week ago', () => {
     const k = seed();
-    const b = { product_id: 'bites', grams: 500, by_name: null, to_orders: 0, spare: 500, written_off: 0 };
+    const b = { product_id: 'bites', grams: 500, by_name: null, to_orders: 0, orders: 0, spare: 500, written_off: 0 };
     k.batches = [
       { ...b, id: 'recent', made_on: '2026-09-23', created_at: '2026-09-23T05:00:00Z' },
       { ...b, id: 'old', made_on: '2026-09-20', created_at: '2026-09-22T05:00:00Z' },

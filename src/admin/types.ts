@@ -210,7 +210,11 @@ export interface Overview {
     /** paid is paid in full; part_paid has a payment but not enough. */
     packing: { count: number; paid: number; part_paid: number };
     /** not_paid counts part-paid orders too, never free samples. oldest_since: when the longest-waiting one got Ready. */
-    ready: { count: number; not_paid: number; part_paid: number; oldest_since: string | null };
+    ready: {
+      count: number; not_paid: number; part_paid: number; oldest_since: string | null;
+      /** The longest-waiting Ready order ("Farah's has waited 4 days"). */
+      oldest: { code: string; name: string | null; since: string } | null;
+    };
     /** Delivered and not paid in full. Free sample orders are never here. */
     to_collect: {
       count: number;
@@ -366,6 +370,8 @@ export interface KitchenBatch {
   by_name: string | null;
   /** Grams given to orders. */
   to_orders: number;
+  /** How many orders its food went to. */
+  orders: number;
   spare: number;
   written_off: number;
 }

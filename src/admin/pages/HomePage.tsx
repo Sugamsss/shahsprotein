@@ -149,7 +149,7 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     q.packing.count > 0 && <Row key="p" lane="packing" circle={q.packing.count} tone="accent" title={copy.toPack}
       hint={overall ? copy.packsThen(overall.packing.packs, paidSplit) : paidSplit} />,
     q.ready.count > 0 && <Row key="r" lane="ready" circle={q.ready.count} title={copy.toDropOff}
-      hint={[q.ready.oldest_since && copy.waited(formatAge(q.ready.oldest_since), q.ready.count), wayHint(q.ready, overall?.ready)].filter(Boolean).join(' ')} />,
+      hint={[q.ready.oldest_since && copy.waited(formatAge(q.ready.oldest_since), q.ready.count, firstName(q.ready.oldest?.name) || null), wayHint(q.ready, overall?.ready)].filter(Boolean).join(' ')} />,
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
