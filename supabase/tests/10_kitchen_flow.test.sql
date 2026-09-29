@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(87);
+select plan(93);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -183,7 +183,7 @@ select ok(
      'public.get_admin_kitchen()', 'public.log_admin_batches(jsonb, boolean)',
      'public.update_admin_batch(uuid, jsonb, boolean)', 'public.delete_admin_batch(uuid, boolean)',
      'public.write_off_admin_spare(uuid, integer, text)', 'public.undo_admin_kitchen(uuid)',
-     'public.set_admin_kitchen_product(text, jsonb)'
+     'public.set_admin_kitchen_product(text, jsonb)', 'public.give_admin_priority(uuid, boolean)'
    ]::regprocedure[]) f),
   'the new kitchen RPCs are for signed-in users only (is_admin inside)'
 );
@@ -225,6 +225,7 @@ select throws_ok('select public.delete_admin_batch(gen_random_uuid())', 'P0001',
 select throws_ok($$select public.write_off_admin_spare(gen_random_uuid(), null, 'used_up')$$, 'P0001', 'Unauthorized', 'non-admin: write_off_admin_spare');
 select throws_ok('select public.undo_admin_kitchen(gen_random_uuid())', 'P0001', 'Unauthorized', 'non-admin: undo_admin_kitchen');
 select throws_ok($$select public.set_admin_kitchen_product('muesli', '{"sample_grams":25}')$$, 'P0001', 'Unauthorized', 'non-admin: set_admin_kitchen_product');
+select throws_ok('select public.give_admin_priority(gen_random_uuid(), true)', 'P0001', 'Unauthorized', 'non-admin: give_admin_priority');
 reset role;
 
 select pg_temp.as_owner();
@@ -842,9 +843,8 @@ select is(
   'undo of that batch is exact: both back in Cooking, the batch gone, priority kept'
 );
 
--- No stealing: grams already given stay where they are. (The current rule.
--- The PM is confirming a "take from orders not yet delivered" step; if it
--- comes, it's a separate call, and this test keeps covering the automatic fill.)
+-- A priority order still short takes food a non-priority Cooking order
+-- holds (it waits for the next batch instead). Undo puts it back exactly.
 select public.update_admin_order(pg_temp.id('SN-KPB22'), '{"priority":false}');
 select pg_temp.log('p2', 'raggi-jaggi', 300);
 select pg_temp.ord('SN-KPC22', 1, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
@@ -853,47 +853,100 @@ select set_config('t.pc', public.update_admin_order(pg_temp.id('SN-KPC22'), '{"p
 
 select is(
   jsonb_build_object('a', pg_temp.cover('SN-KPA22'), 'c', pg_temp.cover('SN-KPC22'),
-    'effects', current_setting('t.pc')::jsonb -> 'kitchen_effects'),
-  '{"a":"raggi-jaggi:p2=300","c":"","effects":null}'::jsonb,
-  'priority never takes grams already given to another order'
+    'moves', pg_temp.moves(current_setting('t.pc')::jsonb -> 'kitchen_effects'),
+    'undoable', current_setting('t.pc')::jsonb #>> '{kitchen_effects,action_id}' is not null),
+  '{"a":"","c":"raggi-jaggi:p2=300","undoable":true,
+    "moves":["SN-KPA22 cooking>cooking raggi-jaggi-300 waiting raggi-jaggi","SN-KPC22 cooking>cooking raggi-jaggi+300 waiting raggi-jaggi"]}'::jsonb,
+  'priority takes food a Cooking order holds, and says so'
 );
 
-select pg_temp.log('p3', 'raggi-jaggi', 500);
-select is(
-  jsonb_build_object('a', pg_temp.cover('SN-KPA22'), 'c', pg_temp.st('SN-KPC22'), 'b', pg_temp.cover('SN-KPB22')),
-  '{"a":"raggi-jaggi:p2=300","c":"packing","b":""}'::jsonb,
-  'the next batch goes to the priority order first'
-);
-
--- Toggling back re-fills in plain oldest-first order, and the plain reverse
--- is an exact Undo of a priority change.
-select pg_temp.ord('SN-KPD22', 0, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
-select set_config('t.snap', pg_temp.snap()::text, true);
-select public.update_admin_order(pg_temp.id('SN-KPD22'), '{"priority":true}');
-select public.update_admin_order(pg_temp.id('SN-KPD22'), '{"priority":false}');
+select public.undo_admin_kitchen((current_setting('t.pc')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
 select is(
   jsonb_build_object('same', pg_temp.snap() = current_setting('t.snap')::jsonb,
-    'priority', (select o.priority from public.orders o where o.code = 'SN-KPD22'),
-    'queue', (select jsonb_agg(q ->> 'code') from jsonb_array_elements(pg_temp.kp('raggi-jaggi') -> 'queue') q)),
-  '{"same":true,"priority":false,"queue":["SN-KPA22","SN-KPB22","SN-KPD22"]}'::jsonb,
-  'setting and clearing priority puts everything back, queue oldest first again'
+    'priority', (select o.priority from public.orders o where o.code = 'SN-KPC22')),
+  '{"same":true,"priority":false}'::jsonb,
+  'undo of setting priority is exact: the food goes back and priority is off'
 );
-
-select pg_temp.log('p4', 'raggi-jaggi', 200);
-select is(pg_temp.st('SN-KPA22'), 'packing', 'with priority cleared, the oldest order is filled first again');
 
 select public.save_admin_order(null, '{"source":"call","code":"SN-KPE22","name":"Kitchen Example","priority":true,
   "lines":[{"product_id":"muesli","size":"250 g","quantity":1}]}');
 select public.save_admin_order(pg_temp.id('SN-KPB22'), '{"name":"Kitchen Example","priority":true,
   "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
 select is(
-  (select jsonb_object_agg(o.code, o.priority) from public.orders o where o.code in ('SN-KPE22', 'SN-KPB22', 'SN-KPD22')),
-  '{"SN-KPE22":true,"SN-KPB22":true,"SN-KPD22":false}'::jsonb,
+  (select jsonb_object_agg(o.code, o.priority) from public.orders o where o.code in ('SN-KPE22', 'SN-KPB22', 'SN-KPC22')),
+  '{"SN-KPE22":true,"SN-KPB22":true,"SN-KPC22":false}'::jsonb,
   'Add order and Edit set priority; an edit without the key keeps it'
 );
-select public.save_admin_order(pg_temp.id('SN-KPD22'), '{"name":"Kitchen Example",
-  "lines":[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]}');
+select public.save_admin_order(pg_temp.id('SN-KPC22'), '{"name":"Kitchen Example",
+  "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
 select is((select o.priority from public.orders o where o.code = 'SN-KPB22'), true, 'still priority after another order''s edit');
+
+-- ─── 19. Priority takes from Cooking orders, newest first ─
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KQA22', 60, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.ord('SN-KQB22', 50, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.ord('SN-KQC22', 40, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('q1', 'raggi-jaggi', 1500);
+select pg_temp.ord('SN-KQP22', 1, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
+select set_config('t.snap', pg_temp.snap()::text, true);
+select set_config('t.qp', public.update_admin_order(pg_temp.id('SN-KQP22'), '{"priority":true}')::text, true);
+
+select is(
+  jsonb_build_object(
+    'older_cooking', pg_temp.cover('SN-KQA22'), 'packing_untouched', pg_temp.st('SN-KQB22') || ' ' || pg_temp.cover('SN-KQB22'),
+    'newest_cooking', pg_temp.cover('SN-KQC22'), 'priority', pg_temp.st('SN-KQP22') || ' ' || pg_temp.cover('SN-KQP22')),
+  '{"older_cooking":"raggi-jaggi:q1=500","packing_untouched":"packing raggi-jaggi:q1=500",
+    "newest_cooking":"raggi-jaggi:q1=250","priority":"packing raggi-jaggi:q1=250"}'::jsonb,
+  'it takes from the newest Cooking order first, never on its own from Packing, and the priority order moves on'
+);
+
+select public.undo_admin_kitchen((current_setting('t.qp')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
+select is(pg_temp.snap(), current_setting('t.snap')::jsonb, 'undo is exact');
+
+-- ─── 20. Packed pouches: ask first ──────────────────────
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KRA22', 60, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.ord('SN-KRB22', 50, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.ord('SN-KRC22', 40, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":2}]');
+select pg_temp.log('r1', 'raggi-jaggi', 1500);
+select pg_temp.move('SN-KRB22', 'ready');
+select public.save_admin_order(null, '{"source":"call","code":"SN-KRD22","name":"Kitchen Example","status":"delivered",
+  "created_at":"2026-01-01T10:00:00Z","lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
+select public.save_admin_order(null, '{"source":"call","code":"SN-KRP22","name":"Priority Example","priority":true,
+  "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
+select set_config('t.snap', pg_temp.snap()::text, true);
+
+select is(
+  (select jsonb_build_object(
+     'stays', pg_temp.st('SN-KRP22'),
+     'pouches', (select jsonb_agg(jsonb_build_array(x ->> 'code', x ->> 'from', x ->> 'size', x -> 'count'))
+                 from jsonb_array_elements(e -> 'pouches') x),
+     'preview', e -> 'preview', 'action', e -> 'action_id')
+   from (select public.give_admin_priority(pg_temp.id('SN-KRP22'), true)::jsonb as e) y),
+  '{"stays":"cooking","pouches":[["SN-KRB22","ready","500 g",1]],"preview":true,"action":null}'::jsonb,
+  'packed food is only offered: the newest same-size pouch (not the 250 g ones, never the delivered order)'
+);
+select is(pg_temp.snap(), current_setting('t.snap')::jsonb, 'asking changes nothing');
+
+select set_config('t.give', public.give_admin_priority(pg_temp.id('SN-KRP22'))::text, true);
+select is(
+  jsonb_build_object(
+    'gave', pg_temp.st('SN-KRB22') || ' ' || pg_temp.cover('SN-KRB22'),
+    'got', pg_temp.st('SN-KRP22') || ' ' || pg_temp.cover('SN-KRP22'),
+    'others', pg_temp.st('SN-KRA22') || ' ' || pg_temp.st('SN-KRC22') || ' ' || pg_temp.st('SN-KRD22')),
+  '{"gave":"cooking ","got":"packing raggi-jaggi:r1=500","others":"packing packing delivered"}'::jsonb,
+  'on yes, the pouch moves with its batch; the order that gave it goes back to Cooking'
+);
+
+select public.undo_admin_kitchen((current_setting('t.give')::jsonb ->> 'action_id')::uuid);
+select is(pg_temp.snap(), current_setting('t.snap')::jsonb, 'undo of giving is exact');
+
+select throws_ok(
+  $$select public.give_admin_priority(pg_temp.id('SN-KRA22'), true)$$,
+  '22023', 'Only a priority order in Cooking can take packed food.', 'only a priority order in Cooking can take'
+);
 
 select * from finish();
 rollback;

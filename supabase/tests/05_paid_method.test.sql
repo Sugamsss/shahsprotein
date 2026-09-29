@@ -12,6 +12,11 @@ select plan(35);
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.admin_users;
 

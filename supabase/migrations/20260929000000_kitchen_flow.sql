@@ -36,8 +36,10 @@
 --     always fully covered: batch grams where they came from a batch, a
 --     by-hand row for the rest.
 --     Priority orders ("skip the line") fill first, oldest first among
---     them, then everyone else oldest first. Priority only jumps the queue
---     for food not yet given: it never takes grams from another order.
+--     them, then everyone else oldest first. A priority order still short
+--     then takes food from non-priority Cooking orders (newest first). Food
+--     in packed pouches (Packing, Ready) only moves when someone says yes
+--     (give_admin_priority()); Delivered orders are never touched.
 --  6. Every kitchen call is one action. Triggers record each row change on
 --     the kitchen tables (and each order status change) while an action is
 --     open; Undo replays them backwards and refuses if a row has moved since.
@@ -928,8 +930,46 @@ $$;
 
 revoke all on function public.kitchen_top_up(uuid, text) from public, anon, authenticated;
 
+-- Moves p_grams of one product from one order to another, keeping each
+-- gram's batch (so its made-on day goes with it): batch grams first, oldest
+-- made first, then by-hand grams (unless p_batch_only). Returns grams moved.
+create or replace function public.kitchen_move_grams(
+  p_from uuid, p_to uuid, p_product_id text, p_grams integer, p_batch_only boolean default false
+)
+returns integer
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_left integer := p_grams;
+  v_row record;
+  v_take integer;
+begin
+  for v_row in
+    select a.id, a.batch_id, a.grams
+    from public.kitchen_allocations a
+    left join public.kitchen_batches b on b.id = a.batch_id
+    where a.order_id = p_from and a.product_id = p_product_id
+      and (not p_batch_only or a.batch_id is not null)
+    order by (a.batch_id is null), b.made_on, b.created_at, b.id
+  loop
+    exit when v_left <= 0;
+    v_take := least(v_left, v_row.grams);
+    perform public.kitchen_take(v_row.id, v_take);
+    perform public.kitchen_give(p_to, p_product_id, v_row.batch_id, v_take);
+    v_left := v_left - v_take;
+  end loop;
+  return p_grams - v_left;
+end;
+$$;
+
+revoke all on function public.kitchen_move_grams(uuid, uuid, text, integer, boolean) from public, anon, authenticated;
+
 -- The one fill rule, for one product: short Cooking orders, priority ones
--- first, oldest first within each, take usable spare, oldest batch first. Then covered orders go to Packing.
+-- first, oldest first within each, take usable spare, oldest batch first.
+-- Then a priority order still short takes food from non-priority Cooking
+-- orders, newest first (they wait for the next batch instead). Then covered
+-- orders go to Packing.
 create or replace function public.kitchen_fill(p_product_id text)
 returns void
 language plpgsql
@@ -937,6 +977,8 @@ set search_path = public
 as $$
 declare
   v_id uuid;
+  v_short integer;
+  v_donor uuid;
 begin
   for v_id in
     select o.id
@@ -952,6 +994,34 @@ begin
       select 1 from public.kitchen_batch_rows(p_product_id) r where r.usable and r.spare > 0
     );
     perform public.kitchen_top_up(v_id, p_product_id);
+  end loop;
+
+  for v_id in
+    select o.id
+    from public.orders o
+    where o.status = 'cooking' and o.priority
+      and exists (
+        select 1 from public.order_lines l where l.order_id = o.id and l.product_id = p_product_id
+      )
+    order by o.created_at, o.id
+  loop
+    v_short := public.kitchen_short(v_id, p_product_id);
+    continue when v_short = 0;
+
+    for v_donor in
+      select d.id
+      from public.orders d
+      where d.status = 'cooking' and not d.priority
+        and exists (
+          select 1 from public.kitchen_allocations a
+          where a.order_id = d.id and a.product_id = p_product_id and a.batch_id is not null
+        )
+      order by d.created_at desc, d.id desc
+      for update of d
+    loop
+      v_short := v_short - public.kitchen_move_grams(v_donor, v_id, p_product_id, v_short, true);
+      exit when v_short = 0;
+    end loop;
   end loop;
 
   perform public.kitchen_promote(p_product_id);
@@ -2896,6 +2966,138 @@ begin
 end;
 $$;
 
+-- The work behind give_admin_priority(): a priority order in Cooking still
+-- short takes whole packed pouches from non-priority orders in Packing or
+-- Ready. A pouch matches when it's the same product and the same pack size
+-- as one the priority order is missing (nothing is repacked), and it only
+-- goes where it fits in what's still short. Newest order first. Delivered and
+-- priority orders are never touched. An order that gives a pouch goes back to
+-- Cooking, unless it's still covered some other way. Returns the effects with
+-- pouches: [{order_id, code, name, from, product_id, size, grams_each, count}].
+create or replace function public.kitchen_run_give_priority(p_order_id uuid)
+returns jsonb
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_order public.orders;
+  v_action uuid;
+  v_cover record;
+  v_line record;
+  v_donor record;
+  v_short integer;
+  v_want integer;
+  v_n integer;
+  v_pouches jsonb := '[]'::jsonb;
+  v_effects jsonb;
+begin
+  perform public.kitchen_lock();
+
+  select * into v_order from public.orders where id = p_order_id for update;
+  if v_order.id is null then
+    raise exception using message = 'That order is gone.', errcode = '22023';
+  end if;
+  if not v_order.priority or v_order.status <> 'cooking' then
+    raise exception using message = 'Only a priority order in Cooking can take packed food.', errcode = '22023';
+  end if;
+
+  v_action := public.kitchen_action_start('give_priority');
+
+  for v_cover in
+    select c.* from public.kitchen_order_cover(p_order_id) c where c.covered < c.need order by c.product_id
+  loop
+    v_short := v_cover.need - v_cover.covered;
+
+    -- Its own packs of this product, biggest first.
+    for v_line in
+      select l.size, l.grams_each, l.quantity
+      from public.order_lines l
+      where l.order_id = p_order_id and l.product_id = v_cover.product_id and l.grams_each > 0
+      order by l.grams_each desc, l.size
+    loop
+      v_want := least(v_line.quantity, v_short / v_line.grams_each);
+      continue when v_want <= 0;
+
+      for v_donor in
+        select d.id, d.code, d.name, d.status, l.quantity
+        from public.orders d
+        join public.order_lines l on l.order_id = d.id
+        where d.status in ('packing', 'ready') and not d.priority and d.id <> p_order_id
+          and l.product_id = v_cover.product_id
+          and l.grams_each = v_line.grams_each
+          and (l.size = 'sample') = (v_line.size = 'sample')
+        order by d.created_at desc, d.id desc
+        for update of d
+      loop
+        exit when v_want = 0;
+        v_n := least(v_want, v_donor.quantity);
+        v_n := public.kitchen_move_grams(v_donor.id, p_order_id, v_cover.product_id, v_n * v_line.grams_each)
+          / v_line.grams_each;
+        continue when v_n = 0;
+
+        if exists (select 1 from public.kitchen_order_cover(v_donor.id) c where c.covered < c.need) then
+          perform public.kitchen_set_status(v_donor.id, 'cooking', true);
+        end if;
+
+        v_pouches := v_pouches || jsonb_build_object(
+          'order_id', v_donor.id, 'code', v_donor.code, 'name', v_donor.name, 'from', v_donor.status,
+          'product_id', v_cover.product_id, 'size', v_line.size, 'grams_each', v_line.grams_each, 'count', v_n
+        );
+        v_want := v_want - v_n;
+        v_short := v_short - v_n * v_line.grams_each;
+      end loop;
+    end loop;
+  end loop;
+
+  -- No fill after: a priority order that's still short means there's no
+  -- usable spare, and a fill would let it take (and split) the other pouches
+  -- of an order that just went back to Cooking, without asking.
+  perform public.kitchen_promote(null, p_order_id);
+
+  v_effects := public.kitchen_effects_json(v_action, false) || jsonb_build_object('pouches', v_pouches);
+  if not public.kitchen_action_finish(v_action) then
+    v_effects := v_effects || jsonb_build_object('action_id', null);
+  end if;
+  return v_effects;
+end;
+$$;
+
+revoke all on function public.kitchen_run_give_priority(uuid) from public, anon, authenticated;
+
+-- "Give it to Meera": packed pouches from orders in Packing or Ready to a
+-- priority order in Cooking (see kitchen_run_give_priority()). The app asks
+-- with p_preview first (nothing changes; pouches lists what would move, []
+-- when nothing matches), then commits on yes. Returns the effects plus
+-- pouches; Undo with undo_admin_kitchen(action_id).
+create or replace function public.give_admin_priority(p_order_id uuid, p_preview boolean default false)
+returns json
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_effects jsonb;
+begin
+  if not public.is_admin() then
+    raise exception using message = 'Unauthorized';
+  end if;
+
+  if coalesce(p_preview, false) then
+    begin
+      v_effects := public.kitchen_run_give_priority(p_order_id);
+      raise exception using errcode = 'KXPRV';
+    exception
+      when sqlstate 'KXPRV' then
+        null;
+    end;
+    return (v_effects || jsonb_build_object('preview', true, 'action_id', null))::json;
+  end if;
+
+  return public.kitchen_run_give_priority(p_order_id)::json;
+end;
+$$;
+
 -- Undo of any kitchen action: its steps, newest first, each only if its row
 -- is still as the action left it; otherwise nothing changes and it says so.
 -- A second tap returns quietly. Returns { undone, kitchen }.
@@ -3755,3 +3957,6 @@ grant execute on function public.undo_admin_kitchen(uuid) to authenticated;
 
 revoke all on function public.set_admin_kitchen_product(text, jsonb) from public, anon;
 grant execute on function public.set_admin_kitchen_product(text, jsonb) to authenticated;
+
+revoke all on function public.give_admin_priority(uuid, boolean) from public, anon;
+grant execute on function public.give_admin_priority(uuid, boolean) to authenticated;
