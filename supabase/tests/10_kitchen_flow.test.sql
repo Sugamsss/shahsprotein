@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(69);
+select plan(70);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -363,6 +363,13 @@ select is(
   'half covered: stays in Cooking, and the order says which product waits'
 );
 
+select is(
+  (select jsonb_build_object('also_waiting', q -> 'also_waiting', 'covered', q -> 'covered')
+   from pg_temp.kp('muesli') p, jsonb_array_elements(p -> 'queue') q where q ->> 'code' = 'SN-KMA22'),
+  '{"also_waiting":[],"covered":["raggi-jaggi"]}'::jsonb,
+  'the queue says the order is only waiting on this product'
+);
+
 select pg_temp.log('m2', 'muesli', 250);
 select is(pg_temp.st('SN-KMA22'), 'packing', 'covered on every product: Packing');
 
@@ -690,7 +697,7 @@ select is(
      'to_collect', o #> '{queue,to_collect,count}', 'free_samples', o #> '{queue,free_samples}',
      'done', o #> '{done,free_samples}')
    from (select public.get_admin_overview()::jsonb as o) x),
-  '{"to_collect":1,"free_samples":{"open":1,"sent_this_month":1},"done":1}'::jsonb,
+  '{"to_collect":1,"free_samples":{"open":1,"sent_this_month":1,"grams_this_month":35},"done":1}'::jsonb,
   'overview: only the paid-for order is to collect; the taster on its way is open, the sample order sent this month'
 );
 

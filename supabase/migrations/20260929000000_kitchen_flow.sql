@@ -1256,6 +1256,13 @@ as $$
                 'also_waiting', coalesce((
                   select jsonb_agg(x.product_id order by x.product_id)
                   from short x where x.order_id = s.order_id and x.product_id <> s.product_id
+                ), '[]'::jsonb),
+                -- The order's other products that are already covered, so the
+                -- card can say "Asha's order is only waiting on this".
+                'covered', coalesce((
+                  select jsonb_agg(y.product_id order by y.product_id)
+                  from cover y
+                  where y.order_id = s.order_id and y.product_id <> s.product_id and y.covered >= y.need
                 ), '[]'::jsonb)
               )
               order by s.created_at, s.order_id
@@ -3072,6 +3079,12 @@ begin
         select count(*) from public.orders f
         where f.status = 'delivered' and f.status_changed_at >= v_month_start
           and exists (select 1 from public.order_lines l where l.order_id = f.id and l.size = 'sample')
+      ),
+      -- Grams of samples in those orders.
+      'grams_this_month', (
+        select coalesce(sum(l.quantity * l.grams_each), 0) from public.orders f
+        join public.order_lines l on l.order_id = f.id and l.size = 'sample'
+        where f.status = 'delivered' and f.status_changed_at >= v_month_start
       )
     )
   ) into v_queue
