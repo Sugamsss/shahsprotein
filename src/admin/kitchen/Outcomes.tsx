@@ -52,7 +52,9 @@ const lineOf = (o: Outcome): Line => {
     case 'partly':
       return {
         icon: <Check size={18} aria-hidden="true" />, tone: 'ok',
-        title: say.partly(o.name, o.got.map(productName)),
+        title: o.got.length
+          ? say.partly(o.name, o.got.map(productName))
+          : say.gets(o.name, o.part.map((g) => weightOf(g.product_id, g.grams))),
         detail: o.waits.length ? say.partlyWaits(o.waits.map((w) => weightOf(w.product_id, w.grams))) : undefined,
       };
     case 'stillWait':

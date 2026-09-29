@@ -138,8 +138,11 @@ type EffectOrder = KitchenEffects['orders'][number];
 export type Outcome =
   /** Orders that leave Cooking. `all`: every order that was waiting. */
   | { kind: 'toPacking'; names: string[]; all: boolean }
-  /** One order got some of its food and still waits on the rest. */
-  | { kind: 'partly'; name: string; got: string[]; waits: { product_id: string; grams: number }[] }
+  /**
+   * One order got some of its food and still waits on the rest. `got`: products now fully
+   * covered; `part`: products it got some grams of but is still short on (grams it got).
+   */
+  | { kind: 'partly'; name: string; got: string[]; part: { product_id: string; grams: number }[]; waits: { product_id: string; grams: number }[] }
   /** Orders this doesn't reach, and what's still to cook overall. */
   | { kind: 'stillWait'; names: string[]; toCook: { product_id: string; grams: number }[] }
   /** A Cooking order that loses food it had (a batch made smaller, or a priority order took it). */
@@ -181,7 +184,16 @@ export const outcomesOf = (effects: KitchenEffects, before: Kitchen, mode: 'log'
   }
   for (const o of effects.orders) {
     if (o.from === 'cooking' && o.to === 'cooking' && gained(o).length) {
-      out.push({ kind: 'partly', name: orderName(o), got: gained(o).sort((a, b) => rank(a) - rank(b)), waits: waitsOf(after, o.id) });
+      const waits = waitsOf(after, o.id);
+      const short = (id: string) => waits.some((w) => w.product_id === id);
+      const up = o.grams.filter((g) => g.change > 0).sort((a, b) => rank(a.product_id) - rank(b.product_id));
+      out.push({
+        kind: 'partly',
+        name: orderName(o),
+        got: up.filter((g) => !short(g.product_id)).map((g) => g.product_id),
+        part: up.filter((g) => short(g.product_id)).map((g) => ({ product_id: g.product_id, grams: g.change })),
+        waits,
+      });
     }
   }
   for (const o of effects.orders) {

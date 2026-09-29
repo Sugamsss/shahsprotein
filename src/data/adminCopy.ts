@@ -779,6 +779,8 @@ export const adminCopy = {
         return names.length === 1 ? 'It goes to Packing for Sunit.' : 'They go to Packing for Sunit.';
       },
       partly: (name: string, products: string[]) => `${name}'s ${andList(products)} ${products.length === 1 ? 'is' : 'are'} covered.`,
+      /** Some grams of a product, not all it needs: "Meera's order gets 350 g Raggi Jaggi." */
+      gets: (name: string, items: string[]) => `${name}'s order gets ${andList(items)}.`,
       partlyWaits: (items: string[]) => `The order still waits on ${andList(items)}.`,
       stillWait: (names: string[]) => `${andList(names)} still ${names.length === 1 ? 'waits' : 'wait'}.`,
       stillToCook: (items: string[]) => `${andList(items)} still to cook.`,

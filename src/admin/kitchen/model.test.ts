@@ -135,9 +135,26 @@ describe('what a log does', () => {
       ]),
     };
     const out = outcomesOf(effects, seed(), 'log');
-    expect(out[1]).toEqual({ kind: 'partly', name: 'Neha', got: ['muesli'], waits: [{ product_id: 'raggi-jaggi', grams: 500 }] });
+    expect(out[1]).toEqual({ kind: 'partly', name: 'Neha', got: ['muesli'], part: [], waits: [{ product_id: 'raggi-jaggi', grams: 500 }] });
     // Neha is named as partly covered, not again as still waiting.
     expect(out.some((o) => o.kind === 'stillWait')).toBe(false);
+  });
+
+  it('an order that got only part of a product is not called covered for it', () => {
+    // Raggi Jaggi's Thu 24 Sep batch fixed from 520 g to 350 g: Meera (priority) gets 350 g of her 500 g.
+    const effects: KitchenEffects = {
+      preview: true, action_id: null,
+      batches: [batch('rj', 'raggi-jaggi', 350, 0)],
+      orders: [order('meera', 'Meera Kulkarni', 'cooking', 'cooking', [['raggi-jaggi', 350]], ['raggi-jaggi'])],
+      kitchen: after([
+        product({ product_id: 'raggi-jaggi', to_cook: 150, queue: [q('meera', 'Meera Kulkarni', 150, { priority: true })] }),
+      ]),
+    };
+    const out = outcomesOf(effects, seed(), 'fix');
+    expect(out[0]).toEqual({
+      kind: 'partly', name: 'Meera', got: [], part: [{ product_id: 'raggi-jaggi', grams: 350 }], waits: [{ product_id: 'raggi-jaggi', grams: 150 }],
+    });
+    expect(adminCopy.kitchen.outcomes.gets('Meera', ['350 g Raggi Jaggi'])).toBe("Meera's order gets 350 g Raggi Jaggi.");
   });
 
   it('a Cooking order losing food to a priority order reads as waiting again, with what it lost', () => {
