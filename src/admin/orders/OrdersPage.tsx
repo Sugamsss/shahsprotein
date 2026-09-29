@@ -321,7 +321,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       {drawn[lane].length > 0
         ? drawn[lane].map((o) => card(o, lane))
         : <p className="adm-lane__empty">{lane === 'packing' && !by.cooking.length ? stages.empty.packingAll : stages.empty[lane]}</p>}
-      {lane === 'packing' && oneStage && by.cooking.length > 0 && <NextFromKitchen cooking={by.cooking} onOpen={() => pick('cooking')} />}
+      {lane === 'packing' && oneStage && by.cooking.length > 0 && <NextFromKitchen cooking={by.cooking} onOpen={() => {
+        pick('cooking');
+        // The row goes with Packing: keep focus on the switcher's Cooking, not lost to the page.
+        document.querySelectorAll<HTMLInputElement>('.adm-stages input')[LANES.indexOf('cooking')]?.focus();
+      }} />}
     </>
   );
 
