@@ -16,6 +16,7 @@
 @import './pages/login.css';
 @import './pages/order-form.css';
 @import './pages/home.css';
+@import './kitchen/kitchen.css';
 @import './orders/orders.css';
 @import './pages/customers.css';
 @import './pages/done.css';

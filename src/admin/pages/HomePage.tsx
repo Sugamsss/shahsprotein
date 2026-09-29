@@ -1,52 +1,97 @@
-import React, { useEffect, useRef } from 'react';
-import { CheckCircle, ChevronRight, IndianRupee, Plus } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronRight, CookingPot, Hourglass, IndianRupee, Plus } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { useOverview } from '../AdminLayout';
 import { getStock, getTotals, setStock } from '../api';
 import { useAdminMe } from '../auth';
-import { firstName, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
+import { firstName, formatAge, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
+import { FixBatchSheet } from '../kitchen/FixBatchSheet';
+import { LoggedList } from '../kitchen/LoggedList';
+import { LogSheet } from '../kitchen/LogSheet';
+import { ordersWaiting, spareWarnings, toCook } from '../kitchen/model';
+import { useKitchenDone } from '../kitchen/useKitchenDone';
+import { WriteOffSheet } from '../kitchen/WriteOffSheet';
+import { productName } from '../orders/model';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import { Logo } from '../Splash';
-import type { OutOfStock, Overview, Totals } from '../types';
+import type { Kitchen, KitchenBatch, OutOfStock, Overview, Totals } from '../types';
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 import { ProductCards } from './HomeProducts';
-import { AdminWeek, CookWeek } from './HomeWeek';
+import { AdminWeek } from './HomeWeek';
 
 const copy = adminCopy.homePage;
 const payCopy = adminCopy.payments;
+const kitchenCopy = adminCopy.kitchen;
 
-// Home (temp/home-totals/v2): three product cards at the top, then a Home per
-// person. get_admin_me's home_view picks it: 'cook' is Pranjali's ("what do I
-// make?", no money), anything else is Sunit's full view (every stage, every
-// rupee). The totals are Home's own call; the overview is the one the layout
-// already loads for the Orders badge, and feeds "Waiting on you" and coupons.
+// Home: one per person. get_admin_me's home_view picks it. 'cook' is Pranjali's: what
+// to cook in one sentence, one "Log cooking" button, the product cards in kitchen
+// words with spare at their foot, and the batches she logged this week (tap one to
+// fix it). Anyone else gets Sunit's: what to pack and drop off and the money still
+// out, the cards by stage, Waiting on you, this week vs last. The totals are Home's
+// own call and carry the kitchen; the overview is the layout's (the Orders badge).
 
 // ---- The line under the date --------------------------------------------------------
 
-// Interim (lane A rebuilds both Homes): only numbers the kitchen flow can say truly.
+/** Pranjali: "Cook 2 kg Raggi Jaggi and 750 g Muesli." When nothing waits, who has the food. */
+const CookLede: React.FC<{ kitchen: Kitchen; packing: number }> = ({ kitchen, packing }) => {
+  const items = toCook(kitchen);
+  if (!items.length) {
+    return (
+      <>
+        <p className="adm-home__lede">{copy.cookNothing}</p>
+        {packing > 0 && <p className="adm-home__lede-more">{copy.cookNothingMore(packing)}</p>}
+      </>
+    );
+  }
+  return (
+    <p className="adm-home__lede" aria-label={copy.cookLedeName(items.map((i) => kitchenCopy.item(formatWeight(i.grams), productName(i.product_id))), ordersWaiting(kitchen))}>
+      {copy.cookWord}
+      {items.map((item, i) => (
+        <React.Fragment key={item.product_id}>
+          {i > 0 && (i === items.length - 1 ? copy.and : ', ')}
+          <b>{kitchenCopy.item(formatWeight(item.grams), productName(item.product_id))}</b>
+        </React.Fragment>
+      ))}
+      .
+    </p>
+  );
+};
 
-/** What's still short across Cooking orders, and how many orders wait on it. */
-const CookLede: React.FC<{ totals: Totals }> = ({ totals: { kitchen } }) => {
-  const grams = kitchen.products.reduce((sum, p) => sum + p.to_cook, 0);
-  if (!grams) return <p className="adm-home__lede">{copy.cookNothing}</p>;
-  const orders = new Set(kitchen.products.flatMap((p) => p.queue.map((q) => q.order_id))).size;
-  const [weight, rest] = copy.cookLede(formatWeight(grams), orders);
-  return <p className="adm-home__lede"><b>{weight}</b>{rest}</p>;
+/** Spare near or past its date, one line per product, most urgent first. A tap takes it off the shelf. */
+const SpareWarnings: React.FC<{ kitchen: Kitchen; onTake: (productId: string, batchId: string) => void }> = ({ kitchen, onTake }) => {
+  const warnings = spareWarnings(kitchen);
+  if (!warnings.length) return null;
+  return (
+    <div className="adm-home__warns">
+      {warnings.map(({ product_id, batch }) => {
+        const kind = batch.state === 'past' ? 'past' : (batch.days_left ?? 0) <= 1 ? 'today' : 'days';
+        const text = kitchenCopy.warn(productName(product_id), kind, batch.days_left ?? 0);
+        return kitchen.can_write_off ? (
+          <button key={product_id} type="button" className={`adm-home__warn is-${batch.state}`} onClick={() => onTake(product_id, batch.batch_id)}>
+            <Hourglass size={18} aria-hidden="true" /><span>{text}</span><ChevronRight size={18} aria-hidden="true" />
+          </button>
+        ) : (
+          <p key={product_id} className={`adm-home__warn is-${batch.state}`}><Hourglass size={18} aria-hidden="true" /><span>{text}</span></p>
+        );
+      })}
+    </div>
+  );
 };
 
 const AdminLede: React.FC<{ totals: Totals }> = ({ totals: { overall } }) => {
   // Sunit's part: packing and dropping off.
-  const need = overall.packing.orders + overall.ready.orders;
+  const pack = overall.packing.orders;
+  const drop = overall.ready.orders;
   // What's still owed on delivered orders, not their quoted totals: part payments are already in.
   const out = overall.to_collect.amount_due;
-  const [count, verb] = copy.adminLede(need);
+  const parts = [pack > 0 && copy.toPackCount(pack), drop > 0 && copy.toDropCount(drop)].filter(Boolean) as string[];
   return (
     <p className="adm-home__lede">
-      {need ? <><b>{count}</b>{verb}</> : copy.adminNothing}
+      {parts.length ? parts.map((part, i) => <React.Fragment key={part}>{i > 0 && ', '}<b>{part}</b></React.Fragment>) : copy.adminNothing}
       {out > 0 && <>{copy.stillOut[0]}<b className="is-money">{formatMoney(out)}</b>{copy.stillOut[1]}</>}.
     </p>
   );
@@ -104,7 +149,7 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     q.packing.count > 0 && <Row key="p" lane="packing" circle={q.packing.count} tone="accent" title={copy.toPack}
       hint={overall ? copy.packsThen(overall.packing.packs, paidSplit) : paidSplit} />,
     q.ready.count > 0 && <Row key="r" lane="ready" circle={q.ready.count} title={copy.toDropOff}
-      hint={wayHint(q.ready, overall?.ready)} />,
+      hint={[q.ready.oldest_since && copy.waited(formatAge(q.ready.oldest_since), q.ready.count), wayHint(q.ready, overall?.ready)].filter(Boolean).join(' ')} />,
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
@@ -126,10 +171,9 @@ type StockRpc = { data: OutOfStock | null; setData: (list: OutOfStock) => void }
 
 /**
  * One row per product (or per size when only one size is out), each with Back in
- * stock. Pranjali always sees it ("Everything's on the site." when nothing is
- * off); Sunit only when something is off. Nothing shows until stock has loaded.
+ * stock. Only when something is off the site. Nothing shows until stock has loaded.
  */
-const Stock: React.FC<{ stock: StockRpc; always: boolean }> = ({ stock: { data, setData }, always }) => {
+const Stock: React.FC<{ stock: StockRpc }> = ({ stock: { data, setData } }) => {
   const run = useUndoable();
   const { reload } = useOverview();
   const stockRef = useRef<OutOfStock | null>(data);
@@ -144,7 +188,7 @@ const Stock: React.FC<{ stock: StockRpc; always: boolean }> = ({ stock: { data, 
       ? [{ product, sizes: rows.map((r) => r.size), item: product.name, since }]
       : rows.map((r) => ({ product, sizes: [r.size], item: `${product.name} ${r.size}`, since: r.since }));
   });
-  if (!data || (!out.length && !always)) return null;
+  if (!data || !out.length) return null;
 
   const flip = (productId: string, sizes: string[], item: string, inStock: boolean, quiet = false) => void run({
     apply: () => {
@@ -167,10 +211,9 @@ const Stock: React.FC<{ stock: StockRpc; always: boolean }> = ({ stock: { data, 
   return (
     <section className="adm-card adm-home__card" aria-labelledby="adm-home-stock">
       <div className="adm-home__head">
-        <h2 id="adm-home-stock">{out.length ? copy.offTheSite : copy.stock}</h2>
+        <h2 id="adm-home-stock">{copy.offTheSite}</h2>
         <AdminLink to="/admin/products" className="adm-text-btn">{copy.products}</AdminLink>
       </div>
-      {!out.length && <p className="adm-home__ok"><CheckCircle size={18} aria-hidden="true" />{copy.allOnSite}</p>}
       {out.map(({ product, sizes, item, since }) => (
         <div key={item} className="adm-home__stock">
           <OrderThumb product={product} className="adm-home__thumb" />
@@ -203,6 +246,11 @@ const Coupons: React.FC<{ coupons: Overview['coupons'] }> = ({ coupons }) => (co
 
 // ---- The page ------------------------------------------------------------------------------
 
+type KitchenSheet =
+  | { kind: 'log' }
+  | { kind: 'fix'; batch: KitchenBatch }
+  | { kind: 'off'; productId: string; batchId: string };
+
 const HomePage: React.FC = () => {
   const me = useAdminMe();
   const cook = me.home_view === 'cook';
@@ -213,21 +261,35 @@ const HomePage: React.FC = () => {
   const stock = useRpc(getStock, []);
   // undefined while it loads (labels stay, numbers pulse), null if it couldn't.
   const totals = totalsRpc.data ?? (totalsRpc.error ? null : undefined);
+  const kitchen = totals?.kitchen;
+
+  const [sheet, setSheet] = useState<KitchenSheet | null>(null);
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const { setData: setTotals, reload: reloadTotals } = totalsRpc;
+  const reloadOverview = overview.reload;
+  // A kitchen change: its kitchen on screen at once, then everything it moved (stages, badge).
+  const showKitchen = useCallback((next: Kitchen) => {
+    setTotals((t) => (t ? { ...t, kitchen: next } : t));
+    void reloadTotals();
+    void reloadOverview();
+  }, [setTotals, reloadTotals, reloadOverview]);
+  const done = useKitchenDone(showKitchen);
+  const take = useCallback((productId: string, batchId: string) => setSheet({ kind: 'off', productId, batchId }), []);
 
   const hour = istHour();
   const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   const name = firstName(me.display_name) || me.email.split('@')[0];
 
   let lede: React.ReactNode = null;
-  if (totals) lede = cook ? <CookLede totals={totals} /> : <AdminLede totals={totals} />;
+  if (totals) lede = cook ? <CookLede kitchen={totals.kitchen} packing={totals.overall.packing.orders} /> : <AdminLede totals={totals} />;
   else if (totals === undefined) lede = <span className="adm-pulse adm-pulse--lede" aria-hidden="true" />;
 
   let below: React.ReactNode;
   if (cook) {
     below = (
       <div className="adm-home__grid">
-        <div className="adm-home__col"><Stock stock={stock} always /></div>
-        <div className="adm-home__col">{totals !== null && <CookWeek totals={totals} />}</div>
+        <div className="adm-home__col">{kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}</div>
+        <div className="adm-home__col"><Stock stock={stock} /></div>
       </div>
     );
   } else if (!overview.data) {
@@ -238,34 +300,55 @@ const HomePage: React.FC = () => {
         <div className="adm-home__col"><Waiting queue={overview.data.queue} totals={totals} /></div>
         <div className="adm-home__col">
           {totals !== null && <AdminWeek totals={totals} />}
-          <Stock stock={stock} always={false} />
+          <Stock stock={stock} />
           <Coupons coupons={overview.data.coupons} />
         </div>
       </div>
     );
   }
 
+  const nothingToCook = kitchen ? toCook(kitchen).length === 0 : false;
+
   return (
     <div className="adm-page adm-home">
       <div className="adm-home__top adm-phone-only">
         <Logo className="adm-home__logo" />
-        <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--tonal adm-btn--sm"><Plus size={18} strokeWidth={1.75} aria-hidden="true" />{copy.addOrder}</AdminLink>
+        {!cook && (
+          <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--tonal adm-btn--sm"><Plus size={18} strokeWidth={1.75} aria-hidden="true" />{copy.addOrder}</AdminLink>
+        )}
       </div>
       <div>
         <h1 className="adm-title">{copy.greeting(part, name)}</h1>
         <p className="adm-home__date">{formatLongDate()}</p>
         {lede}
+        {cook && kitchen && <SpareWarnings kitchen={kitchen} onTake={take} />}
       </div>
+      {cook && (
+        <button
+          type="button"
+          className={`adm-btn adm-btn--block adm-home__log ${nothingToCook ? 'adm-btn--tonal' : 'adm-btn--primary'}`}
+          disabled={!kitchen}
+          onClick={() => setSheet({ kind: 'log' })}
+        >
+          <CookingPot size={22} aria-hidden="true" />{kitchenCopy.logCooking}
+        </button>
+      )}
       <section className="adm-home__products" aria-labelledby="adm-home-products">
         <div className="adm-home__head adm-home__head--products">
           <h2 id="adm-home-products">{cook ? copy.cards.cookTitle : copy.cards.adminTitle}</h2>
-          <span>{cook ? copy.cards.cookMeta : copy.cards.adminMeta}</span>
+          {!cook && <span>{copy.cards.adminMeta}</span>}
         </div>
         {totals === null
           ? <LoadError onRetry={() => void totalsRpc.reload()} />
-          : <ProductCards cook={cook} totals={totals} stock={stock.data} />}
+          : <ProductCards cook={cook} totals={totals} stock={stock.data} onTake={take} />}
       </section>
       {below}
+
+      {kitchen && sheet?.kind === 'log' && <LogSheet kitchen={kitchen} onClose={closeSheet} onLogged={done} />}
+      {kitchen && sheet?.kind === 'fix' && <FixBatchSheet batch={sheet.batch} kitchen={kitchen} onClose={closeSheet} onDone={done} />}
+      {kitchen && sheet?.kind === 'off' && (
+        <WriteOffSheet kitchen={kitchen} productId={sheet.productId} batchId={sheet.batchId} onClose={closeSheet} onDone={done} />
+      )}
     </div>
   );
 };

@@ -1,15 +1,13 @@
 import React from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
-import { productsData } from '../../data/products';
 import { formatDay, formatMoney, formatMoneyShort, istDateValue } from '../format';
 import { moneyByMethod } from '../orders/model';
-import type { Totals, TotalsByMethod, TotalsWeekProduct } from '../types';
+import type { Totals, TotalsByMethod } from '../types';
 
 const copy = adminCopy.homePage;
 
-// This week against last, for both Homes. Every comparison is with last week
+// This week against last, on Sunit's Home. Every comparison is with last week
 // up to the same moment ("last_so_far"), so a Saturday morning isn't measured
 // against a whole week. Until there is a real last week, neither card compares.
 
@@ -20,62 +18,7 @@ const firstWeek = (totals: Totals): 'this' | 'last' | null => {
   return first > Date.parse(totals.weeks.last.starts_at) ? 'last' : null;
 };
 
-const packsOf = (list: TotalsWeekProduct[], id: string) => list.find((p) => p.product_id === id)?.packs ?? 0;
-
 const Pulse: React.FC<{ className?: string }> = ({ className = '' }) => <span className={`adm-pulse ${className}`} aria-hidden="true" />;
-
-/** Pranjali's: a sentence, then packs per product and the change from last week. No money. */
-export const CookWeek: React.FC<{ totals: Totals | null | undefined }> = ({ totals }) => {
-  const first = totals ? firstWeek(totals) : null;
-  const rows = productsData.map((product) => {
-    const packs = totals ? packsOf(totals.weeks.this.by_product, product.id) : 0;
-    const last = totals ? packsOf(totals.weeks.last_so_far.by_product, product.id) : 0;
-    return { product, packs, diff: packs - last };
-  });
-  const top = Math.max(0, ...rows.map((r) => r.packs));
-  const fastest = top > 0 ? rows.filter((r) => r.packs === top) : [];
-
-  return (
-    <section className="adm-card adm-home__card" aria-labelledby="adm-home-week" aria-busy={totals ? undefined : true}>
-      <div className="adm-home__head"><h2 id="adm-home-week">{copy.week}</h2></div>
-      {totals ? (
-        <p className="adm-home__sentence">
-          <b>{copy.weekSoFar(totals.weeks.this.orders)}</b>
-          {first ? copy.weekFirst(first === 'this') : copy.weekVs(totals.weeks.this.orders - totals.weeks.last_so_far.orders)}
-          {fastest.length > 0 && (
-            <>
-              {' '}
-              {fastest.map((r, i) => (
-                <React.Fragment key={r.product.id}>
-                  {i > 0 && (i === fastest.length - 1 ? ' and ' : ', ')}
-                  <b className="adm-pname">{r.product.name}</b>
-                </React.Fragment>
-              ))}
-              {copy.fastest(fastest.length > 1)}
-            </>
-          )}
-        </p>
-      ) : <Pulse className="adm-pulse--line" />}
-      <p className="adm-home__hint">{first ? copy.packsHintFirst : copy.packsHint}</p>
-      <ul className="adm-home__sells">
-        {rows.map(({ product, packs, diff }) => (
-          <li key={product.id} className="adm-home__sell">
-            <OrderThumb product={product} className="adm-home__thumb" />
-            <span className="adm-list__main">
-              <b className="adm-pname">{product.name}</b>
-              {totals ? <small>{copy.weekPacks(packs)}</small> : <Pulse />}
-            </span>
-            {totals && !first && (
-              <span className={`adm-home__diff${diff > 0 ? ' is-up' : ''}`} aria-label={copy.packsDiffName(diff)}>
-                {copy.packsDiff(diff)}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-};
 
 const Change: React.FC<{ now: number; before: number; show: (n: number) => string; first: boolean }> = ({ now, before, show, first }) => {
   if (first) return <em>{copy.vsFirst}</em>;
