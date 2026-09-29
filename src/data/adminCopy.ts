@@ -62,7 +62,7 @@ export const adminCopy = {
   },
   /** AdminSheet's close button. */
   close: 'Close',
-  /** The sheet after an update (src/data/adminReleases.ts has the notes). */
+  /** The dialog after an update (src/data/adminReleases.ts has the notes). */
   whatsNew: {
     title: "What's new",
     sub: 'Changes since you last looked.',
