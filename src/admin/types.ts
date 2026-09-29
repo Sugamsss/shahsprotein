@@ -1,5 +1,5 @@
 // The admin RPCs' JSON, exactly as the migrations return it (the kitchen flow:
-// supabase/migrations/20260929000000_kitchen_flow.sql). Timestamps are ISO
+// supabase/migrations/20260929000001_kitchen_flow.sql). Timestamps are ISO
 // strings, days are "2026-09-29" (India), amounts are whole rupees, weights grams.
 
 /** Cooking → Packing → Ready → Delivered. Done = delivered and (paid in full, or a free sample order). */
@@ -338,7 +338,7 @@ export interface Totals {
   kitchen: Kitchen;
 }
 
-// ---- The kitchen: batches, spare, shelf life (20260929000000) -------------------
+// ---- The kitchen: batches, spare, shelf life (20260929000001) -------------------
 
 /** fresh; near: less than a fifth of its shelf life left (at least 2 days); past: from expires_on on. Past spare never fills an order. */
 export type SpareState = 'fresh' | 'near' | 'past';

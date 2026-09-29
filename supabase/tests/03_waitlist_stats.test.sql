@@ -1,5 +1,5 @@
 -- 20260926000005: get_waitlist_count_stats() is internal. (Its other half,
--- the stale rule, went with the confirm step in 20260929000000.) Test data is
+-- the stale rule, went with the confirm step in 20260929000001.) Test data is
 -- fake (example.com) and everything rolls back at the end.
 
 begin;

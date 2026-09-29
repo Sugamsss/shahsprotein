@@ -1,4 +1,4 @@
--- 20260929000000: the kitchen flow. Who can call what, the stage mapping,
+-- 20260929000001: the kitchen flow. Who can call what, the stage mapping,
 -- site orders taking spare, the fill rule (oldest order first, oldest batch
 -- first, never past its shelf life), preview, undo, cancel and delete,
 -- edits after cooking, batch fixes, moves by hand, used up / thrown out,

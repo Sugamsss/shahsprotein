@@ -1,6 +1,6 @@
 -- 20260926000006: get_admin_totals() for the per-product Home,
 -- get_admin_orders(p_product), and admin_users.home_view. Since
--- 20260929000000 the stages are the kitchen's, samples are their own packs,
+-- 20260929000001 the stages are the kitchen's, samples are their own packs,
 -- and a free sample order never counts as money. Who can call them, zeros on an empty
 -- database, every stage per product and overall, weights, money, the week
 -- boundaries, and the product filter. Test data is fake (9198000000xx,

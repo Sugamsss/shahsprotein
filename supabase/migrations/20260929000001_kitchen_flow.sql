@@ -1,4 +1,4 @@
--- Migration: 20260929000000_kitchen_flow.sql
+-- Migration: 20260929000001_kitchen_flow.sql
 -- The kitchen flow: order stages follow the kitchen (Cooking → Packing →
 -- Ready → Delivered → Done), cooking batches fill orders oldest first, food
 -- left over is spare stock with its made-on date and shelf life, and a free
