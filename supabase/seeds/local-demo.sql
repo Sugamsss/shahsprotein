@@ -113,7 +113,7 @@ select pg_temp.demo_order('SN-E4F5G', 'whatsapp', 'delivered', 'Deepa Yadav', '9
 select pg_temp.demo_order('SN-N9P2Q', 'whatsapp', 'delivered', 'Anjali Bhosale', '919800000009', '415001', 700,
   '7 days', '[["raggi-jaggi","500 g",1],["bites","250 g",1]]');
 select pg_temp.demo_order('SN-Y7Z8A', 'instagram', 'delivered', 'Priya Chavan', '919800000012', '415001', 600,
-  '5 days', '[["raggi-jaggi","250 g",1],["muesli","250 g",1]]');
+  '5 days', '[["raggi-jaggi","250 g",1],["muesli","250 g",1],["bites","sample",1]]');
 select pg_temp.demo_order('SN-R3S4T', 'call', 'delivered', 'Nikhil Mane', '919800000010', '415002', 350,
   '4 days', '[["muesli","250 g",1]]');
 select pg_temp.demo_order('SN-V5W6X', 'whatsapp', 'delivered', 'Sneha Kadam', '919800000011', '415003', null,

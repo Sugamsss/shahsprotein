@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(93);
+select plan(95);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -747,6 +747,15 @@ select pg_temp.clean();
 select pg_temp.log('t1', 'raggi-jaggi', 700, 0);
 select pg_temp.log('t2', 'raggi-jaggi', 300, 20);
 
+select pg_temp.ord('SN-KHA22', 5, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
+select pg_temp.ord('SN-KHB22', 4, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
+select is(
+  (select jsonb_agg(jsonb_build_array(b -> 'grams', b -> 'to_orders', b -> 'orders') order by b ->> 'grams')
+   from jsonb_array_elements(public.get_admin_kitchen()::jsonb -> 'batches') b),
+  '[[300,300,2],[700,200,1]]'::jsonb,
+  'each logged batch says how many orders its food went to (the older batch first)'
+);
+
 select is(
   (select jsonb_build_object(
      'same_kitchen', t -> 'kitchen' = public.get_admin_kitchen()::jsonb,
@@ -912,6 +921,10 @@ select pg_temp.ord('SN-KRB22', 50, '[{"product_id":"raggi-jaggi","size":"500 g",
 select pg_temp.ord('SN-KRC22', 40, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":2}]');
 select pg_temp.log('r1', 'raggi-jaggi', 1500);
 select pg_temp.move('SN-KRB22', 'ready');
+select is(
+  public.get_admin_overview()::jsonb #>> '{queue,ready,oldest,code}', 'SN-KRB22',
+  'the overview names the order that has waited longest in Ready'
+);
 select public.save_admin_order(null, '{"source":"call","code":"SN-KRD22","name":"Kitchen Example","status":"delivered",
   "created_at":"2026-01-01T10:00:00Z","lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
 select public.save_admin_order(null, '{"source":"call","code":"SN-KRP22","name":"Priority Example","priority":true,

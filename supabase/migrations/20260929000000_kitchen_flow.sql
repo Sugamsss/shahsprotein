@@ -1382,7 +1382,9 @@ as $$
         jsonb_build_object(
           'id', b.batch_id, 'product_id', b.product_id, 'grams', b.grams, 'made_on', b.made_on,
           'created_at', b.created_at, 'by_name', coalesce(a.display_name, a.email),
-          'to_orders', b.to_orders, 'spare', b.spare, 'written_off', b.written_off
+          'to_orders', b.to_orders, 'spare', b.spare, 'written_off', b.written_off,
+          -- How many orders its food went to ("covered 4 orders").
+          'orders', (select count(distinct x.order_id) from public.kitchen_allocations x where x.batch_id = b.batch_id)
         )
         order by b.made_on desc, b.created_at desc, b.batch_id
       )
@@ -3292,8 +3294,16 @@ begin
       'count', count(*) filter (where o.status = 'ready'),
       'not_paid', count(*) filter (where o.status = 'ready' and o.paid_at is null and not o.free_sample),
       'part_paid', count(*) filter (where o.status = 'ready' and o.paid_at is null and pay.count > 0),
-      -- How long the oldest has waited to be dropped off.
-      'oldest_since', min(o.status_changed_at) filter (where o.status = 'ready')
+      -- How long the oldest has waited to be dropped off, and whose it is
+      -- ("Farah's has waited 4 days").
+      'oldest_since', min(o.status_changed_at) filter (where o.status = 'ready'),
+      'oldest', (
+        select json_build_object('code', r.code, 'name', r.name, 'since', r.status_changed_at)
+        from public.orders r
+        where r.status = 'ready'
+        order by r.status_changed_at, r.created_at, r.id
+        limit 1
+      )
     ),
     'to_collect', json_build_object(
       'count', count(*) filter (where o.status = 'delivered' and o.paid_at is null and not o.free_sample),

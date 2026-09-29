@@ -496,7 +496,7 @@ select is(
 select is(
   ((current_setting('test.overview')::jsonb -> 'queue') #- '{to_collect,oldest,since}') #- '{cooking,oldest}',
   '{"cooking":{"count":2},"packing":{"count":1,"paid":0,"part_paid":0},
-    "ready":{"count":0,"not_paid":0,"part_paid":0,"oldest_since":null},
+    "ready":{"count":0,"not_paid":0,"part_paid":0,"oldest_since":null,"oldest":null},
     "to_collect":{"count":3,"amount":500,"amount_due":500,"part_paid":0,"without_amount":2,"people":2,
                   "oldest":{"code":"SN-DDDDD","name":"Week D"}},
     "free_samples":{"open":0,"sent_this_month":0,"grams_this_month":0}}'::jsonb,
