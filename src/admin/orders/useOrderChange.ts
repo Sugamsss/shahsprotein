@@ -3,21 +3,21 @@ import { getOrder, undoKitchen, updateOrder } from '../api';
 import { useOverview } from '../AdminLayout';
 import type { Order, OrderChanges, UpdatedOrder } from '../types';
 import { useUndoable } from '../useUndoable';
-import { applyLocal, changeText, effectsText, orderOnly, undoPlanOf } from './model';
+import { applyLocal, changeText, effectsText, movedOthers, orderOnly, undoPlanOf } from './model';
 
 /**
  * One-tap changes to an order, on the shared useUndoable: show it at once, save it,
  * offer Undo, and go back on failure. `show` puts an order on screen (the list, the
  * detail); a save also refreshes the badge.
  *
- * Undo: a move that changed the kitchen (the answer's kitchen_effects has an action_id:
- * food back as spare, covered by hand, another order filled) goes back through
- * undo_admin_kitchen, which restores every row exactly; then the order is loaded again.
- * If something moved since, the server's sentence shows as the toast. Anything else
- * sends the reverse keys, as before.
+ * Undo: every status or priority change answers with kitchen_effects and an action_id,
+ * and goes back through undo_admin_kitchen, which restores status, when it entered it,
+ * priority and the kitchen exactly, and deletes the history the move wrote; then the
+ * order is loaded again. If something moved since, the server's sentence shows as the
+ * toast. An answer without an action id sends the reverse keys.
  *
- * `onOthers` runs when the kitchen moved other orders too (and after a kitchen Undo),
- * so a board can load them again.
+ * `onOthers` runs only when the change moved or touched other orders too (and after
+ * the Undo of such a change), so a board can load them again.
  */
 export const useOrderChange = (show: (order: Order) => void, onOthers?: () => void) => {
   const run = useUndoable();
@@ -36,7 +36,7 @@ export const useOrderChange = (show: (order: Order) => void, onOthers?: () => vo
       await undoKitchen(actionId);
       const fresh = await getOrder(before.code);
       if (fresh) showRef.current(fresh);
-      othersRef.current?.();
+      if (movedOthers(before, saved.kitchen_effects)) othersRef.current?.();
       void reloadBadge();
     },
     text: '',
@@ -56,7 +56,7 @@ export const useOrderChange = (show: (order: Order) => void, onOthers?: () => vo
         const answer = await updateOrder(order.id, changes);
         saved = answer;
         showRef.current(orderOnly(answer));
-        if (answer.kitchen_effects?.orders.some((e) => e.id !== order.id)) othersRef.current?.();
+        if (movedOthers(order, answer.kitchen_effects)) othersRef.current?.();
         void reloadBadge();
       },
       text: () => {

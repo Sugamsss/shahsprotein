@@ -90,8 +90,8 @@ export const getOrders = (filters: OrderFilters = {}) => rpc<OrderPage>('get_adm
 /** null when no order has that code. The code may carry `SN-` or `#`, any case. */
 export const getOrder = (code: string) => rpc<OrderDetail | null>('get_admin_order', { code });
 /**
- * A status move can change the kitchen too (food back as spare, covered by hand, another
- * order filled): then `kitchen_effects` says what, and Undo is undoKitchen(its action_id).
+ * Every status or priority change answers with `kitchen_effects` and an action_id (other
+ * orders may or may not have moved); Undo is undoKitchen(that action_id).
  */
 export const updateOrder = (id: string, changes: OrderChanges) =>
   rpc<UpdatedOrder>('update_admin_order', { id, changes });
@@ -106,7 +106,12 @@ export const addPayment = (orderId: string, payment: PaymentInput) =>
 /** "Mark paid": one payment for whatever is left. */
 export const payRest = (orderId: string, payment: PayRestInput) =>
   rpc<Order>('pay_admin_order_rest', { order_id: orderId, payment });
-export const deletePayment = (id: string) => rpc<Order>('delete_admin_payment', { id });
+/**
+ * The × on a payment, or (`undo`) the Undo of Mark paid / Part payment: then the server also
+ * removes the "paid" event that payment wrote. `p_undo` is sent only when true.
+ */
+export const deletePayment = (id: string, undo = false) =>
+  rpc<Order>('delete_admin_payment', { id, undo: undo || undefined });
 /** Undo for deletePayment and for `paid: false`: pass the payments as the order listed them. Repeats are skipped. */
 export const restorePayments = (orderId: string, payments: RestorePayment[]) =>
   rpc<Order>('restore_admin_payments', {

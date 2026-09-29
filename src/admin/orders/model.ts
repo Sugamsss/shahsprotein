@@ -107,9 +107,11 @@ export const effectsText = (order: Order, effects: KitchenEffects | null): strin
 };
 
 /**
- * How a change is undone: a move that changed the kitchen (kitchen_effects with an
- * action_id) goes back through undo_admin_kitchen, which puts every row back exactly;
- * anything else sends the reverse keys.
+ * How a change is undone: every status or priority change comes back with kitchen_effects
+ * and an action_id, and goes back through undo_admin_kitchen, which puts status,
+ * status_changed_at, priority and the kitchen back exactly and deletes the history the
+ * move wrote. An answer without an action id (an older database, or the save hasn't
+ * answered) sends the reverse keys.
  */
 export type UndoPlan = { kitchen: string } | { changes: OrderChanges };
 export const undoPlanOf = (before: Order, changes: OrderChanges, saved: UpdatedOrder | null): UndoPlan => {
@@ -144,6 +146,14 @@ export const applyLocal = (o: Order, c: OrderChanges): Order => ({
     paid_note: c.paid ? (c.paid_method ? c.paid_note ?? null : o.paid_note) : null,
   }),
 } as Order);
+
+/**
+ * Whether a change moved or touched other orders too, so a board should load them again.
+ * kitchen_effects comes back for every status or priority change, so non-null alone
+ * doesn't mean anything else changed.
+ */
+export const movedOthers = (order: Order, effects: KitchenEffects | null | undefined): boolean =>
+  Boolean(effects?.orders.some((e) => e.id !== order.id));
 
 /** An answer from update_admin_order as the list keeps it: the order, without the effects. */
 export const orderOnly = ({ kitchen_effects: _, ...order }: UpdatedOrder): Order => order;

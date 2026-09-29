@@ -171,8 +171,9 @@ export interface OrderChanges {
   pincode?: string | null;
   /**
    * Skip the line. Turning it on can take food from other Cooking orders, but only when that
-   * completes this order's line for the product; then kitchen_effects has an action_id and Undo
-   * goes through undo_admin_kitchen. With no action_id, Undo sends the old value.
+   * completes this order's line for the product. Like a status change, the answer carries
+   * kitchen_effects with an action_id and Undo goes through undo_admin_kitchen; with no
+   * action_id (an older database), Undo sends the old value.
    */
   priority?: boolean;
 }
@@ -196,9 +197,9 @@ export type RestorePayment = Pick<Payment, 'id' | 'amount' | 'method' | 'note' |
 
 /** save_admin_order's p_order. On edit, code, status, paid and created_at are ignored. */
 /**
- * update_admin_order's answer: the order, plus what the kitchen did when the status move
- * changed more than this order's status (food back as spare, covered by hand, another
- * order filled). Undo that with undo_admin_kitchen(kitchen_effects.action_id).
+ * update_admin_order's answer: the order, plus kitchen_effects for every status or priority
+ * change (with an action_id, even when only this order moved; null for other fields).
+ * Undo that with undo_admin_kitchen(kitchen_effects.action_id).
  */
 export type UpdatedOrder = Order & { kitchen_effects: KitchenEffects | null };
 

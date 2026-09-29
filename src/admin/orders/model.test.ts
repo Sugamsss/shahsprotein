@@ -3,7 +3,7 @@ import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOr
 import {
   changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
   namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
-  reverseOf, searchFor, sortLines, undoPlanOf, byKitchenTurn, daysInStage, landingStage, stageFromHash,
+  reverseOf, searchFor, sortLines, undoPlanOf, movedOthers, byKitchenTurn, daysInStage, landingStage, stageFromHash,
 } from './model';
 
 // The kitchen flow's stages: which lane an order is in, and its one-tap next step.
@@ -45,10 +45,35 @@ describe('undoPlanOf', () => {
     expect(undoPlanOf(asha, { status: 'cancelled' }, saved)).toEqual({ kitchen: 'act-1' });
   });
 
-  it('sends the reverse keys when the kitchen did not change, or the save has not answered', () => {
+  it('undoes a plain stage move with its action too, so its history goes with it', () => {
+    const packed = { ...staged('packing'), id: 'o-p' } as Order;
+    const only = effects([{ id: 'o-p', code: packed.code, name: null, from: 'packing', to: 'ready', grams: [], waiting: [] }], 'act-2');
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, only))).toEqual({ kitchen: 'act-2' });
+    expect(undoPlanOf(packed, { priority: true }, answer({ ...packed, priority: true }, effects([], 'act-3')))).toEqual({ kitchen: 'act-3' });
+  });
+
+  it('sends the reverse keys when the answer has no action id, or the save has not answered', () => {
     const packed = staged('packing');
     expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, null))).toEqual({ changes: { status: 'packing' } });
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, effects([], null)))).toEqual({ changes: { status: 'packing' } });
     expect(undoPlanOf(packed, { status: 'ready' }, null)).toEqual({ changes: { status: 'packing' } });
+  });
+});
+
+describe('a move that touched only this order', () => {
+  const packed = { ...staged('packing'), id: 'o-p', name: 'Asha Patil' } as Order;
+  const only = effects([{ id: 'o-p', code: packed.code, name: 'Asha Patil', from: 'packing', to: 'ready', grams: [], waiting: [] }]);
+
+  it('does not reload the board or add a sentence to the toast', () => {
+    expect(movedOthers(packed, only)).toBe(false);
+    expect(movedOthers(packed, effects([]))).toBe(false);
+    expect(movedOthers(packed, null)).toBe(false);
+    expect(effectsText(packed, only)).toBe('');
+  });
+
+  it('reloads when another order moved', () => {
+    const other = { id: 'o-x', code: 'SN-X', name: 'Neha', from: 'cooking' as const, to: 'packing' as const, grams: [], waiting: [] };
+    expect(movedOthers(packed, effects([...only.orders, other]))).toBe(true);
   });
 });
 
