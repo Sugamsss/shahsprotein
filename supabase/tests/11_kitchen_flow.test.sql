@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(102);
+select plan(106);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -233,11 +233,12 @@ select pg_temp.as_owner();
 -- ─── 2. The migration ───────────────────────────────────
 
 select results_eq(
-  $$select public.kitchen_migrated_status(s, stale) from (values
-      ('new', false), ('new', true), ('confirmed', false), ('sent', false), ('delivered', false), ('cancelled', false)
-    ) as t(s, stale)$$,
-  $$values ('cooking'::text), ('cancelled'), ('cooking'), ('ready'), ('delivered'), ('cancelled')$$,
-  'old stages: new and confirmed cook, sent is ready, a stale site order is cancelled, the rest keep theirs'
+  $$select public.kitchen_migrated_status(s, stale, money) from (values
+      ('new', false, false), ('new', true, false), ('new', true, true), ('confirmed', false, false),
+      ('sent', false, false), ('delivered', false, false), ('cancelled', false, false)
+    ) as t(s, stale, money)$$,
+  $$values ('cooking'::text), ('cancelled'), ('cooking'), ('cooking'), ('ready'), ('delivered'), ('cancelled')$$,
+  'old stages: new and confirmed cook, sent is ready, a stale site order is cancelled unless it has money on it, the rest keep theirs'
 );
 
 select results_eq(
@@ -273,6 +274,10 @@ set local role anon;
 select throws_ok(
   $$select public.submit_order('SN-KSC22', '[{"product_id":"bites","size":"sample","quantity":1}]', 'Site Example', '415001')$$,
   '22023', 'One of the items doesn''t look right.', 'the site still cannot order a sample'
+);
+select throws_ok(
+  $$select public.submit_order('SN-KSD22', '[{"product_id":"bites","size":"99999 kg","quantity":10}]', 'Site Example', '415001')$$,
+  '22023', 'One of the items doesn''t look right.', 'nor a pack over 1 kg'
 );
 reset role;
 
@@ -853,10 +858,11 @@ select is(
 );
 
 -- A priority order still short takes food a non-priority Cooking order
--- holds (it waits for the next batch instead). Undo puts it back exactly.
+-- holds when that completes its line (the other waits for the next batch
+-- instead). Undo puts it back exactly.
 select public.update_admin_order(pg_temp.id('SN-KPB22'), '{"priority":false}');
 select pg_temp.log('p2', 'raggi-jaggi', 300);
-select pg_temp.ord('SN-KPC22', 1, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.ord('SN-KPC22', 1, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
 select set_config('t.snap', pg_temp.snap()::text, true);
 select set_config('t.pc', public.update_admin_order(pg_temp.id('SN-KPC22'), '{"priority":true}')::text, true);
 
@@ -864,9 +870,9 @@ select is(
   jsonb_build_object('a', pg_temp.cover('SN-KPA22'), 'c', pg_temp.cover('SN-KPC22'),
     'moves', pg_temp.moves(current_setting('t.pc')::jsonb -> 'kitchen_effects'),
     'undoable', current_setting('t.pc')::jsonb #>> '{kitchen_effects,action_id}' is not null),
-  '{"a":"","c":"raggi-jaggi:p2=300","undoable":true,
-    "moves":["SN-KPA22 cooking>cooking raggi-jaggi-300 waiting raggi-jaggi","SN-KPC22 cooking>cooking raggi-jaggi+300 waiting raggi-jaggi"]}'::jsonb,
-  'priority takes food a Cooking order holds, and says so'
+  '{"a":"raggi-jaggi:p2=50","c":"raggi-jaggi:p2=250","undoable":true,
+    "moves":["SN-KPA22 cooking>cooking raggi-jaggi-250 waiting raggi-jaggi","SN-KPC22 cooking>packing raggi-jaggi+250"]}'::jsonb,
+  'priority takes food a Cooking order holds when that completes its line, and says so'
 );
 
 select public.undo_admin_kitchen((current_setting('t.pc')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
@@ -1035,6 +1041,47 @@ select is(
 );
 select public.undo_admin_kitchen((current_setting('t.give')::jsonb ->> 'action_id')::uuid);
 select is(pg_temp.hist('SN-KWC22'), current_setting('t.hc')::jsonb, 'and after Undo that line is gone');
+
+-- ─── 23. Review fixes: priority only completes, Undo refills and refuses ─
+
+-- Priority takes nothing when it can't complete its line.
+select pg_temp.clean();
+select pg_temp.ord('SN-KYA22', 50, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('y1', 'raggi-jaggi', 300);
+select pg_temp.ord('SN-KYP22', 1, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select set_config('t.yp', public.update_admin_order(pg_temp.id('SN-KYP22'), '{"priority":true}')::text, true);
+select is(
+  jsonb_build_object('other', pg_temp.cover('SN-KYA22'), 'priority', pg_temp.cover('SN-KYP22'),
+    'effects', current_setting('t.yp')::jsonb -> 'kitchen_effects'),
+  '{"other":"raggi-jaggi:y1=300","priority":"","effects":null}'::jsonb,
+  'priority takes nothing when the Cooking food there can''t complete its line'
+);
+
+-- Undo of a write-off refills a Cooking order that came in meanwhile.
+select pg_temp.clean();
+select pg_temp.log('y2', 'raggi-jaggi', 1000);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+select set_config('t.wo', public.write_off_admin_spare(pg_temp.bid('y2'), null, 'thrown_out')::text, true);
+select pg_temp.as_owner();
+select pg_temp.ord('SN-KYB22', 1, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select public.undo_admin_kitchen((current_setting('t.wo')::jsonb ->> 'action_id')::uuid);
+select is(
+  jsonb_build_object('status', pg_temp.st('SN-KYB22'), 'spare', pg_temp.spare('y2')),
+  '{"status":"packing","spare":500}'::jsonb,
+  'undoing a write-off gives the food back to an order waiting for it'
+);
+
+-- Undo refuses when it would leave an order holding more than it needs.
+select pg_temp.clean();
+select pg_temp.ord('SN-KYC22', 5, '[{"product_id":"muesli","size":"500 g","quantity":3}]');
+select pg_temp.log('y3', 'muesli', 1000);
+select set_config('t.fix', public.update_admin_batch(pg_temp.bid('y3'), '{"grams":500}')::text, true);
+select pg_temp.log('y4', 'muesli', 1000);
+select throws_ok(
+  format('select public.undo_admin_kitchen(%L::uuid)', current_setting('t.fix')::jsonb ->> 'action_id'),
+  '22023', 'Something changed since, so this can''t be undone.',
+  'undo is refused when the order has been topped up since'
+);
 
 select * from finish();
 rollback;

@@ -74,39 +74,50 @@ alter table public.order_events add constraint order_events_event_check check (e
 ));
 
 -- The old stage to the new one. stale is order_is_stale() on the old row
--- (a site order that never came through): it's cancelled rather than cooked.
--- Kept (not dropped) so the mapping has a test.
-create or replace function public.kitchen_migrated_status(p_status text, p_stale boolean)
+-- (a site order that never came through): it's cancelled rather than cooked,
+-- unless it has money on it (a total or a payment), which means it did come
+-- through: that one cooks like the rest. Kept (not dropped) so the mapping
+-- has a test.
+create or replace function public.kitchen_migrated_status(p_status text, p_stale boolean, p_money boolean default false)
 returns text
 language sql
 immutable
 set search_path = public
 as $$
   select case
-    when p_status = 'new' and coalesce(p_stale, false) then 'cancelled'
+    when p_status = 'new' and coalesce(p_stale, false) and not coalesce(p_money, false) then 'cancelled'
     when p_status in ('new', 'confirmed') then 'cooking'
     when p_status = 'sent' then 'ready'
     else p_status
   end;
 $$;
 
-revoke all on function public.kitchen_migrated_status(text, boolean) from public, anon, authenticated;
+revoke all on function public.kitchen_migrated_status(text, boolean, boolean) from public, anon, authenticated;
 
 alter table public.orders drop constraint if exists orders_status_check;
 
 -- Stale site orders get an auto "cancelled" event, so their history says why.
 -- The other moves are a rename, not a change: no event, and status_changed_at
 -- keeps its moment (a sent order has been Ready since it was sent).
-insert into public.order_events (order_id, event, by, auto)
-select o.id, 'cancelled', null, true
+create temporary table kitchen_migrating on commit drop as
+select o.id, public.kitchen_migrated_status(o.status, public.order_is_stale(o),
+    o.amount is not null or exists (select 1 from public.order_payments p where p.order_id = o.id)) as status
 from public.orders o
-where o.status = 'new' and public.order_is_stale(o);
+where o.status in ('new', 'confirmed', 'sent');
+
+insert into public.order_events (order_id, event, by, auto)
+select m.id, 'cancelled', null, true
+from kitchen_migrating m
+where m.status = 'cancelled';
 
 alter table public.orders disable trigger user;
 
 update public.orders o
-set status = public.kitchen_migrated_status(o.status, public.order_is_stale(o))
-where o.status in ('new', 'confirmed', 'sent');
+set status = m.status,
+  -- A cancel is a real move: it happens now. The rest are a rename.
+  status_changed_at = case when m.status = 'cancelled' then timezone('utc', now()) else o.status_changed_at end
+from kitchen_migrating m
+where o.id = m.id;
 
 alter table public.orders enable trigger user;
 
@@ -1002,8 +1013,9 @@ revoke all on function public.kitchen_move_grams(uuid, uuid, text, integer, bool
 -- The one fill rule, for one product: short Cooking orders, priority ones
 -- first, oldest first within each, take usable spare, oldest batch first.
 -- Then a priority order still short takes food from non-priority Cooking
--- orders, newest first (they wait for the next batch instead). Then covered
--- orders go to Packing.
+-- orders, newest first, but only when that completes its line for the
+-- product (they wait for the next batch instead). Then covered orders go to
+-- Packing.
 create or replace function public.kitchen_fill(p_product_id text)
 returns void
 language plpgsql
@@ -1041,6 +1053,16 @@ begin
   loop
     v_short := public.kitchen_short(v_id, p_product_id);
     continue when v_short = 0;
+
+    -- Only when it completes the line: taking part of it would make another
+    -- order wait while this one still waits (it gets the next batch first).
+    continue when coalesce((
+      select sum(a.grams)
+      from public.kitchen_allocations a
+      join public.orders d on d.id = a.order_id
+      where d.status = 'cooking' and not d.priority
+        and a.product_id = p_product_id and a.batch_id is not null
+    ), 0) < v_short;
 
     for v_donor in
       select d.id
@@ -2020,7 +2042,8 @@ grant execute on function public.get_admin_orders(text, text[], boolean, text, t
 
 -- The popup's Send. Same signature and answers as 20260926000000; the order
 -- now lands in Cooking and takes from spare (oldest batch first). Covered on
--- every product, it goes straight to Packing. Samples are still refused.
+-- every product, it goes straight to Packing. Samples are still refused, and
+-- so is a pack over 1 kg.
 create or replace function public.submit_order(
   p_code text,
   p_lines jsonb,
@@ -2096,6 +2119,14 @@ begin
 
   -- No samples from the site.
   v_lines := public.order_clean_lines(p_lines, 10, false);
+  -- The site's packs are small pouches. Anything over 1 kg a pack is junk, and
+  -- would now take all the spare at once and put tonnes on the cook's Home.
+  if exists (
+    select 1 from jsonb_array_elements(v_lines) line
+    where public.order_size_grams(line ->> 'size') not between 1 and 1000
+  ) then
+    raise exception using message = 'One of the items doesn''t look right.', errcode = '22023';
+  end if;
 
   v_name := public.order_clean_name(p_name);
   if v_name is null or char_length(v_name) not between 2 and 60 then
@@ -3208,9 +3239,19 @@ begin
   end loop;
 
   -- A batch that gave its grams to someone else in the meantime can't take
-  -- them back.
+  -- them back, and an order that was topped up meanwhile can't end up
+  -- holding more than it needs.
   if exists (
     select 1 from public.kitchen_batch_rows(null) r where r.spare < 0
+  ) or exists (
+    select 1
+    from (
+      select (coalesce(s.new, s.old) ->> 'order_id')::uuid as order_id
+      from public.kitchen_action_steps s
+      where s.action_id = p_action_id and s.tbl = 'kitchen_allocations'
+    ) t
+    cross join lateral public.kitchen_order_cover(t.order_id) c
+    where c.covered > c.need
   ) then
     raise exception using message = 'Something changed since, so this can''t be undone.', errcode = '22023';
   end if;
@@ -3223,11 +3264,20 @@ begin
   set undone_at = timezone('utc', now()), undone_by = auth.uid()
   where id = p_action_id;
 
-  -- Anything that arrived meanwhile gets its fair share of what's back.
-  select coalesce(array_agg(distinct coalesce(s.new, s.old) ->> 'product_id'), '{}')
+  -- Anything that arrived meanwhile gets its fair share of what's back. A
+  -- write-off step has no product, so it's found through its batch.
+  select coalesce(array_agg(distinct x.product_id), '{}')
   into v_products
-  from public.kitchen_action_steps s
-  where s.action_id = p_action_id and s.tbl in ('kitchen_allocations', 'kitchen_batches');
+  from (
+    select coalesce(s.new, s.old) ->> 'product_id' as product_id
+    from public.kitchen_action_steps s
+    where s.action_id = p_action_id and s.tbl in ('kitchen_allocations', 'kitchen_batches')
+    union
+    select b.product_id
+    from public.kitchen_action_steps s
+    join public.kitchen_batches b on b.id = (coalesce(s.new, s.old) ->> 'batch_id')::uuid
+    where s.action_id = p_action_id and s.tbl = 'kitchen_writeoffs'
+  ) x;
   perform public.kitchen_fill_all(v_products);
 
   return json_build_object('undone', true, 'kitchen', public.kitchen_state_json());
