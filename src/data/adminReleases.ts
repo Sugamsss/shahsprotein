@@ -22,6 +22,48 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-09-29-kitchen-stages',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'Orders follow the kitchen',
+    body: 'Orders now go Cooking, Packing, Ready, Delivered. There’s no Confirm step: every order starts in Cooking and moves to Packing by itself once it’s cooked.',
+  },
+  {
+    id: '2026-09-29-log-cooking',
+    for: ['cook'],
+    kind: 'new',
+    title: 'Log what you cooked',
+    body: 'Tap Log cooking on Home. It’s filled in with what orders need; change it if you made more or less. Covered orders go to Packing and the rest is kept as spare. Tap Undo if it’s wrong.',
+  },
+  {
+    id: '2026-09-29-spare',
+    for: ['cook'],
+    kind: 'new',
+    title: 'Spare shows the days it has left',
+    body: 'Food left over shows on Home with how many days it keeps. When it’s gone, tap it and pick Used up or Thrown out. Nothing is thrown out for you.',
+  },
+  {
+    id: '2026-09-29-one-stage-at-a-time',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Orders, one stage at a time',
+    body: 'On your phone, pick a stage at the top of Orders. Each card has one next step: Packed, Delivered or Mark paid. “From the website” marks orders that might not have come through.',
+  },
+  {
+    id: '2026-09-29-priority',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Priority orders go first',
+    body: 'Turn on Priority for an order that’s still cooking, and it gets food first. If another order is already packed, you’re asked before its pouch moves over.',
+  },
+  {
+    id: '2026-09-29-free-samples',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Free samples, as a pack size',
+    body: 'In Add order, tap + next to Sample under a product. Samples are always free. Every order with one shows in Free samples, under the stages in Orders.',
+  },
+  {
     id: '2026-09-29-updates-install-themselves',
     for: ['admin', 'cook'],
     kind: 'new',
