@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import OrdersPage from './orders/OrdersPage';
 import DonePage from './orders/DonePage';
+import FreeSamplesPage from './orders/FreeSamplesPage';
 import NewOrderPage from './pages/NewOrderPage';
 import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
@@ -63,6 +64,7 @@ const AdminApp: React.FC = () => {
           <Route index element={<HomePage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/done" element={<DonePage />} />
+          <Route path="orders/samples" element={<FreeSamplesPage />} />
           <Route path="orders/new" element={<NewOrderPage />} />
           {/* Phone: its own page. Laptop: a popup over the board. OrdersPage decides. */}
           <Route path="orders/:code" element={<OrdersPage />} />
