@@ -99,14 +99,26 @@
 .adm-ocard__items li { display: flex; align-items: baseline; gap: 6px; color: var(--adm-ink-2); }
 /* 500, not 600: the person's name must lead the card, not the product. */
 .adm-ocard__items .adm-pname { font-weight: 500; }
-.adm-ocard__items li > span:last-child { margin-left: auto; color: var(--adm-ink-1); font-weight: 600; }
-/* A partly cooked card: a small ✓ on lines that are ready, the "Not paid" chip's dashed ring
-   on lines still to cook. The ready line steps down in ink, like a ticked item on a list. */
-.adm-mark { flex: 0 0 16px; display: inline-grid; place-items: center; align-self: center; width: 16px; height: 16px; }
-.adm-mark--ready { color: var(--color-success-text); }
-.adm-mark--wait::before { content: ''; width: 11px; height: 11px; border: 1.5px dashed var(--adm-ink-3); border-radius: 50%; }
-.adm-ocard__items li.is-ready, .adm-ocard__items li.is-ready > span:last-child { color: var(--adm-ink-3); }
-.adm-ocard__items li.is-ready .adm-pname { color: var(--adm-ink-2); }
+.adm-ocard__q { flex: 0 0 auto; margin-left: auto; color: var(--adm-ink-1); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Name, size and "✓ ready" wrap as one run of text in a narrow lane; the quantity stays on the right. */
+.adm-ocard__what { flex: 1 1 auto; min-width: 0; }
+.adm-ocard__size, .adm-lready { white-space: nowrap; }
+/* A Cooking card's line whose product is already covered: a small quiet green "✓ ready". Waiting lines stay plain. */
+.adm-lready { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: 1px; color: var(--color-success-text); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; white-space: nowrap; }
+.adm-ocard__time.is-late { color: var(--adm-warn-text); font-weight: 600; }
+.adm-chip--priority svg { color: var(--adm-ink-2); }
+
+/* The board's lighter card (O1): one thumb, name and day, the lines, then one row with the
+   money (or sample) chip left and the next step right, under the text. No code line. */
+.adm-ocard--light { grid-template-areas: 'pile head' 'pile items' 'pile extra' '. foot'; padding: 14px 14px 12px; }
+.adm-ocard--light .adm-ocard__foot { margin-top: 10px; }
+.adm-ocard--light .adm-ocard__foot .adm-btn { margin-left: auto; }
+/* It left its stage (Packed, Delivered, Mark paid): it folds away; the stage's gap goes with it. */
+.adm-ocard.is-leaving { overflow: hidden; pointer-events: none; animation: adm-leave 260ms var(--ease-glide) forwards; }
+@keyframes adm-leave {
+  from { max-height: 180px; }
+  to { max-height: 0; margin-bottom: -10px; padding-block: 0; border-width: 0; opacity: 0; transform: scale(0.97); }
+}
 .adm-ocard__extra { grid-area: extra; display: grid; gap: 6px; margin-top: 8px; }
 .adm-ocard__extra:empty { display: none; }
 .adm-ocard__note { display: flex; gap: 6px; overflow: hidden; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-style: italic; font-weight: 500; line-height: 1.35;
@@ -151,37 +163,91 @@
 .adm-ocard__items li.is-other { opacity: 0.75; }
 .adm-title:focus { outline: none; }
 
-.adm-jump {
-  position: sticky; top: 0; z-index: 3;
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
-  /* Edge to edge at every phone and tablet width (the page is 640px wide at most). */
-  margin: -4px calc(50% - 50vw) 0; padding: 8px calc(50vw - 50%);
-  background: color-mix(in srgb, var(--adm-page) 86%, transparent);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-}
-.adm-jump a { display: grid; justify-items: center; align-content: center; min-height: 48px; padding: 3px 2px; border-radius: 14px; color: var(--adm-ink-2); text-align: center; }
-.adm-jump b { color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 700; line-height: 1.2; }
-.adm-jump span { font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; white-space: nowrap; }
-.adm-jump a[aria-current] { background: var(--adm-surface-solid); box-shadow: var(--shadow-choice-selected); }
-.adm-jump a[aria-current] b { color: var(--color-text-accent); }
-.adm-jump a.is-money b { color: var(--color-success-text); }
-.adm-jump a.is-zero b { color: var(--adm-ink-3); font-weight: 600; }
 
 .adm-board { display: grid; gap: 24px; }
-.adm-lane { display: grid; gap: 8px; scroll-margin-top: 72px; }
+.adm-lane { display: grid; gap: 8px; align-content: start; scroll-margin-top: 72px; }
 .adm-lane__head { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
 .adm-lane--collect .adm-lane__head .adm-count { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--adm-success-text); }
 .adm-lane__hint, .adm-lane__empty { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-lane__hint { margin: -6px 4px 2px; }
 .adm-lane__empty { padding: 4px 4px 0; }
 
-.adm-donelink {
-  display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px;
-  border: 1px dashed var(--adm-track-off); border-radius: 20px; color: var(--color-success-text);
+
+/* ---- One stage at a time (phones and tablets, O1) ------------------------------------
+   The switcher: native radios, a white thumb (::before) slid to the checked one by --i
+   via :has(), the count inside each. Sticky, on the frosted strip. */
+.adm-stages {
+  position: sticky; top: 0; z-index: 3;
+  /* Edge to edge at every phone and tablet width (the page is 640px wide at most). */
+  margin: -4px calc(50% - 50vw) 0; padding: 8px calc(50vw - 50%);
+  background: color-mix(in srgb, var(--adm-page) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
-.adm-donelink b { display: block; color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
-.adm-donelink small { color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; }
-.adm-donelink:active { background: var(--adm-well); }
+.adm-stages__seg {
+  --i: 0;
+  position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-width: 0; margin: 0; padding: 4px;
+  border: 1px solid var(--color-choice-track-border); border-radius: 22px; background: var(--color-toggle-track);
+}
+.adm-stages__seg:has(> label:nth-of-type(2) > input:checked) { --i: 1; }
+.adm-stages__seg:has(> label:nth-of-type(3) > input:checked) { --i: 2; }
+.adm-stages__seg:has(> label:nth-of-type(4) > input:checked) { --i: 3; }
+.adm-stages__seg::before {
+  content: ''; position: absolute; z-index: -1; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4);
+  border-radius: 18px; background: var(--color-choice-selected-bg); box-shadow: var(--shadow-choice-selected);
+  transform: translateX(calc(100% * var(--i))); transition: transform 280ms var(--ease-glide);
+}
+.adm-stages__seg label { position: relative; display: grid; min-width: 0; }
+.adm-stages__seg input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-stages__seg label > span {
+  display: grid; place-items: center; align-content: center; gap: 1px; min-height: 54px; padding: 4px 2px; border-radius: 18px;
+  color: var(--adm-ink-2); cursor: pointer; text-align: center; transition: color 200ms ease;
+}
+.adm-stages__seg b {
+  color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums;
+  animation: adm-tick 220ms var(--ease-glide) backwards;
+}
+@keyframes adm-tick { from { opacity: 0; transform: translateY(-4px); } }
+.adm-stages__seg small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; white-space: nowrap; }
+.adm-stages__seg input:checked + span { color: var(--adm-ink-1); }
+.adm-stages__seg input:checked + span small { font-weight: 600; }
+.adm-stages__seg input:checked + span b { color: var(--color-text-accent); }
+.adm-stages__seg span.is-money b { color: var(--color-success-text); }
+/* Cooking's count is grey: it isn't Sunit's job. */
+.adm-stages__seg span.is-quiet b { color: var(--adm-ink-2); font-weight: 600; }
+.adm-stages__seg input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-stages__seg label:active > span { transform: scale(0.97); }
+@media (hover: hover) { .adm-stages__seg input:not(:checked) + span:hover { color: var(--adm-ink-1); } }
+
+.adm-stage { display: grid; gap: 10px; }
+.adm-stage__hint { margin: 2px 4px 0; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+/* A new stage slides in from the side tapped toward. */
+.adm-stage.is-from-right { animation: adm-stage-right 240ms var(--ease-glide) backwards; }
+.adm-stage.is-from-left { animation: adm-stage-left 240ms var(--ease-glide) backwards; }
+@keyframes adm-stage-right { from { opacity: 0; transform: translateX(24px); } }
+@keyframes adm-stage-left { from { opacity: 0; transform: translateX(-24px); } }
+.adm-stage .adm-lane__empty { padding: 8px 4px; color: var(--adm-ink-2); font-size: var(--adm-text-body); }
+
+/* Packing's last row: what's next from the kitchen. A tap switches to Cooking. */
+.adm-kitchennext {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px;
+  border-radius: 20px; background: color-mix(in srgb, var(--adm-well) 70%, transparent); color: var(--adm-ink-2); text-align: left;
+}
+.adm-kitchennext:active { background: var(--adm-well-press); }
+.adm-kitchennext__icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--adm-surface-solid); color: var(--adm-ink-2); }
+.adm-kitchennext b { display: block; color: var(--adm-ink-1); font-weight: 600; line-height: 1.35; }
+.adm-kitchennext small { display: block; font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+@media (hover: hover) { .adm-kitchennext:hover { background: var(--adm-well); } }
+
+/* Done and Free samples: a quiet pair under every stage. */
+.adm-stagelinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.adm-stagelinks a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: var(--radius-full);
+  color: var(--adm-ink-2); font-weight: 600;
+}
+.adm-stagelinks a svg { color: var(--adm-ink-3); }
+.adm-stagelinks a span { color: var(--adm-ink-3); font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-stagelinks a:active { background: var(--adm-well-press); }
+@media (hover: hover) { .adm-stagelinks a:hover { background: var(--adm-well); color: var(--adm-ink-1); } }
 
 .adm-caughtup { display: grid; justify-items: center; gap: 6px; padding: 32px 24px; text-align: center; }
 .adm-caughtup__pile { display: flex; margin-bottom: 12px; }
@@ -224,6 +290,10 @@
 .adm-step.is-now .adm-step__dot { background: var(--color-accent-primary); box-shadow: 0 0 0 5px var(--adm-accent-tint); }
 .adm-step.is-now .adm-step__dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--adm-surface-solid); }
 .adm-steps__hint { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); color: var(--adm-ink-2); }
+/* The order view's Priority switch, while it cooks. */
+.adm-od-priority { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
+.adm-od-priority b { display: block; color: var(--adm-ink-1); font-weight: 600; line-height: 1.35; }
+.adm-od-priority small { display: block; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-od-cancelled { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--color-error-text); font-weight: 600; }
 
 /* The order's money (design B, PaymentsBlock.tsx): what's in on the left, what's due
@@ -338,6 +408,15 @@
 .adm-omenu--up .adm-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; }
 .adm-menu__item.is-danger { color: var(--color-error-text); }
 
+/* The give-packed-food popup (PriorityGive.tsx): a question, a line per order giving, who goes back. */
+.adm-give .adm-sheet__body { display: grid; gap: 10px; }
+.adm-give__q { color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 500; line-height: 1.4; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-give__list { display: grid; gap: 6px; padding-left: 18px; color: var(--adm-ink-1); }
+.adm-give__after { color: var(--adm-ink-2); }
+.adm-give__bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-give__bar .adm-btn { flex: 1 1 auto; }
+.adm-give__bar .adm-btn--primary { flex-grow: 2; }
+
 /* ---- Done ---------------------------------------------------------------------- */
 .adm-done .adm-segmented { max-width: 560px; }
 .adm-done__day { margin-top: 8px; }
@@ -384,5 +463,9 @@
   .adm-od-popup .adm-od-go { flex: 0 0 auto; min-width: 240px; }
   .adm-od-popup .adm-od-alldone { margin-left: auto; }
   .adm-od-popup .adm-sheet__bar { position: relative; display: flex; align-items: center; gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-stages__seg::before, .adm-stages__seg label > span { transition: none; }
+  .adm-stages__seg b, .adm-stage.is-from-right, .adm-stage.is-from-left, .adm-ocard.is-leaving { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) { .adm-steps__fill { transition: none; } .adm-ocard.is-flash::after { animation: none; opacity: 0; } .adm-ocard:has(.adm-ocard__open:active) { transform: none; } }

@@ -3,7 +3,7 @@ import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOr
 import {
   changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
   namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
-  reverseOf, searchFor, sortLines, undoPlanOf,
+  reverseOf, searchFor, sortLines, undoPlanOf, byKitchenTurn, daysInStage, landingStage, stageFromHash,
 } from './model';
 
 // The kitchen flow's stages: which lane an order is in, and its one-tap next step.
@@ -53,6 +53,15 @@ describe('undoPlanOf', () => {
 });
 
 describe('effectsText', () => {
+  it('says what a priority order took from other orders, then who moved', () => {
+    const meera = { id: 'm', code: 'SN-K8M9N', name: 'Meera Kulkarni' } as Order;
+    const e = { orders: [
+      { id: 'm', code: 'SN-K8M9N', name: 'Meera Kulkarni', from: 'cooking', to: 'packing', grams: [{ product_id: 'raggi-jaggi', change: 250 }], waiting: [] },
+      { id: 'n', code: 'SN-S4T5V', name: 'Neha Pawar', from: 'cooking', to: 'cooking', grams: [{ product_id: 'raggi-jaggi', change: -250 }], waiting: ['raggi-jaggi'] },
+    ] } as KitchenEffects;
+    expect(effectsText(meera, e)).toBe("Took 250 g Raggi Jaggi from Neha's order.");
+  });
+
   const asha = { id: 'o-asha', name: 'Asha Patil', code: 'SN-A2B3C' } as Order;
 
   it("says what came back as spare and who moved on because of it", () => {
@@ -343,5 +352,58 @@ describe('cleanPastedPhone', () => {
 
   it('leaves a paste it cannot read, so the error can show', () => {
     expect(cleanPastedPhone('', 'call me', 'insertFromPaste')).toBeNull();
+  });
+});
+
+describe('Orders, one stage at a time', () => {
+  const counts = (packing: number, ready: number, collect: number, cooking = 5) => ({ cooking, packing, ready, collect });
+
+  it('lands the cook on Cooking, whatever else is waiting', () => {
+    expect(landingStage(counts(1, 2, 3), true)).toBe('cooking');
+  });
+
+  it.each([
+    [counts(1, 2, 3), 'packing'],
+    [counts(0, 2, 3), 'ready'],
+    [counts(0, 0, 3), 'collect'],
+    // Only Cooking has orders, or nothing does: Packing, where the next job will land.
+    [counts(0, 0, 0), 'packing'],
+    [counts(0, 0, 0, 0), 'packing'],
+  ] as const)('lands everyone else on the first stage with work: %o → %s', (c, stage) => {
+    expect(landingStage(c, false)).toBe(stage);
+  });
+
+  it.each([
+    ['#packing', 'packing'],
+    ['#lane-ready', 'ready'],
+    ['#lane-collect', 'collect'],
+    ['#to_collect', 'collect'],
+    ['#lane-done', null],
+    ['#nonsense', null],
+    ['', null],
+  ] as const)('reads the stage from the link %j', (hash, stage) => {
+    expect(stageFromHash(hash)).toBe(stage);
+  });
+
+  it('puts priority orders first in Cooking, each group oldest first', () => {
+    const at = (name: string, created_at: string, priority = false) => ({ name, created_at, priority }) as Order;
+    const turn = byKitchenTurn([
+      at('Neha', '2026-09-27T10:00:00+05:30'),
+      at('Meera', '2026-09-29T09:00:00+05:30', true),
+      at('Asha', '2026-09-26T10:00:00+05:30'),
+      at('Kavya', '2026-09-28T09:00:00+05:30', true),
+    ]);
+    expect(turn.map((o) => o.name)).toEqual(['Kavya', 'Meera', 'Asha', 'Neha']);
+  });
+
+  it('counts days in a stage by India calendar day, not 24-hour spans', () => {
+    const since = (iso: string) => ({ status_changed_at: iso });
+    const now = Date.parse('2026-09-29T09:00:00+05:30');
+    expect(daysInStage(since('2026-09-25T18:30:00+05:30'), now)).toBe(4);
+    // Late last night is one day, though it's under 24 hours.
+    expect(daysInStage(since('2026-09-28T23:30:00+05:30'), now)).toBe(1);
+    // 11 pm UTC is already the next morning in India.
+    expect(daysInStage(since('2026-09-28T23:00:00Z'), now)).toBe(0);
+    expect(daysInStage(since('2026-09-29T08:00:00+05:30'), now)).toBe(0);
   });
 });

@@ -32,10 +32,12 @@ export interface AdminSheetProps {
   className?: string;
   /** Return false to keep it open when × , Esc or the backdrop is used (see useDialog). */
   canClose?: () => boolean;
+  /** A short question: a centred popup at every size, phones too (not a bottom sheet). */
+  centred?: boolean;
 }
 
 export const AdminSheet: React.FC<AdminSheetProps> = ({
-  isOpen, onClose, title, closeLabel, children, bar, actions, width = 520, initialFocus, className, canClose,
+  isOpen, onClose, title, closeLabel, children, bar, actions, width = 520, initialFocus, className, canClose, centred,
 }) => {
   const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose, initialFocus, canClose });
   const titleId = useId();
@@ -61,10 +63,10 @@ export const AdminSheet: React.FC<AdminSheetProps> = ({
 
   if (!isOpen) return null;
 
-  const classes = ['adm-sheet', `adm-sheet--${width}`, className].filter(Boolean).join(' ');
+  const classes = ['adm-sheet', `adm-sheet--${width}`, centred && 'adm-sheet--centred', className].filter(Boolean).join(' ');
 
   return createPortal(
-    <div ref={layerRef} className={`adm-sheet-layer${isClosing ? ' is-closing' : ''}`} onClick={requestClose}>
+    <div ref={layerRef} className={`adm-sheet-layer${centred ? ' adm-sheet-layer--centred' : ''}${isClosing ? ' is-closing' : ''}`} onClick={requestClose}>
       <div
         ref={dialogRef}
         tabIndex={-1}

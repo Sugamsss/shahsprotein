@@ -1,7 +1,7 @@
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { ORDER_CODE_ALPHABET } from '../../utils/orderCode';
-import { firstName, formatDay, formatWeight } from '../format';
+import { firstName, formatDay, formatWeight, istDateValue } from '../format';
 import type { KitchenEffects, Order, OrderChanges, OrderKitchen, OrderLine, TotalsByMethod, UpdatedOrder } from '../types';
 
 // The order book's rules in one place: which lane an order is in, its next
@@ -86,7 +86,8 @@ export const changeText = (o: Order, changes: OrderChanges): string => {
 
 /**
  * What the kitchen did besides this order's move, for the toast's second sentence:
- * its food back as spare ("500 g Date Bites back as spare."), and other orders that moved
+ * its food back as spare ("500 g Date Bites back as spare."), food a priority order took
+ * from others ("Took 250 g Raggi Jaggi from Neha's order."), and other orders that moved
  * ("Meera's order moved to Packing."). Empty when nothing else changed.
  */
 export const effectsText = (order: Order, effects: KitchenEffects | null): string => {
@@ -95,9 +96,14 @@ export const effectsText = (order: Order, effects: KitchenEffects | null): strin
   const own = effects.orders.find((e) => e.id === order.id);
   const back = (own?.grams ?? []).filter((g) => g.change < 0)
     .map((g) => `${formatWeight(-g.change)} ${productName(g.product_id)}`);
+  // A priority order takes food from others (orders still cooking, or packed pouches).
+  const took = effects.orders.filter((e) => e.id !== order.id).flatMap((e) => {
+    const items = e.grams.filter((g) => g.change < 0).map((g) => `${formatWeight(-g.change)} ${productName(g.product_id)}`);
+    return items.length ? [k.took(items, firstName(e.name) || e.code)] : [];
+  });
   const moved = effects.orders.filter((e) => e.id !== order.id && e.from !== e.to && e.to !== 'cancelled')
     .map((e) => k.moved(firstName(e.name) || e.code, e.to));
-  return [back.length ? k.backAsSpare(back) : '', ...moved].filter(Boolean).join(' ');
+  return [back.length ? k.backAsSpare(back) : '', ...took, ...moved].filter(Boolean).join(' ');
 };
 
 /**
@@ -296,4 +302,38 @@ export const pileOf = (lines: OrderLine[], top?: string | null): string[] => {
   const ids = [...new Set(sortLines(lines).map((l) => l.product_id))];
   if (!top || !ids.includes(top)) return ids.slice(0, 2);
   return [...ids.filter((id) => id !== top).slice(0, 1), top];
+};
+
+// ---- Orders, one stage at a time (O1) ---------------------------------------------------
+
+/**
+ * The stage a link asks for: "#packing", or Home's "#lane-collect" ("to_collect" too).
+ * Null for anything else, and for Done (its own page).
+ */
+export const stageFromHash = (hash: string): WorkLane | null => {
+  const name = hash.replace(/^#/, '').replace(/^lane-/, '').replace(/^to_collect$/, 'collect');
+  return (LANES as readonly string[]).includes(name) ? (name as WorkLane) : null;
+};
+
+/**
+ * Where Orders opens on a phone, worked out fresh each visit (never saved). The cook lands
+ * on Cooking. Everyone else on their first stage with work: Packing, then Ready, then
+ * To collect; with nothing anywhere, Packing.
+ */
+export const landingStage = (counts: Record<WorkLane, number>, cook: boolean): WorkLane => {
+  if (cook) return 'cooking';
+  return (['packing', 'ready', 'collect'] as const).find((s) => counts[s] > 0) ?? 'packing';
+};
+
+/** Cooking in the kitchen's turn: priority orders first, then oldest first (the same order the fill serves them). */
+export const byKitchenTurn = (orders: Order[]): Order[] =>
+  [...orders].sort((a, b) => Number(b.priority) - Number(a.priority) || a.created_at.localeCompare(b.created_at));
+
+/** A Ready card says "Waiting N days" from this many days on; a day or so in Ready is normal. */
+export const WAITING_FROM_DAYS = 2;
+
+/** Whole India calendar days since the order got to where it is (status_changed_at): 0 on the same day. */
+export const daysInStage = (o: Pick<Order, 'status_changed_at'>, now = Date.now()): number => {
+  const day = (v: string | number) => Date.parse(`${istDateValue(v)}T00:00:00Z`);
+  return Math.max(0, Math.round((day(now) - day(o.status_changed_at)) / 86_400_000));
 };

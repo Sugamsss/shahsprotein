@@ -401,6 +401,14 @@ export interface KitchenEffects {
   kitchen: Kitchen;
 }
 
+/** give_admin_priority: one packed pouch kind a priority order can take from another order (Packing or Ready, never Delivered). */
+export interface PriorityPouch {
+  order_id: string; code: string; name: string | null; from: 'packing' | 'ready';
+  product_id: string; size: string; grams_each: number; count: number;
+}
+/** give_admin_priority's answer: the usual effects plus the pouches. `pouches: []` on a preview means nothing to offer. */
+export type PriorityGiveEffects = KitchenEffects & { pouches: PriorityPouch[] };
+
 /** log_admin_batches' p_batches: 1 to 10. made_on left out is today. */
 export interface BatchInput { product_id: string; grams: number; made_on?: string }
 export type WriteOffReason = 'used_up' | 'thrown_out';
