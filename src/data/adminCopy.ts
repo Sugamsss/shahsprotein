@@ -113,8 +113,6 @@ export const adminCopy = {
   products: {
     title: 'Products',
     intro: 'Turn a pack off and the site shows “Back soon” instead of Add.',
-    /** Once prices are set up (20260928000001). Before that, `intro` as it always was. */
-    introPrices: 'Prices only show in here, never on the site. Turn a pack off and the site shows “Back soon”.',
     on: 'On the site',
     off: 'Shows “Back soon”',
     switchLabel: (item: string) => `${item} on the site`,
@@ -122,13 +120,8 @@ export const adminCopy = {
     turnedOn: (item: string) => `${item} is back on the site.`,
     // Prices (admin only): read on the card, set in a sheet per product.
     noPrice: 'No price yet',
-    editPrices: 'Edit prices',
-    addPrices: 'Add prices',
-    editPricesLabel: (name: string) => `Edit ${name} prices`,
-    addPricesLabel: (name: string) => `Add ${name} prices`,
     /** Only coupons in use that price at least one of its packs. */
     couponsOwn: (n: number) => `${n} ${n === 1 ? 'coupon has' : 'coupons have'} their own`,
-    sheetTitle: (name: string) => `${name} prices`,
     base: 'Base price',
     couponPrices: 'Coupon prices',
     couponPricesHint: 'Leave one empty and they pay the base price.',
@@ -138,9 +131,7 @@ export const adminCopy = {
     baseCell: (item: string) => `${item} base price`,
     couponCell: (item: string, code: string) => `${item} with ${code}`,
     priceError: 'Just the number, like 240.',
-    savePrices: 'Save prices',
     saving: 'Saving…',
-    pricesSaved: (name: string) => `${name} prices saved.`,
   },
 
   // ---- Lane B: Orders (spec 2.3, 2.5 to 2.7, 2.15, 2.16) ----
@@ -663,7 +654,6 @@ export const adminCopy = {
     saveEdit: 'Save changes',
     saving: 'Saving…',
     errors: {
-      lines: 'Add at least one pack.',
       name: 'Add their name.',
       via: 'Pick how the order came in.',
       pincode: 'A pincode has 6 digits, like 415001.',
@@ -794,6 +784,61 @@ export const adminCopy = {
       `Took ${weight} ${product} off the shelf. ${left ? `${left} left.` : 'None left of that batch.'}`,
     threw: (weight: string, product: string, left: string | null) =>
       `Threw out ${weight} ${product}. ${left ? `${left} left.` : 'None left of that batch.'}`,
+  },
+
+  // ---- Kitchen flow, lane B: samples and priority in Add order / Edit, sample and
+  // shelf life on Products, the Free samples list. A sample never has a price.
+  kitchenForms: {
+    // Add order / Edit: the slim row under each product.
+    sample: 'Sample',
+    free: 'free',
+    /** "Date Bites sample", the stepper's item in its labels. */
+    sampleItem: (name: string) => `${name} sample`,
+    linesError: 'Add at least one pack or a sample.',
+    /** Under a worked-out total when samples ride along. */
+    fromPrices: (code: string | null, samples: number) =>
+      `From ${code ? `${code} prices` : 'your prices'}. ${samples === 1 ? 'The sample is' : 'The samples are'} free.`,
+    /** A free sample order: the Paid switch and the total and coupon step aside for these. */
+    onlySamplesPaid: 'Only samples, so there’s nothing to pay.',
+    onlySamplesTotal: 'Only samples, so there’s no total or coupon.',
+    shelfFirst: 'Anything on the shelf is used first, so it may start in Packing.',
+    priority: 'Priority',
+    priorityHint: 'Fills first from the next cooking.',
+
+    // Products: the card line and the product sheet.
+    productsIntro: 'Prices, samples and shelf life only show in here. Turn a pack off and the site shows “Back soon”.',
+    shelfLife: (amount: number, unit: 'days' | 'months') =>
+      `${amount} ${unit === 'days' ? (amount === 1 ? 'day' : 'days') : (amount === 1 ? 'month' : 'months')}`,
+    /** "Sample 20 g · Keeps 6 months": each part stays on one line. */
+    sampleFact: (grams: string) => `Sample ${grams}`,
+    keepsFact: (life: string) => `Keeps ${life}`,
+    edit: 'Edit',
+    editLabel: (name: string) => `Edit ${name}`,
+    save: 'Save',
+    keepTitle: 'Sample and shelf life',
+    keepHint: 'A sample is always free. Shelf life counts from the day a batch is made.',
+    sampleField: 'Free sample',
+    sampleUnit: 'g',
+    keepsFor: 'Keeps for',
+    unitLabel: 'Days or months',
+    units: { days: 'Days', months: 'Months' },
+    sampleError: 'Just the grams, like 20.',
+    shelfError: 'Just the number, like 6.',
+    saved: (name: string) => `${name} saved.`,
+    /** One of the two saves failed: say which, then the reason. */
+    pricesFailed: (why: string) => `The sample and shelf life are saved, but the prices aren’t. ${why}`,
+    keepFailed: (why: string) => `The prices are saved, but the sample and shelf life aren’t. ${why}`,
+
+    // Free samples: every order carrying a sample.
+    samplesTitle: 'Free samples',
+    /** From the overview: "4 sent in September, 110 g in all." */
+    samplesSummary: (sent: number, grams: string, month: string) =>
+      (sent ? `${sent} sent in ${month}, ${grams} in all.` : `None sent in ${month} yet.`),
+    notDelivered: 'Not delivered yet',
+    /** A sample that rode along with a real order. */
+    withTheirOrder: 'With their order',
+    samplesEmpty: 'No free samples yet. Add one from the Sample row in Add order.',
+    older: 'Show older ones',
   },
 
   // Home (spec 2.4).

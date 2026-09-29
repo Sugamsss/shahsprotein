@@ -20,6 +20,7 @@
 @import './orders/orders.css';
 @import './pages/customers.css';
 @import './pages/done.css';
+@import './pages/free-samples.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {

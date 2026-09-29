@@ -1,25 +1,27 @@
 import React, { useRef, useState } from 'react';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { productsData } from '../../data/products';
 import { adminCopy } from '../../data/adminCopy';
-import { getStock, setStock } from '../api';
-import { formatMoney } from '../format';
+import { getKitchen, getStock, setStock } from '../api';
+import { formatMoney, formatWeight } from '../format';
 import { couponState } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
 import { LoadError, Skeleton } from '../parts';
-import { ProductPricesSheet } from './ProductPricesSheet';
+import { ProductSheet } from './ProductSheet';
 import { Switch } from '../Switch';
 import type { OutOfStock } from '../types';
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 
 const copy = adminCopy.products;
+const kx = adminCopy.kitchenForms;
 
 // Stock (spec 2.9): a switch per product and size. Off means the site shows
 // "Back soon". Flips go through useUndoable (at once, Undo, back on failure).
-// Prices (admin only) read on each size row and are set in a sheet per product.
-// They load in their own quiet call: without them this is the stock page it always was.
+// Prices (admin only) read on each size row; the sample weight and shelf life read under
+// the name. Both are set in one sheet per product. Each loads in its own quiet call:
+// without them this is the stock page it always was.
 
 const isOut = (stock: OutOfStock, productId: string, size: string) =>
   stock.some((row) => row.product_id === productId && row.size === size);
@@ -29,6 +31,8 @@ const ProductsPage: React.FC = () => {
   const run = useUndoable();
   const book = usePriceBook();
   const prices = book.ready ? book.prices : null;
+  const kitchen = useRpc(getKitchen, []);
+  const keepOf = (productId: string) => kitchen.data?.products.find((p) => p.product_id === productId) ?? null;
   const [editing, setEditing] = useState<string | null>(null);
   // The latest list, so a flip that lands after another starts from it.
   const stockRef = useRef<OutOfStock | null>(stock);
@@ -51,22 +55,31 @@ const ProductsPage: React.FC = () => {
     });
   };
 
-  // "Edit prices" (or "Add prices" with no base price yet), and how many coupons in use have their own.
-  const pricesFoot = (productId: string, name: string, sizes: string[]) => {
-    if (!prices) return null;
-    const none = !sizes.some((size) => prices.base.some((r) => r.product_id === productId && r.size === size));
+  // Edit (the product's sheet), and how many coupons in use have their own prices.
+  const foot = (productId: string, name: string, sizes: string[]) => {
+    if (!prices && !keepOf(productId)) return null;
     const now = new Date();
-    const own = (book.coupons ?? []).filter((c) => couponState(c.code, book.coupons ?? [], now) === 'live'
+    const own = !prices ? 0 : (book.coupons ?? []).filter((c) => couponState(c.code, book.coupons ?? [], now) === 'live'
       && prices.coupons.some((r) => r.coupon_id === c.id && r.product_id === productId && sizes.includes(r.size))).length;
     return (
       <div className="adm-pfoot">
-        <button type="button" className="adm-text-btn" aria-label={(none ? copy.addPricesLabel : copy.editPricesLabel)(name)}
-          onClick={() => setEditing(productId)}>
-          {none ? <Plus size={16} strokeWidth={1.75} aria-hidden="true" /> : <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />}
-          {none ? copy.addPrices : copy.editPrices}
+        <button type="button" className="adm-text-btn" aria-label={kx.editLabel(name)} onClick={() => setEditing(productId)}>
+          <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />{kx.edit}
         </button>
         {own > 0 && <small>{copy.couponsOwn(own)}</small>}
       </div>
+    );
+  };
+  // "Sample 20 g · Keeps 6 months", under the name.
+  const facts = (productId: string) => {
+    const keep = keepOf(productId);
+    if (!keep) return null;
+    const life = keep.shelf_life && kx.shelfLife(keep.shelf_life.amount, keep.shelf_life.unit);
+    return (
+      <small>
+        <span>{kx.sampleFact(formatWeight(keep.sample_grams))}</span>
+        {life && <> · <span>{kx.keepsFact(life)}</span></>}
+      </small>
     );
   };
 
@@ -82,7 +95,10 @@ const ProductsPage: React.FC = () => {
           <section key={product.id} className="adm-card adm-product" aria-labelledby={`adm-product-${product.id}`}>
             <div className="adm-product__head">
               <OrderThumb product={product} className="adm-product__thumb" />
-              <h2 id={`adm-product-${product.id}`}>{product.name}</h2>
+              <span className="adm-product__name">
+                <h2 id={`adm-product-${product.id}`}>{product.name}</h2>
+                {facts(product.id)}
+              </span>
             </div>
             {product.weightOptions.map((size) => {
               const on = !isOut(stock, product.id, size);
@@ -102,22 +118,22 @@ const ProductsPage: React.FC = () => {
                 </div>
               );
             })}
-            {prices && pricesFoot(product.id, product.name, product.weightOptions)}
+            {foot(product.id, product.name, product.weightOptions)}
           </section>
         ))}
       </div>
     );
   }
-  const editingProduct = prices && book.coupons ? productsData.find((p) => p.id === editing) : undefined;
+  const editingProduct = productsData.find((p) => p.id === editing);
 
   return (
     <div className="adm-page adm-page--products">
       <h1 className="adm-title">{copy.title}</h1>
-      <p className="adm-intro">{prices ? copy.introPrices : copy.intro}</p>
+      <p className="adm-intro">{prices || kitchen.data ? kx.productsIntro : copy.intro}</p>
       {body}
-      {editingProduct && prices && book.coupons && (
-        <ProductPricesSheet product={editingProduct} prices={prices} coupons={book.coupons}
-          onClose={() => setEditing(null)} onSaved={(next) => { book.showPrices(next); setEditing(null); }} />
+      {editingProduct && (
+        <ProductSheet product={editingProduct} prices={prices} coupons={book.coupons} keep={keepOf(editingProduct.id)}
+          onClose={() => setEditing(null)} onPrices={book.showPrices} onKeep={kitchen.setData} />
       )}
     </div>
   );

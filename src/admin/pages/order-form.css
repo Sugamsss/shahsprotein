@@ -19,6 +19,24 @@
 .adm-of__packs .adm-pname { display: block; font-size: var(--adm-text-head); line-height: 1.2; }
 .adm-of__packs small { color: var(--adm-ink-2); font-size: var(--adm-text-body); }
 .adm-of__packs em { color: var(--adm-ink-3); font-style: normal; }
+/* A product's sample: tucked under its last size (no hairline), shorter, a gift in the photo's
+   place so "free" reads first, and a round + like the stepper's. Never a ₹ on it. */
+.adm-of__packs li.adm-of__sample { min-height: 48px; padding: 0 0 8px; border-top: 0; }
+.adm-of__gift {
+  display: grid; place-items: center; justify-self: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--adm-well); color: var(--adm-ink-2);
+}
+.adm-of__sample .adm-list__main { display: block; line-height: 1.35; }
+.adm-of__sample b { font-weight: 500; }
+.adm-of__sample small { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; }
+.adm-of__add-sample {
+  position: relative; display: grid; place-items: center; justify-self: end; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-stepper-bg); color: var(--color-text-accent); touch-action: manipulation;
+}
+.adm-of__add-sample::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
+@media (hover: hover) { .adm-of__add-sample:hover { background: var(--color-stepper-bg-press); } }
+.adm-of__add-sample:active { background: var(--color-stepper-bg-press); transform: scale(0.92); }
+.adm-of__add-sample:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 
 /* "Anjali Kulkarni · 2 orders before" with Use. */
 .adm-of__match { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--adm-accent-tint); }
@@ -83,7 +101,16 @@
 .adm-of__via label:active span { transform: scale(0.97); }
 
 .adm-card.adm-of__paid { padding: 14px 16px; }
-.adm-of__paid .adm-paidrow { margin-top: 0; padding-top: 0; border-top: 0; }
+.adm-of__paid > .adm-paidrow:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+/* Where it's at: the stage switch with its one line under it. */
+.adm-of__status { display: grid; gap: 8px; }
+.adm-of__hint { padding: 0 4px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+/* Priority on: the icon takes the tap colour's tint (never the warning colour). */
+.adm-of__priority .adm-paidrow__icon.is-on { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+/* Only samples: one quiet line where the Paid switch, or the total and coupon, would be. */
+.adm-of__free { display: flex; align-items: center; gap: 8px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-of__free svg { flex: none; color: var(--adm-ink-3); }
+.adm-of__paid > .adm-of__free { min-height: 36px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
 .adm-of__links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .adm-of__bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .adm-of__bar > span { color: var(--adm-ink-2); font-weight: 600; }
