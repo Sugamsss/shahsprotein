@@ -1,0 +1,95 @@
+/* "What's new": a centred dialog at every size (design "Capnia", option 1 in
+   temp/changelog-designs/centred/). A ~380px card that scales and fades in over the
+   admin scrim (so dimStatusBar has a colour to dim to) with a light blur. The
+   "What to try" box is the only thing that scrolls; the card never does. */
+
+.wd-layer {
+  position: fixed; inset: 0; z-index: var(--z-modal-overlay);
+  display: flex; align-items: center; justify-content: center;
+  /* The card stays inside the screen and clear of the notch and home indicator. */
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--adm-scrim);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  animation: overlay-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.wd-layer.is-closing { animation: overlay-out 240ms ease both; }
+
+.wd {
+  display: flex; flex-direction: column; gap: 16px;
+  width: min(380px, 100%); max-height: 100%; min-height: 0; padding: 20px;
+  border: 1px solid var(--adm-edge); border-radius: 24px;
+  background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift); color: var(--adm-ink-1);
+  outline: none; transform-origin: center;
+  animation: wd-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.wd-layer.is-closing .wd { animation: wd-out 240ms cubic-bezier(0.32, 0, 0.67, 0) both; }
+@keyframes wd-in { from { opacity: 0; transform: scale(0.95); } }
+@keyframes wd-out { to { opacity: 0; transform: scale(0.97); } }
+
+/* Head: the title and one line, and × beside them. */
+.wd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex: none; }
+.wd-title:focus { outline: none; }
+.wd-sub { margin: 2px 0 0; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.wd-close {
+  display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; margin: -8px -8px 0 0;
+  border-radius: var(--radius-full); background: var(--adm-well); color: var(--adm-ink-2);
+  transition: background-color var(--transition-fast), transform 120ms ease;
+}
+.wd-close:active { background: var(--adm-well-press); transform: scale(0.97); }
+@media (hover: hover) { .wd-close:hover { background: var(--adm-well-press); color: var(--adm-ink-1); } }
+
+/* ---- The box: the only thing that scrolls ---------------------------------------- */
+.wd-box {
+  display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0;
+  padding: 12px 0 0; border: 1px solid var(--adm-edge); border-radius: 16px; background: var(--adm-well);
+}
+.wd-box__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: none; padding: 0 14px;
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35;
+}
+.wd-box__count { color: var(--adm-ink-3); font-weight: 500; }
+.wd-box__list {
+  min-height: 0; max-height: 300px; margin: 0; padding: 0 14px 4px; list-style: none;
+  overflow-y: auto; overscroll-behavior: contain; border-radius: 0 0 15px 15px; scrollbar-width: none;
+}
+.wd-box__list::-webkit-scrollbar { display: none; }
+.wd-box__list:focus { outline: none; }
+.wd-box__list:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: -2px; }
+/* Soft edges only where there's more to scroll that way. */
+.wd-box__list.has-below { -webkit-mask-image: linear-gradient(#000 calc(100% - 40px), transparent); mask-image: linear-gradient(#000 calc(100% - 40px), transparent); }
+.wd-box__list.has-above { -webkit-mask-image: linear-gradient(transparent, #000 24px); mask-image: linear-gradient(transparent, #000 24px); }
+.wd-box__list.has-above.has-below {
+  -webkit-mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 40px), transparent);
+}
+
+/* A note: "New · Title", then the sentence. */
+.wd-note { padding: 10px 0 12px; }
+.wd-note + .wd-note { border-top: 1px solid var(--adm-hairline); }
+.wd-note__title, .wd-note__body { margin: 0; text-wrap: pretty; font-variant-numeric: proportional-nums; }
+.wd-note__title { color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; letter-spacing: -0.005em; }
+/* "New ·" / "Fixed ·": quiet, no colour. */
+.wd-note__kind { color: var(--adm-ink-3); font-weight: 500; letter-spacing: 0; }
+.wd-note__body { margin-top: 2px; color: var(--adm-ink-2); font-size: var(--adm-text-body); line-height: 1.45; }
+
+.wd-ok { flex: none; }
+
+/* Narrow phones: a little less padding so the lines stay long enough. */
+@media (max-width: 359px) {
+  .wd { padding: 16px; gap: 14px; border-radius: 22px; }
+  .wd-box__head { padding: 0 12px; }
+  .wd-box__list { padding-left: 12px; padding-right: 12px; }
+}
+/* Laptop: the same card; the box shows a few more before it scrolls. */
+@media (min-width: 960px) { .wd-box__list { max-height: 380px; } }
+/* Phones on their side: the line under the title goes, so the box keeps the room. */
+@media (max-height: 420px) {
+  .wd-sub { display: none; }
+  .wd-head { align-items: center; }
+  .wd-close { margin-top: -8px; margin-bottom: -8px; }
+}
+/* Reduced motion: a plain fade (the layer's), no scale. */
+@media (prefers-reduced-motion: reduce) {
+  .wd, .wd-layer.is-closing .wd { animation: none; }
+}

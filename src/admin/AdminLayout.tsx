@@ -10,6 +10,8 @@ import { namesOneOrder, searchFor } from './orders/model';
 import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
+import { useAppUpdates } from './update/appUpdate';
+import { WhatsNewDialog } from './update/WhatsNewDialog';
 
 type OverviewState = ReturnType<typeof useRpc<Awaited<ReturnType<typeof getOverview>>>>;
 const OverviewContext = createContext<OverviewState | null>(null);
@@ -189,6 +191,8 @@ const TabBar: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
 /** Laptop: the glass pill header. Phone: the same pill as a tab bar at the bottom. */
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const overview = useRpc(getOverview, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
+  // New builds install themselves at a safe moment; "What's new" shows on Home afterwards.
+  useAppUpdates();
   const toConfirm = overview.data?.queue.to_confirm ?? 0;
   // "(3) Orders · Shah's": the same count as the Orders badge. AdminApp puts the site's title back.
   const { pathname } = useLocation();
@@ -203,6 +207,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         <OverviewContext.Provider value={overview}>{children}</OverviewContext.Provider>
       </main>
       <TabBar toConfirm={toConfirm} />
+      <WhatsNewDialog />
     </div>
     </ToastProvider>
   );

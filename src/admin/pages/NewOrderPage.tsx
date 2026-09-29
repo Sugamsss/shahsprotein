@@ -17,6 +17,7 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
+import { useUnsavedWork } from '../unsavedWork';
 import { cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
 import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
@@ -90,6 +91,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const dirty = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Typed but not saved: no reload for an update until it's saved or left.
+  useUnsavedWork(() => dirty.current || saving);
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
   const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);

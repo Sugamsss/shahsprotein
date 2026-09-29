@@ -18,9 +18,26 @@ const adminPage = (): Plugin => {
   };
 };
 
+// The admin's build id: the commit on Vercel, else unique per local build. It's
+// baked into the admin chunk (__ADMIN_BUILD__, admin code only) and written to
+// /admin-release.json, which vercel.json serves no-store. An open admin fetches
+// that file and reloads itself at a safe moment when the two differ
+// (src/admin/update/appUpdate.ts).
+const ADMIN_BUILD = process.env.VERCEL_GIT_COMMIT_SHA || `local-${Date.now().toString(36)}`;
+const adminRelease = (): Plugin => ({
+  name: 'admin-release',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'admin-release.json', source: `${JSON.stringify({ build: ADMIN_BUILD })}\n` });
+  },
+});
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), adminPage()],
+  plugins: [react(), adminPage(), adminRelease()],
+  define: {
+    __ADMIN_BUILD__: JSON.stringify(ADMIN_BUILD),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
