@@ -153,7 +153,7 @@ select ok(
 
 select is(
   current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at'],
-  '{"source":"whatsapp","status":"cooking","free_sample":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+  '{"source":"whatsapp","status":"cooking","free_sample":false,"priority":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
     "lines":[{"product_id":"muesli","size":"250 g","quantity":99,"grams_each":250}],"packs":99,"samples":0,
@@ -174,7 +174,7 @@ select lives_ok(
 
 select is(
   current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer', 'payments'],
-  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","free_sample":false,"paid":true,
+  '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","free_sample":false,"priority":false,"paid":true,
     "paid_method":null,"paid_note":null,
     "payment_state":"paid","amount_paid":690,"amount_due":0,"amount_extra":0,
     "name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
@@ -219,7 +219,7 @@ select is(
     "source":"call","code":"SN-22222","status":"cancelled","paid":true,"name":"Priya Example","phone":"9800000001",
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}]
   }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
-  '{"source":"call","status":"cooking","free_sample":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
+  '{"source":"call","status":"cooking","free_sample":false,"priority":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3,"grams_each":500}],"packs":3,"samples":0,
@@ -280,7 +280,7 @@ select is(
   public.update_admin_order(current_setting('test.site_id')::uuid,
     '{"status":"packing","phone":"+91 98000 00002","amount":700}')::jsonb
     - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'name', 'pincode', 'note',
-            'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'free_sample', 'customer',
+            'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'free_sample', 'priority', 'customer',
             'created_at', 'updated_at', 'status_changed_at',
             'payment_state', 'payments', 'amount_paid', 'amount_extra'],
   '{"status":"packing","phone":"919800000002","amount":700,"amount_due":700}'::jsonb,

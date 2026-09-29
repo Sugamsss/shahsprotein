@@ -159,6 +159,9 @@ select pg_temp.demo_order('SN-P2Q3R', 'call', 'cooking', 'Sameer Shinde', '91980
   '1 day', '[["raggi-jaggi","500 g",1],["bites","sample",1]]');
 select pg_temp.demo_order('SN-K8M9N', 'whatsapp', 'cooking', 'Meera Kulkarni', '919800000002', '415001', 480,
   '2 hours', '[["raggi-jaggi","500 g",1]]');
+-- Meera's order skips the line: nothing is spare for it yet, so this only
+-- puts her first for the next Raggi Jaggi.
+update public.orders set priority = true where code = 'SN-K8M9N';
 
 -- A small fresh Date Bites batch from yesterday: nobody is waiting on Date
 -- Bites, so all of it is spare, next to the old one.
@@ -254,7 +257,7 @@ on conflict do nothing;
 
 -- Orders by stage, oldest first. "food" is per product: ✓ covered, or what's
 -- still waiting. Cooking: Asha (Date Bites ✓, Raggi Jaggi waiting), Ravi,
--- Neha, Sameer (sample ✓), Meera. Packing: Tanvi. Ready: Farah (4 days) and
+-- Neha, Sameer (sample ✓), Meera (priority). Packing: Tanvi. Ready: Farah (4 days) and
 -- Anil's free samples. Delivered, not paid: Pooja (no total), Rohan (₹375
 -- due), Vikram. Then the done ones and Aditya, cancelled.
 select o.code, o.name, o.status,

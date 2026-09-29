@@ -35,6 +35,9 @@
 --     covered on every product moves to Packing. Past Cooking an order is
 --     always fully covered: batch grams where they came from a batch, a
 --     by-hand row for the rest.
+--     Priority orders ("skip the line") fill first, oldest first among
+--     them, then everyone else oldest first. Priority only jumps the queue
+--     for food not yet given: it never takes grams from another order.
 --  6. Every kitchen call is one action. Triggers record each row change on
 --     the kitchen tables (and each order status change) while an action is
 --     open; Undo replays them backwards and refuses if a row has moved since.
@@ -211,7 +214,10 @@ alter table public.order_lines
   add constraint order_lines_grams_each_check check (grams_each >= 0);
 
 -- Every line of the order is a sample. Set by save_admin_order().
+-- priority: fills before the others (see kitchen_fill()). Harmless once the
+-- order has left Cooking.
 alter table public.orders
+  add column if not exists priority boolean not null default false,
   add column if not exists free_sample boolean not null default false,
   add constraint orders_free_sample_no_money
     check (not free_sample or (amount is null and coupon_code is null));
@@ -481,9 +487,13 @@ create trigger trg_order_lines_grams
 -- Safety net: a batch never gives out more than it holds, and a batch's
 -- grams only go to its own product. Deferred, so a call can pass through a
 -- middle state; the functions check first and say it plainly.
+-- security definer: a deferred trigger runs at commit, after the RPC has
+-- returned, as the caller's own role (anon on the site, authenticated in the
+-- admin), which can't read the kitchen tables.
 create or replace function public.kitchen_check_batch_room()
 returns trigger
 language plpgsql
+security definer
 set search_path = public
 as $$
 declare
@@ -499,10 +509,14 @@ begin
     return null;
   end if;
 
-  if tg_table_name = 'kitchen_allocations' and exists (
-    select 1 from public.kitchen_batches b where b.id = v_batch and b.product_id <> new.product_id
-  ) then
-    raise exception using message = 'A batch only fills its own product.', errcode = '23514';
+  -- Nested, not "and": plpgsql resolves new.product_id even when the first
+  -- half is false, and a write-off row has no product_id.
+  if tg_table_name = 'kitchen_allocations' then
+    if exists (
+      select 1 from public.kitchen_batches b where b.id = v_batch and b.product_id <> new.product_id
+    ) then
+      raise exception using message = 'A batch only fills its own product.', errcode = '23514';
+    end if;
   end if;
 
   if exists (
@@ -543,7 +557,7 @@ create constraint trigger trg_kitchen_batches_room
 -- ═══════════════════════════════════════════════════════
 
 -- Records one step under the open action (shahs.kitchen_action), if any.
--- Orders record only their id and status.
+-- Orders record only their id, status and priority.
 create or replace function public.kitchen_log_step()
 returns trigger
 language plpgsql
@@ -559,8 +573,8 @@ begin
   end if;
 
   if tg_table_name = 'orders' then
-    v_old := jsonb_build_object('id', old.id, 'status', old.status);
-    v_new := jsonb_build_object('id', new.id, 'status', new.status);
+    v_old := jsonb_build_object('id', old.id, 'status', old.status, 'priority', old.priority);
+    v_new := jsonb_build_object('id', new.id, 'status', new.status, 'priority', new.priority);
   else
     if tg_op <> 'INSERT' then v_old := to_jsonb(old); end if;
     if tg_op <> 'DELETE' then v_new := to_jsonb(new); end if;
@@ -596,9 +610,9 @@ create trigger trg_kitchen_writeoffs_log
 
 drop trigger if exists trg_orders_kitchen_log on public.orders;
 create trigger trg_orders_kitchen_log
-  after update of status on public.orders
+  after update of status, priority on public.orders
   for each row
-  when (old.status is distinct from new.status)
+  when (old.status is distinct from new.status or old.priority is distinct from new.priority)
   execute function public.kitchen_log_step();
 
 -- Opens an action and returns its id. Old actions (over 7 days) go first.
@@ -870,7 +884,7 @@ begin
       and not exists (
         select 1 from public.kitchen_order_cover(o.id) c where c.covered < c.need
       )
-    order by o.created_at, o.id
+    order by o.priority desc, o.created_at, o.id
     for update of o
   loop
     perform public.kitchen_set_status(v_id, 'packing', true);
@@ -914,8 +928,8 @@ $$;
 
 revoke all on function public.kitchen_top_up(uuid, text) from public, anon, authenticated;
 
--- The one fill rule, for one product: short Cooking orders, oldest first,
--- take usable spare, oldest batch first. Then covered orders go to Packing.
+-- The one fill rule, for one product: short Cooking orders, priority ones
+-- first, oldest first within each, take usable spare, oldest batch first. Then covered orders go to Packing.
 create or replace function public.kitchen_fill(p_product_id text)
 returns void
 language plpgsql
@@ -931,7 +945,7 @@ begin
       and exists (
         select 1 from public.order_lines l where l.order_id = o.id and l.product_id = p_product_id
       )
-    order by o.created_at, o.id
+    order by o.priority desc, o.created_at, o.id
     for update of o
   loop
     exit when not exists (
@@ -1033,8 +1047,8 @@ $$;
 
 revoke all on function public.kitchen_trim(uuid, text, integer, boolean) from public, anon, authenticated;
 
--- A batch shrank (or went): takes p_grams back from its orders, youngest
--- first. Cooking/Packing orders lose them (a Packing order goes back to
+-- A batch shrank (or went): takes p_grams back from its orders, the
+-- reverse of the fill: normal orders before priority ones, youngest first. Cooking/Packing orders lose them (a Packing order goes back to
 -- Cooking). Ready and Delivered orders are packed, so they keep the grams as
 -- "by hand". The caller runs the fill after.
 create or replace function public.kitchen_take_back(p_batch_id uuid, p_grams integer)
@@ -1059,7 +1073,7 @@ begin
     from public.kitchen_allocations a
     join public.orders o on o.id = a.order_id
     where a.batch_id = p_batch_id
-    order by o.created_at desc, o.id desc
+    order by o.priority, o.created_at desc, o.id desc
     for update of a, o
   loop
     v_take := least(v_left, v_row.grams);
@@ -1212,7 +1226,7 @@ stable
 set search_path = public
 as $$
   with cover as (
-    select o.id as order_id, o.code, o.name, o.created_at, c.product_id, c.need, c.covered
+    select o.id as order_id, o.code, o.name, o.created_at, o.priority, c.product_id, c.need, c.covered
     from public.orders o
     cross join lateral public.kitchen_order_cover(o.id) c
     where o.status = 'cooking'
@@ -1247,11 +1261,12 @@ as $$
               group by 1, 2
             ) w
           ), '[]'::jsonb),
-          -- Who it's for, oldest first.
+          -- Who it's for, in fill order: priority first, then oldest first.
           'queue', coalesce((
             select jsonb_agg(
               jsonb_build_object(
                 'order_id', s.order_id, 'code', s.code, 'name', s.name, 'created_at', s.created_at,
+                'priority', s.priority,
                 'short', s.short,
                 'also_waiting', coalesce((
                   select jsonb_agg(x.product_id order by x.product_id)
@@ -1265,7 +1280,7 @@ as $$
                   where y.order_id = s.order_id and y.product_id <> s.product_id and y.covered >= y.need
                 ), '[]'::jsonb)
               )
-              order by s.created_at, s.order_id
+              order by s.priority desc, s.created_at, s.order_id
             )
             from short s where s.product_id = k.product_id
           ), '[]'::jsonb),
@@ -1431,8 +1446,9 @@ declare
   v_id uuid := (coalesce(p_step.new, p_step.old) ->> 'id')::uuid;
 begin
   if p_step.tbl = 'orders' then
-    update public.orders set status = v_old ->> 'status'
-    where id = v_id and status = v_new ->> 'status';
+    update public.orders
+    set status = v_old ->> 'status', priority = (v_old ->> 'priority')::boolean
+    where id = v_id and status = v_new ->> 'status' and priority = (v_new ->> 'priority')::boolean;
     return found;
   end if;
 
@@ -1537,6 +1553,7 @@ as $$
     'source', p_order.source,
     'status', p_order.status,
     'free_sample', p_order.free_sample,
+    'priority', p_order.priority,
     'paid', p_order.paid_at is not null,
     'paid_at', p_order.paid_at,
     'paid_method', p_order.paid_method,
@@ -2055,6 +2072,8 @@ grant execute on function public.submit_order(text, jsonb, text, text, text) to 
 --   Sent further along (Packing, Ready, Delivered), it's covered by hand.
 --   An edit keeps each kept line's weight and re-balances the kitchen
 --   (kitchen_order_rebalance). Not undoable, as before.
+--   priority (true/false, optional): skip the line. Left out, a new order
+--   isn't priority and an edit keeps what it had.
 create or replace function public.save_admin_order(p_id uuid default null, p_order jsonb default null)
 returns json
 language plpgsql
@@ -2077,6 +2096,7 @@ declare
   v_coupon_valid boolean;
   v_source text;
   v_status text := 'cooking';
+  v_priority boolean;
   v_paid boolean := false;
   v_paid_method text;
   v_paid_note text;
@@ -2095,7 +2115,7 @@ begin
   for v_key in select jsonb_object_keys(v_input) loop
     if v_key not in (
       'source', 'code', 'name', 'phone', 'pincode', 'note', 'amount',
-      'coupon', 'lines', 'status', 'paid', 'paid_method', 'paid_note', 'created_at'
+      'coupon', 'lines', 'status', 'paid', 'paid_method', 'paid_note', 'created_at', 'priority'
     ) then
       raise exception using message = format('Unknown field: %s.', v_key), errcode = '22023';
     end if;
@@ -2111,6 +2131,9 @@ begin
   v_note := public.order_check_note(v_input -> 'note');
   v_amount := public.order_check_amount(v_input -> 'amount');
   v_coupon := public.order_check_coupon(v_input -> 'coupon');
+  if coalesce(jsonb_typeof(v_input -> 'priority'), 'null') <> 'null' then
+    v_priority := public.order_check_boolean(v_input -> 'priority', 'priority');
+  end if;
 
   if p_id is not null then
     perform public.kitchen_lock();
@@ -2169,7 +2192,8 @@ begin
       coupon_code = v_coupon,
       coupon_id = v_coupon_id,
       coupon_valid = v_coupon_valid,
-      free_sample = v_free_sample
+      free_sample = v_free_sample,
+      priority = coalesce(v_priority, priority)
     where id = p_id
     returning * into v_order;
 
@@ -2184,6 +2208,8 @@ begin
     from jsonb_array_elements(v_lines) line;
 
     perform public.kitchen_order_rebalance(v_order.id);
+    -- A priority change only reorders food not yet given.
+    perform public.kitchen_fill_all(public.kitchen_order_products(v_order.id));
   else
     if coalesce(jsonb_typeof(v_input -> 'status'), 'null') <> 'null' then
       v_status := public.order_check_status(v_input -> 'status');
@@ -2239,11 +2265,11 @@ begin
 
     insert into public.orders (
       code, source, status, name, pincode, phone, note, amount,
-      coupon_code, coupon_id, coupon_valid, free_sample, created_at, created_by
+      coupon_code, coupon_id, coupon_valid, free_sample, priority, created_at, created_by
     ) values (
       v_code, v_source, v_status,
       v_name, v_pincode, v_phone, v_note, v_amount,
-      v_coupon, v_coupon_id, v_coupon_valid, v_free_sample, v_created_at, auth.uid()
+      v_coupon, v_coupon_id, v_coupon_valid, v_free_sample, coalesce(v_priority, false), v_created_at, auth.uid()
     ) returning * into v_order;
 
     insert into public.order_lines (order_id, product_id, size, quantity)
@@ -2270,7 +2296,9 @@ revoke all on function public.save_admin_order(uuid, jsonb) from public, anon;
 grant execute on function public.save_admin_order(uuid, jsonb) to authenticated;
 
 -- Quick changes, as in 20260928000000, with the new stages and without kept.
--- A status change is a kitchen action (see kitchen_order_moved()). The answer
+-- A status change is a kitchen action (see kitchen_order_moved()), and so is
+-- priority (true/false): it re-runs the fill for food not yet given, never
+-- taking grams from another order. The answer
 -- is the order plus kitchen_effects: what it did to the kitchen, with an
 -- action_id for undo_admin_kitchen(), or null when only this order's status
 -- changed (undo that with the old status, as before).
@@ -2288,6 +2316,7 @@ declare
   v_cover public.order_payments;
   v_order public.orders;
   v_from text;
+  v_priority boolean;
   v_action uuid;
   v_effects jsonb;
 begin
@@ -2301,13 +2330,13 @@ begin
 
   for v_key in select jsonb_object_keys(p_changes) loop
     if v_key not in (
-      'status', 'paid', 'paid_method', 'paid_note', 'phone', 'amount', 'note', 'name', 'pincode'
+      'status', 'paid', 'paid_method', 'paid_note', 'phone', 'amount', 'note', 'name', 'pincode', 'priority'
     ) then
       raise exception using message = format('Unknown field: %s.', v_key), errcode = '22023';
     end if;
   end loop;
 
-  if p_changes ? 'status' then
+  if p_changes ? 'status' or p_changes ? 'priority' then
     perform public.kitchen_lock();
   end if;
 
@@ -2323,6 +2352,11 @@ begin
 
   if p_changes ? 'paid' then
     v_paid := public.order_check_boolean(p_changes -> 'paid', 'paid');
+  end if;
+
+  v_priority := v_order.priority;
+  if p_changes ? 'priority' then
+    v_order.priority := public.order_check_boolean(p_changes -> 'priority', 'priority');
   end if;
 
   if (p_changes ? 'paid_method' or p_changes ? 'paid_note') and v_paid is not true then
@@ -2361,13 +2395,14 @@ begin
     delete from public.order_payments where order_id = p_id;
   end if;
 
-  if v_order.status <> v_from then
-    v_action := public.kitchen_action_start('order_status');
+  if v_order.status <> v_from or v_order.priority <> v_priority then
+    v_action := public.kitchen_action_start(case when v_order.status <> v_from then 'order_status' else 'priority' end);
   end if;
 
   update public.orders
   set
     status = v_order.status,
+    priority = v_order.priority,
     phone = v_order.phone,
     amount = v_order.amount,
     note = v_order.note,
@@ -2378,6 +2413,9 @@ begin
 
   if v_action is not null then
     perform public.kitchen_order_moved(p_id, v_from, v_order.status);
+    if v_order.priority <> v_priority then
+      perform public.kitchen_fill_all(public.kitchen_order_products(p_id));
+    end if;
 
     -- Worth an Undo of its own only when more than this order's status moved.
     if exists (
