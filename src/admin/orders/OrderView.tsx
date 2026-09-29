@@ -9,9 +9,10 @@ import { AdminLink } from '../router';
 import type { Order } from '../types';
 import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
-import { laneOf, nextOf } from './model';
+import { type WorkLane, laneOf, nextOf } from './model';
 import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
 import { PaidSheet } from './PaidMethod';
+import { usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
 import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 
@@ -42,10 +43,11 @@ const OrderBody: React.FC<{
   show: (o: Order) => void;
   payments: PaymentActions;
   onPayRest: (o: Order) => void;
-}> = ({ order, change, show, payments, onPayRest }) => (
+  onPriorityOn: (o: Order) => void;
+}> = ({ order, change, show, payments, onPayRest, onPriorityOn }) => (
   <>
     <OrderNotes order={order} />
-    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} />
+    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
       <DetailsCard order={order} onSaved={show} />
@@ -60,12 +62,15 @@ const isTyping = (el: EventTarget | null) =>
 /** Phone: the order as its own page, with the next step pinned above the tab bar. */
 export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
   const navigate = useNavigate();
-  // Back to the same board: a product filter or a search stays.
-  const board = `/admin/orders${useLocation().search}`;
+  // Back to the same board: a product filter or a search stays, and on a phone the stage it came from (#packing).
+  const { search, hash } = useLocation();
+  const board = `/admin/orders${search}${hash}`;
   const { order, show, detail } = useOrder(code);
-  const change = useOrderChange(show);
+  // A priority order can take food from others: after that, load this one again.
+  const change = useOrderChange(show, detail.reload);
   const payments = usePayments(show);
   const [paying, setPaying] = useState<Order | null>(null);
+  const give = usePriorityGive(detail.reload);
 
   if (!order) {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
@@ -82,7 +87,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
         <OrderMenu order={order} change={change} payments={payments} onDeleted={() => navigate(board, { replace: true })} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -92,6 +97,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
         </div>
       )}
       <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
+      {give.popup}
     </div>
   );
 };
@@ -108,13 +114,17 @@ export const OrderPopup: React.FC<{
   putInList: (o: Order) => void;
   onDeleted: (o: Order) => void;
   onClose: () => void;
-}> = ({ code, sequence, putInList, onDeleted, onClose }) => {
+  /** The kitchen moved other orders (priority took food, or was given it): load the board again. */
+  onKitchen?: () => void;
+}> = ({ code, sequence, putInList, onDeleted, onClose, onKitchen }) => {
   const navigate = useNavigate();
   // Moving between orders keeps the board's query, so a filtered board stays filtered behind.
   const { search } = useLocation();
   const fromList = sequence.find((o) => o.code === code);
   const { order, show, detail } = useOrder(code, fromList, putInList);
-  const change = useOrderChange(show);
+  const kitchenMoved = () => { detail.reload(); onKitchen?.(); };
+  const change = useOrderChange(show, kitchenMoved);
+  const give = usePriorityGive(kitchenMoved);
   const payments = usePayments(show);
   const nameRef = useRef<HTMLSpanElement>(null);
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on
@@ -190,7 +200,7 @@ export const OrderPopup: React.FC<{
       actions={at >= 0 && (
         <>
           {inLane.length > 0 && lane !== 'done' && (
-            <span className="adm-od-pos">{copy.position(inLane.indexOf(fromList!) + 1, inLane.length, adminCopy.orders.lanes[lane][0])}</span>
+            <span className="adm-od-pos">{copy.position(inLane.indexOf(fromList!) + 1, inLane.length, adminCopy.orderStages.names[lane as WorkLane])}</span>
           )}
           <button type="button" className="adm-iconbtn" aria-label={copy.prev} disabled={at <= 0} onClick={() => go(-1)}><ChevronLeft size={20} aria-hidden="true" /></button>
           <button type="button" className="adm-iconbtn" aria-label={copy.nextOrder} disabled={at >= sequence.length - 1} onClick={() => go(1)}><ChevronRight size={20} aria-hidden="true" /></button>
@@ -209,7 +219,8 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} />}
+      {give.popup}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
     </AdminSheet>

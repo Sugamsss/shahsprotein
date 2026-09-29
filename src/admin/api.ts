@@ -2,7 +2,7 @@ import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
   KitchenSettings, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
-  PaymentInput, PayRestInput, PriceChange, Prices, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
+  PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -127,6 +127,13 @@ export const writeOffSpare = (batchId: string, grams: number | null, reason: Wri
  */
 export const undoKitchen = (actionId: string) =>
   rpc<{ undone: boolean; kitchen: Kitchen }>('undo_admin_kitchen', { action_id: actionId });
+/**
+ * A priority order in Cooking takes whole packed pouches (same product and size) from non-priority
+ * orders in Packing or Ready, newest first; those go back to Cooking unless still covered.
+ * `preview` changes nothing. Undo with undoKitchen(action_id). A refusal is a plain 22023 message.
+ */
+export const givePriority = (orderId: string, preview = false) =>
+  rpc<PriorityGiveEffects>('give_admin_priority', { order_id: orderId, preview });
 /** Products page: sample weight and shelf life. Returns the kitchen. */
 export const setKitchenProduct = (productId: string, settings: KitchenSettings) =>
   rpc<Kitchen>('set_admin_kitchen_product', { product_id: productId, settings });

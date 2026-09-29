@@ -141,17 +141,8 @@ export const adminCopy = {
     find: 'Find an order',
     findPlaceholder: 'Code, name or phone',
     cancelFind: 'Cancel',
-    jumpLabel: 'Jump to a lane',
-    lanes: {
-      cooking: ['Cooking', 'Moves to Packing once it’s all cooked.'],
-      packing: ['Packing', 'Cooked. Pack it, then tap Packed.'],
-      ready: ['Ready', 'Packed, waiting to drop off.'],
-      collect: ['Delivered', 'Not paid in full yet.'],
-      done: ['Done', ''],
-    },
-    /** The phone's jump strip: short, and the money lane by what it's for. */
+    /** Short stage names, used on a customer's page ("2 ready"). */
     jump: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', collect: 'To collect' },
-    laneEmpty: 'Nothing here right now.',
     toPack: 'to pack',
     toDropOff: 'to drop off',
     toCollect: (money: string) => `${money} to collect`,
@@ -208,6 +199,69 @@ export const adminCopy = {
     },
   },
 
+  /** Orders, one stage at a time (O1): the stage switcher, each stage's line, the lighter cards. */
+  orderStages: {
+    switchLabel: 'Stage',
+    names: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', collect: 'To collect' },
+    /** One plain line of what to do, under the switcher (and under each lane's name on a laptop). */
+    hints: {
+      cooking: 'Moves to Packing once it’s all cooked.',
+      packing: 'Cooked. Pack it, then tap Packed.',
+      ready: 'Packed. Drop it off, then tap Delivered.',
+      collect: 'Delivered, not paid in full yet.',
+    },
+    empty: {
+      cooking: 'Nothing cooking. Every order has its food.',
+      packing: 'Nothing to pack right now.',
+      /** Packing is empty and so is the kitchen. */
+      packingAll: 'Nothing to pack, and nothing cooking.',
+      ready: 'Nothing to drop off.',
+      collect: 'Nothing to collect. Everyone has paid.',
+    },
+    /** Packing's last row: what's coming, a tap goes to Cooking. */
+    nextTitle: 'Next from the kitchen',
+    /** "5 orders. Asha’s is nearly ready." */
+    nextSub: (orders: number, nearly: string | null) =>
+      `${orders} ${orders === 1 ? 'order' : 'orders'}.${nearly ? ` ${nearly}’s is nearly ready.` : ''}`,
+    /** A Cooking card's line whose product is already covered. */
+    lineReady: 'ready',
+    /** A Ready card that has sat a while, in place of its day. */
+    waiting: (days: number) => `Waiting ${days} days`,
+    priority: 'Priority',
+    doneLink: 'Done',
+    samplesLink: 'Free samples',
+    /** The laptop's top buttons: "Free samples · 4". */
+    samplesCount: (n: number) => `Free samples · ${n}`,
+    /** Read with a switcher choice: "Packing, 1 order" / "To collect, ₹895 due". */
+    countLabel: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
+    moneyLabel: (money: string) => `${money} due`,
+  },
+  /**
+   * The centre popup after an order turns priority: packed pouches it can take from other orders.
+   * Names are first names; `what` is "Raggi Jaggi 500 g", "Raggi Jaggi 500 g × 2" or a list of them.
+   */
+  priorityGive: {
+    title: (taker: string) => `${taker} is priority`,
+    /** One person gives: "Give Meera Tanvi's packed Raggi Jaggi 500 g?" */
+    one: (taker: string, giver: string, what: string[]) => `Give ${taker} ${giver}’s packed ${andList(what)}?`,
+    /** Several people give: the question, then a line each. */
+    several: (taker: string) => `Give ${taker} these packed pouches?`,
+    item: (giver: string, what: string[]) => `${giver}’s ${andList(what)}`,
+    goesBack: (givers: string[]) => (givers.length === 1
+      ? `${givers[0]}’s order goes back to Cooking.`
+      : `${andList(givers.map((g) => `${g}’s`))} orders go back to Cooking.`),
+    confirm: (taker: string, pouches: number) => `Give ${pouches === 1 ? 'it' : 'them'} to ${taker}`,
+    notNow: 'Not now',
+    /** The toast when the taker is still short after it (else it says the order moved to Packing). */
+    gave: (taker: string) => `Gave ${taker} the packed food.`,
+  },
+  /** The order view's Priority switch, while the order is in Cooking. */
+  orderPriority: {
+    label: 'Priority',
+    hint: 'Gets food first: from spare, the next batch, and orders still cooking.',
+    switchLabel: (name: string) => `Priority for ${name}’s order`,
+  },
+
   /** A free sample: a third pack size, always free, never priced (admin only). */
   samples: {
     /** After the product name: "Date Bites sample". */
@@ -219,6 +273,8 @@ export const adminCopy = {
   kitchenEffects: {
     /** "500 g Date Bites back as spare." */
     backAsSpare: (items: string[]) => `${andList(items)} back as spare.`,
+    /** A priority order took food from another order: "Took 250 g Raggi Jaggi from Neha's order." */
+    took: (items: string[], name: string) => `Took ${andList(items)} from ${name}'s order.`,
     moved: (name: string, to: string) =>
       (to === 'packing' ? `${name}'s order moved to Packing.` : to === 'cooking' ? `${name}'s order is back to Cooking.` : `${name}'s order moved on.`),
   },

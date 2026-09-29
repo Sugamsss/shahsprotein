@@ -7,6 +7,7 @@ import { useAdminMe } from '../auth';
 import { firstName, formatDay, formatMoney, formatPhone, formatTime } from '../format';
 import { AdminLink } from '../router';
 import { Field } from '../parts';
+import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, FromWebsite, Thumb, Via } from './OrderCard';
@@ -18,7 +19,7 @@ import type { PaymentActions } from './usePayments';
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
 const copy = adminCopy.order;
-type Change = (order: Order, changes: OrderChanges) => void;
+type Change = (order: Order, changes: OrderChanges) => void | Promise<void>;
 
 /** Code and came-via, the name, when and where. Spans only: the page puts it in an h1, the popup in its h2. */
 export const OrderHead: React.FC<{ order: Order; nameRef?: React.Ref<HTMLSpanElement> }> = ({ order: o, nameRef }) => (
@@ -67,7 +68,9 @@ export const StatusCard: React.FC<{
   payments: PaymentActions;
   /** Opens "How did they pay?" for whatever is left. */
   onPayRest: (order: Order) => void;
-}> = ({ order: o, change, payments, onPayRest }) => {
+  /** Priority was just turned on (and saved): offer it packed food from other orders. */
+  onPriorityOn?: (order: Order) => void;
+}> = ({ order: o, change, payments, onPayRest, onPriorityOn }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
   const lastChange = o.status_changed_at;
@@ -92,6 +95,17 @@ export const StatusCard: React.FC<{
         </p>
       ) : (
         <p className="adm-steps__hint">{hintOf(o)}</p>
+      )}
+      {/* Skip the line: only while it cooks, since that's the only place it changes anything. */}
+      {o.status === 'cooking' && (
+        <div className="adm-od-priority">
+          <span><b>{adminCopy.orderPriority.label}</b><small>{adminCopy.orderPriority.hint}</small></span>
+          <Switch checked={o.priority} label={adminCopy.orderPriority.switchLabel(firstName(o.name) || o.code)}
+            onChange={async (priority) => {
+              await change(o, { priority });
+              if (priority) onPriorityOn?.(o);
+            }} />
+        </div>
       )}
       {/* A free sample has no money to take. */}
       {!o.free_sample && <PaymentsBlock order={o} payments={payments} onPayRest={onPayRest} />}
