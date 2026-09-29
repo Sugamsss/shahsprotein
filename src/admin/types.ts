@@ -84,6 +84,8 @@ export interface Order {
   amount_extra: number | null;
   /** Every line is a sample: no total, no coupon, no payments; done once delivered. */
   free_sample: boolean;
+  /** Skips the line in the kitchen: fills before the others, never taking food already given. Only matters in Cooking. */
+  priority: boolean;
   name: string | null;
   pincode: string | null;
   phone: string | null;
@@ -152,6 +154,8 @@ export interface OrderChanges {
   note?: string | null;
   name?: string;
   pincode?: string | null;
+  /** Skip the line. Undo with the old value (kitchen_effects stays null: it never moves food already given). */
+  priority?: boolean;
 }
 
 /** add_admin_payment: "Part payment…". The order needs a total first. */
@@ -196,6 +200,8 @@ export interface OrderInput {
   paid_method?: PaidMethod;
   paid_note?: string;
   created_at?: string;
+  /** Skip the line. Left out: a new order isn't priority, an edit keeps what it had. */
+  priority?: boolean;
 }
 
 export interface Overview {
@@ -340,9 +346,9 @@ export interface KitchenProduct {
   to_cook: number;
   /** The packs those short orders hold, samples last: "250 g × 2 · 500 g × 3". size is '250 g' or 'sample'. */
   waiting_packs: { size: string; grams_each: number; packs: number }[];
-  /** The short orders, oldest first. covered: the order's other products that are already covered ("only waiting on this"). */
+  /** The short orders in fill order: priority first, then oldest first. covered: the order's other products that are already covered ("only waiting on this"). */
   queue: {
-    order_id: string; code: string; name: string | null; created_at: string;
+    order_id: string; code: string; name: string | null; created_at: string; priority: boolean;
     short: number; also_waiting: string[]; covered: string[];
   }[];
   /** Usable spare grams (fresh and near). */

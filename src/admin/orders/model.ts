@@ -80,6 +80,7 @@ export const changeText = (o: Order, changes: OrderChanges): string => {
   const name = firstName(o.name) || o.code;
   const t = copy.toasts;
   if (changes.status) return t[changes.status](name);
+  if (changes.priority !== undefined) return changes.priority ? t.priority(name) : t.notPriority(name);
   return changes.paid ? t.paid(name, paidByText(changes)) : t.unpaid(name);
 };
 
@@ -117,6 +118,7 @@ export const undoPlanOf = (before: Order, changes: OrderChanges, saved: UpdatedO
  */
 export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
   ...(changes.status !== undefined && { status: o.status }),
+  ...(changes.priority !== undefined && { priority: o.priority }),
   ...(changes.paid !== undefined && { paid: o.paid }),
   ...(changes.paid !== undefined && o.paid && o.paid_method && {
     paid_method: o.paid_method,

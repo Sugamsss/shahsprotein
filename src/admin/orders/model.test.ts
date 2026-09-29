@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOrder } from '../types';
 import {
-  applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
+  changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
   namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
   reverseOf, searchFor, sortLines, undoPlanOf,
 } from './model';
@@ -194,6 +194,17 @@ describe('a card on a filtered board', () => {
 const paidOrder = (paid_method: Order['paid_method'], paid_note: string | null = null) =>
   ({ paid: true, paid_at: '2026-09-26T10:00:00Z', paid_method, paid_note } as Order);
 const unpaidOrder = { paid: false, paid_at: null, paid_method: null, paid_note: null } as Order;
+
+describe('priority', () => {
+  it('undoing a priority change sends the old value back, and says so in the toast', () => {
+    const o = { name: 'Meera Kulkarni', code: 'SN-K8M9N', priority: false } as Order;
+    expect(reverseOf(o, { priority: true })).toEqual({ priority: false });
+    expect(undoPlanOf(o, { priority: true }, { ...o, priority: true, kitchen_effects: null } as UpdatedOrder))
+      .toEqual({ changes: { priority: false } });
+    expect(changeText(o, { priority: true })).toBe("Meera's order is priority");
+    expect(changeText(o, { priority: false })).toBe("Meera's order is back in line");
+  });
+});
 
 describe('paying with a method', () => {
   it('undoing Not paid puts the method and note back', () => {

@@ -209,6 +209,9 @@ export const adminCopy = {
       /** "Neha's order is marked paid · UPI". Undo and old orders have no method. */
       paid: (n: string, how: string | null) => `${n}'s order is marked paid${how ? ` · ${how}` : ''}`,
       unpaid: (n: string) => `${n}'s order is marked not paid`,
+      /** Skip the line: fills first from the next batch or spare. */
+      priority: (n: string) => `${n}'s order is priority`,
+      notPriority: (n: string) => `${n}'s order is back in line`,
       copied: 'Copied.',
       deleted: 'Order deleted.',
     },
