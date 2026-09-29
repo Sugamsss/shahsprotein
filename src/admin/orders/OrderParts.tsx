@@ -332,7 +332,8 @@ export const DetailsCard: React.FC<{
           {copy.useSuggestion(formatPhone(suggestion.phone), formatDay(suggestion.created_at))}
         </button>
       )}
-      <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />
+      {/* A free sample order has no total, as in Add and Edit. */}
+      {!o.free_sample && <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />}
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
       <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
       {o.phone && (

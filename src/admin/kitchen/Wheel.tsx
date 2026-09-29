@@ -10,7 +10,9 @@ const copy = adminCopy.kitchen;
 // numbers; the chosen row is ink-1 600 and shows its unit. A column reports its
 // value once it settles (scrollend, or a short quiet spell where there's none),
 // so the preview asks the server only for amounts she stopped on. Each column is a
-// spinbutton: arrow keys step it, and a tap on a row rolls to it.
+// spinbutton: arrow keys step it, and a tap on a row rolls to it. A tap or focus anywhere
+// else while a column is still moving reports the row in the band at once, so a button
+// tapped mid-snap ("Log it", Save) always uses exactly what the wheel shows.
 
 const ROW = 40;
 const SETTLE_MS = 140;
@@ -54,8 +56,11 @@ const WheelColumn: React.FC<{
     if (Math.round(el.scrollTop / ROW) !== index) el.scrollTop = index * ROW;
   }, [index, options.length]);
 
+  // Scrolled and not yet reported.
+  const moving = useRef(false);
   const settle = useCallback(() => {
     window.clearTimeout(timer.current);
+    moving.current = false;
     const next = optionsRef.current[liveRef.current];
     if (next !== undefined && next !== valueRef.current) onChangeRef.current(next);
   }, []);
@@ -73,16 +78,30 @@ const WheelColumn: React.FC<{
           tick();
         }
       });
+      moving.current = true;
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(settle, SETTLE_MS);
+    };
+    // Something else is touched or focused mid-roll: report the band's row now. Capture, so it
+    // lands before that control's own handlers, and React has re-rendered by its click.
+    const flush = (e: Event) => {
+      if (!moving.current || el.contains(e.target as Node)) return;
+      const i = Math.min(optionsRef.current.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
+      liveRef.current = i;
+      setLive(i);
+      settle();
     };
     // scrollend fires once the snap has landed; the timer covers browsers without it.
     const onEnd = () => requestAnimationFrame(settle);
     el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('scrollend', onEnd);
+    document.addEventListener('pointerdown', flush, true);
+    document.addEventListener('focusin', flush, true);
     return () => {
       el.removeEventListener('scroll', onScroll);
       el.removeEventListener('scrollend', onEnd);
+      document.removeEventListener('pointerdown', flush, true);
+      document.removeEventListener('focusin', flush, true);
       window.clearTimeout(timer.current);
       if (frame.current) cancelAnimationFrame(frame.current);
     };

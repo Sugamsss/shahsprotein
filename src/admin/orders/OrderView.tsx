@@ -59,18 +59,29 @@ const OrderBody: React.FC<{
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
-/** Phone: the order as its own page, with the next step pinned above the tab bar. */
-export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
+/**
+ * Phone: the order as its own page, with the next step pinned above the tab bar. The board
+ * stays mounted behind it, so every change goes back into the board's list (`putInList`),
+ * and a kitchen move or a delete loads the board again: Back shows the new stages and counts.
+ */
+export const OrderPage: React.FC<{
+  code: string;
+  putInList?: (o: Order) => void;
+  onDeleted?: (o: Order) => void;
+  /** The kitchen moved other orders: load the board again. */
+  onKitchen?: () => void;
+}> = ({ code, putInList, onDeleted, onKitchen }) => {
   const navigate = useNavigate();
   // Back to the same board: a product filter or a search stays, and on a phone the stage it came from (#packing).
   const { search, hash } = useLocation();
   const board = `/admin/orders${search}${hash}`;
-  const { order, show, detail } = useOrder(code);
-  // A priority order can take food from others: after that, load this one again.
-  const change = useOrderChange(show, detail.reload);
+  const { order, show, detail } = useOrder(code, undefined, putInList);
+  // A priority order can take food from others: after that, load this one and the board again.
+  const kitchenMoved = () => { detail.reload(); onKitchen?.(); };
+  const change = useOrderChange(show, kitchenMoved);
   const payments = usePayments(show);
   const [paying, setPaying] = useState<Order | null>(null);
-  const give = usePriorityGive(detail.reload);
+  const give = usePriorityGive(kitchenMoved);
   useOfferOnArrival(give.offer);
 
   if (!order) {
@@ -85,7 +96,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
     <div className="adm-page adm-od">
       <div className="adm-od-top">
         {back}
-        <OrderMenu order={order} change={change} payments={payments} onDeleted={() => navigate(board, { replace: true })} />
+        <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted?.(order); navigate(board, { replace: true }); }} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
       <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} />
@@ -178,8 +189,8 @@ export const OrderPopup: React.FC<{
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1); }
       else if (e.key === 'Enter' && !target.closest('button, a, summary') && o) { e.preventDefault(); step(); }
       // P: paid → not paid at once (Undo); not or part paid → pay the rest, focus on UPI.
-      // A cancelled order takes no new money, the same as its money block.
-      else if (e.key.toLowerCase() === 'p' && o) {
+      // A cancelled order takes no new money, the same as its money block; a free sample has none.
+      else if (e.key.toLowerCase() === 'p' && o && !o.free_sample) {
         e.preventDefault();
         if (o.paid) void pay.markNotPaid(o);
         else if (o.status !== 'cancelled') ask({ order: o, moveOn: false });

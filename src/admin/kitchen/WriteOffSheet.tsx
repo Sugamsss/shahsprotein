@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { useDialogClose } from '../../components/ui/useDialog';
 import { adminCopy } from '../../data/adminCopy';
@@ -6,6 +6,7 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { toAdminError, writeOffSpare } from '../api';
 import { formatWeight } from '../format';
+import { useToast } from '../toast';
 import { madeOnDay, productName } from '../orders/model';
 import { Segmented } from '../parts';
 import type { Kitchen, KitchenEffects, WriteOffReason } from '../types';
@@ -39,19 +40,35 @@ export const WriteOffSheet: React.FC<{
   onDone: (effects: KitchenEffects, text: string) => void;
 }> = ({ kitchen, productId, batchId, onClose, onDone }) => {
   const batches = kitchen.products.find((p) => p.product_id === productId)?.spare_batches ?? [];
-  const [pickedId, setPickedId] = useState(batchId);
-  const batch: SpareBatch | undefined = batches.find((b) => b.batch_id === pickedId) ?? batches[0];
+  // Fall back to the first batch only as the sheet opens. After that the kitchen may refresh
+  // (another phone, a site order took the spare): the picked batch never quietly changes.
+  const [pickedId, setPickedId] = useState(() => (batches.some((b) => b.batch_id === batchId) ? batchId : batches[0]?.batch_id));
+  const onShelf = batches.find((b) => b.batch_id === pickedId);
+  // After her save the batch may be gone; keep drawing it while the sheet closes.
+  const lastBatch = useRef(onShelf);
+  if (onShelf) lastBatch.current = onShelf;
   const startFor = (b: SpareBatch | undefined) => ({
     amount: 'all' as Amount,
     reason: (b?.state === 'past' ? 'thrown_out' : 'used_up') as WriteOffReason,
     part: b ? partStart(b.grams) : 0,
   });
-  const [choice, setChoice] = useState(() => startFor(batch));
+  const [choice, setChoice] = useState(() => startFor(onShelf));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const name = productName(productId);
   const product = productsData.find((p) => p.id === productId);
   const groupName = useId();
+  const toast = useToast();
+  // The picked batch left the shelf while the sheet was open (or nothing was there): say so and close.
+  // Not after her own save: "All of it" empties the batch on purpose, while the sheet plays its exit.
+  const [saved, setSaved] = useState(false);
+  const batch: SpareBatch | undefined = onShelf ?? (saved ? lastBatch.current : undefined);
+  const gone = !batch && !busy;
+  useEffect(() => {
+    if (!gone) return;
+    toast.show({ text: copy.batchGone });
+    onClose();
+  }, [gone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!batch) return null;
   const parts = partOptions(batch.grams);
@@ -71,6 +88,7 @@ export const WriteOffSheet: React.FC<{
       const effects = await writeOffSpare(batch.batch_id, amount === 'all' ? null : grams, choice.reason);
       const left = effects.batches.find((b) => b.id === batch.batch_id)?.spare ?? 0;
       const say = choice.reason === 'thrown_out' ? copy.threw : copy.took;
+      setSaved(true);
       onDone(effects, say(weight, name, left > 0 ? formatWeight(left) : null));
       return true;
     } catch (err) {

@@ -61,6 +61,12 @@ describe('what to cook', () => {
     ]);
   });
 
+  it('caps a need bigger than the wheels at 25 kg 950 g, so the pill and the wheel agree', () => {
+    const k = seed();
+    k.products = k.products.map((p) => (p.product_id === 'raggi-jaggi' ? { ...p, to_cook: 30_040 } : p));
+    expect(prefill(k)[0]).toEqual({ product_id: 'raggi-jaggi', need: 30_040, grams: 25_950 });
+  });
+
   it('has nothing to cook once everything is covered', () => {
     const k = seed();
     k.products = k.products.map((p) => ({ ...p, to_cook: 0, queue: [] }));

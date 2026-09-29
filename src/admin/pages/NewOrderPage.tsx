@@ -395,9 +395,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     </>
   );
   // Status and Paid are set here only for a new order; afterwards they live on the order itself.
-  // An edit keeps Priority while the order can still be cooked for.
+  // An edit shows Priority only while the order is in Cooking, as the order view does.
   const whereAt = order ? (
-    order.status === 'delivered' || order.status === 'cancelled' ? null : (
+    order.status !== 'cooking' ? null : (
       <section className="adm-of__section adm-of--where" aria-label={kx.priority}>
         <div className="adm-card adm-of__paid">{priorityRow}</div>
       </section>

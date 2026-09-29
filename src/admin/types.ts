@@ -169,7 +169,11 @@ export interface OrderChanges {
   note?: string | null;
   name?: string;
   pincode?: string | null;
-  /** Skip the line. Undo with the old value (kitchen_effects stays null: it never moves food already given). */
+  /**
+   * Skip the line. Turning it on can take food from other Cooking orders, but only when that
+   * completes this order's line for the product; then kitchen_effects has an action_id and Undo
+   * goes through undo_admin_kitchen. With no action_id, Undo sends the old value.
+   */
   priority?: boolean;
 }
 

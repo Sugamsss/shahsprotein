@@ -148,7 +148,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const navigate = useNavigate();
   const laptop = useLaptop();
   const cook = useAdminMe().home_view === 'cook';
-  const overview = useOverview().data;
+  const { data: overview, reload: reloadOverview } = useOverview();
   const doneCounts = overview?.done;
   const doneTotal = doneCounts && doneCounts.delivered_paid + doneCounts.free_samples + doneCounts.cancelled;
   // Orders with samples on their way plus the ones sent this month (the overview has no all-time count).
@@ -192,6 +192,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     return () => clearTimeout(timer);
   }, [flash, board]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
+  // A delete runs the kitchen fill, so another order may have moved: load the board and the badge again.
+  const deleted = (o: Order) => { drop(o); void list.reload(); void reloadOverview(); };
   // A move that changed the kitchen can move other orders too (cancelled food fills the next one).
   const change = useOrderChange(put, list.reload);
   // A new priority order from Add order lands here and may be offered packed food.
@@ -281,7 +283,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   };
 
   // Phone: one order is its own page.
-  if (code && !laptop) return <OrderPage code={code} />;
+  if (code && !laptop) return <OrderPage code={code} putInList={put} onDeleted={deleted} onKitchen={list.reload} />;
 
   // On a phone the card's link carries the stage, so the order page's back link returns to it.
   const cardSearch = oneStage ? `${location.search}#${stage}` : location.search;
@@ -416,7 +418,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       {!q && board && <MoreLinks done={doneTotal} samples={samplesCount} />}
 
       {laptop && code && (
-        <OrderPopup key="popup" code={code} sequence={sequence} putInList={put} onDeleted={drop} onKitchen={list.reload}
+        <OrderPopup key="popup" code={code} sequence={sequence} putInList={put} onDeleted={deleted} onKitchen={list.reload}
           onClose={() => {
             navigate(`/admin/orders${location.search}`);
             // The card may have moved lanes while the popup was open, so find it again.

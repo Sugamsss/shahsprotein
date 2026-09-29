@@ -25,7 +25,7 @@ export interface LogRow { product_id: string; need: number; grams: number }
 
 /** What Log cooking opens with: every product to cook, at exactly its need. */
 export const prefill = (kitchen: Kitchen): LogRow[] =>
-  toCook(kitchen).map((c) => ({ product_id: c.product_id, need: c.grams, grams: c.grams }));
+  toCook(kitchen).map((c) => ({ product_id: c.product_id, need: c.grams, grams: Math.min(c.grams, WHEEL_MAX) }));
 
 /** Distinct orders waiting on the kitchen. */
 export const ordersWaiting = (kitchen: Kitchen): number =>
@@ -98,6 +98,8 @@ export const spareWarnings = (kitchen: Kitchen): { product_id: string; batch: Sp
 export const GRAM_STEP = 50;
 /** The kg wheel's top: 25 kg 950 g is the most one row can log. */
 export const KG_MAX = 25;
+/** The most the wheels show, 25 kg 950 g: a bigger need pre-fills this, so the pill and the wheel agree. */
+export const WHEEL_MAX = KG_MAX * 1000 + 1000 - 50;
 /** Bigger than this in one batch asks first ("30 kg of Muesli? That's a lot, just checking"). */
 export const BIG_BATCH = 10_000;
 

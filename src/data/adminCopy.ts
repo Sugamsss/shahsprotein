@@ -265,13 +265,15 @@ export const adminCopy = {
     notNow: 'Not now',
     /** The toast when the taker is still short after it (else it says the order moved to Packing). */
     gave: (taker: string) => `Gave ${taker} the packed food.`,
+    /** The pouches went elsewhere before the yes (another phone): nothing moved. */
+    nothingLeft: 'Nothing to give any more.',
     /** The giver's history line: "Gave Raggi Jaggi 500 g to Meera’s order (priority)". */
     gaveHistory: (what: string[], taker: string) => `Gave ${andList(what)} to ${taker}’s order (priority)`,
   },
   /** The order view's Priority switch, while the order is in Cooking. */
   orderPriority: {
     label: 'Priority',
-    hint: 'Gets food first: from spare, the next batch, and orders still cooking.',
+    hint: 'Gets food first: from spare and the next batch, or from orders still cooking when that finishes it.',
     switchLabel: (name: string) => `Priority for ${name}’s order`,
   },
 
@@ -767,6 +769,8 @@ export const adminCopy = {
     // Over 10 kg in one batch.
     big: (weight: string, product: string) => [`${weight} of ${product}?`, " That's a lot, just checking."] as const,
     changeIt: 'Change it',
+    /** Used up / Thrown out: the batch left the shelf while the sheet was open. */
+    batchGone: 'That batch is gone. Nothing was changed.',
     /** The check above names the product, so the button stays short at 320px. [lead, weight]: the weight never breaks. */
     yesLog: (weight: string) => ['Yes, log ', weight] as const,
     item: (weight: string, product: string) => `${weight} ${product}`,

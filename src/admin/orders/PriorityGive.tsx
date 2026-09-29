@@ -6,7 +6,8 @@ import { useOverview } from '../AdminLayout';
 import { AdminSheet } from '../AdminSheet';
 import { givePriority, undoKitchen } from '../api';
 import type { Order, PriorityGiveEffects } from '../types';
-import { useUndoable } from '../useUndoable';
+import { useToast } from '../toast';
+import { type UndoableRun, useUndoable } from '../useUndoable';
 import { giveText, givenText } from './giveText';
 
 export type Taker = Pick<Order, 'id' | 'name' | 'code'>;
@@ -49,6 +50,7 @@ const Bar: React.FC<{ confirm: string; onGive: () => void }> = ({ confirm, onGiv
 export const usePriorityGive = (onDone?: () => void) => {
   const [offered, setOffered] = useState<{ taker: Taker; preview: PriorityGiveEffects } | null>(null);
   const run = useUndoable();
+  const toast = useToast();
   const { reload: reloadBadge } = useOverview();
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
@@ -66,13 +68,20 @@ export const usePriorityGive = (onDone?: () => void) => {
     let actionId: string | null = null;
     let text = '';
     const refresh = () => { doneRef.current?.(); void reloadBadge(); };
-    void run({
+    const job: UndoableRun = {
       apply: () => () => {},
       save: async () => {
         const done = await givePriority(taker.id);
         actionId = done.action_id;
-        text = givenText(taker, done);
         refresh();
+        // The pouches went elsewhere between the question and the yes (the other phone
+        // delivered them): nothing moved, so say that, with no Undo.
+        if (!done.action_id || !done.pouches.length) {
+          job.quiet = true;
+          toast.show({ text: adminCopy.priorityGive.nothingLeft });
+          return;
+        }
+        text = givenText(taker, done);
       },
       text: () => text,
       undo: () => {
@@ -80,7 +89,8 @@ export const usePriorityGive = (onDone?: () => void) => {
         const id = actionId;
         void run({ apply: () => () => {}, save: async () => { await undoKitchen(id); refresh(); }, text: '', undo: () => {}, quiet: true });
       },
-    });
+    };
+    void run(job);
   };
 
   const words = offered && giveText(

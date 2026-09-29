@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, ChevronRight, Plus } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { useDialogClose } from '../../components/ui/useDialog';
@@ -10,7 +10,7 @@ import { formatWeight } from '../format';
 import { productName } from '../orders/model';
 import type { BatchInput, Kitchen, KitchenEffects } from '../types';
 import { MadeOn } from './MadeOn';
-import { BIG_BATCH, inSiteOrder, packedCount, prefill, type LogRow } from './model';
+import { BIG_BATCH, WHEEL_MAX, inSiteOrder, packedCount, prefill, type LogRow } from './model';
 import { Outcomes } from './Outcomes';
 import { AmountWheel } from './Wheel';
 
@@ -27,6 +27,8 @@ const ADDED_START = 500;
 
 const productOf = (id: string) => productsData.find((p) => p.id === id);
 
+const BIG_GUARD_MS = 400;
+
 /** The pinned bar: Log it, or the big-amount check. Inside the sheet, so it can close it. */
 const Bar: React.FC<{
   busy: boolean;
@@ -37,6 +39,11 @@ const Bar: React.FC<{
 }> = ({ busy, disabled, big, onLog, onChange }) => {
   const close = useDialogClose();
   const log = async () => { if (await onLog()) close(); };
+  // The check's "Yes" appears under the finger that just tapped Log it: a second tap
+  // within 400 ms is that same tap, not a yes.
+  const bigShownAt = useRef(0);
+  useEffect(() => { if (big) bigShownAt.current = performance.now(); }, [big?.product_id, big?.grams]); // eslint-disable-line react-hooks/exhaustive-deps
+  const confirmBig = () => { if (performance.now() - bigShownAt.current >= BIG_GUARD_MS) void log(); };
   if (big) {
     const [lead, rest] = copy.big(formatWeight(big.grams), productName(big.product_id));
     const yes = copy.yesLog(formatWeight(big.grams));
@@ -45,7 +52,7 @@ const Bar: React.FC<{
         <p className="adm-kx-check" role="alert"><b>{lead}</b>{rest}</p>
         <div className="adm-kx-bar__pair">
           <button type="button" className="adm-btn adm-btn--quiet" onClick={onChange} disabled={busy}>{copy.changeIt}</button>
-          <button type="button" className="adm-btn adm-btn--primary" onClick={() => void log()} disabled={busy}>
+          <button type="button" className="adm-btn adm-btn--primary" onClick={confirmBig} disabled={busy}>
             {busy ? copy.logging : <span>{yes[0]}<span className="adm-kx-nowrap">{yes[1]}</span></span>}
           </button>
         </div>
@@ -87,7 +94,7 @@ export const LogSheet: React.FC<{
   };
   const add = (productId: string) => {
     const row = rows.find((r) => r.product_id === productId);
-    if (row) setGrams(productId, row.need || ADDED_START);
+    if (row) setGrams(productId, Math.min(row.need, WHEEL_MAX) || ADDED_START);
     else {
       setRows((list) => inSiteOrder([...list, { product_id: productId, need: 0, grams: ADDED_START }]));
       setBig(null);
