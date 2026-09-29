@@ -123,7 +123,7 @@ export const undoPlanOf = (before: Order, changes: OrderChanges, saved: UpdatedO
  * gets plain `paid: true`, which leaves it with no method.
  */
 export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
-  ...(changes.status !== undefined && { status: o.status }),
+  ...(changes.status !== undefined && { status: o.status, status_changed_at: o.status_changed_at }),
   ...(changes.priority !== undefined && { priority: o.priority }),
   ...(changes.paid !== undefined && { paid: o.paid }),
   ...(changes.paid !== undefined && o.paid && o.paid_method && {

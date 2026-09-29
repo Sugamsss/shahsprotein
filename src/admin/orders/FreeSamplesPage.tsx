@@ -19,7 +19,9 @@ export const FREE_SAMPLES_PATH = '/admin/orders/samples';
 
 // Who got free samples: every order carrying one, a free sample order or a taster riding
 // along with a real order. The Done page's pattern: newest first, a page at a time.
-const FILTER: OrderFilters = { view: 'all', samples: true };
+// Every order carrying a sample that isn't cancelled. The Orders page's Free samples count
+// (overview queue.free_samples.total) counts exactly these.
+const FILTER: OrderFilters = { view: 'all', samples: true, status: ['cooking', 'packing', 'ready', 'delivered'] };
 const PAGE = 50;
 
 const monthNow = () => new Intl.DateTimeFormat('en-IN', { month: 'long', timeZone: 'Asia/Kolkata' }).format(new Date());

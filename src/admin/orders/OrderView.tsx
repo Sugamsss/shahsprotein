@@ -12,7 +12,7 @@ import { useRpc } from '../useRpc';
 import { type WorkLane, laneOf, nextOf } from './model';
 import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
 import { PaidSheet } from './PaidMethod';
-import { usePriorityGive } from './PriorityGive';
+import { useOfferOnArrival, usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
 import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 
@@ -71,6 +71,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
   const payments = usePayments(show);
   const [paying, setPaying] = useState<Order | null>(null);
   const give = usePriorityGive(detail.reload);
+  useOfferOnArrival(give.offer);
 
   if (!order) {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
@@ -125,6 +126,7 @@ export const OrderPopup: React.FC<{
   const kitchenMoved = () => { detail.reload(); onKitchen?.(); };
   const change = useOrderChange(show, kitchenMoved);
   const give = usePriorityGive(kitchenMoved);
+  useOfferOnArrival(give.offer);
   const payments = usePayments(show);
   const nameRef = useRef<HTMLSpanElement>(null);
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on

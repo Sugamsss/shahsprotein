@@ -143,6 +143,8 @@ export interface OrderPage {
 /** update_admin_order: only the keys present change; null clears where allowed. */
 export interface OrderChanges {
   status?: OrderStatus;
+  /** Only with `status`: Undo puts back when the order entered its old status ("waiting 4 days"). */
+  status_changed_at?: string;
   /** true records one payment for whatever is left; false removes every payment (Undo: restorePayments). */
   paid?: boolean;
   /** Only with `paid: true` in the same call. */
@@ -228,7 +230,8 @@ export interface Overview {
       people: number;
     };
     /** Orders carrying a sample (free sample orders and paid orders with a taster). */
-    free_samples: { open: number; sent_this_month: number; grams_this_month: number };
+    /** total: every order carrying a sample, not cancelled (the Free samples list). */
+    free_samples: { total: number; open: number; sent_this_month: number; grams_this_month: number };
   };
   week: {
     starts_on: string;

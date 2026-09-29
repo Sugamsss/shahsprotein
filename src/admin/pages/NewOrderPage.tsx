@@ -50,10 +50,11 @@ const PINCODE = /^[1-9][0-9]{5}$/;
 const PAID_OPTIONS = PAID_METHODS.map((value) => ({ value, label: adminCopy.paidBy.methods[value] }));
 
 /**
- * A new order saved with Priority on. The hook for the "give it packed food?" popup
- * (lane C's shared component, wired at merge): it only needs the saved order.
+ * An order that turned priority on this save (new, or an edit that switched it on). The page
+ * it lands on offers it packed food ("Give it to Meera?"); see useOfferOnArrival.
  */
-const onPriorityOrderSaved = (_order: Order): void => {};
+const giveState = (saved: Order, before: Order | null) =>
+  (saved.priority && !before?.priority ? { give: { id: saved.id, name: saved.name, code: saved.code } } : {});
 
 type Errors = Partial<Record<'lines' | 'name' | 'via' | 'pincode' | 'phone' | 'amount' | 'paidMethod' | 'paidNote' | 'form', string>>;
 
@@ -211,12 +212,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     try {
       const saved = await saveOrder(input, order?.id);
       void reloadCounts();
-      if (!order && saved.priority) onPriorityOrderSaved(saved);
       toast.show({
         text: copy.saved(saved.code),
         action: order ? undefined : { label: copy.view, onAction: () => navigate(`/admin/orders/${saved.code}`) },
       });
-      navigate(order ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id } });
+      // A priority order just saved may take packed food: the page it lands on asks (useOfferOnArrival).
+      navigate(order ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id, ...giveState(saved, order) } });
     } catch (err) {
       const error = toAdminError(err);
       setFormError(error.kind === 'message' ? error.message : adminCopy.toast.failed);

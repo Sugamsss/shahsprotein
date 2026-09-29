@@ -204,6 +204,13 @@ const paidOrder = (paid_method: Order['paid_method'], paid_note: string | null =
   ({ paid: true, paid_at: '2026-09-26T10:00:00Z', paid_method, paid_note } as Order);
 const unpaidOrder = { paid: false, paid_at: null, paid_method: null, paid_note: null } as Order;
 
+describe('undoing a status tap', () => {
+  it('sends back the old status and when the order entered it, so "waiting 4 days" survives', () => {
+    const o = { status: 'ready', status_changed_at: '2026-09-25T10:00:00Z' } as Order;
+    expect(reverseOf(o, { status: 'delivered' })).toEqual({ status: 'ready', status_changed_at: '2026-09-25T10:00:00Z' });
+  });
+});
+
 describe('priority', () => {
   it('undoing a priority change sends the old value back, and says so in the toast', () => {
     const o = { name: 'Meera Kulkarni', code: 'SN-K8M9N', priority: false } as Order;

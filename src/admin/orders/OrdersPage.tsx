@@ -19,6 +19,8 @@ import {
 import { type CardAction, OrderCard, Thumb } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { PaidSheet } from './PaidMethod';
+import { FREE_SAMPLES_PATH as SAMPLES_PATH } from './FreeSamplesPage';
+import { useOfferOnArrival, usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
 import { usePayments } from './usePayments';
 import { useTheme } from '../../context/ThemeContext';
@@ -27,7 +29,6 @@ const copy = adminCopy.orders;
 const filterCopy = adminCopy.ordersProduct;
 const stages = adminCopy.orderStages;
 /** Lane B's Free samples page. */
-const SAMPLES_PATH = '/admin/orders/samples';
 const LAPTOP = '(min-width: 960px)';
 
 export const useLaptop = (): boolean => {
@@ -152,7 +153,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const doneTotal = doneCounts && doneCounts.delivered_paid + doneCounts.free_samples + doneCounts.cancelled;
   // Orders with samples on their way plus the ones sent this month (the overview has no all-time count).
   const samplesQueue = overview?.queue.free_samples;
-  const samplesCount = samplesQueue && samplesQueue.open + samplesQueue.sent_this_month;
+  // The same set the Free samples list shows: every order carrying a sample, not cancelled.
+  const samplesCount = samplesQueue?.total;
   const query = new URLSearchParams(location.search);
   const q = query.get('q') ?? '';
   // ?product=raggi-jaggi (a Home product card): only orders with it. An id we don't sell is ignored.
@@ -192,6 +194,10 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
   // A move that changed the kitchen can move other orders too (cancelled food fills the next one).
   const change = useOrderChange(put, list.reload);
+  // A new priority order from Add order lands here and may be offered packed food.
+  // With an order open (phone page or laptop popup), that view asks instead.
+  const give = usePriorityGive(list.reload);
+  useOfferOnArrival(give.offer, !code);
   const payments = usePayments(put);
 
   // Search also looks through Done, and an empty board asks whether anything was ever done.
@@ -414,6 +420,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           }} />
       )}
       <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
+      {give.popup}
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
     </div>
   );
