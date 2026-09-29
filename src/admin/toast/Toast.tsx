@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useLayoutEffe
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
+import { useUnsavedWork } from '../unsavedWork';
 
 // The undo toast (spec 2.3). One at a time; a new one replaces the old. It stays
 // 6s, and the clock stops while the pointer or focus is on it. After Undo it
@@ -65,6 +66,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSlots((list) => (on ? [...list.filter((x) => x !== el), el] : list.filter((x) => x !== el)));
   }, []);
   const slot = slots[slots.length - 1];
+  // A toast with Undo, Try again or View is waiting on them: no reload for an update until it goes.
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  useUnsavedWork(() => !!shownRef.current?.action);
 
   const put = useCallback((toast: Omit<Shown, 'id'>) => {
     setPaused(false);

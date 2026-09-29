@@ -4,6 +4,7 @@ import type {
   KitchenSettings, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
+import { holdUntilDone } from './unsavedWork';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
 // Every failure becomes an AdminError, so screens only ever check `kind`.
@@ -61,7 +62,10 @@ export const toAdminError = (error: unknown, status?: number): AdminError => {
 const params = (values: object): Record<string, unknown> =>
   Object.fromEntries(Object.entries(values).filter(([, v]) => v !== undefined).map(([k, v]) => [`p_${k}`, v]));
 
-const rpc = async <T>(name: string, args?: object): Promise<T> => {
+/** Every admin call holds updates while it's out, so a reload never cuts a save off (unsavedWork.ts). */
+const rpc = <T>(name: string, args?: object): Promise<T> => holdUntilDone(send<T>(name, args));
+
+const send = async <T>(name: string, args?: object): Promise<T> => {
   try {
     const supabase = await client;
     if (!supabase) throw new AdminError('unknown', copy.gate.notSetUp);
@@ -79,6 +83,8 @@ const rpc = async <T>(name: string, args?: object): Promise<T> => {
 
 export const getMe = () => rpc<AdminMe>('get_admin_me');
 export const getUsers = () => rpc<AdminUser[]>('get_admin_users');
+/** Remembers the newest "What's new" note they've seen. Only where get_admin_me returns notes_seen. */
+export const setNotesSeen = (id: string) => rpc<void>('set_admin_notes_seen', { id });
 
 export const getOrders = (filters: OrderFilters = {}) => rpc<OrderPage>('get_admin_orders', filters);
 /** null when no order has that code. The code may carry `SN-` or `#`, any case. */

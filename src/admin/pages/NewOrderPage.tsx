@@ -17,6 +17,7 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
+import { useUnsavedWork } from '../unsavedWork';
 import { SAMPLE, cleanPastedPhone, normalisePhone, packsText, plainPhone, productName } from '../orders/model';
 import { isSamplesOnly, moneyInput } from '../orders/samples';
 import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
@@ -105,6 +106,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const dirty = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Typed but not saved: no reload for an update until it's saved or left.
+  useUnsavedWork(() => dirty.current || saving);
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
   const lines = LINES.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
