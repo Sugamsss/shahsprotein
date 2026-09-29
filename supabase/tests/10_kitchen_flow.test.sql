@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(95);
+select plan(98);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -700,7 +700,7 @@ select is(
      'to_collect', o #> '{queue,to_collect,count}', 'free_samples', o #> '{queue,free_samples}',
      'done', o #> '{done,free_samples}')
    from (select public.get_admin_overview()::jsonb as o) x),
-  '{"to_collect":1,"free_samples":{"open":1,"sent_this_month":1,"grams_this_month":35},"done":1}'::jsonb,
+  '{"to_collect":1,"free_samples":{"total":2,"open":1,"sent_this_month":1,"grams_this_month":35},"done":1}'::jsonb,
   'overview: only the paid-for order is to collect; the taster on its way is open, the sample order sent this month'
 );
 
@@ -959,6 +959,42 @@ select is(pg_temp.snap(), current_setting('t.snap')::jsonb, 'undo of giving is e
 select throws_ok(
   $$select public.give_admin_priority(pg_temp.id('SN-KRA22'), true)$$,
   '22023', 'Only a priority order in Cooking can take packed food.', 'only a priority order in Cooking can take'
+);
+
+-- ─── 21. Undo keeps when an order entered its status ───
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KSA22', 100, '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]');
+select pg_temp.move('SN-KSA22', 'ready');
+update public.orders set status_changed_at = now() - interval '4 days' where code = 'SN-KSA22';
+select set_config('t.at', (select status_changed_at::text from public.orders where code = 'SN-KSA22'), true);
+select pg_temp.move('SN-KSA22', 'delivered');
+select public.update_admin_order(pg_temp.id('SN-KSA22'),
+  jsonb_build_object('status', 'ready', 'status_changed_at', current_setting('t.at')));
+select is(
+  (select jsonb_build_object('status', o.status, 'same', o.status_changed_at = current_setting('t.at')::timestamptz)
+   from public.orders o where o.code = 'SN-KSA22'),
+  '{"status":"ready","same":true}'::jsonb,
+  'the plain reverse puts back when it became Ready, so it still says waiting 4 days'
+);
+
+select pg_temp.ord('SN-KSB22', 90, '[{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('s1', 'muesli', 250);
+update public.orders set status_changed_at = now() - interval '2 days' where code = 'SN-KSB22';
+select set_config('t.at', (select status_changed_at::text from public.orders where code = 'SN-KSB22'), true);
+select set_config('t.cx', pg_temp.move('SN-KSB22', 'cancelled')::text, true);
+select public.undo_admin_kitchen((current_setting('t.cx')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
+select is(
+  (select jsonb_build_object('status', o.status, 'same', o.status_changed_at = current_setting('t.at')::timestamptz,
+     'cover', pg_temp.cover('SN-KSB22'))
+   from public.orders o where o.code = 'SN-KSB22'),
+  '{"status":"packing","same":true,"cover":"muesli:s1=250"}'::jsonb,
+  'undo through the kitchen puts back the status, its moment and the food'
+);
+
+select throws_ok(
+  $$select public.update_admin_order(pg_temp.id('SN-KSA22'), '{"status_changed_at":"2026-01-01T00:00:00Z"}')$$,
+  '22023', 'status_changed_at goes only with status.', 'status_changed_at only with a status'
 );
 
 select * from finish();

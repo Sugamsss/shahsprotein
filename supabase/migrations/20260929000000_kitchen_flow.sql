@@ -150,6 +150,25 @@ revoke all on function public.log_order_events() from public, anon, authenticate
 
 alter table public.orders drop column if exists kept_at;
 
+-- When an order entered its status. A status change stamps now, unless the
+-- same update sets status_changed_at itself: that's Undo putting back the
+-- moment the order had (Farah keeps "waiting 4 days" after an undone tap).
+create or replace function public.set_order_status_changed_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.status is distinct from old.status
+     and new.status_changed_at is not distinct from old.status_changed_at then
+    new.status_changed_at := timezone('utc', now());
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.set_order_status_changed_at() from public, anon, authenticated;
+
 create or replace function public.order_check_status(p_value jsonb)
 returns text
 language plpgsql
@@ -559,7 +578,7 @@ create constraint trigger trg_kitchen_batches_room
 -- ═══════════════════════════════════════════════════════
 
 -- Records one step under the open action (shahs.kitchen_action), if any.
--- Orders record only their id, status and priority.
+-- Orders record only their id, status, priority and when the status began.
 create or replace function public.kitchen_log_step()
 returns trigger
 language plpgsql
@@ -575,8 +594,10 @@ begin
   end if;
 
   if tg_table_name = 'orders' then
-    v_old := jsonb_build_object('id', old.id, 'status', old.status, 'priority', old.priority);
-    v_new := jsonb_build_object('id', new.id, 'status', new.status, 'priority', new.priority);
+    v_old := jsonb_build_object('id', old.id, 'status', old.status, 'priority', old.priority,
+      'status_changed_at', old.status_changed_at);
+    v_new := jsonb_build_object('id', new.id, 'status', new.status, 'priority', new.priority,
+      'status_changed_at', new.status_changed_at);
   else
     if tg_op <> 'INSERT' then v_old := to_jsonb(old); end if;
     if tg_op <> 'DELETE' then v_new := to_jsonb(new); end if;
@@ -1519,7 +1540,8 @@ declare
 begin
   if p_step.tbl = 'orders' then
     update public.orders
-    set status = v_old ->> 'status', priority = (v_old ->> 'priority')::boolean
+    set status = v_old ->> 'status', priority = (v_old ->> 'priority')::boolean,
+      status_changed_at = (v_old ->> 'status_changed_at')::timestamptz
     where id = v_id and status = v_new ->> 'status' and priority = (v_new ->> 'priority')::boolean;
     return found;
   end if;
@@ -2389,6 +2411,7 @@ declare
   v_order public.orders;
   v_from text;
   v_priority boolean;
+  v_changed_at timestamptz;
   v_action uuid;
   v_effects jsonb;
 begin
@@ -2402,7 +2425,7 @@ begin
 
   for v_key in select jsonb_object_keys(p_changes) loop
     if v_key not in (
-      'status', 'paid', 'paid_method', 'paid_note', 'phone', 'amount', 'note', 'name', 'pincode', 'priority'
+      'status', 'status_changed_at', 'paid', 'paid_method', 'paid_note', 'phone', 'amount', 'note', 'name', 'pincode', 'priority'
     ) then
       raise exception using message = format('Unknown field: %s.', v_key), errcode = '22023';
     end if;
@@ -2420,6 +2443,14 @@ begin
 
   if p_changes ? 'status' then
     v_order.status := public.order_check_status(p_changes -> 'status');
+  end if;
+
+  -- Undo of a status tap sends back when the order entered the old status.
+  if p_changes ? 'status_changed_at' then
+    if not p_changes ? 'status' then
+      raise exception using message = 'status_changed_at goes only with status.', errcode = '22023';
+    end if;
+    v_changed_at := public.order_check_payment_date(p_changes -> 'status_changed_at');
   end if;
 
   if p_changes ? 'paid' then
@@ -2474,6 +2505,7 @@ begin
   update public.orders
   set
     status = v_order.status,
+    status_changed_at = coalesce(v_changed_at, status_changed_at),
     priority = v_order.priority,
     phone = v_order.phone,
     amount = v_order.amount,
@@ -3330,6 +3362,13 @@ begin
     -- taster), as the Free samples list: on their way, and delivered this
     -- month (India time).
     'free_samples', json_build_object(
+      -- Every order carrying a sample that isn't cancelled: what the Free
+      -- samples list shows (get_admin_orders with p_samples, not cancelled).
+      'total', (
+        select count(*) from public.orders t
+        where t.status <> 'cancelled'
+          and exists (select 1 from public.order_lines l where l.order_id = t.id and l.size = 'sample')
+      ),
       'open', count(*) filter (where o.status in ('cooking', 'packing', 'ready') and exists (
         select 1 from public.order_lines l where l.order_id = o.id and l.size = 'sample'
       )),
