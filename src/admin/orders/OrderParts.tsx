@@ -8,6 +8,7 @@ import { firstName, formatAgo, formatDay, formatMoney, formatPhone, formatTime }
 import { AdminLink } from '../router';
 import { Field } from '../parts';
 import { useToast } from '../toast';
+import { useUnsavedWork } from '../unsavedWork';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, Thumb, Via } from './OrderCard';
 import { itemsText, nextOf, normalisePhone, productName, sortLines } from './model';
@@ -172,22 +173,27 @@ const AutoField: React.FC<{
   /** Typed but not saved yet. */
   const pending = useRef<string | null>(null);
   const input = useRef<HTMLElement | null>(null);
+  /** On screen but not saved: waiting to save, or its save failed or was refused. No reload for an update meanwhile. */
+  const unsaved = useRef(false);
+  useUnsavedWork(() => unsaved.current);
 
   // A change from elsewhere ("Use 98231…", Undo) shows unless you're typing here.
   const saved = order[field];
   useEffect(() => {
-    if (document.activeElement !== input.current) setValue(shownValue(latest.current, field));
+    if (document.activeElement !== input.current) { setValue(shownValue(latest.current, field)); unsaved.current = false; }
   }, [saved, field]);
 
   const save = async (raw: string) => {
     window.clearTimeout(timer.current);
     pending.current = null;
+    unsaved.current = true;
     const parsed = parseField(field, raw);
     if ('error' in parsed) return setStatus(parsed.error);
     const current = latest.current[field];
-    if (parsed.value === (current ?? null)) return setStatus('');
+    if (parsed.value === (current ?? null)) { unsaved.current = false; return setStatus(''); }
     try {
       onSaved(await updateOrder(latest.current.id, { [field]: parsed.value }));
+      unsaved.current = false;
       setStatus(copy.saved);
     } catch (err) {
       const e = toAdminError(err);
@@ -207,6 +213,7 @@ const AutoField: React.FC<{
     setStatus('');
     window.clearTimeout(timer.current);
     pending.current = next;
+    unsaved.current = true;
     timer.current = window.setTimeout(() => void save(next), 600);
   };
   const isError = status !== '' && status !== copy.saved;

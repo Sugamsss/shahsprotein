@@ -62,6 +62,12 @@ export const adminCopy = {
   },
   /** AdminSheet's close button. */
   close: 'Close',
+  /** The sheet after an update (src/data/adminReleases.ts has the notes). */
+  whatsNew: {
+    title: "What's new",
+    gotIt: 'Got it',
+    kinds: { new: 'New', fixed: 'Fixed' },
+  },
 
   login: {
     title: 'Sign in',

@@ -32,6 +32,11 @@ export interface AdminMe {
   display_name: string | null;
   /** Which Home they see: 'cook' is Pranjali's; anything else, or missing, gets the full admin Home. */
   home_view?: 'cook' | 'admin' | null;
+  /**
+   * The newest "What's new" note they've seen (20260929000000); null when none.
+   * The key is missing on a database without that migration: the admin then keeps it on the device only.
+   */
+  notes_seen?: string | null;
 }
 
 export interface OrderLine {
