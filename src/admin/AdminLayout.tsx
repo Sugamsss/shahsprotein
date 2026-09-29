@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardList, Home, LogOut, MoreHorizontal, Package, Plus, Search, Settings, Users } from 'lucide-react';
+import { ClipboardList, CookingPot, Home, LogOut, MoreHorizontal, Package, Plus, Search, Settings, Users } from 'lucide-react';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getOverview } from './api';
 import { signOut, useAdminMe } from './auth';
@@ -22,6 +22,18 @@ export const useOverview = (): OverviewState => {
   if (!overview) throw new Error('useOverview must be used inside AdminLayout');
   return overview;
 };
+
+/**
+ * The cook's one action, "Log cooking", sits in the laptop header where "Add order" is for
+ * Sunit. It opens the sheet on Home: a tap sends her there with { logCooking: true }, and Home
+ * opens it (useLogCookingAsk). Home says when there's nothing left to cook, so the pill goes quiet.
+ */
+const LogCookingQuiet = createContext<(quiet: boolean) => void>(() => {});
+export const useLogCookingQuiet = (quiet: boolean) => {
+  const set = useContext(LogCookingQuiet);
+  useEffect(() => { set(quiet); return () => set(false); }, [set, quiet]);
+};
+export const LOG_COOKING_STATE = { logCooking: true };
 
 /** A nav link that says it's the current page: exact for Home, by prefix for the rest. */
 const NavItem: React.FC<{ to: string; current?: boolean; children: React.ReactNode }> = ({ to, current, children }) => {
@@ -77,7 +89,7 @@ const AccountMenu: React.FC = () => {
   );
 };
 
-const Header: React.FC<{ badge: number }> = ({ badge }) => {
+const Header: React.FC<{ badge: number; logQuiet: boolean }> = ({ badge, logQuiet }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const search = useRef<HTMLInputElement>(null);
@@ -142,8 +154,13 @@ const Header: React.FC<{ badge: number }> = ({ badge }) => {
           onKeyDown={(e) => e.key === 'Escape' && value && (onBoard ? setBoardQuery : setQuery)('')} />
         <kbd aria-hidden="true">/</kbd>
       </form>
-      {/* The cook adds orders from the Orders page; her one action is Log cooking on Home. */}
-      {!cook && (
+      {/* The cook adds orders from the Orders page; her one action, Log cooking, takes this spot. */}
+      {cook ? (
+        <button type="button" className={`adm-btn adm-btn--${logQuiet ? 'tonal' : 'primary'} adm-btn--sm`}
+          onClick={() => navigate('/admin', { state: LOG_COOKING_STATE })}>
+          <CookingPot size={18} aria-hidden="true" /><span className="adm-btn__text">{copy.kitchen.logCooking}</span>
+        </button>
+      ) : (
         <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--primary adm-btn--sm">
           <Plus size={18} aria-hidden="true" /><span className="adm-btn__text">{copy.header.addOrder}</span>
         </AdminLink>
@@ -203,14 +220,17 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   // "(3) Orders · Shah's": the same count as the Orders badge. AdminApp puts the site's title back.
   const { pathname } = useLocation();
   useEffect(() => { document.title = copy.tabTitle(tabPage(pathname), badge); }, [pathname, badge]);
+  const [logQuiet, setLogQuiet] = useState(false);
 
   return (
     <ToastProvider>
     <div className="adm">
       <a href="#adm-main" className="skip-link">{copy.skipLink}</a>
-      <Header badge={badge} />
+      <Header badge={badge} logQuiet={cook && logQuiet} />
       <main id="adm-main" className="adm-main" tabIndex={-1}>
-        <OverviewContext.Provider value={overview}>{children}</OverviewContext.Provider>
+        <LogCookingQuiet.Provider value={setLogQuiet}>
+          <OverviewContext.Provider value={overview}>{children}</OverviewContext.Provider>
+        </LogCookingQuiet.Provider>
       </main>
       <TabBar badge={badge} />
       <WhatsNewDialog />

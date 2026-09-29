@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { KitchenEffects, PriorityPouch } from '../types';
-import { giveText, givenText } from './giveText';
+import { giveText, givenText, historyDetailText } from './giveText';
 
 const meera = { id: 'm', name: 'Meera Kulkarni', code: 'SN-K8M9N' };
 const pouch = (order_id: string, name: string, product_id: string, size: string, count = 1, from: PriorityPouch['from'] = 'packing'): PriorityPouch =>
@@ -63,5 +63,29 @@ describe('givenText: the toast after giving', () => {
     expect(givenText(meera, effects([
       { id: 't', code: 'SN-Z8A2B', name: 'Tanvi More', from: 'ready', to: 'cooking', grams: [], waiting: [] },
     ]))).toBe("Gave Meera the packed food. Tanvi's order is back to Cooking.");
+  });
+});
+
+describe('historyDetailText: a giver order’s history line', () => {
+  const detail = (items: { product_id: string; size: string; count: number }[], to_name: string | null = 'Meera Kulkarni') =>
+    ({ reason: 'gave_priority' as const, to_code: 'SN-K8M9N', to_name, items });
+
+  it('names the pouch and the priority order by first name', () => {
+    expect(historyDetailText(detail([{ product_id: 'raggi-jaggi', size: '500 g', count: 1 }])))
+      .toBe('Gave Raggi Jaggi 500 g to Meera’s order (priority)');
+  });
+
+  it('joins several pouches plainly and counts more than one', () => {
+    expect(historyDetailText(detail([
+      { product_id: 'raggi-jaggi', size: '500 g', count: 2 },
+      { product_id: 'muesli', size: '250 g', count: 1 },
+    ]))).toBe('Gave Raggi Jaggi 500 g × 2 and Muesli 250 g to Meera’s order (priority)');
+  });
+
+  it('uses the code when the order has no name, and nothing without a detail it knows', () => {
+    expect(historyDetailText(detail([{ product_id: 'muesli', size: '500 g', count: 1 }], null)))
+      .toBe('Gave Muesli 500 g to SN-K8M9N’s order (priority)');
+    expect(historyDetailText(null)).toBeNull();
+    expect(historyDetailText(detail([]))).toBeNull();
   });
 });

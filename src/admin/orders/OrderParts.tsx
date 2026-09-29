@@ -13,6 +13,7 @@ import { useUnsavedWork } from '../unsavedWork';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, FromWebsite, Thumb, Via } from './OrderCard';
 import { MOVE_TO_PACKING, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
+import { historyDetailText } from './giveText';
 import { PaymentsBlock } from './PaymentsBlock';
 import { usePriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
@@ -353,7 +354,7 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
       <ol>
         {history.map((h, i) => (
           <li key={i}>
-            <b>{(h.auto && copy.autoEvents[h.event]) || copy.events[h.event]}</b> · {formatDay(h.at)}, {formatTime(h.at)}
+            <b>{historyDetailText(h.detail) || (h.auto && copy.autoEvents[h.event]) || copy.events[h.event]}</b> · {formatDay(h.at)}, {formatTime(h.at)}
             {h.by_name && !h.auto && ` · ${firstName(h.by_name)}`}
           </li>
         ))}

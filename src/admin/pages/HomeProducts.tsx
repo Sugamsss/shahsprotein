@@ -70,13 +70,24 @@ const notesOf = (kitchen: KitchenProduct): string[] => {
 };
 
 /** Pranjali: "Cook 2 kg", the packs waiting on it, "for 4 orders", and who's named. */
-const CookBody: React.FC<{ kitchen?: KitchenProduct; off?: string[] | null }> = ({ kitchen, off }) => {
+/** Under "Nothing to cook": where its orders are, once the totals are in. */
+const withSunitText = (stages: ProductStages | undefined) =>
+  stages && copy.withSunit(stages.packing.orders + stages.ready.orders, !stages.cooking.orders);
+
+const CookBody: React.FC<{ kitchen?: KitchenProduct; stages?: ProductStages; off?: string[] | null }> = ({ kitchen, stages, off }) => {
   if (!kitchen) {
     return <span className="adm-pcard__make"><span>{copy.make}</span><Pulse className="adm-pulse--big" /></span>;
   }
   const offNote = off !== undefined && <span className="adm-pcard__off"><i />{copy.offSite(off)}</span>;
   if (!kitchen.to_cook) {
-    return <><span className="adm-pcard__none"><CheckCircle size={18} aria-hidden="true" />{copy.nothingToMake}</span>{offNote}</>;
+    const where = withSunitText(stages);
+    return (
+      <>
+        <span className="adm-pcard__none"><CheckCircle size={18} aria-hidden="true" />{copy.nothingToMake}</span>
+        {where && <span className="adm-pcard__for">{where}</span>}
+        {offNote}
+      </>
+    );
   }
   const notes = notesOf(kitchen);
   return (
@@ -132,7 +143,7 @@ const spokenName = (product: Product, stages: ProductStages | undefined, kitchen
   }
   const main = kitchen.to_cook
     ? `${copy.make.toLowerCase()} ${formatWeight(kitchen.to_cook)} ${copy.forOrders(kitchen.queue.length)}`
-    : copy.nothingToMake.toLowerCase();
+    : [copy.nothingToMake.toLowerCase(), withSunitText(stages)].filter(Boolean).join('. ');
   const notes = kitchen.to_cook ? notesOf(kitchen) : [];
   return copy.cookName(product.name, main, [...notes, off !== undefined ? copy.offSite(off) : ''].filter(Boolean).join('. '));
 };
@@ -180,7 +191,7 @@ export const ProductCards: React.FC<{
                   {!cook && open !== undefined && <span className="adm-pcard__meta">{open ? copy.orders(open) : copy.allClear}</span>}
                   <ChevronRight className="adm-pcard__chev" size={18} aria-hidden="true" />
                 </span>
-                {cook ? <CookBody kitchen={kitchen} off={off} /> : <AdminBody stages={stages} off={off} />}
+                {cook ? <CookBody kitchen={kitchen} stages={stages} off={off} /> : <AdminBody stages={stages} off={off} />}
               </span>
             </AdminLink>
             <SpareFoot product={kitchen} canWriteOff={Boolean(kitchenOf?.can_write_off)} onTake={onTake} />

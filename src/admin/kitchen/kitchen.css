@@ -26,6 +26,7 @@
 .adm-kx-row__name { display: grid; gap: 1px; min-width: 0; }
 .adm-kx-row__name b { font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 .adm-kx-row__name span { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-kx-row__sub > span, .adm-kx-nowrap { white-space: nowrap; }
 .adm-kx-row.is-off .adm-kx-row__name b { color: var(--adm-ink-2); }
 .adm-kx-row.is-off .adm-kx-thumb { opacity: 0.55; }
 .adm-kx-row .adm-wheel { margin: 0 12px; }

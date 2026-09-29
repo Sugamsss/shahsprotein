@@ -40,9 +40,6 @@
 .adm-home__warn svg { flex: 0 0 auto; }
 .adm-home__warn svg:last-child { margin-left: -2px; }
 button.adm-home__warn:active { opacity: 0.7; }
-/* Her one action. Tonal once everything's covered. */
-.adm-btn.adm-home__log { min-height: 56px; gap: 10px; }
-.adm-btn.adm-home__log svg { margin-left: -4px; }
 
 /* Loading: the labels stay, the numbers pulse. */
 .adm-pulse {
@@ -257,7 +254,5 @@ button.adm-home__warn:active { opacity: 0.7; }
   .adm-pcard__spare { margin-inline: 12px; }
   .adm-pcard__notes { padding: 6px 12px; border-radius: 12px; }
   .adm-pcard__none svg { width: 18px; height: 18px; }
-  /* Her button sits under the headline at a comfortable width, not across the whole page. */
-  .adm-btn.adm-home__log { justify-self: start; width: auto; min-width: 320px; padding: 0 32px; }
   .adm-pcard__stages li { padding: 5px 0; }
 }

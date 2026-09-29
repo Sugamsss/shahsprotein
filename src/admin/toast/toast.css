@@ -1,8 +1,9 @@
 /* ---- Undo toast (spec 2.3) -------------------------------------------------
-   Above the tab bar on phones, bottom right at 400px on laptops, and above any
-   open sheet or popup. Dark on light, light on dark. */
+   Above the tab bar on phones, bottom right at 400px on laptops. Under the
+   backdrop of any open sheet or popup (--z-toast sits between the header and
+   --z-modal-overlay), so a sheet always covers it. Dark on light, light on dark. */
 .adm-toast-dock {
-  position: fixed; z-index: calc(var(--z-modal) + 10);
+  position: fixed; z-index: var(--z-toast);
   left: 16px; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom));
   display: flex; justify-content: center; pointer-events: none;
 }

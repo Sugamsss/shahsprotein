@@ -1,6 +1,6 @@
 import { adminCopy } from '../../data/adminCopy';
 import { firstName } from '../format';
-import type { KitchenEffects, Order, PriorityPouch } from '../types';
+import type { HistoryDetail, KitchenEffects, Order, PriorityPouch } from '../types';
 import { productName, sizeText } from './model';
 
 // The words of the "give packed food to a priority order" popup, and its toast. No React here.
@@ -8,7 +8,7 @@ import { productName, sizeText } from './model';
 const copy = adminCopy.priorityGive;
 
 /** "Raggi Jaggi 500 g", or "Raggi Jaggi 500 g × 2" for more than one pouch. */
-const pouchText = (p: PriorityPouch) => `${productName(p.product_id)} ${sizeText(p.size)}${p.count > 1 ? ` × ${p.count}` : ''}`;
+const pouchText = (p: Pick<PriorityPouch, 'product_id' | 'size' | 'count'>) => `${productName(p.product_id)} ${sizeText(p.size)}${p.count > 1 ? ` × ${p.count}` : ''}`;
 const nameOf = (o: { name: string | null; code: string }) => firstName(o.name) || o.code;
 
 export interface GiveText {
@@ -53,3 +53,9 @@ export const givenText = (taker: Pick<Order, 'id' | 'name' | 'code'>, effects: K
   const others = effects.orders.filter((e) => e.id !== taker.id && e.from !== e.to).map((e) => k.moved(nameOf(e), e.to));
   return [first, ...others].join(' ');
 };
+
+/** A history line from the server's detail, or null when there's no detail we know how to say. */
+export const historyDetailText = (d: HistoryDetail | null | undefined): string | null =>
+  d?.reason === 'gave_priority' && d.items?.length
+    ? copy.gaveHistory(d.items.map(pouchText), nameOf({ name: d.to_name, code: d.to_code }))
+    : null;

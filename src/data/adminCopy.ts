@@ -265,6 +265,8 @@ export const adminCopy = {
     notNow: 'Not now',
     /** The toast when the taker is still short after it (else it says the order moved to Packing). */
     gave: (taker: string) => `Gave ${taker} the packed food.`,
+    /** The giver's history line: "Gave Raggi Jaggi 500 g to Meera’s order (priority)". */
+    gaveHistory: (what: string[], taker: string) => `Gave ${andList(what)} to ${taker}’s order (priority)`,
   },
   /** The order view's Priority switch, while the order is in Cooking. */
   orderPriority: {
@@ -765,7 +767,8 @@ export const adminCopy = {
     // Over 10 kg in one batch.
     big: (weight: string, product: string) => [`${weight} of ${product}?`, " That's a lot, just checking."] as const,
     changeIt: 'Change it',
-    yesLog: (weight: string, product: string) => `Yes, log ${weight} ${product}`,
+    /** The check above names the product, so the button stays short at 320px. [lead, weight]: the weight never breaks. */
+    yesLog: (weight: string) => ['Yes, log ', weight] as const,
     item: (weight: string, product: string) => `${weight} ${product}`,
     logged: (items: string[], packed: number) =>
       `Logged ${andList(items)}.${packed ? ` ${packed} ${packed === 1 ? 'order' : 'orders'} to Packing.` : ''}`,
@@ -926,6 +929,15 @@ export const adminCopy = {
       make: 'Cook',
       forOrders: (n: number) => `for ${n} ${n === 1 ? 'order' : 'orders'}`,
       nothingToMake: 'Nothing to cook',
+      /**
+       * Under "Nothing to cook": its orders past Cooking (Packing and Ready). `all` when none of
+       * its orders is still in Cooking. "All 4 orders are with Sunit", "Both orders are with Sunit".
+       */
+      withSunit: (n: number, all: boolean) => {
+        if (!n) return 'No orders waiting on it';
+        if (!all) return `${n} ${n === 1 ? 'order is' : 'orders are'} with Sunit`;
+        return n === 1 ? 'The order is with Sunit' : n === 2 ? 'Both orders are with Sunit' : `All ${n} orders are with Sunit`;
+      },
       offSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off the site` : 'Off the site'),
       cookName: (product: string, main: string, more: string) =>
         [`${product}: ${main}.`, more && `${more}.`, 'See its orders.'].filter(Boolean).join(' '),
@@ -968,8 +980,9 @@ export const adminCopy = {
     /** "Farah's has waited 4 days." With no name, as before. */
     waited: (age: string, n: number, name?: string | null) =>
       (name ? `${name}'s has waited ${age}.` : n === 1 ? `Waiting ${age}.` : `The oldest has waited ${age}.`),
-    paidSplit: (paid: number, notPaid: number) =>
-      [paid ? `${paid} paid` : '', notPaid ? `${notPaid} not paid yet` : ''].filter(Boolean).join(', '),
+    /** "1 paid, 1 not paid yet"; once any of the rest paid part, they're "not paid in full". */
+    paidSplit: (paid: number, notPaid: number, partPaid = 0) =>
+      [paid ? `${paid} paid` : '', notPaid ? `${notPaid} ${partPaid ? 'not paid in full' : 'not paid yet'}` : ''].filter(Boolean).join(', '),
     packsThen: (packs: number, rest: string) => `${packs} ${packs === 1 ? 'pack' : 'packs'}${rest ? `. ${rest}` : ''}`,
     toCollect: (money: string) => `${money} to collect`,
     ordersToCollect: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} to collect`,

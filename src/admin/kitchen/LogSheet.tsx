@@ -39,13 +39,14 @@ const Bar: React.FC<{
   const log = async () => { if (await onLog()) close(); };
   if (big) {
     const [lead, rest] = copy.big(formatWeight(big.grams), productName(big.product_id));
+    const yes = copy.yesLog(formatWeight(big.grams));
     return (
       <div className="adm-kx-bar">
         <p className="adm-kx-check" role="alert"><b>{lead}</b>{rest}</p>
         <div className="adm-kx-bar__pair">
           <button type="button" className="adm-btn adm-btn--quiet" onClick={onChange} disabled={busy}>{copy.changeIt}</button>
           <button type="button" className="adm-btn adm-btn--primary" onClick={() => void log()} disabled={busy}>
-            {busy ? copy.logging : copy.yesLog(formatWeight(big.grams), productName(big.product_id))}
+            {busy ? copy.logging : <span>{yes[0]}<span className="adm-kx-nowrap">{yes[1]}</span></span>}
           </button>
         </div>
       </div>
@@ -134,14 +135,18 @@ export const LogSheet: React.FC<{
               const name = productName(row.product_id);
               const isOpen = open === row.product_id;
               const off = row.grams === 0 && !isOpen;
-              const sub = row.need
-                ? [copy.need(formatWeight(row.need)), row.grams === 0 && copy.notMade].filter(Boolean).join(' · ')
-                : `${copy.nothingNeeded} · ${copy.goesSpare}`;
+              // Each part stays whole ("Need 2 kg" never breaks); a narrow row wraps between them.
+              const sub = (row.need
+                ? [copy.need(formatWeight(row.need)), row.grams === 0 && copy.notMade]
+                : [copy.nothingNeeded, copy.goesSpare]).filter(Boolean) as string[];
               return (
                 <li key={row.product_id} className={`adm-kx-row${off ? ' is-off' : ''}${isOpen ? ' is-open' : ''}`}>
                   <div className="adm-kx-row__head">
                     {product && <OrderThumb product={product} className="adm-kx-thumb" />}
-                    <span className="adm-kx-row__name"><b>{name}</b><span>{sub}</span></span>
+                    <span className="adm-kx-row__name">
+                      <b>{name}</b>
+                      <span className="adm-kx-row__sub">{sub.map((part, i) => <React.Fragment key={part}>{i > 0 && ' · '}<span>{part}</span></React.Fragment>)}</span>
+                    </span>
                     {off ? (
                       <button type="button" className="adm-kx-pill is-add" onClick={() => add(row.product_id)} aria-label={copy.addName(name)}>
                         <Plus size={18} aria-hidden="true" />{copy.add}

@@ -115,9 +115,17 @@ export type OrderEvent =
   | 'created' | OrderStatus | 'paid' | 'unpaid'
   | 'new' | 'confirmed' | 'sent' | 'kept' | 'unkept';
 
+/** Why an auto move happened, when the server knows more. gave_priority: this order gave packed pouches to a priority order. */
+export interface HistoryDetail {
+  reason: 'gave_priority';
+  to_code: string;
+  to_name: string | null;
+  items: { product_id: string; size: string; count: number }[];
+}
+
 export interface OrderDetail extends Order {
   /** auto: moved by the kitchen rules (a batch, spare, an edit), not picked by a person. */
-  history: { event: OrderEvent; at: string; by_name: string | null; auto?: boolean }[];
+  history: { event: OrderEvent; at: string; by_name: string | null; auto?: boolean; detail?: HistoryDetail | null }[];
   phone_suggestion: { phone: string; code: string; created_at: string } | null;
 }
 

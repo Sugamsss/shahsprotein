@@ -33,7 +33,7 @@ export const adminReleases: AdminRelease[] = [
     for: ['cook'],
     kind: 'new',
     title: 'Log what you cooked',
-    body: 'Tap Log cooking on Home. It’s filled in with what orders need; change it if you made more or less. Covered orders go to Packing and the rest is kept as spare. Tap Undo if it’s wrong.',
+    body: 'Tap Log cooking, top right on Home. It’s filled in with what orders need; change it if you made more or less. Covered orders go to Packing and the rest is kept as spare. Tap Undo if it’s wrong.',
   },
   {
     id: '2026-09-29-spare',

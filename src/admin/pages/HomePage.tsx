@@ -3,7 +3,8 @@ import { ChevronRight, CookingPot, Hourglass, IndianRupee, Plus } from 'lucide-r
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
-import { useOverview } from '../AdminLayout';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { LOG_COOKING_STATE, useLogCookingQuiet, useOverview } from '../AdminLayout';
 import { getStock, getTotals, setStock } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatAge, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
@@ -21,6 +22,7 @@ import type { Kitchen, KitchenBatch, OutOfStock, Overview, Totals } from '../typ
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 import { ProductCards } from './HomeProducts';
+import { readyHint, packingHint } from './homeHints';
 import { AdminWeek } from './HomeWeek';
 
 const copy = adminCopy.homePage;
@@ -109,35 +111,10 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
   </AdminLink>
 );
 
-/**
- * Ready: who hasn't paid. With part payments it's two sentences, "Aarav hasn't paid.
- * Snehal paid part.", since the server's unpaid names include the part paid.
- */
-const wayHint = (way: Overview['queue']['ready'], names: Totals['overall']['ready'] | undefined): string => {
-  if (!way.not_paid) return copy.allPaid;
-  const unpaid = names?.unpaid_names ?? [];
-  if (!way.part_paid) return unpaid.length ? copy.namesNotPaid(unpaid, way.not_paid) : copy.notPaidYet(way.not_paid);
-  const part = names?.part_paid_names ?? [];
-  // Take each part-paid name out once, so two people with the same first name both stay right.
-  const left = [...part];
-  const none = unpaid.filter((n) => {
-    const at = left.indexOf(n);
-    if (at < 0) return true;
-    left.splice(at, 1);
-    return false;
-  });
-  const noneCount = way.not_paid - way.part_paid;
-  return [
-    noneCount > 0 && payCopy.hasntPaid(none.slice(0, noneCount), noneCount),
-    payCopy.paidPart(part, way.part_paid),
-  ].filter(Boolean).join(' ');
-};
-
 /** The overview gives the counts and dates; the totals add packs and names once they're in. */
 const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
   const collect = q.to_collect;
   const overall = totals?.overall;
-  const paidSplit = copy.paidSplit(q.packing.paid, q.packing.count - q.packing.paid);
   const collectHint = [
     (collect.people ?? 1) > 1 || !collect.oldest ? copy.fromPeople(collect.people ?? collect.count)
       : copy.deliveredBy(collect.oldest.name ?? collect.oldest.code, formatDayInSentence(collect.oldest.since)),
@@ -147,9 +124,9 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
   ].filter(Boolean).join('. ');
   const rows = [
     q.packing.count > 0 && <Row key="p" lane="packing" circle={q.packing.count} tone="accent" title={copy.toPack}
-      hint={overall ? copy.packsThen(overall.packing.packs, paidSplit) : paidSplit} />,
+      hint={packingHint(q.packing, overall?.packing.packs)} />,
     q.ready.count > 0 && <Row key="r" lane="ready" circle={q.ready.count} title={copy.toDropOff}
-      hint={[q.ready.oldest_since && copy.waited(formatAge(q.ready.oldest_since), q.ready.count, firstName(q.ready.oldest?.name) || null), wayHint(q.ready, overall?.ready)].filter(Boolean).join(' ')} />,
+      hint={readyHint(q.ready, overall?.ready, q.ready.oldest_since && formatAge(q.ready.oldest_since), firstName(q.ready.oldest?.name) || null)} />,
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
@@ -308,12 +285,28 @@ const HomePage: React.FC = () => {
   }
 
   const nothingToCook = kitchen ? toCook(kitchen).length === 0 : false;
+  useLogCookingQuiet(cook && nothingToCook);
+  // The header's Log cooking lands here with { logCooking: true }: open the sheet once the
+  // kitchen is in, then drop the flag so Back or a reload doesn't open it again.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const askedToLog = cook && (location.state as typeof LOG_COOKING_STATE | null)?.logCooking === true;
+  useEffect(() => {
+    if (!askedToLog || !kitchen) return;
+    setSheet({ kind: 'log' });
+    navigate(location.pathname, { replace: true, state: null });
+  }, [askedToLog, kitchen, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="adm-page adm-home">
       <div className="adm-home__top adm-phone-only">
         <Logo className="adm-home__logo" />
-        {!cook && (
+        {cook ? (
+          <button type="button" className={`adm-btn adm-btn--${nothingToCook ? 'tonal' : 'primary'} adm-btn--sm`} disabled={!kitchen}
+            onClick={() => setSheet({ kind: 'log' })}>
+            <CookingPot size={18} strokeWidth={1.75} aria-hidden="true" />{kitchenCopy.logCooking}
+          </button>
+        ) : (
           <AdminLink to="/admin/orders/new" className="adm-btn adm-btn--tonal adm-btn--sm"><Plus size={18} strokeWidth={1.75} aria-hidden="true" />{copy.addOrder}</AdminLink>
         )}
       </div>
@@ -323,16 +316,6 @@ const HomePage: React.FC = () => {
         {lede}
         {cook && kitchen && <SpareWarnings kitchen={kitchen} onTake={take} />}
       </div>
-      {cook && (
-        <button
-          type="button"
-          className={`adm-btn adm-btn--block adm-home__log ${nothingToCook ? 'adm-btn--tonal' : 'adm-btn--primary'}`}
-          disabled={!kitchen}
-          onClick={() => setSheet({ kind: 'log' })}
-        >
-          <CookingPot size={22} aria-hidden="true" />{kitchenCopy.logCooking}
-        </button>
-      )}
       <section className="adm-home__products" aria-labelledby="adm-home-products">
         <div className="adm-home__head adm-home__head--products">
           <h2 id="adm-home-products">{cook ? copy.cards.cookTitle : copy.cards.adminTitle}</h2>
