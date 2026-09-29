@@ -1523,7 +1523,7 @@ revoke all on function public.kitchen_undo_step(public.kitchen_action_steps) fro
 -- As in 20260928000000, without kept and stale, plus free_sample, grams_each
 -- per line, samples (packs counts the rest), and kitchen: per product what
 -- it needs, what's covered (by hand included), the by-hand part, and whether
--- it's waiting (Cooking and short).
+-- it's waiting (Cooking and short), and the batches its food came from.
 create or replace function public.admin_order_json(p_order public.orders)
 returns json
 language sql
@@ -1582,7 +1582,15 @@ as $$
       select json_agg(
         json_build_object(
           'product_id', c.product_id, 'need', c.need, 'covered', c.covered, 'by_hand', c.by_hand,
-          'waiting', p_order.status = 'cooking' and c.covered < c.need
+          'waiting', p_order.status = 'cooking' and c.covered < c.need,
+          -- Where its food came from: each batch's made-on day and grams, oldest first.
+          'batches', coalesce((
+            select json_agg(json_build_object('made_on', b.made_on, 'grams', a.grams)
+              order by b.made_on, b.created_at, b.id)
+            from public.kitchen_allocations a
+            join public.kitchen_batches b on b.id = a.batch_id
+            where a.order_id = p_order.id and a.product_id = c.product_id
+          ), '[]'::json)
         )
         order by c.product_id
       )

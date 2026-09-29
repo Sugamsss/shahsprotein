@@ -357,9 +357,10 @@ select pg_temp.log('m1', 'raggi-jaggi', 250);
 select is(
   (select jsonb_build_object('status', o.status, 'kitchen', public.admin_order_json(o)::jsonb -> 'kitchen')
    from public.orders o where o.code = 'SN-KMA22'),
-  '{"status":"cooking","kitchen":[
-     {"product_id":"muesli","need":250,"covered":0,"by_hand":0,"waiting":true},
-     {"product_id":"raggi-jaggi","need":250,"covered":250,"by_hand":0,"waiting":false}]}'::jsonb,
+  format('{"status":"cooking","kitchen":[
+     {"product_id":"muesli","need":250,"covered":0,"by_hand":0,"waiting":true,"batches":[]},
+     {"product_id":"raggi-jaggi","need":250,"covered":250,"by_hand":0,"waiting":false,
+      "batches":[{"made_on":"%s","grams":250}]}]}', pg_temp.day(0))::jsonb,
   'half covered: stays in Cooking, and the order says which product waits'
 );
 
@@ -507,8 +508,9 @@ select public.save_admin_order(pg_temp.id('SN-KEA22'),
 select is(
   (select jsonb_build_object('status', o.status, 'cover', pg_temp.cover(o.code), 'kitchen', public.admin_order_json(o)::jsonb -> 'kitchen')
    from public.orders o where o.code = 'SN-KEA22'),
-  '{"status":"cooking","cover":"raggi-jaggi:e=500",
-    "kitchen":[{"product_id":"raggi-jaggi","need":1000,"covered":500,"by_hand":0,"waiting":true}]}'::jsonb,
+  format('{"status":"cooking","cover":"raggi-jaggi:e=500",
+    "kitchen":[{"product_id":"raggi-jaggi","need":1000,"covered":500,"by_hand":0,"waiting":true,
+      "batches":[{"made_on":"%s","grams":500}]}]}', pg_temp.day(0))::jsonb,
   'a pack added after cooking: back to Cooking, waiting only for the missing part'
 );
 

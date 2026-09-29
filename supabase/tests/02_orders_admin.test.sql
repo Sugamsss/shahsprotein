@@ -157,7 +157,7 @@ select is(
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
     "lines":[{"product_id":"muesli","size":"250 g","quantity":99,"grams_each":250}],"packs":99,"samples":0,
-    "kitchen":[{"product_id":"muesli","need":24750,"covered":0,"by_hand":0,"waiting":true}],
+    "kitchen":[{"product_id":"muesli","need":24750,"covered":0,"by_hand":0,"waiting":true,"batches":[]}],
     "customer":{"order_number":1,"orders":1}}'::jsonb,
   'create: Cooking and waiting, not paid, phone normalised, note trimmed, lines merged and capped at 99'
 );
@@ -180,7 +180,7 @@ select is(
     "name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
     "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
     "lines":[{"product_id":"date-bites","size":"250 g","quantity":2,"grams_each":250}],"packs":2,"samples":0,
-    "kitchen":[{"product_id":"date-bites","need":500,"covered":500,"by_hand":500,"waiting":false}]}'::jsonb,
+    "kitchen":[{"product_id":"date-bites","need":500,"covered":500,"by_hand":500,"waiting":false,"batches":[]}]}'::jsonb,
   'create: the typed code is used as is, the coupon is matched, a delivered order is covered by hand'
 );
 
@@ -223,7 +223,7 @@ select is(
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3,"grams_each":500}],"packs":3,"samples":0,
-    "kitchen":[{"product_id":"raggi-jaggi","need":1500,"covered":0,"by_hand":0,"waiting":true}]}'::jsonb,
+    "kitchen":[{"product_id":"raggi-jaggi","need":1500,"covered":0,"by_hand":0,"waiting":true,"batches":[]}]}'::jsonb,
   'edit: a full replace of fields and lines; code, status and paid are ignored; the note is cleared'
 );
 
