@@ -65,6 +65,11 @@ export const adminCopy = {
   /** The sheet after an update (src/data/adminReleases.ts has the notes). */
   whatsNew: {
     title: "What's new",
+    sub: 'Changes since you last looked.',
+    /** The box's heading, and the scrolling list's label. */
+    box: 'What to try',
+    /** Shown only above 3, when the box may scroll. */
+    count: (n: number) => `${n} things`,
     gotIt: 'Got it',
     kinds: { new: 'New', fixed: 'Fixed' },
   },

@@ -1,0 +1,48 @@
+/* "What's new" (design A, temp/changelog-designs/): title, the "What to try"
+   box, a pinned "Got it". The sheet itself never scrolls; only the box's list
+   does, and on a short screen the box shrinks while the bar stays. */
+
+.wn .adm-sheet__title { display: grid; gap: 2px; }
+.wn-sub {
+  color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 400; line-height: 1.45;
+  letter-spacing: 0; font-variant-numeric: proportional-nums;
+}
+.wn .adm-sheet__body { display: flex; flex-direction: column; padding-top: 12px; overflow: hidden; }
+
+.wn-box {
+  display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0;
+  border: 1px solid var(--adm-edge); border-radius: 20px; background: var(--adm-well);
+}
+.wn-box__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: none;
+  padding: 14px 16px 2px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35;
+}
+.wn-box__count { color: var(--adm-ink-3); font-weight: 500; }
+.wn-box__list {
+  min-height: 0; max-height: 344px; margin: 0; padding: 0 16px 4px; list-style: none;
+  overflow-y: auto; overscroll-behavior: contain; border-radius: 0 0 19px 19px; scrollbar-width: none;
+}
+.wn-box__list::-webkit-scrollbar { display: none; }
+.wn-box__list:focus { outline: none; }
+.wn-box__list:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: -2px; border-radius: 19px; }
+/* Soft edges only where there's more to scroll that way. */
+.wn-box__list.has-below { -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent); mask-image: linear-gradient(#000 calc(100% - 44px), transparent); }
+.wn-box__list.has-above { -webkit-mask-image: linear-gradient(transparent, #000 28px); mask-image: linear-gradient(transparent, #000 28px); }
+.wn-box__list.has-above.has-below {
+  -webkit-mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 44px), transparent);
+}
+
+.wn-note { padding: 12px 0 14px; }
+.wn-note + .wn-note { border-top: 1px solid var(--adm-hairline); }
+.wn-note__title, .wn-note__body { margin: 0; text-wrap: pretty; font-variant-numeric: proportional-nums; }
+.wn-note__title { color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; letter-spacing: -0.005em; }
+/* "New ·" / "Fixed ·": quiet, no colour. */
+.wn-note__kind { color: var(--adm-ink-3); font-weight: 500; letter-spacing: 0; }
+.wn-note__body { margin-top: 3px; color: var(--adm-ink-2); font-size: var(--adm-text-body); line-height: 1.45; }
+
+/* Laptop: the popup has the room, so the box shows more before it scrolls. */
+@media (min-width: 960px) {
+  .wn .adm-sheet__body { padding-top: 20px; }
+  .wn-box__list { max-height: 440px; }
+}

@@ -18,6 +18,7 @@
 @import './pages/home.css';
 @import './orders/orders.css';
 @import './pages/customers.css';
+@import './update/whats-new.css';
 @import './pages/done.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
