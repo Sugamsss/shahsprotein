@@ -1,6 +1,116 @@
 import { describe, expect, it } from 'vitest';
-import type { Order, OrderLine, Payment } from '../types';
-import { applyLocal, cleanPastedPhone, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter, reverseOf, searchFor } from './model';
+import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOrder } from '../types';
+import {
+  applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
+  namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
+  reverseOf, searchFor, sortLines, undoPlanOf,
+} from './model';
+
+// The kitchen flow's stages: which lane an order is in, and its one-tap next step.
+
+const staged = (status: Order['status'], extra: Partial<Order> = {}) => ({ status, paid: false, free_sample: false, ...extra }) as Order;
+
+describe('laneOf and nextOf', () => {
+  it.each([
+    [staged('cooking'), 'cooking', null],
+    [staged('packing'), 'packing', 'ready'],
+    [staged('ready'), 'ready', 'delivered'],
+    [staged('delivered'), 'collect', null],
+    [staged('delivered', { paid: true }), 'done', null],
+    // A free sample has nothing to collect: delivered is done.
+    [staged('delivered', { free_sample: true }), 'done', null],
+    [staged('cancelled'), 'done', null],
+  ] as const)('%o is in %s, next status %s', (order, lane, nextStatus) => {
+    expect(laneOf(order)).toBe(lane);
+    expect(nextOf(order)?.changes.status ?? null).toBe(nextStatus);
+  });
+
+  it('Cooking has no next step (it moves on by itself); To collect asks to be paid', () => {
+    expect(nextOf(staged('cooking'))).toBeNull();
+    expect(nextOf(staged('delivered'))?.changes).toEqual({ paid: true });
+  });
+});
+
+// Undo: a move that changed the kitchen goes back through undo_admin_kitchen; the rest by reverse keys.
+
+const effects = (orders: KitchenEffects['orders'], action_id: string | null = 'act-1') =>
+  ({ preview: false, action_id, batches: [], orders, kitchen: {} }) as unknown as KitchenEffects;
+const answer = (order: Order, kitchen_effects: KitchenEffects | null) => ({ ...order, kitchen_effects }) as UpdatedOrder;
+
+describe('undoPlanOf', () => {
+  const asha = { ...staged('cooking'), id: 'o-asha', name: 'Asha Patil' } as Order;
+
+  it('undoes a kitchen move with its action, not by moving the status back', () => {
+    const saved = answer({ ...asha, status: 'cancelled' }, effects([]));
+    expect(undoPlanOf(asha, { status: 'cancelled' }, saved)).toEqual({ kitchen: 'act-1' });
+  });
+
+  it('sends the reverse keys when the kitchen did not change, or the save has not answered', () => {
+    const packed = staged('packing');
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, null))).toEqual({ changes: { status: 'packing' } });
+    expect(undoPlanOf(packed, { status: 'ready' }, null)).toEqual({ changes: { status: 'packing' } });
+  });
+});
+
+describe('effectsText', () => {
+  const asha = { id: 'o-asha', name: 'Asha Patil', code: 'SN-A2B3C' } as Order;
+
+  it("says what came back as spare and who moved on because of it", () => {
+    const e = effects([
+      { id: 'o-asha', code: 'SN-A2B3C', name: 'Asha Patil', from: 'cooking', to: 'cancelled', grams: [{ product_id: 'bites', change: -500 }], waiting: [] },
+      { id: 'o-meera', code: 'SN-K8M9N', name: 'Meera Kulkarni', from: 'cooking', to: 'packing', grams: [{ product_id: 'bites', change: 500 }], waiting: [] },
+    ]);
+    expect(effectsText(asha, e)).toBe("500 g Date Bites back as spare. Meera's order moved to Packing.");
+  });
+
+  it('says nothing more when the kitchen only covered this order by hand', () => {
+    const e = effects([{ id: 'o-asha', code: 'SN-A2B3C', name: 'Asha Patil', from: 'cooking', to: 'packing', grams: [], waiting: [] }]);
+    expect(effectsText(asha, e)).toBe('');
+    expect(effectsText(asha, null)).toBe('');
+  });
+});
+
+// Per product in the kitchen: waiting, or ready with the days its food was made.
+
+const k = (product_id: string, waiting: boolean, made: string[] = []): OrderKitchen =>
+  ({ product_id, need: 500, covered: waiting ? 0 : 500, by_hand: 0, waiting, batches: made.map((made_on) => ({ made_on, grams: 250 })) });
+
+describe('line states on a Cooking order', () => {
+  const partly = staged('cooking', { kitchen: [k('bites', false, ['2026-09-17', '2026-09-17', '2026-09-19']), k('raggi-jaggi', true)] });
+
+  it('marks a card only when some products are ready and some are not', () => {
+    expect(isPartlyCooked(partly)).toBe(true);
+    expect(isPartlyCooked(staged('cooking', { kitchen: [k('raggi-jaggi', true)] }))).toBe(false);
+    expect(isPartlyCooked({ ...partly, status: 'packing' })).toBe(false);
+  });
+
+  it('lists every product in the site\'s order with its state', () => {
+    const o = { ...partly, lines: [line('bites', '250 g', 2), line('raggi-jaggi', '500 g', 1)] } as Order;
+    expect(productStates(o)).toEqual([
+      { product_id: 'raggi-jaggi', ready: false, madeOn: [] },
+      { product_id: 'bites', ready: true, madeOn: ['2026-09-17', '2026-09-19'] },
+    ]);
+  });
+
+  it('gives each ready product its made-on days once, and none when covered by hand', () => {
+    expect(lineState(partly, 'bites')).toEqual({ ready: true, madeOn: ['2026-09-17', '2026-09-19'] });
+    expect(lineState(partly, 'raggi-jaggi')).toEqual({ ready: false });
+    expect(lineState(staged('cooking', { kitchen: [k('muesli', false)] }), 'muesli')).toEqual({ ready: true, madeOn: [] });
+  });
+});
+
+describe('samples in an order', () => {
+  it('sort after the packs of their product', () => {
+    const lines = [line('bites', 'sample', 1), line('muesli', '250 g', 1), line('bites', '250 g', 2)];
+    expect(sortLines(lines).map((l) => `${l.product_id} ${l.size}`)).toEqual(['muesli 250 g', 'bites 250 g', 'bites sample']);
+  });
+
+  it('count apart from packs', () => {
+    expect(packsText({ packs: 3, samples: 0 })).toBe('3 packs');
+    expect(packsText({ packs: 1, samples: 1 })).toBe('1 pack · 1 sample');
+    expect(packsText({ packs: 0, samples: 2 })).toBe('2 samples');
+  });
+});
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 

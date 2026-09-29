@@ -42,14 +42,13 @@ const OrderBody: React.FC<{
   show: (o: Order) => void;
   payments: PaymentActions;
   onPayRest: (o: Order) => void;
-  phoneRef?: React.Ref<HTMLInputElement>;
-}> = ({ order, change, show, payments, onPayRest, phoneRef }) => (
+}> = ({ order, change, show, payments, onPayRest }) => (
   <>
     <OrderNotes order={order} />
     <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
-      <DetailsCard order={order} onSaved={show} phoneRef={phoneRef} />
+      <DetailsCard order={order} onSaved={show} />
     </div>
     <History history={order.history} />
   </>
@@ -109,8 +108,7 @@ export const OrderPopup: React.FC<{
   putInList: (o: Order) => void;
   onDeleted: (o: Order) => void;
   onClose: () => void;
-  focusPhone?: boolean;
-}> = ({ code, sequence, putInList, onDeleted, onClose, focusPhone }) => {
+}> = ({ code, sequence, putInList, onDeleted, onClose }) => {
   const navigate = useNavigate();
   // Moving between orders keeps the board's query, so a filtered board stays filtered behind.
   const { search } = useLocation();
@@ -119,7 +117,6 @@ export const OrderPopup: React.FC<{
   const change = useOrderChange(show);
   const payments = usePayments(show);
   const nameRef = useRef<HTMLSpanElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on
   // to the next order, like every next step; from the money block or P it stays.
   const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
@@ -129,15 +126,12 @@ export const OrderPopup: React.FC<{
     const to = sequence[at + step];
     if (at >= 0 && to) navigate(`/admin/orders/${to.code}${search}`, { replace: true });
   };
-  // The board draws stale orders at the bottom of To confirm, and ← → walk
-  // through them there, so the counter counts them as to confirm too.
-  const group = (o: Order) => (laneOf(o) === 'stale' ? 'confirm' : laneOf(o));
-  const lane = order ? group(order) : 'done';
-  const inLane = sequence.filter((o) => group(o) === lane);
+  const lane = order ? laneOf(order) : 'done';
+  const inLane = sequence.filter((o) => laneOf(o) === lane);
   const next = order && nextOf(order);
 
   // Enter (or the main button) does the next step, then moves on to the next
-  // order in the lane this one came from, so To confirm is Enter, Enter, Enter.
+  // order in the lane this one came from, so Packing is Enter, Enter, Enter.
   // The last one left in its lane stays open, showing where it went.
   // Mark paid first asks how they paid (the sheet), then moves on the same way.
   const doNext = (how?: HowPaid) => {
@@ -151,12 +145,12 @@ export const OrderPopup: React.FC<{
   };
 
   // A deep link can open the popup before the order has loaded, so focus lands
-  // on ×. Once the order is there, move it to the name (or the phone, for Confirm).
+  // on ×. Once the order is there, move it to the name.
   const placed = useRef(false);
   useEffect(() => {
     if (placed.current || !order) return;
     placed.current = true;
-    const target = (focusPhone ? phoneRef : nameRef).current;
+    const target = nameRef.current;
     if (target && !isTyping(document.activeElement)) target.focus();
   });
 
@@ -192,7 +186,7 @@ export const OrderPopup: React.FC<{
       closeLabel={adminCopy.close}
       width={760}
       className="adm-od-popup"
-      initialFocus={focusPhone ? phoneRef : nameRef}
+      initialFocus={nameRef}
       actions={at >= 0 && (
         <>
           {inLane.length > 0 && lane !== 'done' && (
@@ -215,7 +209,7 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} phoneRef={phoneRef} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} />}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
     </AdminSheet>

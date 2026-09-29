@@ -6,7 +6,7 @@ import { productsData } from '../../data/products';
 import { useOverview } from '../AdminLayout';
 import { getStock, getTotals, setStock } from '../api';
 import { useAdminMe } from '../auth';
-import { firstName, formatDayInSentence, formatLongDate, formatMoney, formatTime, formatWeight, istHour } from '../format';
+import { firstName, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import { Logo } from '../Splash';
@@ -25,35 +25,22 @@ const payCopy = adminCopy.payments;
 // rupee). The totals are Home's own call; the overview is the one the layout
 // already loads for the Orders badge, and feeds "Waiting on you" and coupons.
 
-/** "today, 8:40 am", "yesterday, 9:10 pm", else "Wed 23 Sep". */
-const whenIn = (iso: string) => {
-  const day = formatDayInSentence(iso);
-  return day === adminCopy.dates.today || day === adminCopy.dates.yesterday.toLowerCase() ? `${day}, ${formatTime(iso)}` : day;
-};
-
 // ---- The line under the date --------------------------------------------------------
 
-const CookLede: React.FC<{ totals: Totals }> = ({ totals }) => {
-  const grams = totals.products.reduce((sum, p) => sum + p.stages.to_send.grams, 0);
-  if (grams > 0) {
-    const [weight, rest] = copy.cookLede(formatWeight(grams), totals.overall.to_send.orders);
-    return <p className="adm-home__lede"><b>{weight}</b>{rest}</p>;
-  }
-  const maybe = productsData.filter((product) => totals.products.some((p) => p.product_id === product.id && p.stages.to_confirm.orders > 0));
-  return (
-    <>
-      <p className="adm-home__lede">{copy.cookNothing}</p>
-      {maybe.length > 0 && (
-        <p className="adm-home__lede-more">
-          {copy.cookMaybe(totals.overall.to_confirm.orders === 1, maybe.map((p) => p.name), maybe.length === productsData.length)}
-        </p>
-      )}
-    </>
-  );
+// Interim (lane A rebuilds both Homes): only numbers the kitchen flow can say truly.
+
+/** What's still short across Cooking orders, and how many orders wait on it. */
+const CookLede: React.FC<{ totals: Totals }> = ({ totals: { kitchen } }) => {
+  const grams = kitchen.products.reduce((sum, p) => sum + p.to_cook, 0);
+  if (!grams) return <p className="adm-home__lede">{copy.cookNothing}</p>;
+  const orders = new Set(kitchen.products.flatMap((p) => p.queue.map((q) => q.order_id))).size;
+  const [weight, rest] = copy.cookLede(formatWeight(grams), orders);
+  return <p className="adm-home__lede"><b>{weight}</b>{rest}</p>;
 };
 
 const AdminLede: React.FC<{ totals: Totals }> = ({ totals: { overall } }) => {
-  const need = overall.to_confirm.orders + overall.to_send.orders;
+  // Sunit's part: packing and dropping off.
+  const need = overall.packing.orders + overall.ready.orders;
   // What's still owed on delivered orders, not their quoted totals: part payments are already in.
   const out = overall.to_collect.amount_due;
   const [count, verb] = copy.adminLede(need);
@@ -78,10 +65,10 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
 );
 
 /**
- * On the way: who hasn't paid. With part payments it's two sentences, "Aarav hasn't paid.
+ * Ready: who hasn't paid. With part payments it's two sentences, "Aarav hasn't paid.
  * Snehal paid part.", since the server's unpaid names include the part paid.
  */
-const wayHint = (way: Overview['queue']['on_the_way'], names: Totals['overall']['on_the_way'] | undefined): string => {
+const wayHint = (way: Overview['queue']['ready'], names: Totals['overall']['ready'] | undefined): string => {
   if (!way.not_paid) return copy.allPaid;
   const unpaid = names?.unpaid_names ?? [];
   if (!way.part_paid) return unpaid.length ? copy.namesNotPaid(unpaid, way.not_paid) : copy.notPaidYet(way.not_paid);
@@ -105,7 +92,7 @@ const wayHint = (way: Overview['queue']['on_the_way'], names: Totals['overall'][
 const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
   const collect = q.to_collect;
   const overall = totals?.overall;
-  const paidSplit = copy.paidSplit(q.to_send.paid, q.to_send.count - q.to_send.paid);
+  const paidSplit = copy.paidSplit(q.packing.paid, q.packing.count - q.packing.paid);
   const collectHint = [
     (collect.people ?? 1) > 1 || !collect.oldest ? copy.fromPeople(collect.people ?? collect.count)
       : copy.deliveredBy(collect.oldest.name ?? collect.oldest.code, formatDayInSentence(collect.oldest.since)),
@@ -114,17 +101,13 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     collect.part_paid > 0 && payCopy.paidPart(overall?.to_collect.part_paid_names ?? [], collect.part_paid),
   ].filter(Boolean).join('. ');
   const rows = [
-    q.to_confirm > 0 && <Row key="c" lane="confirm" circle={q.to_confirm} tone="accent" title={copy.toConfirm(q.to_confirm)}
-      hint={q.to_confirm_oldest ? copy.oldestFrom(whenIn(q.to_confirm_oldest)) : ''} />,
-    q.to_send.count > 0 && <Row key="s" lane="send" circle={q.to_send.count} title={copy.toSend}
-      hint={overall ? copy.packsThen(overall.to_send.packs, paidSplit) : paidSplit} />,
+    q.packing.count > 0 && <Row key="p" lane="packing" circle={q.packing.count} tone="accent" title={copy.toPack}
+      hint={overall ? copy.packsThen(overall.packing.packs, paidSplit) : paidSplit} />,
+    q.ready.count > 0 && <Row key="r" lane="ready" circle={q.ready.count} title={copy.toDropOff}
+      hint={wayHint(q.ready, overall?.ready)} />,
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
-    q.on_the_way.count > 0 && <Row key="w" lane="way" circle={q.on_the_way.count} title={copy.onTheWay}
-      hint={wayHint(q.on_the_way, overall?.on_the_way)} />,
-    q.stale > 0 && <Row key="x" lane="stale" circle={q.stale} title={copy.stale}
-      hint={q.stale_oldest ? copy.staleFrom(formatDayInSentence(q.stale_oldest)) : copy.staleHint} />,
   ].filter(Boolean);
   return (
     <section className="adm-card adm-home__card adm-home__card--flush" aria-labelledby="adm-home-waiting">

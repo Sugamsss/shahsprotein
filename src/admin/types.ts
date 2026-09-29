@@ -1,7 +1,9 @@
-// The admin RPCs' JSON, exactly as temp/admin-rebuild/contract.md describes it.
-// Timestamps are ISO strings; amounts are whole rupees.
+// The admin RPCs' JSON, exactly as the migrations return it (the kitchen flow:
+// supabase/migrations/20260929000000_kitchen_flow.sql). Timestamps are ISO
+// strings, days are "2026-09-29" (India), amounts are whole rupees, weights grams.
 
-export type OrderStatus = 'new' | 'confirmed' | 'sent' | 'delivered' | 'cancelled';
+/** Cooking → Packing → Ready → Delivered. Done = delivered and (paid in full, or a free sample order). */
+export type OrderStatus = 'cooking' | 'packing' | 'ready' | 'delivered' | 'cancelled';
 export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_person';
 export type OrderView = 'todo' | 'done' | 'all';
 /** How a paid order was paid. Old paid orders have none (null). */
@@ -36,8 +38,26 @@ export interface AdminMe {
 
 export interface OrderLine {
   product_id: string;
+  /** '250 g', '500 g' or 'sample'. */
   size: string;
   quantity: number;
+  /** From the server: grams in one pack, fixed when the line was saved (a sample's weight at that moment). */
+  grams_each?: number;
+}
+
+/** One product of an order in the kitchen: what it needs and what's covered. */
+export interface OrderKitchen {
+  product_id: string;
+  /** Grams the order needs of it (samples included). */
+  need: number;
+  /** Grams covered: from batches, plus by hand. */
+  covered: number;
+  /** The part covered by hand (moved on by a person, or an old order), not from a logged batch. */
+  by_hand: number;
+  /** In Cooking and still short of it. */
+  waiting: boolean;
+  /** Where its food came from: each batch's made-on day and grams, oldest first. */
+  batches: { made_on: string; grams: number }[];
 }
 
 export interface Order {
@@ -62,8 +82,8 @@ export interface Order {
   amount_due: number | null;
   /** Paid over the total; 0 when not over, null when there's no total. */
   amount_extra: number | null;
-  kept: boolean;
-  stale: boolean;
+  /** Every line is a sample: no total, no coupon, no payments; done once delivered. */
+  free_sample: boolean;
   name: string | null;
   pincode: string | null;
   phone: string | null;
@@ -71,18 +91,26 @@ export interface Order {
   amount: number | null;
   coupon: { code: string; valid: boolean; known: boolean; description: string | null } | null;
   lines: OrderLine[];
+  /** Packs, samples left out. */
   packs: number;
+  /** Sample packs. */
+  samples: number;
+  /** Per product, in product id order. */
+  kitchen: OrderKitchen[];
   customer: { order_number: number; orders: number } | null;
   created_at: string;
   updated_at: string;
   status_changed_at: string;
 }
 
+/** History events. new, confirmed, sent, kept and unkept are only on orders from before the kitchen flow. */
 export type OrderEvent =
-  | 'created' | OrderStatus | 'paid' | 'unpaid' | 'kept' | 'unkept';
+  | 'created' | OrderStatus | 'paid' | 'unpaid'
+  | 'new' | 'confirmed' | 'sent' | 'kept' | 'unkept';
 
 export interface OrderDetail extends Order {
-  history: { event: OrderEvent; at: string; by_name: string | null }[];
+  /** auto: moved by the kitchen rules (a batch, spare, an edit), not picked by a person. */
+  history: { event: OrderEvent; at: string; by_name: string | null; auto?: boolean }[];
   phone_suggestion: { phone: string; code: string; created_at: string } | null;
 }
 
@@ -99,6 +127,10 @@ export interface OrderFilters {
   limit?: number;
   /** Only orders with this product, any size. */
   product?: string;
+  /** true: only free sample orders (every line a sample); false: without them. */
+  free_sample?: boolean;
+  /** true: orders carrying any sample (the Free samples list); false: orders with none. */
+  samples?: boolean;
 }
 
 export interface OrderPage {
@@ -115,7 +147,6 @@ export interface OrderChanges {
   paid_method?: PaidMethod;
   /** Only with `paid_method: 'other'`. */
   paid_note?: string;
-  kept?: boolean;
   phone?: string | null;
   amount?: number | null;
   note?: string | null;
@@ -141,6 +172,13 @@ export type PayRestInput = Omit<PaymentInput, 'amount'>;
 export type RestorePayment = Pick<Payment, 'id' | 'amount' | 'method' | 'note' | 'paid_at'>;
 
 /** save_admin_order's p_order. On edit, code, status, paid and created_at are ignored. */
+/**
+ * update_admin_order's answer: the order, plus what the kitchen did when the status move
+ * changed more than this order's status (food back as spare, covered by hand, another
+ * order filled). Undo that with undo_admin_kitchen(kitchen_effects.action_id).
+ */
+export type UpdatedOrder = Order & { kitchen_effects: KitchenEffects | null };
+
 export interface OrderInput {
   source: OrderSource;
   code?: string | null;
@@ -162,9 +200,12 @@ export interface OrderInput {
 
 export interface Overview {
   queue: {
-    to_confirm: number;
-    /** paid is paid in full; part_paid has a payment but not enough (20260928000000). */
-    to_send: { count: number; paid: number; part_paid: number };
+    cooking: { count: number; oldest: string | null };
+    /** paid is paid in full; part_paid has a payment but not enough. */
+    packing: { count: number; paid: number; part_paid: number };
+    /** not_paid counts part-paid orders too, never free samples. oldest_since: when the longest-waiting one got Ready. */
+    ready: { count: number; not_paid: number; part_paid: number; oldest_since: string | null };
+    /** Delivered and not paid in full. Free sample orders are never here. */
     to_collect: {
       count: number;
       /** The totals quoted on these orders. */
@@ -176,11 +217,8 @@ export interface Overview {
       oldest: { code: string; name: string | null; since: string } | null;
       people: number;
     };
-    /** not_paid counts part-paid orders too. */
-    on_the_way: { count: number; not_paid: number; part_paid: number };
-    stale: number;
-    to_confirm_oldest: string | null;
-    stale_oldest: string | null;
+    /** Orders carrying a sample (free sample orders and paid orders with a taster). */
+    free_samples: { open: number; sent_this_month: number; grams_this_month: number };
   };
   week: {
     starts_on: string;
@@ -195,23 +233,26 @@ export interface Overview {
   selling: { product_id: string; size: string; packs: number; orders: number }[];
   coupons: { code: string; orders: number; last_used_at: string | null }[];
   email: { active: number };
-  /** All time. */
-  done: { delivered_paid: number; cancelled: number };
+  /** All time. delivered_paid doesn't count free samples; free_samples is delivered free sample orders. */
+  done: { delivered_paid: number; free_samples: number; cancelled: number };
 }
 
 /** get_admin_totals(): one pack size, lightest first, only sizes with packs. */
 export interface TotalsSize { size: string; grams_each: number; packs: number }
 
-/** One product in one stage: orders that contain it, and its packs and weight in them. */
-export interface TotalsCell { orders: number; packs: number; grams: number; by_size: TotalsSize[] }
+/** One product in one stage: orders that contain it, its packs (samples apart) and weight in them. by_size lists 'sample' last. */
+export interface TotalsCell { orders: number; packs: number; samples: number; grams: number; by_size: TotalsSize[] }
 
 /** The stages, in Home's order. Every order is in at most one; cancelled and done orders in none. */
-export type TotalsStage = 'to_confirm' | 'to_send' | 'on_the_way' | 'to_collect' | 'stale';
+export type TotalsStage = 'cooking' | 'packing' | 'ready' | 'to_collect';
 
 /** One stage across all products. Money is per order, so it's only here, never per product. */
 export interface TotalsOverall {
   orders: number;
   packs: number;
+  samples: number;
+  /** Free sample orders in the stage. They never add to the money keys. */
+  free_samples: number;
   /** ₹ quoted on the stage's orders. */
   amount: number;
   /** Orders with no amount typed yet. */
@@ -229,7 +270,7 @@ export interface TotalsOverall {
 export interface TotalsWeek {
   starts_at: string;
   ends_at: string;
-  /** Real orders (confirmed, sent or delivered), by created_at. */
+  /** Real orders (not cancelled, not a free sample), by created_at. Packs leave samples out. */
   orders: number;
   packs: number;
   /** ₹ that came in during the week: each payment on its own date (20260928000000). */
@@ -239,6 +280,10 @@ export interface TotalsWeek {
   paid_without_amount: number;
   /** Payments in the week that were part of a split. Home notes "Part payments count on the day they came in." */
   part_payments: number;
+  /** Grams logged in batches made in the week (by made_on). */
+  grams_made: number;
+  /** Orders carrying a sample, and sample packs. */
+  samples: { orders: number; packs: number };
 }
 export interface TotalsDay { date: string; orders: number; packs: number }
 /**
@@ -257,14 +302,11 @@ export interface Totals {
   /** Only products with lines in some stage; Home shows all three and uses zeros for the rest. */
   products: { product_id: string; stages: Record<TotalsStage, TotalsCell> }[];
   overall: {
-    to_confirm: TotalsOverall;
-    to_send: TotalsOverall;
-    /** First names, oldest first, at most 3. */
-    /** unpaid_names includes the part paid; part_paid_names is just those (first names, oldest first, at most 3). */
-    on_the_way: TotalsOverall & { unpaid_names: string[]; part_paid_names: string[] };
+    cooking: TotalsOverall;
+    packing: TotalsOverall;
+    /** First names, oldest first, at most 3. unpaid_names includes the part paid; part_paid_names is just those. */
+    ready: TotalsOverall & { unpaid_names: string[]; part_paid_names: string[] };
     to_collect: TotalsOverall & { without_amount_names: string[]; part_paid_names: string[] };
-    /** They never came through, so no money. */
-    stale: { orders: number; packs: number };
   };
   weeks: {
     /** Monday 00:00 India time up to now. */
@@ -279,7 +321,85 @@ export interface Totals {
     /** Last week up to the same weekday and time, for a fair comparison. */
     last_so_far: TotalsWeek & { by_product: TotalsWeekProduct[] };
   };
+  /** The same object as get_admin_kitchen(), so Home stays one call. */
+  kitchen: Kitchen;
 }
+
+// ---- The kitchen: batches, spare, shelf life (20260929000000) -------------------
+
+/** fresh; near: less than a fifth of its shelf life left (at least 2 days); past: from expires_on on. Past spare never fills an order. */
+export type SpareState = 'fresh' | 'near' | 'past';
+export type ShelfLifeUnit = 'days' | 'months';
+export interface ShelfLife { amount: number; unit: ShelfLifeUnit }
+
+export interface KitchenProduct {
+  product_id: string;
+  sample_grams: number;
+  shelf_life: ShelfLife | null;
+  /** Grams still short across Cooking orders. */
+  to_cook: number;
+  /** The packs those short orders hold, samples last: "250 g × 2 · 500 g × 3". size is '250 g' or 'sample'. */
+  waiting_packs: { size: string; grams_each: number; packs: number }[];
+  /** The short orders, oldest first. covered: the order's other products that are already covered ("only waiting on this"). */
+  queue: {
+    order_id: string; code: string; name: string | null; created_at: string;
+    short: number; also_waiting: string[]; covered: string[];
+  }[];
+  /** Usable spare grams (fresh and near). */
+  spare: number;
+  /** Every batch with food on the shelf, oldest first, past ones too. grams is what's left of it. expires_on is the first day it's past; "use by" is the day before. */
+  spare_batches: { batch_id: string; made_on: string; grams: number; expires_on: string | null; days_left: number | null; state: SpareState }[];
+}
+
+export interface KitchenBatch {
+  id: string;
+  product_id: string;
+  grams: number;
+  made_on: string;
+  created_at: string;
+  by_name: string | null;
+  /** Grams given to orders. */
+  to_orders: number;
+  spare: number;
+  written_off: number;
+}
+
+/** get_admin_kitchen(). */
+export interface Kitchen {
+  /** This person may mark spare used up / thrown out (the cook, or anyone when nobody is the cook). */
+  can_write_off: boolean;
+  /** India's today. */
+  today: string;
+  /** Every kitchen product, by product id. */
+  products: KitchenProduct[];
+  /** Batches made or logged in the last 14 days, newest first. */
+  batches: KitchenBatch[];
+}
+
+/**
+ * What a kitchen call did (or, with preview, would do). "Covers 4 orders, 200 g left over" is
+ * the orders with from 'cooking' to 'packing', plus the batch's spare.
+ */
+export interface KitchenEffects {
+  preview: boolean;
+  /** Undo with undoKitchen(action_id). Null on a preview. */
+  action_id: string | null;
+  batches: { id: string; product_id: string; grams: number; made_on: string; to_orders: number; spare: number; written_off: number; deleted: boolean }[];
+  /** Orders whose stage or batch grams changed, oldest first. change is net batch grams per product; waiting is what a Cooking order still waits for. */
+  orders: {
+    id: string; code: string; name: string | null; from: OrderStatus; to: OrderStatus;
+    grams: { product_id: string; change: number }[];
+    waiting: string[];
+  }[];
+  /** The kitchen after it. */
+  kitchen: Kitchen;
+}
+
+/** log_admin_batches' p_batches: 1 to 10. made_on left out is today. */
+export interface BatchInput { product_id: string; grams: number; made_on?: string }
+export type WriteOffReason = 'used_up' | 'thrown_out';
+/** set_admin_kitchen_product: only the keys present change. */
+export interface KitchenSettings { sample_grams?: number; shelf_life?: ShelfLife | null }
 
 export interface Customer {
   phone: string;
@@ -288,6 +408,8 @@ export interface Customer {
   orders: number;
   delivered: number;
   open: number;
+  /** Free sample orders; they don't count in orders. */
+  samples: number;
   first_order_at: string;
   last_order_at: string;
   amount_total: number;
@@ -316,7 +438,7 @@ export interface Coupon {
   internal_note: string | null;
   created_at: string;
   updated_at: string;
-  /** Only from get_admin_coupons: confirmed-and-later orders, all time. */
+  /** Only from get_admin_coupons: orders that used it, all time. */
   order_count?: number;
   last_used_at?: string | null;
 }

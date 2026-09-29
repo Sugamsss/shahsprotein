@@ -44,7 +44,7 @@ describe('formatWhen', () => {
   });
 });
 
-describe('formatAgo and formatAge (a stale order: "Sent from the site 5 days ago")', () => {
+describe('formatAgo and formatAge ("waiting 5 days", "made 2 weeks ago")', () => {
   it.each([
     ['2026-09-23T09:00:00+05:30', '2 days ago', '2 days'],
     ['2026-09-20T23:59:00+05:30', '5 days ago', '5 days'],
@@ -131,16 +131,17 @@ describe('formatMoneyShort', () => {
 describe('formatWeight', () => {
   it.each([
     [0, '0 g'],
-    [250, '250 g'],
+    [15, '15 g'],
+    [285, '285 g'],
     [750, '750 g'],
     [1000, '1 kg'],
-    [1250, '1¼ kg'],
     [1500, '1½ kg'],
-    [1750, '1¾ kg'],
-    [4750, '4¾ kg'],
-    [12000, '12 kg'],
-    [1100, '1,100 g'], // not a quarter kilo: whole grams, never rounded
-    [100, '100 g'],
+    [2000, '2 kg'],
+    [2250, '2 kg 250 g'],
+    [1750, '1 kg 750 g'],
+    [1100, '1 kg 100 g'], // never rounded to a weight nobody made
+    [12500, '12½ kg'],
+    [25000, '25 kg'],
   ])('%d g → %s', (grams, expected) => {
     expect(formatWeight(grams)).toBe(expected);
   });

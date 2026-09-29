@@ -36,12 +36,12 @@ const CustomerPage: React.FC = () => {
   const latest = orders[0];
   if (!latest) return <div className="adm-page">{back}<p className="adm-muted">{copy.notFound}</p></div>;
 
-  // "1 delivered, 1 to confirm": finished (delivered and paid), then what's still open, lane by lane.
+  // "1 delivered, 1 packing": finished (delivered and paid, or a free sample), then what's still open, lane by lane.
   const open = LANES.map((lane) => [lane, counted.filter((o) => laneOf(o) === lane).length] as const).filter(([, n]) => n > 0);
   const finished = counted.filter((o) => laneOf(o) === 'done').length;
   const where = [
     finished > 0 && copy.delivered(finished),
-    ...open.map(([lane, n]) => `${n} ${adminCopy.orders.lanes[lane][0].toLowerCase()}`),
+    ...open.map(([lane, n]) => `${n} ${adminCopy.orders.jump[lane].toLowerCase()}`),
   ].filter(Boolean).join(', ');
   const quoted = counted.reduce((sum, o) => sum + (o.amount ?? 0), 0);
   const first = counted[counted.length - 1] ?? latest;

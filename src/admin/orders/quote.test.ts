@@ -59,6 +59,18 @@ describe('quote', () => {
     expect(quote([line('bites', '250 g', 2)], 'EXAMPLE10', COUPONS, PRICES, NOW)).toEqual({ total: 240 });
   });
 
+  it('counts a sample as free: no price needed, and a coupon never prices it', () => {
+    // No price row exists for a sample, and there's a coupon row that would match if samples were looked up.
+    const withCouponRow = { ...PRICES, coupons: [...PRICES.coupons, { coupon_id: 'c-live', product_id: 'bites', size: 'sample', price: 50 }] };
+    const lines = [...MUESLI_ORDER, line('bites', 'sample', 2)];
+    expect(quote(lines, null, COUPONS, withCouponRow, NOW)).toEqual({ total: 2 * 200 + 380 });
+    expect(quote(lines, 'EXAMPLE10', COUPONS, withCouponRow, NOW)).toEqual({ total: 2 * 170 + 380 });
+  });
+
+  it('gives no total for a samples-only order, which is free', () => {
+    expect(quote([line('bites', 'sample', 1), line('muesli', 'sample', 1)], 'EXAMPLE10', COUPONS, PRICES, NOW)).toBeNull();
+  });
+
   it('works nothing out when nothing is ordered', () => {
     expect(quote([], 'EXAMPLE10', COUPONS, PRICES, NOW)).toBeNull();
     expect(quote([line('muesli', '250 g', 0)], null, COUPONS, PRICES, NOW)).toBeNull();

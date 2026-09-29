@@ -10,9 +10,8 @@ import { AdminLink, usePathPart, useQueryText } from '../router';
 import type { Order, OrderPage as Page } from '../types';
 import { useOverview } from '../AdminLayout';
 import { useRpc, useSettled } from '../useRpc';
-import { ConfirmSheet } from './ConfirmSheet';
 import { ExportSheet } from './ExportSheet';
-import { type Lane, LANES, NEXT, laneOf, namesOneOrder, packsOf, productFilter, productName, searchFor } from './model';
+import { type Lane, LANES, NEXT, type WorkLane, laneOf, namesOneOrder, packsOf, productFilter, productName, searchFor } from './model';
 import { type CardAction, OrderCard, Thumb } from './OrderCard';
 import { OrderPage, OrderPopup } from './OrderView';
 import { PaidSheet } from './PaidMethod';
@@ -62,15 +61,15 @@ const LaneBlock: React.FC<{ lane: Lane; orders: Order[]; money?: number; hint?: 
 };
 
 /** Phone: the sticky strip that jumps between lanes and follows the scroll. */
-const LaneJump: React.FC<{ counts: Record<Lane, number>; money: number }> = ({ counts, money }) => {
-  const [current, setCurrent] = useState<Lane>('confirm');
+const LaneJump: React.FC<{ counts: Record<WorkLane, number>; money: number }> = ({ counts, money }) => {
+  const [current, setCurrent] = useState<WorkLane>('cooking');
   useEffect(() => {
     let frame = 0;
     const onScroll = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const passed = LANES.filter((l) => (document.getElementById(`lane-${l}`)?.getBoundingClientRect().top ?? 1e9) < 90);
-        setCurrent(passed[passed.length - 1] ?? 'confirm');
+        setCurrent(passed[passed.length - 1] ?? 'cooking');
       });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -81,7 +80,7 @@ const LaneJump: React.FC<{ counts: Record<Lane, number>; money: number }> = ({ c
       {LANES.map((l) => (
         <a key={l} href={`#lane-${l}`} aria-current={l === current || undefined}
           className={`${counts[l] ? '' : 'is-zero'}${l === 'collect' && money ? ' is-money' : ''}`}>
-          <b>{l === 'collect' && money ? formatMoney(money) : counts[l]}</b><span>{copy.lanes[l][0]}</span>
+          <b>{l === 'collect' && money ? formatMoney(money) : counts[l]}</b><span>{copy.jump[l]}</span>
         </a>
       ))}
     </nav>
@@ -119,7 +118,6 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   // ?product=raggi-jaggi (a Home product card): only orders with it. An id we don't sell is ignored.
   const product = productFilter(query.get('product'));
   const [searching, setSearching] = useState(false);
-  const [confirming, setConfirming] = useState<Order | null>(null);
   const [paying, setPaying] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null); // clearing the filter moves focus here
@@ -151,7 +149,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     if (hasData && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
   }, [hasData, location.hash]);
   const drop = (o: Order) => list.setData((d) => d && { ...d, orders: d.orders.filter((x) => x.id !== o.id) });
-  const change = useOrderChange(put);
+  // A move that changed the kitchen can move other orders too (cancelled food fills the next one).
+  const change = useOrderChange(put, list.reload);
   const payments = usePayments(put);
 
   // Search also looks through Done, and an empty board asks whether anything was ever done.
@@ -170,11 +169,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
 
   const orders = board?.orders ?? [];
   const shown = q.trim() ? orders.filter((o) => matches(o, q)) : orders;
-  const by: Record<Lane, Order[]> = { confirm: [], send: [], way: [], collect: [], stale: [], done: [] };
+  const by: Record<Lane, Order[]> = { cooking: [], packing: [], ready: [], collect: [], done: [] };
   shown.forEach((o) => by[laneOf(o)].push(o));
   // What's still owed, not the totals quoted: part payments are already in.
   const money = by.collect.reduce((sum, o) => sum + (o.amount_due ?? 0), 0);
-  const sequence = [...by.confirm, ...by.stale, ...by.send, ...by.way, ...by.collect, ...by.done];
+  const sequence = [...by.cooking, ...by.packing, ...by.ready, ...by.collect, ...by.done];
 
   const [findText, setFindText] = useQueryText('/admin/orders');
 
@@ -193,17 +192,12 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
 
   const onAction = (o: Order, action: CardAction) => {
     const lane = laneOf(o);
-    if (action === 'next' && (lane === 'confirm' || lane === 'stale')) {
-      if (laptop) navigate(`/admin/orders/${o.code}${location.search}`, { state: { focus: 'phone' } });
-      else setConfirming(o);
-    } else if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
-    else if (action === 'next' && lane !== 'done') void change(o, NEXT[lane]);
+    if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
+    else if (action === 'next' && (lane === 'packing' || lane === 'ready')) void change(o, NEXT[lane]);
     else if (action === 'paid') {
       if (o.paid) void payments.markNotPaid(o);
       else setPaying(o);
     }
-    else if (action === 'keep') void change(o, { kept: true });
-    else if (action === 'cancel') void change(o, { status: 'cancelled' });
   };
 
   // Phone: one order is its own page.
@@ -213,14 +207,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     <OrderCard key={o.id} order={o} onAction={onAction} selected={o.code === code} mark={q} flash={o.id === flash}
       product={product} search={location.search} />
   );
-  // While searching, a lane with no hits of its own says nothing (it's only there for its stale hits).
-  const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : !q && <p className="adm-lane__empty">{copy.laneEmpty}</p>);
-  // Laptop: To confirm also holds the stale orders, so a stale-only hit still needs that lane.
-  const hasHits = (lane: Lane) => by[lane].length > 0 || (lane === 'confirm' && laptop && by.stale.length > 0);
+  const cards = (lane: Lane) => (by[lane].length ? by[lane].map(card) : <p className="adm-lane__empty">{copy.laneEmpty}</p>);
   const doneHits = settledQ && doneFor.current === doneKey ? done.data?.orders ?? [] : [];
-  const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<Lane, number>;
-  // The chip: which product, and how many cards the board draws for it (the four lanes and stale; the
-  // list can briefly hold a card that just went to Done, which the board no longer shows). Then To send's packing line.
+  const counts = Object.fromEntries(LANES.map((l) => [l, by[l].length])) as Record<WorkLane, number>;
+  // The chip: which product, and how many cards the board draws for it (the four lanes; the list
+  // can briefly hold a card that just went to Done, which the board no longer shows). Then Packing's line.
   const filter = product && {
     id: product,
     name: productName(product),
@@ -232,11 +223,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       return `/admin/orders${kept ? `?${kept}` : ''}`;
     })(),
   };
-  const pack = product ? packsOf(orders.filter((o) => laneOf(o) === 'send'), product) : null;
+  const pack = product ? packsOf(orders.filter((o) => laneOf(o) === 'packing'), product) : null;
   const packHint = pack?.packs ? filterCopy.pack(pack.packs, productName(product!), pack.sizes) : undefined;
   const summary = [
-    by.confirm.length > 0 && ['confirm', `${by.confirm.length} ${copy.toConfirm}`],
-    by.send.length > 0 && ['send', `${by.send.length} ${copy.toSend}`],
+    by.packing.length > 0 && ['packing', `${by.packing.length} ${copy.toPack}`],
+    by.ready.length > 0 && ['ready', `${by.ready.length} ${copy.toDropOff}`],
     by.collect.length > 0 && ['collect', copy.toCollect(money ? formatMoney(money) : String(by.collect.length))],
   ].filter(Boolean) as [Lane, string][];
 
@@ -260,7 +251,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
           <button type="button" className="adm-iconbtn adm-phone-only" aria-label={copy.find} aria-expanded={searching || !!q}
             onClick={() => setSearching(true)}><Search size={20} aria-hidden="true" /></button>
           <AdminLink className="adm-btn adm-btn--tonal adm-btn--sm adm-phone-only" to="/admin/orders/new"><Plus size={18} aria-hidden="true" />{copy.add}</AdminLink>
-          <AdminLink className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" to="/admin/orders/done"><CheckCircle2 size={16} aria-hidden="true" />{doneCounts ? copy.doneCount(doneCounts.delivered_paid + doneCounts.cancelled) : copy.doneLink}</AdminLink>
+          <AdminLink className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" to="/admin/orders/done"><CheckCircle2 size={16} aria-hidden="true" />{doneCounts ? copy.doneCount(doneCounts.delivered_paid + doneCounts.free_samples + doneCounts.cancelled) : copy.doneLink}</AdminLink>
           <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm adm-laptop-only" onClick={() => setExporting(true)}>
             <Download size={16} aria-hidden="true" />{copy.exportCsv}
           </button>
@@ -294,20 +285,13 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
         <>
           {!q && <LaneJump counts={counts} money={money} />}
           <div className="adm-board">
-            {LANES.map((lane) => (!q || hasHits(lane)) && (
-              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money} hint={lane === 'send' ? packHint : lane === 'collect' ? adminCopy.payments.collectHint : undefined}>
+            {/* While searching, a lane with no hits says nothing. */}
+            {LANES.map((lane) => (!q || by[lane].length > 0) && (
+              <LaneBlock key={lane} lane={lane} orders={by[lane]} money={money} hint={lane === 'packing' ? packHint : undefined}>
                 {cards(lane)}
-                {/* Laptop: stale orders sit at the bottom of To confirm. Phone: their own group, below. */}
-                {lane === 'confirm' && laptop && by.stale.length > 0 && (
-                  <div className="adm-lane__stale" id="lane-stale">
-                    <p className="adm-lane__sub">{copy.lanes.stale[0]} <span className="adm-count">{by.stale.length}</span></p>
-                    {by.stale.map(card)}
-                  </div>
-                )}
               </LaneBlock>
             ))}
           </div>
-          {!laptop && by.stale.length > 0 && <LaneBlock lane="stale" orders={by.stale}>{by.stale.map(card)}</LaneBlock>}
         </>
       )}
 
@@ -326,21 +310,19 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       {!q && board && (
         <AdminLink className="adm-donelink adm-phone-only" to="/admin/orders/done">
           <CheckCircle2 size={22} aria-hidden="true" />
-          <span><b>{copy.doneLink}</b>{doneCounts && <small>{copy.doneSub(doneCounts.delivered_paid, doneCounts.cancelled)}</small>}</span>
+          <span><b>{copy.doneLink}</b>{doneCounts && <small>{copy.doneSub(doneCounts.delivered_paid, doneCounts.free_samples, doneCounts.cancelled)}</small>}</span>
           <ChevronRight size={20} aria-hidden="true" />
         </AdminLink>
       )}
 
       {laptop && code && (
         <OrderPopup key="popup" code={code} sequence={sequence} putInList={put} onDeleted={drop}
-          focusPhone={(location.state as { focus?: string } | null)?.focus === 'phone'}
           onClose={() => {
             navigate(`/admin/orders${location.search}`);
             // The card may have moved lanes while the popup was open, so find it again.
             requestAnimationFrame(() => document.querySelector<HTMLElement>(`.adm-ocard__open[href="/admin/orders/${code}${location.search}"]`)?.focus());
           }} />
       )}
-      <ConfirmSheet order={confirming} onClose={() => setConfirming(null)} onConfirm={(o, c) => void change(o, c)} />
       <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
     </div>

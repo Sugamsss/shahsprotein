@@ -8,7 +8,7 @@ import { AdminLink } from '../router';
 import type { Order, OrderFilters } from '../types';
 import { useRpc } from '../useRpc';
 import { itemsText } from './model';
-import { Code, OrderCard, PaidChip } from './OrderCard';
+import { Code, FreeSampleChip, OrderCard, PaidChip } from './OrderCard';
 import { useLaptop } from './OrdersPage';
 import { PaidSheet } from './PaidMethod';
 import { usePayments } from './usePayments';
@@ -20,7 +20,7 @@ const FILTERS: Record<Filter, OrderFilters> = {
   all: { view: 'done' },
   delivered: { view: 'done', status: ['delivered'] },
   cancelled: { view: 'done', status: ['cancelled'] },
-  unpaid: { view: 'all', status: ['delivered'], paid: false },
+  unpaid: { view: 'all', status: ['delivered'], paid: false, free_sample: false },
 };
 const PAGE = 50;
 
@@ -111,7 +111,7 @@ const DonePage: React.FC = () => {
                   <td className={o.status === 'cancelled' ? 'is-cancelled' : undefined}>
                     {o.status === 'cancelled' ? adminCopy.orders.cancelled : adminCopy.order.steps[o.status]}
                   </td>
-                  <td>{o.status !== 'cancelled' && <PaidChip order={o} onToggle={paidToggle(o)} />}</td>
+                  <td>{o.free_sample ? <FreeSampleChip /> : o.status !== 'cancelled' && <PaidChip order={o} onToggle={paidToggle(o)} />}</td>
                 </tr>
               ))}
             </tbody>

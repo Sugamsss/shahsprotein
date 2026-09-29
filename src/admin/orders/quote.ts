@@ -1,4 +1,5 @@
 import type { Coupon, CouponUse, OrderLine, Prices } from '../types';
+import { SAMPLE } from './model';
 
 // The worked-out "Total you quoted" (temp/prices-grid-plan.md, "How the total works").
 // Admin only: nothing here ever reaches the site, the order popup or the message.
@@ -24,13 +25,14 @@ export type Quote =
 /**
  * Packs × (the live coupon's price for that pack, else the base price).
  * Delivery isn't in it. A coupon that's off, expired or unknown counts as none.
- * A line with no price at all gives no total rather than a wrong one. Null when
- * there's nothing ordered.
+ * A line with no price at all gives no total rather than a wrong one. Samples
+ * are free: never priced, never part of the coupon math. Null when there's
+ * nothing to pay for (nothing ordered, or only samples: a free sample order has no total).
  */
 export const quote = (
   lines: OrderLine[], code: string | null, coupons: Coupon[], prices: Prices, now: Date,
 ): Quote | null => {
-  const ordered = lines.filter((l) => l.quantity > 0);
+  const ordered = lines.filter((l) => l.quantity > 0 && l.size !== SAMPLE);
   if (!ordered.length) return null;
   const coupon = code ? coupons.find((c) => c.code.toUpperCase() === code.trim().toUpperCase()) : undefined;
   const couponId = coupon && couponState(coupon.code, coupons, now) === 'live' ? coupon.id : null;

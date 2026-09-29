@@ -14,7 +14,7 @@ const namesAndMore = (names: string[], count: number) =>
 export const adminCopy = {
   brand: "Shah's Nutrition",
   /** The browser tab: "(3) Orders · Shah's". The count is the Orders badge's, shown only above 0. */
-  tabTitle: (page: string, toConfirm: number) => `${toConfirm > 0 ? `(${toConfirm}) ` : ''}${page} · Shah's`,
+  tabTitle: (page: string, badge: number) => `${badge > 0 ? `(${badge}) ` : ''}${page} · Shah's`,
   tabPages: {
     home: 'Home', orders: 'Orders', done: 'Done', newOrder: 'New order', editOrder: 'Edit order', products: 'Products',
     customers: 'Customers', coupons: 'Coupons', emailList: 'Email list', settings: 'Settings', more: 'More', signIn: 'Sign in',
@@ -31,7 +31,8 @@ export const adminCopy = {
     emailList: 'Email list',
     more: 'More',
     settings: 'Settings',
-    toConfirm: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} to confirm`,
+    /** The Orders badge, Sunit's only: orders in Packing. */
+    toPack: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} to pack`,
   },
 
   header: {
@@ -151,41 +152,41 @@ export const adminCopy = {
     cancelFind: 'Cancel',
     jumpLabel: 'Jump to a lane',
     lanes: {
-      confirm: ['To confirm', 'Reply with the total on WhatsApp, then confirm.'],
-      send: ['To send', 'Confirmed. Pack them and send them.'],
-      way: ['On the way', 'Mark delivered once it reaches them.'],
-      collect: ['To collect', 'Delivered, not paid in full yet.'],
-      stale: ["Didn't come through?", 'Sent from the site, but no message came yet. Still waiting, or cancel it?'],
+      cooking: ['Cooking', 'Moves to Packing once it’s all cooked.'],
+      packing: ['Packing', 'Cooked. Pack it, then tap Packed.'],
+      ready: ['Ready', 'Packed, waiting to drop off.'],
+      collect: ['Delivered', 'Not paid in full yet.'],
       done: ['Done', ''],
     },
+    /** The phone's jump strip: short, and the money lane by what it's for. */
+    jump: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', collect: 'To collect' },
     laneEmpty: 'Nothing here right now.',
-    toSend: 'to send',
-    toConfirm: 'to confirm',
+    toPack: 'to pack',
+    toDropOff: 'to drop off',
     toCollect: (money: string) => `${money} to collect`,
     doneLink: 'Done',
     doneCount: (n: number) => `Done · ${n}`,
-    doneSub: (paid: number, cancelled: number) => `${paid} delivered and paid, ${cancelled} cancelled`,
+    doneSub: (paid: number, free: number, cancelled: number) =>
+      [`${paid} delivered and paid`, free ? `${free} free ${free === 1 ? 'sample' : 'samples'}` : '', `${cancelled} cancelled`].filter(Boolean).join(', '),
     exportCsv: 'Export CSV',
     // Card buttons, then the detail's pinned button.
     next: {
-      confirm: ['Confirm', 'Confirm order'],
-      send: ['Mark sent', 'Mark sent'],
-      way: ['Delivered', 'Mark delivered'],
+      packing: ['Packed', 'Mark packed'],
+      ready: ['Delivered', 'Mark delivered'],
       collect: ['Mark paid', 'Mark paid'],
-      // A "Didn't come through?" order whose message finally arrived.
-      stale: ['Confirm', 'They messaged, confirm it'],
     },
-    stillWaiting: 'Still waiting',
-    cancel: 'Cancel',
     allDone: 'All done.',
     deliveredPaid: 'Delivered · Paid',
+    deliveredFree: 'Delivered · Free sample',
+    /** The only came-via marker left on cards: a website order may never have arrived on WhatsApp. */
+    fromWebsite: 'From the website',
+    freeSample: 'Free sample',
+    noTotalYet: 'No total yet',
     cancelled: 'Cancelled',
     paid: 'Paid',
     /** Some money in, not the whole total. */
     partPaid: 'Part paid',
     notPaid: 'Not paid',
-    /** The stale card's chip: "No message in 5 days". */
-    noMessage: (age: string) => `No message in ${age}`,
     nthOrder: (n: number) => {
       const end = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
       return `${n}${end} order`;
@@ -200,18 +201,32 @@ export const adminCopy = {
       addByHand: 'Add it by hand',
     },
     toasts: {
-      confirmed: (n: string) => `${n}'s order is confirmed`,
-      sent: (n: string) => `${n}'s order is marked sent`,
+      cooking: (n: string) => `${n}'s order is back to Cooking`,
+      packing: (n: string) => `${n}'s order moved to Packing`,
+      ready: (n: string) => `${n}'s order is packed`,
       delivered: (n: string) => `${n}'s order is marked delivered`,
-      new: (n: string) => `${n}'s order is back to New`,
       cancelled: (n: string) => `${n}'s order is cancelled`,
       /** "Neha's order is marked paid · UPI". Undo and old orders have no method. */
       paid: (n: string, how: string | null) => `${n}'s order is marked paid${how ? ` · ${how}` : ''}`,
       unpaid: (n: string) => `${n}'s order is marked not paid`,
-      kept: (n: string) => `We'll check on ${n}'s order again in 2 days`,
       copied: 'Copied.',
       deleted: 'Order deleted.',
     },
+  },
+
+  /** A free sample: a third pack size, always free, never priced (admin only). */
+  samples: {
+    /** After the product name: "Date Bites sample". */
+    word: 'sample',
+    count: (n: number) => `${n} ${n === 1 ? 'sample' : 'samples'}`,
+  },
+
+  /** A status move's second sentence in the toast, from what the kitchen did. */
+  kitchenEffects: {
+    /** "500 g Date Bites back as spare." */
+    backAsSpare: (items: string[]) => `${andList(items)} back as spare.`,
+    moved: (name: string, to: string) =>
+      (to === 'packing' ? `${name}'s order moved to Packing.` : to === 'cooking' ? `${name}'s order is back to Cooking.` : `${name}'s order moved on.`),
   },
 
   /** How an order was paid: picked when it's marked paid (detail, cards, Done, Add order). */
@@ -327,8 +342,6 @@ export const adminCopy = {
     },
     /** Done: "Delivered · Paid, ₹50 extra" */
     doneExtra: (extra: string) => `Delivered · Paid, ${extra} extra`,
-    /** The To collect lane's line. */
-    collectHint: 'Delivered, not paid in full yet.',
     /** Edit order, under "Total you quoted" once money has come in: "₹750 paid so far". */
     paidSoFar: (amount: string) => `${amount} paid so far`,
 
@@ -356,17 +369,24 @@ export const adminCopy = {
     back: 'Orders',
     notFound: (code: string) => `No order matches “${code}”. Check the code in the chat.`,
     messageSays: (code: string) => `The message says ${code}.`,
-    steps: { new: 'New', confirmed: 'Confirmed', sent: 'Sent', delivered: 'Delivered' },
+    steps: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', delivered: 'Delivered' },
     stepsLabel: 'Status',
     hints: {
-      new: 'Reply with the total on WhatsApp, then confirm.',
-      confirmed: 'Confirmed. Pack it and send it. Payment can come now or on delivery.',
-      sent: 'On its way. Mark delivered once it reaches them.',
+      /** "Waiting on the Raggi Jaggi. It moves to Packing by itself once that's cooked." */
+      cooking: (waiting: string[]) => (waiting.length
+        ? `Waiting on the ${andList(waiting)}. It moves to Packing by itself once ${waiting.length === 1 ? 'that’s' : 'they’re'} cooked.`
+        : 'It moves to Packing by itself once it’s all cooked.'),
+      packing: 'Cooked. Pack it, then mark it packed.',
+      ready: 'Packed. Mark delivered once it reaches them.',
       delivered: 'Delivered. Mark paid when the money comes in.',
+      freeSample: 'Delivered. A free sample, so nothing to collect.',
       done: 'All done.',
     },
-    /** A stale order's hint, with formatAgo: "Sent from the site 5 days ago, …". */
-    staleHint: (ago: string) => `Sent from the site ${ago}, but no message came. Maybe they never pressed send in WhatsApp.`,
+    /** Per product in "3 packs": still to cook, or ready (with the days its food was made). */
+    stillToCook: 'Still to cook',
+    ready: 'Ready',
+    /** "Ready, made Thu 17 Sep" / "Ready, made Thu 17 Sep and Sat 19 Sep". */
+    readyMade: (days: string[]) => `Ready, made ${andList(days)}`,
     cancelledOn: (day: string) => `Cancelled on ${day}.`,
     bringBack: 'Bring it back',
     notPaidYet: 'Not paid yet',
@@ -414,12 +434,20 @@ export const adminCopy = {
     call: 'Call',
     history: 'History',
     events: {
-      created: 'Came in', new: 'Back to New', confirmed: 'Confirmed', sent: 'Sent', delivered: 'Delivered',
-      cancelled: 'Cancelled', paid: 'Marked paid', unpaid: 'Marked not paid', kept: 'Still waiting', unkept: 'Still waiting undone',
+      created: 'Came in', cooking: 'Back to Cooking', packing: 'Moved to Packing', ready: 'Packed', delivered: 'Delivered',
+      cancelled: 'Cancelled', paid: 'Marked paid', unpaid: 'Marked not paid',
+      // Only on orders from before the kitchen flow.
+      new: 'Back to New', confirmed: 'Confirmed', sent: 'Sent', kept: 'Still waiting', unkept: 'Still waiting undone',
     },
+    /** Moves the kitchen made by itself (a batch, spare, an edit), not a person's pick. */
+    autoEvents: {
+      cooking: 'Back to Cooking, short of food after a change',
+      packing: 'Moved to Packing by itself, all cooked',
+      cancelled: 'Cancelled by itself, it never came through',
+    } as Partial<Record<string, string>>,
     more: 'More',
     moreLabel: 'More for this order',
-    menu: { edit: 'Edit order', copy: 'Copy details', cancel: 'Cancel order', delete: 'Delete order' },
+    menu: { moveToPacking: 'Move to Packing', edit: 'Edit order', copy: 'Copy details', cancel: 'Cancel order', delete: 'Delete order' },
     deleteTitle: 'Delete this order?',
     deleteBody: "It's gone for good and stops counting on Home. To keep a record, cancel it instead.",
     keep: 'Keep it',
@@ -428,8 +456,6 @@ export const adminCopy = {
     nextOrder: 'Next order',
     keys: ['close', 'next order', 'paid'],
     matchHint: (name: string, day: string) => `Same number as ${name}'s order on ${day}`,
-    confirmTitle: (name: string) => `Confirm ${name}'s order`,
-    confirmNote: 'You can add these later too.',
   },
 
   done: {
@@ -448,7 +474,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Samples', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 
@@ -653,55 +679,43 @@ export const adminCopy = {
 
     // The three product cards (temp/home-totals/v2/README.md). Each is one link to that product's orders.
     cards: {
-      cookTitle: 'What to make',
-      cookMeta: 'For confirmed orders',
+      cookTitle: 'What to cook',
+      cookMeta: 'For orders waiting on food',
       adminTitle: 'By product',
       adminMeta: 'Tap one to see its orders',
       seeOrders: 'See its orders.',
-      // Pranjali: "Make 3 kg", "250 g × 6 · 500 g × 3" (sizeTimes, like everywhere else), "for 6 orders".
-      make: 'Make',
+      // Pranjali: "Cook 2 kg", "250 g × 2 · 500 g × 3" (the packs waiting on it), "for 4 orders".
+      make: 'Cook',
       forOrders: (n: number) => `for ${n} ${n === 1 ? 'order' : 'orders'}`,
-      nothingToMake: 'Nothing to make',
-      nothingYet: 'Nothing to make yet',
-      maybe: 'Maybe',
-      // After "Maybe 1¾ kg". Only "more" when there's already something to make.
-      maybeIf: (orders: number, more: boolean) =>
-        `${more ? ' more' : ''}, if ${orders === 1 ? 'a new order goes' : `${orders} new orders go`} ahead`,
-      // The tablet's short form: "Maybe +1¾ kg", or "Maybe 1¾ kg" when there's nothing to make yet.
-      maybeShort: (weight: string, more: boolean) => (more ? `+${weight}` : weight),
+      nothingToMake: 'Nothing to cook',
       offSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off the site` : 'Off the site'),
-      cookName: (product: string, main: string, maybe: string, off: string) =>
-        [`${product}: ${main}.`, maybe && `${maybe}.`, off && `${off}.`, 'See its orders.'].filter(Boolean).join(' '),
+      cookName: (product: string, main: string, off: string) =>
+        [`${product}: ${main}.`, off && `${off}.`, 'See its orders.'].filter(Boolean).join(' '),
       // Sunit: every stage, always in this order.
-      toConfirm: 'To confirm',
+      cooking: 'Cooking',
       toPack: 'To pack',
-      onTheWay: 'On the way',
+      ready: 'Ready',
       notPaid: 'Not paid yet',
       sizeTimes: (size: string, packs: number) => `${size} × ${packs}`,
       orders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
       allClear: 'All clear',
-      stale: (n: number) => `${n} didn't come through`,
       off: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off` : 'Off the site'),
-      adminName: (product: string, confirm: number, packs: number, way: number, notPaid: number) =>
-        `${product}: ${confirm} to confirm, ${packs} ${packs === 1 ? 'pack' : 'packs'} to pack, ${way} on the way, ${notPaid} not paid. See its orders.`,
+      adminName: (product: string, cooking: number, packs: number, ready: number, notPaid: number) =>
+        `${product}: ${cooking} cooking, ${packs} ${packs === 1 ? 'pack' : 'packs'} to pack, ${ready} ready, ${notPaid} not paid. See its orders.`,
     },
 
     // The line under the date.
-    cookLede: (weight: string, orders: number) => [weight, ` to make in all, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`] as const,
-    cookNothing: 'Nothing to make right now.',
-    // Under "Nothing to make right now.", quieter. The cards below name each product, so every product is "some of each".
-    cookMaybe: (oneOrder: boolean, products: string[], every: boolean) =>
-      `${oneOrder ? 'A new order' : 'New orders'} might need some ${every ? 'of each' : andList(products)}.`,
+    cookLede: (weight: string, orders: number) => [weight, ` to cook in all, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`] as const,
+    cookNothing: 'Nothing to cook right now.',
     adminLede: (orders: number) => [`${orders} ${orders === 1 ? 'order' : 'orders'}`, ` ${orders === 1 ? 'needs' : 'need'} you`] as const,
     adminNothing: 'Nothing needs you right now',
     stillOut: [', and ', ' is still out'] as const,
 
     waiting: 'Waiting on you',
     allOrders: 'All orders',
-    nothing: 'Nothing waiting. Every order is confirmed, sent or done. Enjoy the quiet.',
-    toConfirm: (n: number) => (n === 1 ? 'New order to confirm' : 'New orders to confirm'),
-    oldestFrom: (when: string) => `Oldest from ${when}`,
-    toSend: 'To pack and send',
+    nothing: 'Nothing to pack, drop off or collect. Enjoy the quiet.',
+    toPack: 'To pack',
+    toDropOff: 'To drop off',
     paidSplit: (paid: number, notPaid: number) =>
       [paid ? `${paid} paid` : '', notPaid ? `${notPaid} not paid yet` : ''].filter(Boolean).join(', '),
     packsThen: (packs: number, rest: string) => `${packs} ${packs === 1 ? 'pack' : 'packs'}${rest ? `. ${rest}` : ''}`,
@@ -713,13 +727,9 @@ export const adminCopy = {
     noTotalYet: (names: string[], count: number) => `${names.length
       ? namesAndMore(names.map((n) => `${n}'s`), count)
       : count} ${count === 1 ? 'has' : 'have'} no total yet`,
-    onTheWay: 'On the way',
     notPaidYet: (n: number) => `${n} not paid yet`,
     namesNotPaid: (names: string[], count: number) => `${namesAndMore(names, count)} ${count === 1 ? "hasn't" : "haven't"} paid yet`,
     allPaid: 'All paid',
-    stale: "Didn't come through?",
-    staleFrom: (when: string) => `From ${when}. Still waiting, or cancel?`,
-    staleHint: 'Still waiting, or cancel?',
 
     // This week, Pranjali's: gentle, in packs, no money.
     week: 'This week',

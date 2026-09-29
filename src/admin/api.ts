@@ -1,8 +1,8 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
-  AdminMe, AdminUser, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Order, OrderChanges,
-  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, PaymentInput, PayRestInput,
-  PriceChange, Prices, RestorePayment, Totals,
+  AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
+  KitchenSettings, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  PaymentInput, PayRestInput, PriceChange, Prices, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -83,8 +83,12 @@ export const getUsers = () => rpc<AdminUser[]>('get_admin_users');
 export const getOrders = (filters: OrderFilters = {}) => rpc<OrderPage>('get_admin_orders', filters);
 /** null when no order has that code. The code may carry `SN-` or `#`, any case. */
 export const getOrder = (code: string) => rpc<OrderDetail | null>('get_admin_order', { code });
+/**
+ * A status move can change the kitchen too (food back as spare, covered by hand, another
+ * order filled): then `kitchen_effects` says what, and Undo is undoKitchen(its action_id).
+ */
 export const updateOrder = (id: string, changes: OrderChanges) =>
-  rpc<Order>('update_admin_order', { id, changes });
+  rpc<UpdatedOrder>('update_admin_order', { id, changes });
 /** Creates an order when `id` is left out; otherwise a full edit. */
 export const saveOrder = (order: OrderInput, id?: string) => rpc<Order>('save_admin_order', { id, order });
 export const deleteOrder = (id: string) => rpc<void>('delete_admin_order', { id });
@@ -103,6 +107,29 @@ export const restorePayments = (orderId: string, payments: RestorePayment[]) =>
     order_id: orderId,
     payments: payments.map(({ id, amount, method, note, paid_at }) => ({ id, amount, method, note, paid_at })),
   });
+
+// The kitchen: batches, spare, shelf life. Every change returns its effects; with
+// `preview` it runs for real and rolls back, so the preview can't drift from the save.
+export const getKitchen = () => rpc<Kitchen>('get_admin_kitchen');
+/** "Log a batch": 1 to 10 at once. */
+export const logBatches = (batches: BatchInput[], preview = false) =>
+  rpc<KitchenEffects>('log_admin_batches', { batches, preview });
+/** Fix a batch's grams or made-on day. */
+export const updateBatch = (id: string, changes: { grams?: number; made_on?: string }, preview = false) =>
+  rpc<KitchenEffects>('update_admin_batch', { id, changes, preview });
+export const deleteBatch = (id: string, preview = false) => rpc<KitchenEffects>('delete_admin_batch', { id, preview });
+/** Used up / thrown out: `grams` null is all of the batch's spare. Only when kitchen.can_write_off. */
+export const writeOffSpare = (batchId: string, grams: number | null, reason: WriteOffReason) =>
+  rpc<KitchenEffects>('write_off_admin_spare', { batch_id: batchId, grams, reason });
+/**
+ * Undo of any kitchen action (a batch, a write-off, a status move with kitchen_effects).
+ * A second call is a no-op. If anything moved since, it fails with a plain message (kind 'message').
+ */
+export const undoKitchen = (actionId: string) =>
+  rpc<{ undone: boolean; kitchen: Kitchen }>('undo_admin_kitchen', { action_id: actionId });
+/** Products page: sample weight and shelf life. Returns the kitchen. */
+export const setKitchenProduct = (productId: string, settings: KitchenSettings) =>
+  rpc<Kitchen>('set_admin_kitchen_product', { product_id: productId, settings });
 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
 /** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */

@@ -32,7 +32,7 @@ const OrdersBadge: React.FC<{ count: number }> = ({ count }) =>
   count > 0 ? (
     <>
       <span className="adm-badge" aria-hidden="true">{count > 9 ? '9+' : count}</span>
-      <span className="visually-hidden">, {copy.nav.toConfirm(count)}</span>
+      <span className="visually-hidden">, {copy.nav.toPack(count)}</span>
     </>
   ) : null;
 
@@ -75,7 +75,7 @@ const AccountMenu: React.FC = () => {
   );
 };
 
-const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
+const Header: React.FC<{ badge: number }> = ({ badge }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const search = useRef<HTMLInputElement>(null);
@@ -127,7 +127,7 @@ const Header: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
         {links.map(([to, label]) => (
           <NavItem key={to} to={to}>
             {label}
-            {to === '/admin/orders' && <OrdersBadge count={toConfirm} />}
+            {to === '/admin/orders' && <OrdersBadge count={badge} />}
           </NavItem>
         ))}
       </nav>
@@ -160,7 +160,7 @@ const tabPage = (pathname: string): string => {
 
 const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings)(\/|$)/;
 
-const TabBar: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
+const TabBar: React.FC<{ badge: number }> = ({ badge }) => {
   const { pathname } = useLocation();
   const tabs = [
     { to: '/admin', label: copy.nav.home, Icon: Home },
@@ -174,7 +174,7 @@ const TabBar: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
         <NavItem key={to} to={to}>
           <Icon size={22} aria-hidden="true" />
           <span>{label}</span>
-          {to === '/admin/orders' && <OrdersBadge count={toConfirm} />}
+          {to === '/admin/orders' && <OrdersBadge count={badge} />}
         </NavItem>
       ))}
       {/* More stays lit on the pages it leads to. */}
@@ -189,20 +189,22 @@ const TabBar: React.FC<{ toConfirm: number }> = ({ toConfirm }) => {
 /** Laptop: the glass pill header. Phone: the same pill as a tab bar at the bottom. */
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const overview = useRpc(getOverview, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
-  const toConfirm = overview.data?.queue.to_confirm ?? 0;
+  // The Orders badge is what's waiting on Sunit: orders to pack. The cook gets none; her Home answers her.
+  const cook = useAdminMe().home_view === 'cook';
+  const badge = cook ? 0 : overview.data?.queue.packing.count ?? 0;
   // "(3) Orders · Shah's": the same count as the Orders badge. AdminApp puts the site's title back.
   const { pathname } = useLocation();
-  useEffect(() => { document.title = copy.tabTitle(tabPage(pathname), toConfirm); }, [pathname, toConfirm]);
+  useEffect(() => { document.title = copy.tabTitle(tabPage(pathname), badge); }, [pathname, badge]);
 
   return (
     <ToastProvider>
     <div className="adm">
       <a href="#adm-main" className="skip-link">{copy.skipLink}</a>
-      <Header toConfirm={toConfirm} />
+      <Header badge={badge} />
       <main id="adm-main" className="adm-main" tabIndex={-1}>
         <OverviewContext.Provider value={overview}>{children}</OverviewContext.Provider>
       </main>
-      <TabBar toConfirm={toConfirm} />
+      <TabBar badge={badge} />
     </div>
     </ToastProvider>
   );

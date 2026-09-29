@@ -17,7 +17,7 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
-import { cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
+import { SAMPLE, cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
 import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
@@ -38,7 +38,7 @@ const SOURCES: { value: Source; icon: React.ReactNode }[] = [
   { value: 'instagram', icon: <Instagram size={20} strokeWidth={1.75} /> },
   { value: 'in_person', icon: <User size={20} strokeWidth={1.75} /> },
 ];
-const STEPS = ['new', 'confirmed', 'sent', 'delivered'] as const;
+const STEPS = ['cooking', 'packing', 'ready', 'delivered'] as const;
 type Step = (typeof STEPS)[number];
 const STATUSES = STEPS.map((value) => ({ value, label: orderCopy.steps[value] }));
 const PACKS = productsData.flatMap((p) => p.weightOptions.map((size) => ({ product: p, size, key: `${p.id}|${size}` })));
@@ -64,7 +64,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [name, setName] = useState(order?.name ?? '');
   const [pincode, setPincode] = useState(order?.pincode ?? '');
   const [via, setVia] = useState<OrderSource | null>(order?.source ?? null);
-  const [status, setStatus] = useState<Step>('confirmed');
+  const [status, setStatus] = useState<Step>('cooking');
   const [paid, setPaid] = useState(false);
   // Nothing picked until they pick: '' is "not yet".
   const [paidMethod, setPaidMethod] = useState<PaidMethod | ''>('');
@@ -93,7 +93,11 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
   const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);
-  const lines = PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
+  // Samples aren't in this form yet (lane B adds them), so an edit keeps the order's sample lines as they are.
+  const lines = [
+    ...PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] })),
+    ...(order?.lines ?? []).filter((l) => l.size === SAMPLE).map(({ product_id, size, quantity }) => ({ product_id, size, quantity })),
+  ];
 
   // Filled in by itself: only on a new order, only while he hasn't picked, only with the coupon list shown.
   const digits = normalisePhone(phone);

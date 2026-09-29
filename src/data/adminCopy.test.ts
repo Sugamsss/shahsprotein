@@ -1,31 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { adminCopy } from './adminCopy';
 
-// Pranjali's Home: the sentences that change with the day's numbers.
-const { cards, cookMaybe } = adminCopy.homePage;
+// The admin's sentences that change with the order or the day's numbers.
+const { order, orders } = adminCopy;
 
-describe("a product card's maybe", () => {
-  // It follows "Maybe 1¾ kg". "More" only makes sense when there's already something to make.
-  it.each([
-    [4, true, 'Maybe 1¾ kg more, if 4 new orders go ahead'],
-    [4, false, 'Maybe 1¾ kg, if 4 new orders go ahead'],
-    [1, false, 'Maybe 1¾ kg, if a new order goes ahead'],
-  ])('%i orders, something to make: %s', (orders, more, expected) => {
-    expect(`${cards.maybe} 1¾ kg${cards.maybeIf(orders, more)}`).toBe(expected);
+describe("a Cooking order's hint", () => {
+  it('names what it waits on, and agrees with one or more', () => {
+    expect(order.hints.cooking(['Raggi Jaggi'])).toBe('Waiting on the Raggi Jaggi. It moves to Packing by itself once that’s cooked.');
+    expect(order.hints.cooking(['Raggi Jaggi', 'Muesli']))
+      .toBe('Waiting on the Raggi Jaggi and Muesli. It moves to Packing by itself once they’re cooked.');
   });
 
-  it('the short form adds a + only when there is something to make', () => {
-    expect(cards.maybeShort('1¾ kg', true)).toBe('+1¾ kg');
-    expect(cards.maybeShort('1¾ kg', false)).toBe('1¾ kg');
+  it('says it plainly when nothing is short (moved back by hand, a fill still to come)', () => {
+    expect(order.hints.cooking([])).toBe('It moves to Packing by itself once it’s all cooked.');
   });
 });
 
-describe('the maybe under "Nothing to make right now."', () => {
-  it('names the products when only some might be needed', () => {
-    expect(cookMaybe(true, ['Raggi Jaggi', 'Muesli'], false)).toBe('A new order might need some Raggi Jaggi and Muesli.');
+describe('a ready product in the order', () => {
+  it('says the day, or the days, its food was made', () => {
+    expect(order.readyMade(['Thu 17 Sep'])).toBe('Ready, made Thu 17 Sep');
+    expect(order.readyMade(['Thu 17 Sep', 'Sat 19 Sep'])).toBe('Ready, made Thu 17 Sep and Sat 19 Sep');
   });
+});
 
-  it('says "some of each" instead of listing every product', () => {
-    expect(cookMaybe(false, ['Raggi Jaggi', 'Muesli', 'Date Bites'], true)).toBe('New orders might need some of each.');
+describe("Done's line on the Orders page", () => {
+  it('mentions free samples only when there are some', () => {
+    expect(orders.doneSub(6, 0, 1)).toBe('6 delivered and paid, 1 cancelled');
+    expect(orders.doneSub(6, 1, 1)).toBe('6 delivered and paid, 1 free sample, 1 cancelled');
   });
 });

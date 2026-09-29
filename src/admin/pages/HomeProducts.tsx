@@ -5,17 +5,19 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import type { Product } from '../../types/product';
 import { formatWeight } from '../format';
+import { sizeText } from '../orders/model';
 import { AdminLink } from '../router';
-import type { OutOfStock, Totals, TotalsCell, TotalsStage } from '../types';
+import type { KitchenProduct, OutOfStock, Totals, TotalsCell, TotalsStage } from '../types';
 
 const copy = adminCopy.homePage.cards;
 
 // The three product cards at the top of Home (temp/home-totals/v2): always all
 // three, in product order, each one link to that product's orders. Pranjali's
-// say what to make; Sunit's list every stage. `totals` is undefined while it
-// loads: the labels stay and the numbers pulse.
+// say what's still to cook (the kitchen's to_cook); Sunit's list every stage.
+// `totals` is undefined while it loads: the labels stay and the numbers pulse.
+// Interim: lane A rebuilds both.
 
-const EMPTY: TotalsCell = { orders: 0, packs: 0, grams: 0, by_size: [] };
+const EMPTY: TotalsCell = { orders: 0, packs: 0, samples: 0, grams: 0, by_size: [] };
 
 export type ProductStages = Record<TotalsStage, TotalsCell>;
 
@@ -23,11 +25,10 @@ export type ProductStages = Record<TotalsStage, TotalsCell>;
 export const stagesOf = (totals: Totals, productId: string): ProductStages => {
   const found = totals.products.find((p) => p.product_id === productId)?.stages;
   return {
-    to_confirm: found?.to_confirm ?? EMPTY,
-    to_send: found?.to_send ?? EMPTY,
-    on_the_way: found?.on_the_way ?? EMPTY,
+    cooking: found?.cooking ?? EMPTY,
+    packing: found?.packing ?? EMPTY,
+    ready: found?.ready ?? EMPTY,
     to_collect: found?.to_collect ?? EMPTY,
-    stale: found?.stale ?? EMPTY,
   };
 };
 
@@ -58,39 +59,25 @@ const Photo: React.FC<{ product: Product }> = ({ product }) => {
   );
 };
 
-/** Pranjali: "Make 3 kg", "250 g × 6 · 500 g × 3", "for 6 orders", then the dashed maybe. */
-const CookBody: React.FC<{ stages?: ProductStages; off?: string[] | null }> = ({ stages, off }) => {
-  if (!stages) {
+/** Pranjali: "Cook 2 kg", the packs waiting on it, "for 4 orders". */
+const CookBody: React.FC<{ kitchen?: KitchenProduct; off?: string[] | null }> = ({ kitchen, off }) => {
+  if (!kitchen) {
     return <span className="adm-pcard__make"><span>{copy.make}</span><Pulse className="adm-pulse--big" /></span>;
   }
-  const make = stages.to_send;
-  const maybe = stages.to_confirm;
-  const more = make.packs > 0;
-  const maybeBox = maybe.orders > 0 && (
-    <span className="adm-pcard__maybe">
-      <span className="adm-pcard__long">{copy.maybe} <b>{formatWeight(maybe.grams)}</b>{copy.maybeIf(maybe.orders, more)}</span>
-      <span className="adm-pcard__short">{copy.maybe} <b>{copy.maybeShort(formatWeight(maybe.grams), more)}</b></span>
-    </span>
-  );
   const offNote = off !== undefined && <span className="adm-pcard__off"><i />{copy.offSite(off)}</span>;
-  if (!more) {
-    return (
-      <>
-        <span className="adm-pcard__none"><CheckCircle size={18} aria-hidden="true" />{maybe.orders ? copy.nothingYet : copy.nothingToMake}</span>
-        {maybeBox}{offNote}
-      </>
-    );
+  if (!kitchen.to_cook) {
+    return <><span className="adm-pcard__none"><CheckCircle size={18} aria-hidden="true" />{copy.nothingToMake}</span>{offNote}</>;
   }
   return (
     <>
-      <span className="adm-pcard__make"><span>{copy.make}</span><b>{formatWeight(make.grams)}</b></span>
+      <span className="adm-pcard__make"><span>{copy.make}</span><b>{formatWeight(kitchen.to_cook)}</b></span>
       <span className="adm-pcard__sizes">
-        {make.by_size.map((s, i) => (
-          <React.Fragment key={s.size}>{i > 0 && <i>·</i>}<span>{copy.sizeTimes(s.size, s.packs)}</span></React.Fragment>
+        {kitchen.waiting_packs.map((s, i) => (
+          <React.Fragment key={s.size}>{i > 0 && <i>·</i>}<span>{copy.sizeTimes(sizeText(s.size), s.packs)}</span></React.Fragment>
         ))}
       </span>
-      <span className="adm-pcard__for">{copy.forOrders(make.orders)}</span>
-      {maybeBox}{offNote}
+      <span className="adm-pcard__for">{copy.forOrders(kitchen.queue.length)}</span>
+      {offNote}
     </>
   );
 };
@@ -104,43 +91,36 @@ const Value: React.FC<{ n?: number }> = ({ n }) => {
 
 /** Sunit: the four stages, always all four in the same order, zeros faded. */
 const AdminBody: React.FC<{ stages?: ProductStages; off?: string[] | null }> = ({ stages, off }) => {
-  const pack = stages?.to_send;
-  const foot = [
-    stages?.stale.orders ? copy.stale(stages.stale.orders) : '',
-    off !== undefined ? copy.off(off) : '',
-  ].filter(Boolean);
+  const pack = stages?.packing;
   return (
     <>
       <ul className="adm-pcard__stages">
-        <li className={stages?.to_confirm.orders ? 'is-accent' : ''}><span>{copy.toConfirm}</span><Value n={stages?.to_confirm.orders} /></li>
-        <li>
+        <li><span>{copy.cooking}</span><Value n={stages?.cooking.orders} /></li>
+        <li className={pack?.packs ? 'is-accent' : ''}>
           <span>
             {copy.toPack}
-            {pack && pack.packs > 0 && <small>{pack.by_size.map((s) => copy.sizeTimes(s.size, s.packs)).join(' · ')}</small>}
+            {pack && pack.packs > 0 && <small>{pack.by_size.map((s) => copy.sizeTimes(sizeText(s.size), s.packs)).join(' · ')}</small>}
           </span>
           <Value n={pack?.packs} />
         </li>
-        <li><span>{copy.onTheWay}</span><Value n={stages?.on_the_way.orders} /></li>
+        <li><span>{copy.ready}</span><Value n={stages?.ready.orders} /></li>
         <li><span>{copy.notPaid}</span><Value n={stages?.to_collect.orders} /></li>
       </ul>
-      {foot.length > 0 && <span className="adm-pcard__note">{foot.join(' · ')}</span>}
+      {off !== undefined && <span className="adm-pcard__note">{copy.off(off)}</span>}
     </>
   );
 };
 
 /** What a screen reader says for the whole card. */
-const spokenName = (cook: boolean, product: Product, stages: ProductStages | undefined, off: string[] | null | undefined) => {
+const spokenName = (product: Product, stages: ProductStages | undefined, kitchen: KitchenProduct | undefined, off: string[] | null | undefined) => {
   if (!stages) return `${product.name}. ${copy.seeOrders}`;
-  if (!cook) {
-    return copy.adminName(product.name, stages.to_confirm.orders, stages.to_send.packs, stages.on_the_way.orders, stages.to_collect.orders);
+  if (!kitchen) {
+    return copy.adminName(product.name, stages.cooking.orders, stages.packing.packs, stages.ready.orders, stages.to_collect.orders);
   }
-  const make = stages.to_send;
-  const maybe = stages.to_confirm;
-  const main = make.packs
-    ? `${copy.make.toLowerCase()} ${formatWeight(make.grams)} ${copy.forOrders(make.orders)}`
-    : (maybe.orders ? copy.nothingYet : copy.nothingToMake).toLowerCase();
-  const maybeText = maybe.orders ? `${copy.maybe} ${formatWeight(maybe.grams)}${copy.maybeIf(maybe.orders, make.packs > 0)}` : '';
-  return copy.cookName(product.name, main, maybeText, off !== undefined ? copy.offSite(off) : '');
+  const main = kitchen.to_cook
+    ? `${copy.make.toLowerCase()} ${formatWeight(kitchen.to_cook)} ${copy.forOrders(kitchen.queue.length)}`
+    : copy.nothingToMake.toLowerCase();
+  return copy.cookName(product.name, main, off !== undefined ? copy.offSite(off) : '');
 };
 
 /**
@@ -161,16 +141,17 @@ export const ProductCards: React.FC<{
   <div className={`adm-pcards adm-pcards--${cook ? 'cook' : 'admin'}`} onFocus={revealFocused}>
     {productsData.map((product) => {
       const stages = totals ? stagesOf(totals, product.id) : undefined;
+      const kitchen = cook && totals ? totals.kitchen.products.find((k) => k.product_id === product.id) : undefined;
       const off = offSizes(product, stock);
       const open = stages
-        ? stages.to_confirm.orders + stages.to_send.orders + stages.on_the_way.orders + stages.to_collect.orders
+        ? stages.cooking.orders + stages.packing.orders + stages.ready.orders + stages.to_collect.orders
         : undefined;
       return (
         <AdminLink
           key={product.id}
           to={`/admin/orders?product=${product.id}`}
           className="adm-card adm-pcard"
-          aria-label={spokenName(cook, product, stages, off)}
+          aria-label={spokenName(product, stages, kitchen, off)}
           aria-busy={stages ? undefined : true}
         >
           <Photo product={product} />
@@ -180,7 +161,7 @@ export const ProductCards: React.FC<{
               {!cook && open !== undefined && <span className="adm-pcard__meta">{open ? copy.orders(open) : copy.allClear}</span>}
               <ChevronRight className="adm-pcard__chev" size={18} aria-hidden="true" />
             </span>
-            {cook ? <CookBody stages={stages} off={off} /> : <AdminBody stages={stages} off={off} />}
+            {cook ? <CookBody kitchen={kitchen} off={off} /> : <AdminBody stages={stages} off={off} />}
           </span>
         </AdminLink>
       );
