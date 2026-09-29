@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(98);
+select plan(102);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -996,6 +996,45 @@ select throws_ok(
   $$select public.update_admin_order(pg_temp.id('SN-KSA22'), '{"status_changed_at":"2026-01-01T00:00:00Z"}')$$,
   '22023', 'status_changed_at goes only with status.', 'status_changed_at only with a status'
 );
+
+-- ─── 22. Undo leaves no history; a given pouch says so ──
+
+create function pg_temp.hist(p_code text) returns jsonb language sql as $$
+  select coalesce(jsonb_agg(jsonb_build_array(e.event, e.auto) order by e.at, e.id), '[]')
+  from public.order_events e where e.order_id = pg_temp.id(p_code);
+$$;
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KWA22', 50, '[{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.ord('SN-KWB22', 40, '[{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('u1', 'muesli', 250);
+select set_config('t.ha', pg_temp.hist('SN-KWA22')::text, true);
+select set_config('t.hb', pg_temp.hist('SN-KWB22')::text, true);
+select set_config('t.cx', pg_temp.move('SN-KWA22', 'cancelled')::text, true);
+select is(pg_temp.st('SN-KWB22'), 'packing', 'cancelling A sends its food to B');
+select public.undo_admin_kitchen((current_setting('t.cx')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
+select is(
+  jsonb_build_object('a', pg_temp.hist('SN-KWA22'), 'b', pg_temp.hist('SN-KWB22')),
+  jsonb_build_object('a', current_setting('t.ha')::jsonb, 'b', current_setting('t.hb')::jsonb),
+  'after Undo both histories read as if the cancel never happened'
+);
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KWC22', 50, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('u2', 'raggi-jaggi', 500);
+select public.save_admin_order(null, '{"source":"call","code":"SN-KWP22","name":"Meera Example","priority":true,
+  "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
+select set_config('t.hc', pg_temp.hist('SN-KWC22')::text, true);
+select set_config('t.give', public.give_admin_priority(pg_temp.id('SN-KWP22'))::text, true);
+select is(
+  (select jsonb_build_object('event', h -> -1 -> 'event', 'auto', h -> -1 -> 'auto', 'detail', h -> -1 -> 'detail')
+   from (select (public.get_admin_order('SN-KWC22')::jsonb -> 'history') as h) x),
+  '{"event":"cooking","auto":true,"detail":{"reason":"gave_priority","to_code":"SN-KWP22","to_name":"Meera Example",
+    "items":[{"product_id":"raggi-jaggi","size":"500 g","count":1}]}}'::jsonb,
+  'the order that gave a pouch says where it went'
+);
+select public.undo_admin_kitchen((current_setting('t.give')::jsonb ->> 'action_id')::uuid);
+select is(pg_temp.hist('SN-KWC22'), current_setting('t.hc')::jsonb, 'and after Undo that line is gone');
 
 select * from finish();
 rollback;

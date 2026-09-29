@@ -59,7 +59,12 @@
 -- ═══════════════════════════════════════════════════════
 
 alter table public.order_events
-  add column if not exists auto boolean not null default false;
+  add column if not exists auto boolean not null default false,
+  -- The kitchen action that wrote it (Undo of that action removes it), and
+  -- what a rule did when a status alone doesn't say it (a pouch given to a
+  -- priority order: {"reason": "gave_priority", "to_code", "to_name", "items"}).
+  add column if not exists action_id uuid,
+  add column if not exists detail jsonb;
 
 alter table public.order_events drop constraint if exists order_events_event_check;
 alter table public.order_events add constraint order_events_event_check check (event in (
@@ -124,7 +129,14 @@ set search_path = public
 as $$
 declare
   v_by uuid := auth.uid();
+  v_action uuid := nullif(current_setting('shahs.kitchen_action', true), '')::uuid;
 begin
+  -- Kitchen Undo puts rows back as if the mistake never happened: it writes
+  -- no history of its own, and removes what the action wrote.
+  if coalesce(current_setting('shahs.no_events', true), '') = 'on' then
+    return null;
+  end if;
+
   if tg_op = 'INSERT' then
     insert into public.order_events (order_id, event, by)
     values (new.id, 'created', v_by);
@@ -132,14 +144,15 @@ begin
   end if;
 
   if new.status is distinct from old.status then
-    insert into public.order_events (order_id, event, by, auto)
-    values (new.id, new.status, v_by, coalesce(current_setting('shahs.order_auto', true), '') = 'on');
+    insert into public.order_events (order_id, event, by, auto, action_id, detail)
+    values (new.id, new.status, v_by, coalesce(current_setting('shahs.order_auto', true), '') = 'on', v_action,
+      nullif(current_setting('shahs.order_event_detail', true), '')::jsonb);
   end if;
 
   if old.paid_at is null and new.paid_at is not null then
-    insert into public.order_events (order_id, event, by) values (new.id, 'paid', v_by);
+    insert into public.order_events (order_id, event, by, action_id) values (new.id, 'paid', v_by, v_action);
   elsif old.paid_at is not null and new.paid_at is null then
-    insert into public.order_events (order_id, event, by) values (new.id, 'unpaid', v_by);
+    insert into public.order_events (order_id, event, by, action_id) values (new.id, 'unpaid', v_by, v_action);
   end if;
 
   return null;
@@ -1782,7 +1795,10 @@ begin
       'at', e.at,
       'by_name', coalesce(a.display_name, a.email),
       -- Moved by the kitchen rules (a batch, spare, an edit), not chosen.
-      'auto', e.auto
+      'auto', e.auto,
+      -- What the rule did, when the event alone doesn't say (a pouch given to
+      -- a priority order); null otherwise.
+      'detail', e.detail
     )
     order by e.at, e.id
   ), '[]'::json) into v_history
@@ -3070,7 +3086,14 @@ begin
         continue when v_n = 0;
 
         if exists (select 1 from public.kitchen_order_cover(v_donor.id) c where c.covered < c.need) then
+          -- Its history says where the pouch went, not just "back to Cooking".
+          perform set_config('shahs.order_event_detail', jsonb_build_object(
+            'reason', 'gave_priority', 'to_code', v_order.code, 'to_name', v_order.name,
+            'items', jsonb_build_array(jsonb_build_object(
+              'product_id', v_cover.product_id, 'size', v_line.size, 'count', v_n))
+          )::text, true);
           perform public.kitchen_set_status(v_donor.id, 'cooking', true);
+          perform set_config('shahs.order_event_detail', '', true);
         end if;
 
         v_pouches := v_pouches || jsonb_build_object(
@@ -3161,8 +3184,9 @@ begin
     return json_build_object('undone', true, 'kitchen', public.kitchen_state_json());
   end if;
 
-  -- Nothing Undo does is itself recorded.
+  -- Nothing Undo does is itself recorded, in the undo log or the history.
   perform set_config('shahs.kitchen_action', '', true);
+  perform set_config('shahs.no_events', 'on', true);
 
   perform 1 from public.orders o
   where o.id in (
@@ -3190,6 +3214,10 @@ begin
   ) then
     raise exception using message = 'Something changed since, so this can''t be undone.', errcode = '22023';
   end if;
+
+  perform set_config('shahs.no_events', '', true);
+  -- The history reads as if it never happened.
+  delete from public.order_events where action_id = p_action_id;
 
   update public.kitchen_actions
   set undone_at = timezone('utc', now()), undone_by = auth.uid()
