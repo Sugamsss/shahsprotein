@@ -2,9 +2,12 @@
 -- design brief) plus every payment state, for trying the UI and taking
 -- screenshots. LOCAL ONLY. It's not in config.toml's seed paths, so
 -- `supabase db reset` doesn't load it and `db push` never sends it.
--- Load it by hand after a reset:
+-- Load it by hand after a reset, in one transaction that stops at the first
+-- error (without these flags psql runs past the empty-database guard below
+-- and half-loads the data a second time):
 --
---   psql "$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')" -f supabase/seeds/local-demo.sql
+--   psql "$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')" \
+--     -v ON_ERROR_STOP=1 --single-transaction -f supabase/seeds/local-demo.sql
 --
 -- Everyone here is made up: names, phones (9198000000xx), codes and prices.
 -- The two sign-ins are local test accounts:
