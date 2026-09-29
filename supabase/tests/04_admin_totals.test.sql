@@ -45,17 +45,17 @@ reset role;
 select ok(
   not has_function_privilege('public', 'public.get_admin_totals()', 'execute')
   and not has_function_privilege('anon',
-    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean)', 'execute')
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean,boolean)', 'execute')
   and has_function_privilege('authenticated',
-    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean)', 'execute'),
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean,boolean)', 'execute'),
   'grants: PUBLIC cannot run get_admin_totals; get_admin_orders is authenticated only'
 );
 
 select is(
   (select array_agg(p.oid::regprocedure::text) from pg_proc p
    where p.pronamespace = 'public'::regnamespace and p.proname = 'get_admin_orders'),
-  array['get_admin_orders(text,text[],boolean,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,integer,text,boolean)'],
-  'get_admin_orders has one signature, with p_product and p_free_sample; the older ones are gone'
+  array['get_admin_orders(text,text[],boolean,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,integer,text,boolean,boolean)'],
+  'get_admin_orders has one signature, with p_product, p_free_sample and p_samples; the older ones are gone'
 );
 
 -- ─── 2. An empty database gives zeros ───────────────────
@@ -266,8 +266,9 @@ select is(
 select is(
   (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
   '{"orders":7,"packs":22,"amount_in":1700,"paid_orders":2,"paid_without_amount":0,"part_payments":0,
-    "grams_made":0,"samples":{"orders":1,"packs":3}}'::jsonb,
-  'this week: real orders (not cancelled or free samples), packs without samples; samples counted apart; '
+    "grams_made":0,"samples":{"orders":2,"packs":3}}'::jsonb,
+  'this week: real orders (not cancelled or free samples), packs without samples; samples counted apart '
+  '(orders carrying one: the free sample order and the paid order with a taster); '
   'money in skips the cancelled order'
 );
 

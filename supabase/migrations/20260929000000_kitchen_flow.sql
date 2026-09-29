@@ -1686,7 +1686,8 @@ $$;
 revoke all on function public.get_admin_order(text) from public, anon;
 grant execute on function public.get_admin_order(text) to authenticated;
 
--- get_admin_orders() gains p_free_sample, so both are dropped and made again.
+-- get_admin_orders() gains p_free_sample and p_samples, so both are dropped
+-- and made again.
 drop function if exists public.get_admin_orders(
   text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text
 );
@@ -1696,7 +1697,10 @@ drop function if exists public.admin_filter_orders(
 
 -- As in 20260926000006, with the new stages. Done = delivered and (paid in
 -- full, or a free sample order), or cancelled. p_free_sample: true keeps only
--- free sample orders, false leaves them out, null doesn't filter.
+-- free sample orders, false leaves them out, null doesn't filter. p_samples:
+-- true keeps orders carrying at least one sample (free sample orders and
+-- paid orders with a free taster: the Free samples list), false keeps orders
+-- with none, null doesn't filter.
 create function public.admin_filter_orders(
   p_view text,
   p_status text[],
@@ -1711,7 +1715,8 @@ create function public.admin_filter_orders(
   p_name_like text,
   p_digits_like text,
   p_product text,
-  p_free_sample boolean
+  p_free_sample boolean,
+  p_samples boolean
 )
 returns setof public.orders
 language sql
@@ -1734,6 +1739,9 @@ as $$
     and (p_status is null or o.status = any (p_status))
     and (p_paid is null or (o.paid_at is not null) = p_paid)
     and (p_free_sample is null or o.free_sample = p_free_sample)
+    and (p_samples is null or p_samples = exists (
+      select 1 from public.order_lines l where l.order_id = o.id and l.size = 'sample'
+    ))
     and (p_source is null or o.source = p_source)
     and (p_from is null or o.created_at >= p_from)
     and (p_to is null or o.created_at < p_to)
@@ -1751,7 +1759,7 @@ as $$
     ));
 $$;
 
-revoke all on function public.admin_filter_orders(text, text[], boolean, text, timestamptz, timestamptz, timestamptz, boolean, text, text, text, text, text, boolean)
+revoke all on function public.admin_filter_orders(text, text[], boolean, text, timestamptz, timestamptz, timestamptz, boolean, text, text, text, text, text, boolean, boolean)
   from public, anon, authenticated;
 
 create function public.get_admin_orders(
@@ -1766,7 +1774,8 @@ create function public.get_admin_orders(
   p_before timestamptz default null,
   p_limit integer default 50,
   p_product text default null,
-  p_free_sample boolean default null
+  p_free_sample boolean default null,
+  p_samples boolean default null
 )
 returns json
 language plpgsql
@@ -1832,7 +1841,7 @@ begin
   select f.created_at into v_boundary
   from public.admin_filter_orders(
     v_view, v_status, p_paid, p_source, p_from, p_to, p_before,
-    v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample
+    v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample, p_samples
   ) f
   order by f.created_at desc, f.id desc
   offset v_limit - 1
@@ -1842,7 +1851,7 @@ begin
   into v_orders
   from public.admin_filter_orders(
     v_view, v_status, p_paid, p_source, p_from, p_to, p_before,
-    v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample
+    v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample, p_samples
   ) f
   where v_boundary is null or f.created_at >= v_boundary;
 
@@ -1850,7 +1859,7 @@ begin
     select 1
     from public.admin_filter_orders(
       v_view, v_status, p_paid, p_source, p_from, p_to, v_boundary,
-      v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample
+      v_phone_given, v_phone, v_code_like, v_name_like, v_digits_like, v_product, p_free_sample, p_samples
     )
   ) then
     v_next_before := v_boundary;
@@ -1860,8 +1869,8 @@ begin
 end;
 $$;
 
-revoke all on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text, boolean) from public, anon;
-grant execute on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text, boolean) to authenticated;
+revoke all on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text, boolean, boolean) from public, anon;
+grant execute on function public.get_admin_orders(text, text[], boolean, text, text, text, timestamptz, timestamptz, timestamptz, integer, text, boolean, boolean) to authenticated;
 
 -- ═══════════════════════════════════════════════════════
 -- 9. Orders in: the site, and the admin
@@ -3052,11 +3061,17 @@ begin
         limit 1
       )
     ),
+    -- Orders carrying samples (free sample orders and paid orders with a
+    -- taster), as the Free samples list: on their way, and delivered this
+    -- month (India time).
     'free_samples', json_build_object(
-      'open', count(*) filter (where o.free_sample and o.status in ('cooking', 'packing', 'ready')),
+      'open', count(*) filter (where o.status in ('cooking', 'packing', 'ready') and exists (
+        select 1 from public.order_lines l where l.order_id = o.id and l.size = 'sample'
+      )),
       'sent_this_month', (
         select count(*) from public.orders f
-        where f.free_sample and f.status = 'delivered' and f.status_changed_at >= v_month_start
+        where f.status = 'delivered' and f.status_changed_at >= v_month_start
+          and exists (select 1 from public.order_lines l where l.order_id = f.id and l.size = 'sample')
       )
     )
   ) into v_queue
@@ -3200,8 +3215,8 @@ grant execute on function public.get_admin_overview() to authenticated;
 --   weeks        orders and packs are every order that isn't cancelled or a
 --                free sample, by created_at, packs without samples. New:
 --                grams_made (batches by made_on, India date) and samples
---                {orders: free sample orders, packs: sample packs on any
---                order}. Money in is unchanged.
+--                {orders: orders carrying a sample, packs: sample packs on
+--                any order}. Money in is unchanged.
 --   kitchen      the get_admin_kitchen() object, so Home stays one call.
 create or replace function public.get_admin_totals()
 returns json
@@ -3371,9 +3386,12 @@ begin
       from real_orders r
       join public.order_lines l on l.order_id = r.id and l.size <> 'sample'
     ),
-    -- Samples: free sample orders, and sample packs on any order.
+    -- Samples: orders carrying a sample (free sample orders and paid orders
+    -- with a taster), and sample packs on any order.
     sample_orders as (
-      select o.created_at from public.orders o where o.status <> 'cancelled' and o.free_sample
+      select o.created_at from public.orders o
+      where o.status <> 'cancelled'
+        and exists (select 1 from public.order_lines l where l.order_id = o.id and l.size = 'sample')
     ),
     sample_lines as (
       select o.created_at, l.quantity

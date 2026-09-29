@@ -167,6 +167,10 @@ $$;
 create function pg_temp.codes(p json) returns jsonb language sql as $$
   select coalesce(jsonb_agg(o ->> 'code' order by n), '[]') from json_array_elements(p -> 'orders') with ordinality t(o, n);
 $$;
+-- The same, sorted: for orders saved in one transaction (same created_at).
+create function pg_temp.codeset(p json) returns jsonb language sql as $$
+  select coalesce(jsonb_agg(o ->> 'code' order by o ->> 'code'), '[]') from json_array_elements(p -> 'orders') t(o);
+$$;
 
 -- ─── 1. Who can call what ───────────────────────────────
 
@@ -661,15 +665,24 @@ select public.save_admin_order(null, '{
   "lines":[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]
 }');
 select pg_temp.move('SN-KZA22', 'delivered');
+-- A paid order with a free taster riding along: in the Free samples list,
+-- but still money like any order.
+select public.save_admin_order(null, '{
+  "source":"call","code":"SN-KZC22","name":"Anil Example","phone":"919800000099","amount":250,"status":"ready",
+  "lines":[{"product_id":"muesli","size":"250 g","quantity":1},{"product_id":"bites","size":"sample","quantity":1}]
+}');
 
 select is(
   jsonb_build_object(
-    'todo', pg_temp.codes(public.get_admin_orders()),
+    'todo', pg_temp.codeset(public.get_admin_orders()),
     'done', pg_temp.codes(public.get_admin_orders(p_view => 'done')),
     'only', pg_temp.codes(public.get_admin_orders(p_view => 'all', p_free_sample => true)),
-    'without', pg_temp.codes(public.get_admin_orders(p_view => 'all', p_free_sample => false))),
-  '{"todo":["SN-KZB22"],"done":["SN-KZA22"],"only":["SN-KZA22"],"without":["SN-KZB22"]}'::jsonb,
-  'a delivered free sample order is done with nothing to collect; p_free_sample picks them out or leaves them out'
+    'without', pg_temp.codeset(public.get_admin_orders(p_view => 'all', p_free_sample => false)),
+    'samples', pg_temp.codeset(public.get_admin_orders(p_view => 'all', p_samples => true)),
+    'no_samples', pg_temp.codes(public.get_admin_orders(p_view => 'all', p_samples => false))),
+  '{"todo":["SN-KZB22","SN-KZC22"],"done":["SN-KZA22"],"only":["SN-KZA22"],"without":["SN-KZB22","SN-KZC22"],
+    "samples":["SN-KZA22","SN-KZC22"],"no_samples":["SN-KZB22"]}'::jsonb,
+  'a delivered free sample order is done with nothing to collect; p_free_sample picks out sample-only orders, p_samples every order carrying one'
 );
 
 select is(
@@ -677,14 +690,14 @@ select is(
      'to_collect', o #> '{queue,to_collect,count}', 'free_samples', o #> '{queue,free_samples}',
      'done', o #> '{done,free_samples}')
    from (select public.get_admin_overview()::jsonb as o) x),
-  '{"to_collect":1,"free_samples":{"open":0,"sent_this_month":1},"done":1}'::jsonb,
-  'overview: only the paid-for order is to collect; the sample counts as sent this month'
+  '{"to_collect":1,"free_samples":{"open":1,"sent_this_month":1},"done":1}'::jsonb,
+  'overview: only the paid-for order is to collect; the taster on its way is open, the sample order sent this month'
 );
 
 select is(
   (select jsonb_build_object('orders', c -> 'orders', 'delivered', c -> 'delivered', 'open', c -> 'open', 'samples', c -> 'samples')
    from jsonb_array_elements(public.get_admin_customers()::jsonb -> 'customers') c),
-  '{"orders":1,"delivered":1,"open":1,"samples":1}'::jsonb,
+  '{"orders":2,"delivered":1,"open":2,"samples":1}'::jsonb,
   'customers: a free sample order is not an order, it shows as samples'
 );
 
