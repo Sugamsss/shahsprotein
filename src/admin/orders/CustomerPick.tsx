@@ -1,5 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
-import { BookUser } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { getCustomers } from '../api';
@@ -99,10 +98,21 @@ export const useNameSuggestions = (name: string, onPick: (p: Picked) => void) =>
 interface ContactsManager { select: (props: ('name' | 'tel')[], options?: { multiple?: boolean }) => Promise<{ name?: string[]; tel?: string[] }[]> }
 const contacts = typeof navigator !== 'undefined' ? (navigator as Navigator & { contacts?: ContactsManager }).contacts : undefined;
 
+/** The usual contacts icon: an address book with a person on the page (Material's "contacts"). */
+const ContactBookIcon: React.FC = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M20 0H4v2h16V0zM4 24h16v-2H4v2zM20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 10.24 9.75 9 10.76 6.75 12 6.75zM17 17H7v-1.5c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5V17z" />
+  </svg>
+);
+
+/** How long the number chooser ignores a close after it opens. The phone's own picker's Done tap can land on the page right as it closes. */
+const SETTLE_MS = 500;
+
 /** Pick from contacts, a round button beside Phone: only where the phone has a contact picker, so nobody taps a button that can't work. */
 export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPick }) => {
   const toast = useToast();
   const [choosing, setChoosing] = useState<{ name: string; phones: string[] } | null>(null);
+  const openedAt = useRef(0);
   if (!contacts?.select) return null;
 
   const open = async () => {
@@ -115,7 +125,10 @@ export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPi
     if (!chosen) return; // closed without picking
     const name = (chosen.name ?? []).map((n) => n.trim()).find(Boolean)?.slice(0, 60) ?? '';
     const phones = contactNumbers(chosen.tel ?? []);
-    if (phones.length > 1) return setChoosing({ name, phones });
+    if (phones.length > 1) {
+      openedAt.current = Date.now();
+      return setChoosing({ name, phones });
+    }
     if (phones.length === 1) return onPick({ name, phone: phones[0] });
     // No number we can use: keep the name, and say so.
     if (name) onPick({ name, phone: '' });
@@ -130,9 +143,10 @@ export const ContactsButton: React.FC<{ onPick: (p: Picked) => void }> = ({ onPi
   return (
     <>
       <button type="button" className="adm-of__contacts" aria-label={copy.pickContact} title={copy.pickContact} onClick={() => void open()}>
-        <BookUser size={18} strokeWidth={1.75} aria-hidden="true" />
+        <ContactBookIcon />
       </button>
-      <AdminSheet isOpen={!!choosing} onClose={() => setChoosing(null)} title={copy.whichNumber(choosing?.name ?? '')} closeLabel={adminCopy.close}>
+      <AdminSheet isOpen={!!choosing} onClose={() => setChoosing(null)} title={copy.whichNumber(choosing?.name ?? '')} closeLabel={adminCopy.close}
+        canClose={() => Date.now() - openedAt.current > SETTLE_MS}>
         <div className="adm-of__numbers">
           {choosing?.phones.map((phone) => (
             <button key={phone} type="button" onClick={() => choose(phone)}>{plain(phone)}</button>
