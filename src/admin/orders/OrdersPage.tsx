@@ -310,7 +310,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   };
   const pack = product ? packsOf(by.packing, product) : null;
   const packHint = pack?.packs ? filterCopy.pack(pack.packs, productName(product!), pack.sizes) : undefined;
-  const hintOf = (lane: WorkLane) => (lane === 'packing' && packHint) || stages.hints[lane];
+  /** What to do in a stage. An empty stage says only its empty line, so no hint there. */
+  const hintOf = (lane: WorkLane) => (drawn[lane].length > 0 ? (lane === 'packing' && packHint) || stages.hints[lane] : undefined);
   const summary = [
     by.packing.length > 0 && ['packing', `${by.packing.length} ${copy.toPack}`],
     by.ready.length > 0 && ['ready', `${by.ready.length} ${copy.toDropOff}`],
@@ -386,7 +387,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
         <>
           <StageSwitch stage={stage} counts={counts} money={money} onPick={pick} />
           <section key={stage} className={`adm-stage${slide ? ` is-${slide}` : ''}`} aria-label={stages.names[stage]}>
-            <p className="adm-stage__hint">{hintOf(stage)}</p>
+            {hintOf(stage) && <p className="adm-stage__hint">{hintOf(stage)}</p>}
             {stageCards(stage)}
           </section>
         </>
