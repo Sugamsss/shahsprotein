@@ -1,8 +1,9 @@
-/* Home (temp/home-totals/v2). The three product cards across the top (a row that
-   scrolls sideways on phones, a shelf of pouches on a tablet, wide product photos
-   on a laptop), then per person: Pranjali
-   gets stock and a gentle week; Sunit gets Waiting on you, this week vs last,
-   stock when something is off, and coupons. Phone: one column. Laptop: two. */
+/* Home. The three product cards across the top (a row that scrolls sideways on
+   phones, a shelf of pouches on a tablet, wide product photos on a laptop), spare at
+   their foot. Pranjali's (temp/kitchen-flow, "one action"): the headline, the spare
+   warning, one Log cooking button, the cards, Logged this week. Sunit's: Waiting on
+   you, this week vs last, stock when something is off, and coupons.
+   Phone: one column. Laptop: two. */
 .adm-home__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .adm-home__logo { width: 124px; height: auto; }
 /* The greeting steps back to head; the answer line is the loudest thing on the page,
@@ -15,7 +16,7 @@
 }
 .adm-home__lede b { color: var(--adm-ink-1); font-weight: 700; }
 .adm-home__lede b.is-money { color: var(--color-success-text); }
-/* Pranjali's quiet day: "Nothing to make right now." stays the answer; the maybe under it is a body-size aside. */
+/* Pranjali's quiet day: "Nothing to cook right now." stays the answer; who has the food is a body-size aside. */
 .adm-home__lede-more { margin-top: 6px; color: var(--adm-ink-2); font-size: var(--adm-text-body); line-height: 1.45; text-wrap: pretty; }
 .adm-home__grid, .adm-home__col { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .adm-home__card { display: grid; gap: 14px; }
@@ -27,7 +28,21 @@
    so a card heading with a link lines up with one without. */
 .adm-home__head .adm-text-btn { margin-block: -6px; }
 .adm-home__quiet { padding: 18px 20px; color: var(--adm-ink-2); }
-.adm-home__hint { margin-bottom: -2px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+
+/* Spare near or past its date, under the headline: one quiet line per product (the
+   card's own band may be off screen in the sideways row). A button where she can act. */
+.adm-home__warns { display: grid; justify-items: start; margin: 8px 0 -8px; }
+.adm-home__warn {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+  color: var(--adm-warn-text); font-weight: 600; text-align: start; text-wrap: pretty; touch-action: manipulation;
+}
+.adm-home__warn.is-past { color: var(--color-error-text); }
+.adm-home__warn svg { flex: 0 0 auto; }
+.adm-home__warn svg:last-child { margin-left: -2px; }
+button.adm-home__warn:active { opacity: 0.7; }
+/* Her one action. Tonal once everything's covered. */
+.adm-btn.adm-home__log { min-height: 56px; gap: 10px; }
+.adm-btn.adm-home__log svg { margin-left: -4px; }
 
 /* Loading: the labels stay, the numbers pulse. */
 .adm-pulse {
@@ -44,16 +59,18 @@
    and laptops spell everything out (see the blocks at the end). */
 .adm-home__products { display: grid; gap: 12px; }
 .adm-pcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+/* A card is a link (photo and words) with the spare band under it, outside the link. */
 .adm-card.adm-pcard {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 10px;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start;
   padding: 6px 6px 12px; border-radius: 20px; color: var(--adm-ink-1);
   transition: transform 120ms ease, border-color var(--transition-fast);
 }
-.adm-card.adm-pcard:active { transform: scale(0.99); }
-/* The site's ring, with the card's own corners (global :focus-visible squares them). */
-.adm-card.adm-pcard:focus-visible { border-radius: 20px; outline-offset: 3px; }
+.adm-pcard__link { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 10px; min-width: 0; color: inherit; border-radius: 14px; }
+.adm-card.adm-pcard:has(> .adm-pcard__link:active) { transform: scale(0.99); }
+/* The site's ring, with the link's own corners (global :focus-visible squares them). */
+.adm-pcard__link:focus-visible { border-radius: 14px; outline-offset: 3px; }
 @media (hover: hover) {
-  .adm-card.adm-pcard:hover { border-color: color-mix(in srgb, var(--color-accent-primary) 35%, transparent); }
+  .adm-card.adm-pcard:has(> .adm-pcard__link:hover) { border-color: color-mix(in srgb, var(--color-accent-primary) 35%, transparent); }
 }
 .adm-pcard__photo { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 14px; }
 .adm-pcard__photo--raggi-jaggi { background: var(--color-art-raggi-jaggi); }
@@ -75,16 +92,16 @@
 .adm-pcard__make b { font-size: var(--adm-text-title); line-height: 1.15; letter-spacing: -0.022em; }
 .adm-pcard__sizes { display: flex; flex-wrap: wrap; color: var(--adm-ink-1); font-weight: 600; }
 .adm-pcard__sizes i { margin: 0 6px; color: var(--adm-ink-3); font-style: normal; font-weight: 400; }
-.adm-pcard__maybe {
-  justify-self: start; margin-top: 6px; padding: 3px 7px; border: 1.5px dashed var(--adm-track-off); border-radius: 9px;
-  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; text-wrap: balance;
+/* Who's named under the packs: "Meera's order is priority", "Asha's order is only waiting on this". */
+.adm-pcard__notes {
+  display: grid; gap: 4px; justify-self: start; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: var(--adm-well);
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; text-wrap: pretty;
 }
-.adm-pcard__maybe b { color: var(--adm-ink-1); font-weight: 600; white-space: nowrap; }
-.adm-pcard__long { display: none; }
-/* The "all good" tick. The Stock card's "Everything's on the site." uses the same one. */
-.adm-pcard__none, .adm-home__ok { display: flex; align-items: flex-start; gap: 6px; color: var(--adm-ink-2); font-weight: 600; }
-.adm-pcard__none { margin-top: 4px; }
-.adm-pcard__none svg, .adm-home__ok svg { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 1px; color: var(--color-success); }
+.adm-pcard__notes > span { display: flex; align-items: flex-start; gap: 6px; }
+.adm-pcard__notes svg { flex: 0 0 auto; margin-top: 2px; color: var(--adm-ink-3); }
+/* The "all good" tick. */
+.adm-pcard__none { display: flex; align-items: flex-start; gap: 6px; margin-top: 4px; color: var(--adm-ink-2); font-weight: 600; }
+.adm-pcard__none svg { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 1px; color: var(--color-success); }
 .adm-pcard__off { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; }
 /* The small print on a card. */
 .adm-pcard__for, .adm-pcard__off, .adm-pcard__note, .adm-pcard__stages small {
@@ -103,6 +120,18 @@
 .adm-pcard__stages .adm-pulse { width: 12px; }
 .adm-pcard__note { margin-top: 4px; }
 
+/* Spare at the card's foot: a hairline, then a line per batch on the shelf. A button
+   (Used up / thrown out) where this person can take spare off; plain text otherwise. */
+.adm-pcard__spare { display: grid; margin: 10px 4px 0; padding: 6px 0 0; border-top: 1px solid var(--adm-hairline); list-style: none; }
+.adm-pcard__spare li { display: flex; align-items: center; min-height: 32px; }
+.adm-pcard__spare-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px;
+  margin: 0 -8px; padding: 0 8px; border-radius: 12px; text-align: start; touch-action: manipulation;
+}
+.adm-pcard__spare-btn:active { background: var(--adm-well-press); }
+.adm-pcard__spare-chev { flex: 0 0 auto; color: var(--adm-ink-3); }
+@media (hover: hover) { .adm-pcard__spare-btn:hover { background: var(--adm-well); } }
+
 /* ---- Waiting on you: 64px rows with a 40px number circle ---------------------------- */
 .adm-list.adm-home__rows > a { grid-template-columns: 40px 1fr auto; min-height: 64px; padding: 10px 20px; }
 .adm-home__circle {
@@ -112,17 +141,8 @@
 .adm-home__circle.is-accent { background: var(--color-accent-gradient); color: var(--color-btn-text); }
 .adm-home__circle.is-money { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
 
-/* ---- This week (Pranjali) ------------------------------------------------------------- */
-.adm-home__sentence { color: var(--adm-ink-2); text-wrap: pretty; }
-.adm-home__sentence b { color: var(--adm-ink-1); font-weight: 600; }
-.adm-home__sells { display: grid; list-style: none; }
-.adm-home__sell { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 14px; }
-.adm-home__sell + .adm-home__sell { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--adm-hairline); }
-.adm-home__sell .adm-pname { font-size: var(--adm-text-head); line-height: 1.3; letter-spacing: -0.01em; }
-.adm-home__sell small { color: var(--adm-ink-2); font-size: var(--adm-text-body); }
+/* A product thumb in the Stock card's rows. */
 .adm-home__thumb { width: 52px; height: 52px; border-radius: 12px; }
-.adm-home__diff { color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; white-space: nowrap; }
-.adm-home__diff.is-up { color: var(--color-success-text); }
 
 /* ---- This week vs last (Sunit) ---------------------------------------------------------- */
 .adm-home__vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -179,12 +199,14 @@
 /* ---- Below 360px ------------------------------------------------------------------------ */
 @media (max-width: 359px) {
   .adm-list.adm-home__rows > a { padding-inline: 16px; }
+  /* "Tap one to fix it" can't sit beside its heading here; the chevrons say it. */
+  .adm-home__head > span.adm-home__meta-wide { display: none; }
   .adm-home__bars { gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .adm-card.adm-pcard { transition: none; }
-  .adm-card.adm-pcard:active { transform: none; }
+  .adm-card.adm-pcard:has(> .adm-pcard__link:active) { transform: none; }
   .adm-pulse { animation: none; }
 }
 
@@ -194,8 +216,6 @@
   .adm-pcard__photo { aspect-ratio: 16 / 10; }
   .adm-pcard__meta, .adm-pcard__chev { display: inline; }
   .adm-pcard__make { display: flex; }
-  .adm-pcard__long { display: inline; }
-  .adm-pcard__short { display: none; }
   .adm-pcard__stages small { display: block; }
 }
 
@@ -213,11 +233,12 @@
     scrollbar-width: none;
   }
   .adm-pcards::-webkit-scrollbar { display: none; }
-  .adm-card.adm-pcard { gap: 12px; padding: 6px 6px 14px; border-radius: 22px; scroll-snap-align: start; }
-  .adm-card.adm-pcard:focus-visible { border-radius: 22px; }
+  .adm-card.adm-pcard { padding: 6px 6px 14px; border-radius: 22px; scroll-snap-align: start; }
+  .adm-pcard__link { gap: 12px; border-radius: 16px; }
+  .adm-pcard__link:focus-visible { border-radius: 16px; }
   .adm-pcard__photo { border-radius: 16px; }
   .adm-pcard__body { padding: 0 8px; }
-  .adm-pcard__maybe { padding: 4px 9px; border-radius: 10px; }
+  .adm-pcard__spare { margin-inline: 8px; }
 }
 
 /* ---- Laptop: two columns, and the cards get bigger ---------------------------------------- */
@@ -228,11 +249,15 @@
   .adm-home__stock .adm-btn { grid-column: 2; justify-self: start; }
 
   .adm-pcards { gap: 24px; }
-  .adm-card.adm-pcard { gap: 14px; padding: 8px 8px 18px; border-radius: 24px; }
-  .adm-card.adm-pcard:focus-visible { border-radius: 24px; }
+  .adm-card.adm-pcard { padding: 8px 8px 18px; border-radius: 24px; }
+  .adm-pcard__link { gap: 14px; border-radius: 18px; }
+  .adm-pcard__link:focus-visible { border-radius: 18px; }
   .adm-pcard__photo { border-radius: 18px; }
   .adm-pcard__body { gap: 4px; padding: 0 12px; }
-  .adm-pcard__maybe { margin-top: 8px; padding: 5px 10px; border-radius: 12px; }
-  .adm-pcard__none svg, .adm-home__ok svg { width: 18px; height: 18px; }
+  .adm-pcard__spare { margin-inline: 12px; }
+  .adm-pcard__notes { padding: 6px 12px; border-radius: 12px; }
+  .adm-pcard__none svg { width: 18px; height: 18px; }
+  /* Her button sits under the headline at a comfortable width, not across the whole page. */
+  .adm-btn.adm-home__log { justify-self: start; width: auto; min-width: 320px; padding: 0 32px; }
   .adm-pcard__stages li { padding: 5px 0; }
 }

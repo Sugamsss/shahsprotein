@@ -675,6 +675,127 @@ export const adminCopy = {
     keepEditing: 'Keep editing',
   },
 
+  // The kitchen (temp/kitchen-flow, lane A): Pranjali's Log cooking, fixing a batch,
+  // spare on the shelf and taking it off. Weights come in already worded ("2 kg", "750 g").
+  kitchen: {
+    logCooking: 'Log cooking',
+    // Log cooking sheet.
+    madeOn: 'Made on',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    pickDay: 'Pick a day',
+    pickLabel: 'The day it was made',
+    need: (weight: string) => `Need ${weight}`,
+    notMade: 'not made',
+    nothingNeeded: 'Nothing needed',
+    goesSpare: 'goes spare',
+    add: 'Add',
+    addName: (product: string) => `Add ${product}`,
+    /** The amount pill's name: "Raggi Jaggi, 2 kg. Change the amount." */
+    amountName: (product: string, weight: string) => `${product}, ${weight}. Change the amount.`,
+    wheelKg: (product: string) => `${product}, kilograms`,
+    wheelG: (product: string) => `${product}, grams`,
+    kg: 'kg',
+    g: 'g',
+    whenYouLog: 'When you log this',
+    ifYouSave: 'If you save this',
+    ifYouDelete: 'If you delete it',
+    checking: 'Working it out…',
+    previewFailed: "Couldn't work out what this does. You can still go ahead.",
+    pickSomething: 'Roll an amount up from 0 to log it.',
+    logIt: 'Log it',
+    logging: 'Logging…',
+    // Over 10 kg in one batch.
+    big: (weight: string, product: string) => [`${weight} of ${product}?`, " That's a lot, just checking."] as const,
+    changeIt: 'Change it',
+    yesLog: (weight: string, product: string) => `Yes, log ${weight} ${product}`,
+    item: (weight: string, product: string) => `${weight} ${product}`,
+    logged: (items: string[], packed: number) =>
+      `Logged ${andList(items)}.${packed ? ` ${packed} ${packed === 1 ? 'order' : 'orders'} to Packing.` : ''}`,
+
+    // What a batch does, said in the sheet.
+    outcomes: {
+      allCovered: (n: number) => (n === 1 ? 'The order is covered.' : `All ${n} orders are covered.`),
+      covered: (names: string[]) => `${andList(names.map((n) => `${n}'s`))} ${names.length === 1 ? 'order is' : 'orders are'} covered.`,
+      goPacking: (names: string[], all: boolean) => {
+        if (all) return `${andList(names)} ${names.length === 1 ? 'goes' : 'go'} to Packing for Sunit.`;
+        return names.length === 1 ? 'It goes to Packing for Sunit.' : 'They go to Packing for Sunit.';
+      },
+      partly: (name: string, products: string[]) => `${name}'s ${andList(products)} ${products.length === 1 ? 'is' : 'are'} covered.`,
+      partlyWaits: (items: string[]) => `The order still waits on ${andList(items)}.`,
+      stillWait: (names: string[]) => `${andList(names)} still ${names.length === 1 ? 'waits' : 'wait'}.`,
+      stillToCook: (items: string[]) => `${andList(items)} still to cook.`,
+      back: (names: string[]) =>
+        `${andList(names.map((n) => `${n}'s`))} ${names.length === 1 ? 'order goes' : 'orders go'} back to Cooking.`,
+      backWhy: (n: number) => (n === 1 ? "It isn't packed yet, so it waits for the next batch." : "They aren't packed yet, so they wait for the next batch."),
+      /** A Cooking order that loses food (a smaller batch, or a priority order took it). */
+      waitsAgain: (name: string, items: string[]) => `${name} waits again for ${andList(items)}.`,
+      spare: (weight: string, product: string) => `${weight} ${product} goes spare.`,
+      goodTill: (day: string) => `Good till ${day}.`,
+      spareLess: (before: string, after: string | null, product: string) =>
+        (after ? `${product} spare goes from ${before} to ${after}.` : `The ${before} spare ${product} comes off the shelf.`),
+      noSpare: 'Nothing goes spare.',
+      ordersSame: "Orders don't change.",
+    },
+
+    // Fix a batch.
+    fixTitle: (product: string, day: string) => `${product}, made ${day}`,
+    howMuch: 'How much',
+    was: (weight: string) => `was ${weight}`,
+    save: 'Save',
+    saving: 'Saving…',
+    delete: 'Delete',
+    keepIt: 'Keep it',
+    deleteIt: 'Delete batch',
+    deleting: 'Deleting…',
+    fixed: (product: string, rest: string) => `${product} batch fixed.${rest ? ` ${rest}` : ''}`,
+    deleted: (product: string, rest: string) => `${product} batch deleted.${rest ? ` ${rest}` : ''}`,
+    /** The toast's second sentence after a fix or delete. */
+    movedOn: (packed: number, back: string[]) => [
+      packed ? `${packed} ${packed === 1 ? 'order' : 'orders'} to Packing.` : '',
+      back.length ? `${andList(back.map((n) => `${n}'s`))} back to Cooking.` : '',
+    ].filter(Boolean).join(' '),
+
+    // "Logged this week", on Pranjali's Home.
+    loggedTitle: 'Logged this week',
+    loggedMeta: 'Tap one to fix it',
+    batchTitle: (product: string, weight: string) => `${product} · ${weight}`,
+    batchParts: (toOrders: string | null, spare: string | null, off: string | null) =>
+      [toOrders && `${toOrders} to orders`, spare && `${spare} spare`, off && `${off} off the shelf`].filter(Boolean) as string[],
+    fixName: (product: string, weight: string, day: string) => `Fix ${weight} ${product}, made ${day}`,
+
+    // Spare on the shelf: the foot of a product card, the warning line, the sheet.
+    spareLine: (weight: string, keeps: string) => `${weight} spare${keeps ? ` · ${keeps}` : ''}`,
+    daysLeft: (n: number) => `${n} days left`,
+    lastDay: 'last day today',
+    goodTillShort: (day: string) => `good till ${day}`,
+    pastLine: (weight: string) => `${weight} past its date`,
+    pastSub: "Won't go to orders",
+    warn: (product: string, kind: 'past' | 'today' | 'days', days = 0) =>
+      (kind === 'past' ? `${product} spare is past its date.`
+        : kind === 'today' ? `${product} spare is on its last day.` : `${product} spare has ${days} days left.`),
+    takeOffName: (weight: string, product: string) => `Take ${weight} ${product} off the shelf`,
+
+    // Used up / thrown out.
+    offTitle: 'Take some off the shelf',
+    onShelf: (product: string) => `${product} on the shelf`,
+    made: (day: string) => `Made ${day}`,
+    useBy: (day: string) => `use by ${day}`,
+    allOfIt: (weight: string) => `All of it · ${weight}`,
+    partOfIt: 'Part of it',
+    partWheel: 'Grams to take off',
+    stays: (weight: string) => [weight, ' stays on the shelf.'] as const,
+    whatHappened: 'What happened',
+    usedUp: 'Used up',
+    thrownOut: 'Thrown out',
+    takeOff: (weight: string) => `Take off ${weight}`,
+    throwOut: (weight: string) => `Throw out ${weight}`,
+    took: (weight: string, product: string, left: string | null) =>
+      `Took ${weight} ${product} off the shelf. ${left ? `${left} left.` : 'None left of that batch.'}`,
+    threw: (weight: string, product: string, left: string | null) =>
+      `Threw out ${weight} ${product}. ${left ? `${left} left.` : 'None left of that batch.'}`,
+  },
+
   // Home (spec 2.4).
   homePage: {
     greeting: (part: 'morning' | 'afternoon' | 'evening', name: string) => `Good ${part}, ${name}`,
@@ -683,7 +804,6 @@ export const adminCopy = {
     // The three product cards (temp/home-totals/v2/README.md). Each is one link to that product's orders.
     cards: {
       cookTitle: 'What to cook',
-      cookMeta: 'For orders waiting on food',
       adminTitle: 'By product',
       adminMeta: 'Tap one to see its orders',
       seeOrders: 'See its orders.',
@@ -692,26 +812,37 @@ export const adminCopy = {
       forOrders: (n: number) => `for ${n} ${n === 1 ? 'order' : 'orders'}`,
       nothingToMake: 'Nothing to cook',
       offSite: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off the site` : 'Off the site'),
-      cookName: (product: string, main: string, off: string) =>
-        [`${product}: ${main}.`, off && `${off}.`, 'See its orders.'].filter(Boolean).join(' '),
-      // Sunit: every stage, always in this order.
+      cookName: (product: string, main: string, more: string) =>
+        [`${product}: ${main}.`, more && `${more}.`, 'See its orders.'].filter(Boolean).join(' '),
+      // Under the packs: who's first, and who waits on nothing else.
+      priority: (names: string[]) => `${andList(names.map((n) => `${n}'s`))} ${names.length === 1 ? 'order is' : 'orders are'} priority`,
+      onlyThis: (names: string[]) =>
+        `${andList(names.map((n) => `${n}'s`))} ${names.length === 1 ? 'order is' : 'orders are'} only waiting on this`,
+      // Sunit: every stage, always in this order, in orders; the packs under each.
       cooking: 'Cooking',
-      toPack: 'To pack',
+      packing: 'Packing',
       ready: 'Ready',
       notPaid: 'Not paid yet',
       sizeTimes: (size: string, packs: number) => `${size} × ${packs}`,
+      sample: 'Sample',
       orders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
       allClear: 'All clear',
       off: (sizes: string[] | null) => (sizes ? `${andList(sizes)} ${sizes.length === 1 ? 'is' : 'are'} off` : 'Off the site'),
-      adminName: (product: string, cooking: number, packs: number, ready: number, notPaid: number) =>
-        `${product}: ${cooking} cooking, ${packs} ${packs === 1 ? 'pack' : 'packs'} to pack, ${ready} ready, ${notPaid} not paid. See its orders.`,
+      adminName: (product: string, cooking: number, packing: number, ready: number, notPaid: number) =>
+        `${product}: ${cooking} cooking, ${packing} packing, ${ready} ready, ${notPaid} not paid. See its orders.`,
     },
 
-    // The line under the date.
-    cookLede: (weight: string, orders: number) => [weight, ` to cook in all, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`] as const,
+    // The line under the date. Pranjali: "Cook 2 kg Raggi Jaggi and 750 g Muesli."
+    cookWord: 'Cook ',
+    and: ' and ',
+    cookLedeName: (items: string[], orders: number) =>
+      `Cook ${andList(items)}, for ${orders} ${orders === 1 ? 'order' : 'orders'}.`,
     cookNothing: 'Nothing to cook right now.',
-    adminLede: (orders: number) => [`${orders} ${orders === 1 ? 'order' : 'orders'}`, ` ${orders === 1 ? 'needs' : 'need'} you`] as const,
-    adminNothing: 'Nothing needs you right now',
+    cookNothingMore: (n: number) => (n === 1 ? 'The order is with Sunit for packing.' : `${n} orders are with Sunit for packing.`),
+    // Sunit: "1 to pack, 2 to drop off, and ₹895 is still out."
+    toPackCount: (n: number) => `${n} to pack`,
+    toDropCount: (n: number) => `${n} to drop off`,
+    adminNothing: 'Nothing to pack or drop off',
     stillOut: [', and ', ' is still out'] as const,
 
     waiting: 'Waiting on you',
@@ -719,6 +850,7 @@ export const adminCopy = {
     nothing: 'Nothing to pack, drop off or collect. Enjoy the quiet.',
     toPack: 'To pack',
     toDropOff: 'To drop off',
+    waited: (age: string, n: number) => (n === 1 ? `Waiting ${age}.` : `The oldest has waited ${age}.`),
     paidSplit: (paid: number, notPaid: number) =>
       [paid ? `${paid} paid` : '', notPaid ? `${notPaid} not paid yet` : ''].filter(Boolean).join(', '),
     packsThen: (packs: number, rest: string) => `${packs} ${packs === 1 ? 'pack' : 'packs'}${rest ? `. ${rest}` : ''}`,
@@ -733,22 +865,6 @@ export const adminCopy = {
     notPaidYet: (n: number) => `${n} not paid yet`,
     namesNotPaid: (names: string[], count: number) => `${namesAndMore(names, count)} ${count === 1 ? "hasn't" : "haven't"} paid yet`,
     allPaid: 'All paid',
-
-    // This week, Pranjali's: gentle, in packs, no money.
-    week: 'This week',
-    weekSoFar: (orders: number) => `${orders} ${orders === 1 ? 'order' : 'orders'}`,
-    weekVs: (diff: number) => (diff > 0 ? ` so far, ${diff} more than this time last week.`
-      : diff < 0 ? ` so far, ${-diff} fewer than this time last week.` : ' so far, the same as this time last week.'),
-    // No real last week yet: say so instead of comparing.
-    weekFirst: (thisWeek: boolean) => (thisWeek ? " so far. It's our first week, so there's nothing to compare yet."
-      : ' so far. Last week was our first, so there\'s no fair comparison yet.'),
-    fastest: (many: boolean) => (many ? ' are going fastest.' : ' is going fastest.'),
-    packsHint: 'Packs going out, and the change from last week.',
-    packsHintFirst: 'Packs going out this week.',
-    // A row under "This week", so it doesn't say "this week" again.
-    weekPacks: (n: number) => (n ? `${n} ${n === 1 ? 'pack' : 'packs'}` : 'None yet'),
-    packsDiff: (diff: number) => (diff > 0 ? `${diff} more` : diff < 0 ? `${-diff} fewer` : 'same'),
-    packsDiffName: (diff: number) => (diff > 0 ? `${diff} more than last week` : diff < 0 ? `${-diff} fewer than last week` : 'the same as last week'),
 
     // This week vs last, Sunit's.
     vsTitle: 'This week vs last',
@@ -771,11 +887,9 @@ export const adminCopy = {
     lastWeek: 'Last week',
     dayLetters: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
 
-    // Stock: Pranjali always sees it; Sunit only when something is off.
-    stock: 'Stock',
+    // Stock: only when something is off the site.
     offTheSite: 'Off the site',
     products: 'Products',
-    allOnSite: "Everything's on the site.",
     offSince: (when: string) => `Off since ${when}. The site shows “Back soon”.`,
     backInStock: 'Back in stock',
     coupons: 'Coupons used',
