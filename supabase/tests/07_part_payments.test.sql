@@ -66,7 +66,7 @@ reset role;
 select ok(
   not has_function_privilege('anon', 'public.add_admin_payment(uuid,jsonb)', 'execute')
   and not has_function_privilege('anon', 'public.pay_admin_order_rest(uuid,jsonb)', 'execute')
-  and not has_function_privilege('anon', 'public.delete_admin_payment(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.delete_admin_payment(uuid,boolean)', 'execute')
   and not has_function_privilege('anon', 'public.restore_admin_payments(uuid,jsonb)', 'execute'),
   'anon can''t call the payment RPCs'
 );
@@ -272,8 +272,8 @@ reset role;
 select results_eq(
   $$select e.event from public.order_events e
     where e.order_id = '00000000-0000-4000-a000-00000000000a' order by e.id$$,
-  $$values ('created'::text), ('paid'), ('unpaid'), ('paid'), ('unpaid'), ('paid')$$,
-  'history: paid only when the total was covered, unpaid only when it stopped being covered'
+  $$values ('created'::text), ('paid')$$,
+  'history: paid when the total was covered; each removal was undone, so it left no unpaid or paid line behind'
 );
 
 -- ─── 7. Refusals ────────────────────────────────────────

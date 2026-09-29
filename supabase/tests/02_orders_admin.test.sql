@@ -173,7 +173,7 @@ select lives_ok(
       'source', 'instagram', 'code', ' sn-7kq4m ', 'name', 'Neha Example', 'pincode', '415001',
       'coupon', 'example10', 'amount', 690, 'paid', true, 'status', 'delivered',
       'created_at', now() - interval '3 days',
-      'lines', '[{"product_id":"date-bites","size":"250 g","quantity":2}]'::jsonb))::text, true)$$,
+      'lines', '[{"product_id":"bites","size":"250 g","quantity":2}]'::jsonb))::text, true)$$,
   'create with a typed code, back-dated, paid and delivered'
 );
 
@@ -184,8 +184,8 @@ select is(
     "payment_state":"paid","amount_paid":690,"amount_due":0,"amount_extra":0,
     "name":"Neha Example","pincode":"415001","phone":null,"note":null,"amount":690,
     "coupon":{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"},
-    "lines":[{"product_id":"date-bites","size":"250 g","quantity":2,"grams_each":250}],"packs":2,"samples":0,
-    "kitchen":[{"product_id":"date-bites","need":500,"covered":500,"by_hand":500,"waiting":false,"batches":[]}]}'::jsonb,
+    "lines":[{"product_id":"bites","size":"250 g","quantity":2,"grams_each":250}],"packs":2,"samples":0,
+    "kitchen":[{"product_id":"bites","need":500,"covered":500,"by_hand":500,"waiting":false,"batches":[]}]}'::jsonb,
   'create: the typed code is used as is, the coupon is matched, a delivered order is covered by hand'
 );
 

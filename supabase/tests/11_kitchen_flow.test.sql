@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(106);
+select plan(111);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -451,9 +451,11 @@ select is(pg_temp.snap(), current_setting('t.before')::jsonb, 'undo of the cance
 
 select set_config('t.log', pg_temp.log('y', 'raggi-jaggi', 500)::text, true);
 select is(
-  pg_temp.move('SN-KYA22', 'ready') -> 'kitchen_effects',
-  'null'::jsonb,
-  'Packing to Ready changes nothing in the kitchen: no kitchen_effects'
+  (select jsonb_build_object('moves', pg_temp.moves(e), 'grams', (select count(*) from jsonb_array_elements(e -> 'orders') o,
+     jsonb_array_elements(o -> 'grams') g), 'undoable', e ->> 'action_id' is not null)
+   from (select pg_temp.move('SN-KYA22', 'ready') -> 'kitchen_effects' as e) x),
+  '{"moves":["SN-KYA22 packing>ready"],"grams":0,"undoable":true}'::jsonb,
+  'Packing to Ready moves no food; it still comes back with an Undo (the move alone)'
 );
 
 select throws_ok(
@@ -718,7 +720,7 @@ select is(
 
 select throws_ok(
   $$select public.save_admin_order(null, '{"source":"call","name":"Anil Example","lines":[{"product_id":"saffron","size":"sample","quantity":1}]}')$$,
-  '22023', 'That product has no sample weight yet. Set one on the Products page.', 'a sample needs its product''s weight'
+  '22023', 'We don''t know one of those products.', 'Add order refuses a product we don''t make'
 );
 
 -- ─── 14. A sample keeps the weight it was saved with ────
@@ -828,10 +830,10 @@ select set_config('t.pb', public.update_admin_order(pg_temp.id('SN-KPB22'), '{"p
 select is(
   jsonb_build_object(
     'priority', current_setting('t.pb')::jsonb -> 'priority',
-    'effects', current_setting('t.pb')::jsonb -> 'kitchen_effects',
+    'effects', current_setting('t.pb')::jsonb #> '{kitchen_effects,orders}',
     'queue', (select jsonb_agg(jsonb_build_array(q ->> 'code', q -> 'priority'))
               from jsonb_array_elements(pg_temp.kp('raggi-jaggi') -> 'queue') q)),
-  '{"priority":true,"effects":null,"queue":[["SN-KPB22",true],["SN-KPA22",false]]}'::jsonb,
+  '{"priority":true,"effects":[],"queue":[["SN-KPB22",true],["SN-KPA22",false]]}'::jsonb,
   'priority: the queue puts it first; nothing to give yet, so no kitchen effects'
 );
 
@@ -1052,8 +1054,8 @@ select pg_temp.ord('SN-KYP22', 1, '[{"product_id":"raggi-jaggi","size":"500 g","
 select set_config('t.yp', public.update_admin_order(pg_temp.id('SN-KYP22'), '{"priority":true}')::text, true);
 select is(
   jsonb_build_object('other', pg_temp.cover('SN-KYA22'), 'priority', pg_temp.cover('SN-KYP22'),
-    'effects', current_setting('t.yp')::jsonb -> 'kitchen_effects'),
-  '{"other":"raggi-jaggi:y1=300","priority":"","effects":null}'::jsonb,
+    'effects', current_setting('t.yp')::jsonb #> '{kitchen_effects,orders}'),
+  '{"other":"raggi-jaggi:y1=300","priority":"","effects":[]}'::jsonb,
   'priority takes nothing when the Cooking food there can''t complete its line'
 );
 
@@ -1081,6 +1083,62 @@ select throws_ok(
   format('select public.undo_admin_kitchen(%L::uuid)', current_setting('t.fix')::jsonb ->> 'action_id'),
   '22023', 'Something changed since, so this can''t be undone.',
   'undo is refused when the order has been topped up since'
+);
+
+-- ─── 24. Last pass: plain Undo leaves no history; samples are never taken ─
+
+-- A stage tap and its Undo leave the history as it was.
+select pg_temp.clean();
+select pg_temp.ord('SN-KZD22', 30, '[{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('z1', 'muesli', 250);
+select set_config('t.h', pg_temp.hist('SN-KZD22')::text, true);
+select set_config('t.at', (select status_changed_at::text from public.orders where code = 'SN-KZD22'), true);
+select set_config('t.mv', pg_temp.move('SN-KZD22', 'ready')::text, true);
+select public.undo_admin_kitchen((current_setting('t.mv')::jsonb #>> '{kitchen_effects,action_id}')::uuid);
+select is(
+  (select jsonb_build_object('status', o.status, 'same_time', o.status_changed_at = current_setting('t.at')::timestamptz,
+     'same_history', pg_temp.hist('SN-KZD22') = current_setting('t.h')::jsonb)
+   from public.orders o where o.code = 'SN-KZD22'),
+  '{"status":"packing","same_time":true,"same_history":true}'::jsonb,
+  'Packed then Undo: back in Packing, same moment, no history left behind'
+);
+
+-- Mark paid then Undo, and × then Undo, leave the history as it was.
+select public.update_admin_order(pg_temp.id('SN-KZD22'), '{"amount":300}');
+select set_config('t.h', pg_temp.hist('SN-KZD22')::text, true);
+select set_config('t.pay', public.pay_admin_order_rest(pg_temp.id('SN-KZD22'), '{"method":"upi"}')::text, true);
+select public.delete_admin_payment((current_setting('t.pay')::jsonb #>> '{payments,0,id}')::uuid, true);
+select is(pg_temp.hist('SN-KZD22'), current_setting('t.h')::jsonb, 'Mark paid then Undo leaves no paid line');
+
+select set_config('t.pay', public.pay_admin_order_rest(pg_temp.id('SN-KZD22'), '{"method":"cash"}')::text, true);
+select set_config('t.h', pg_temp.hist('SN-KZD22')::text, true);
+select public.delete_admin_payment((current_setting('t.pay')::jsonb #>> '{payments,0,id}')::uuid);
+select is(pg_temp.hist('SN-KZD22') -> -1 -> 0, '"unpaid"'::jsonb, 'the × is a real removal: it says unpaid');
+select public.restore_admin_payments(pg_temp.id('SN-KZD22'),
+  (select jsonb_agg(x - 'by_name' - 'created_at') from jsonb_array_elements(current_setting('t.pay')::jsonb -> 'payments') x));
+select is(
+  jsonb_build_object('paid', (select o.paid_at is not null from public.orders o where o.code = 'SN-KZD22'),
+    'same_history', pg_temp.hist('SN-KZD22') = current_setting('t.h')::jsonb),
+  '{"paid":true,"same_history":true}'::jsonb,
+  'undoing the × puts the payment back and leaves no unpaid line'
+);
+
+-- Samples are never taken: not offered from a packed order, not taken from Cooking.
+select pg_temp.clean();
+select public.set_admin_kitchen_product('raggi-jaggi', '{"sample_grams":20}');
+select pg_temp.ord('SN-KZE22', 60, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"raggi-jaggi","size":"sample","quantity":1}]');
+select pg_temp.log('z2', 'raggi-jaggi', 520);
+select pg_temp.ord('SN-KZF22', 50, '[{"product_id":"raggi-jaggi","size":"sample","quantity":1},{"product_id":"muesli","size":"250 g","quantity":1}]');
+select pg_temp.log('z3', 'raggi-jaggi', 20);
+select public.save_admin_order(null, '{"source":"call","code":"SN-KZP22","name":"Priority Example","priority":true,
+  "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"raggi-jaggi","size":"sample","quantity":1}]}');
+select is(
+  (select jsonb_build_object(
+     'auto', pg_temp.cover('SN-KZF22'),
+     'offer', (select jsonb_agg(jsonb_build_array(x ->> 'code', x ->> 'size')) from jsonb_array_elements(e -> 'pouches') x))
+   from (select public.give_admin_priority(pg_temp.id('SN-KZP22'), true)::jsonb as e) y),
+  '{"auto":"raggi-jaggi:z3=20","offer":[["SN-KZE22","500 g"]]}'::jsonb,
+  'a Cooking order''s sample food is never taken, and only the 500 g pouch is offered, never a sample'
 );
 
 select * from finish();

@@ -1024,7 +1024,7 @@ as $$
 declare
   v_id uuid;
   v_short integer;
-  v_donor uuid;
+  v_donor record;
 begin
   for v_id in
     select o.id
@@ -1054,18 +1054,37 @@ begin
     v_short := public.kitchen_short(v_id, p_product_id);
     continue when v_short = 0;
 
+    -- Never for a sample: a priority order short only on its samples waits.
+    continue when v_short <= coalesce((
+      select sum(l.quantity * l.grams_each) from public.order_lines l
+      where l.order_id = v_id and l.product_id = p_product_id and l.size = 'sample'
+    ), 0);
+
     -- Only when it completes the line: taking part of it would make another
     -- order wait while this one still waits (it gets the next batch first).
+    -- A giver keeps what its own samples need.
     continue when coalesce((
-      select sum(a.grams)
-      from public.kitchen_allocations a
-      join public.orders d on d.id = a.order_id
-      where d.status = 'cooking' and not d.priority
-        and a.product_id = p_product_id and a.batch_id is not null
+      select sum(greatest(g.grams - g.samples, 0))
+      from (
+        select a.order_id, sum(a.grams) as grams,
+          coalesce((select sum(l.quantity * l.grams_each) from public.order_lines l
+                    where l.order_id = a.order_id and l.product_id = p_product_id and l.size = 'sample'), 0) as samples
+        from public.kitchen_allocations a
+        join public.orders d on d.id = a.order_id
+        where d.status = 'cooking' and not d.priority
+          and a.product_id = p_product_id and a.batch_id is not null
+        group by a.order_id
+      ) g
     ), 0) < v_short;
 
     for v_donor in
-      select d.id
+      select d.id,
+        greatest(
+          (select sum(a.grams) from public.kitchen_allocations a
+           where a.order_id = d.id and a.product_id = p_product_id and a.batch_id is not null)
+          - coalesce((select sum(l.quantity * l.grams_each) from public.order_lines l
+                      where l.order_id = d.id and l.product_id = p_product_id and l.size = 'sample'), 0),
+          0)::integer as spare_for_priority
       from public.orders d
       where d.status = 'cooking' and not d.priority
         and exists (
@@ -1075,7 +1094,9 @@ begin
       order by d.created_at desc, d.id desc
       for update of d
     loop
-      v_short := v_short - public.kitchen_move_grams(v_donor, v_id, p_product_id, v_short, true);
+      continue when v_donor.spare_for_priority = 0;
+      v_short := v_short - public.kitchen_move_grams(v_donor.id, v_id, p_product_id,
+        least(v_short, v_donor.spare_for_priority), true);
       exit when v_short = 0;
     end loop;
   end loop;
@@ -2263,6 +2284,14 @@ begin
   end loop;
 
   v_lines := public.order_clean_lines(v_input -> 'lines', 99, true);
+  -- Only products we make (every one has a kitchen_products row, set up by
+  -- the migration that adds it).
+  if exists (
+    select 1 from jsonb_array_elements(v_lines) line
+    where not exists (select 1 from public.kitchen_products k where k.product_id = line ->> 'product_id')
+  ) then
+    raise exception using message = 'We don''t know one of those products.', errcode = '22023';
+  end if;
   v_free_sample := not exists (
     select 1 from jsonb_array_elements(v_lines) line where line ->> 'size' <> 'sample'
   );
@@ -2438,11 +2467,10 @@ grant execute on function public.save_admin_order(uuid, jsonb) to authenticated;
 
 -- Quick changes, as in 20260928000000, with the new stages and without kept.
 -- A status change is a kitchen action (see kitchen_order_moved()), and so is
--- priority (true/false): it re-runs the fill for food not yet given, never
--- taking grams from another order. The answer
--- is the order plus kitchen_effects: what it did to the kitchen, with an
--- action_id for undo_admin_kitchen(), or null when only this order's status
--- changed (undo that with the old status, as before).
+-- priority (true/false): it re-runs the fill. Every one returns
+-- kitchen_effects with an action_id for undo_admin_kitchen(); it's null only
+-- when neither changed. status_changed_at (with status) still works for a
+-- plain reverse.
 create or replace function public.update_admin_order(p_id uuid, p_changes jsonb)
 returns json
 language plpgsql
@@ -2568,18 +2596,11 @@ begin
       perform public.kitchen_fill_all(public.kitchen_order_products(p_id));
     end if;
 
-    -- Worth an Undo of its own only when more than this order's status moved.
-    if exists (
-      select 1 from public.kitchen_action_steps s
-      where s.action_id = v_action
-        and not (s.tbl = 'orders' and (s.new ->> 'id')::uuid = p_id)
-    ) then
-      v_effects := public.kitchen_effects_json(v_action, false);
-      perform public.kitchen_action_finish(v_action);
-    else
-      perform public.kitchen_action_finish(v_action);
-      delete from public.kitchen_actions where id = v_action;
-    end if;
+    -- Every status or priority move is undone through undo_admin_kitchen(),
+    -- which puts it back exactly (status, when it began, priority) and removes
+    -- the history it wrote, so an undone tap leaves no trace.
+    v_effects := public.kitchen_effects_json(v_action, false);
+    perform public.kitchen_action_finish(v_action);
   end if;
 
   if v_paid then
@@ -3094,6 +3115,8 @@ begin
       select l.size, l.grams_each, l.quantity
       from public.order_lines l
       where l.order_id = p_order_id and l.product_id = v_cover.product_id and l.grams_each > 0
+        -- Samples are tiny and free: never take anyone's sample pouch.
+        and l.size <> 'sample'
       order by l.grams_each desc, l.size
     loop
       v_want := least(v_line.quantity, v_short / v_line.grams_each);
@@ -3106,7 +3129,7 @@ begin
         where d.status in ('packing', 'ready') and not d.priority and d.id <> p_order_id
           and l.product_id = v_cover.product_id
           and l.grams_each = v_line.grams_each
-          and (l.size = 'sample') = (v_line.size = 'sample')
+          and l.size <> 'sample'
         order by d.created_at desc, d.id desc
         for update of d
       loop
@@ -4059,7 +4082,162 @@ from public.orders o
 where o.status in ('ready', 'delivered');
 
 -- ═══════════════════════════════════════════════════════
--- 13. Grants for the new admin RPCs
+-- 13. Payment Undo leaves no history
+-- ═══════════════════════════════════════════════════════
+
+-- As in 20260928000000, plus p_undo: the Undo of "Mark paid" or "Part
+-- payment" (not the × on a payment, which is a real removal). An undo writes
+-- no history and removes the "paid" event the payment wrote.
+drop function if exists public.delete_admin_payment(uuid);
+
+create or replace function public.delete_admin_payment(p_id uuid, p_undo boolean default false)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+  v_was_paid boolean;
+  v_order public.orders;
+begin
+  if not public.is_admin() then
+    raise exception using message = 'Unauthorized';
+  end if;
+
+  select p.order_id into v_order_id from public.order_payments p where p.id = p_id;
+  if v_order_id is null then
+    raise exception using message = 'That payment is gone.', errcode = '22023';
+  end if;
+
+  select * into v_order from public.orders where id = v_order_id for update;
+  v_was_paid := v_order.paid_at is not null;
+
+  if coalesce(p_undo, false) then
+    perform set_config('shahs.no_events', 'on', true);
+  end if;
+  delete from public.order_payments where id = p_id;
+  perform set_config('shahs.no_events', '', true);
+
+  select * into v_order from public.orders where id = v_order_id;
+  if coalesce(p_undo, false) and v_was_paid and v_order.paid_at is null then
+    delete from public.order_events
+    where id = (
+      select e.id from public.order_events e
+      where e.order_id = v_order_id and e.event = 'paid'
+      order by e.at desc, e.id desc
+      limit 1
+    );
+  end if;
+
+  return public.admin_order_json(v_order);
+end;
+$$;
+
+revoke all on function public.delete_admin_payment(uuid, boolean) from public, anon;
+grant execute on function public.delete_admin_payment(uuid, boolean) to authenticated;
+
+-- As in 20260928000000: the Undo of × and of "Mark not paid". It writes no
+-- history, and removes the "unpaid" event the removal wrote.
+create or replace function public.restore_admin_payments(p_order_id uuid, p_payments jsonb)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.orders;
+  v_was_paid boolean;
+  v_item jsonb;
+  v_id uuid;
+  v_amount integer;
+  v_method text;
+  v_note text;
+  v_paid_at timestamptz;
+begin
+  if not public.is_admin() then
+    raise exception using message = 'Unauthorized';
+  end if;
+
+  if p_payments is null or jsonb_typeof(p_payments) <> 'array'
+     or jsonb_array_length(p_payments) not between 1 and 50 then
+    raise exception using message = 'Nothing to put back.', errcode = '22023';
+  end if;
+
+  select * into v_order from public.orders where id = p_order_id for update;
+  if v_order.id is null then
+    raise exception using message = 'That order is gone.', errcode = '22023';
+  end if;
+  v_was_paid := v_order.paid_at is not null;
+
+  -- An Undo writes no history of its own.
+  perform set_config('shahs.no_events', 'on', true);
+
+  for v_item in select value from jsonb_array_elements(p_payments) loop
+    perform public.order_check_keys(v_item, array['id', 'amount', 'method', 'note', 'paid_at']);
+
+    begin
+      v_id := (v_item ->> 'id')::uuid;
+    exception
+      when others then
+        v_id := null;
+    end;
+    if v_id is null or jsonb_typeof(v_item -> 'paid_at') is distinct from 'string' then
+      raise exception using message = 'That payment doesn''t look right.', errcode = '22023';
+    end if;
+
+    if coalesce(jsonb_typeof(v_item -> 'amount'), 'null') = 'null' then
+      if v_order.amount is not null then
+        raise exception using message = 'Type how much they paid.', errcode = '22023';
+      end if;
+      v_amount := null;
+    else
+      if v_order.amount is null then
+        raise exception using message = 'Add the order total first.', errcode = '22023';
+      end if;
+      -- 0 is allowed back: it's the rest of a ₹0 order.
+      v_amount := public.order_check_amount(v_item -> 'amount');
+      if v_amount is null then
+        raise exception using message = 'Type how much they paid.', errcode = '22023';
+      end if;
+    end if;
+
+    v_method := public.order_check_paid_method(v_item -> 'method');
+    v_note := public.order_check_paid_note(v_item -> 'note');
+    perform public.order_check_paid_pair(v_method, v_note);
+    v_paid_at := public.order_check_payment_date(v_item -> 'paid_at');
+
+    insert into public.order_payments (id, order_id, amount, method, note, paid_at, created_by)
+    values (v_id, p_order_id, v_amount, v_method, v_note, v_paid_at, auth.uid())
+    on conflict (id) do nothing;
+  end loop;
+
+  perform set_config('shahs.no_events', '', true);
+
+  -- If putting them back makes it paid again, the removal wrote "unpaid":
+  -- that goes too, so the history reads as if it never happened.
+  select * into v_order from public.orders where id = p_order_id;
+  if not v_was_paid and v_order.paid_at is not null then
+    delete from public.order_events
+    where id = (
+      select e.id from public.order_events e
+      where e.order_id = p_order_id and e.event = 'unpaid'
+      order by e.at desc, e.id desc
+      limit 1
+    );
+  end if;
+
+  return public.admin_order_json(v_order);
+end;
+$$;
+
+
+
+revoke all on function public.restore_admin_payments(uuid, jsonb) from public, anon;
+grant execute on function public.restore_admin_payments(uuid, jsonb) to authenticated;
+
+-- ═══════════════════════════════════════════════════════
+-- 14. Grants for the new admin RPCs
 -- ═══════════════════════════════════════════════════════
 
 -- Supabase grants execute on new functions to anon and authenticated by
