@@ -16,6 +16,11 @@ select plan(8);
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.admin_users;
 
@@ -67,9 +72,9 @@ select 'SN-' || t.code, 'whatsapp', t.status, '9198000000' || t.n, t.amount,
 from (values
   -- In: two UPI, cash, bank, other with its note, and one paid before methods existed.
   ('MBA22', 10, 'delivered', 500,  interval '0', 'upi',   null),
-  ('MBB22', 11, 'sent',      300,  interval '0', 'upi',   null),
+  ('MBB22', 11, 'ready',     300,  interval '0', 'upi',   null),
   ('MBC22', 12, 'delivered', 200,  interval '0', 'cash',  null),
-  ('MBD22', 13, 'confirmed', 1000, interval '0', 'bank',  null),
+  ('MBD22', 13, 'packing',   1000, interval '0', 'bank',  null),
   ('MBE22', 14, 'delivered', 150,  interval '0', 'other', 'Paid by a friend'),
   ('MBF22', 15, 'delivered', 400,  interval '0', null,    null),
   -- Out: paid with no amount yet (adds nothing), cancelled after paying, paid last week.
@@ -78,7 +83,7 @@ from (values
   ('MBJ22', 18, 'delivered', 7777, interval '-1 microsecond', 'upi', null)
 ) as t(code, n, status, amount, shift, method, note);
 
--- Out: delivered and not paid, with an amount. Made now, so it's this week's one real order.
+-- Out: delivered and not paid, with an amount. Made now, so it's this week's one order.
 insert into public.orders (code, source, status, phone, amount, created_at)
 values ('SN-MBK22', 'whatsapp', 'delivered', '919800000019', 250, now());
 
@@ -101,7 +106,8 @@ select is(
 
 select is(
   (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
-  '{"orders":1,"packs":0,"amount_in":2550,"paid_orders":7,"paid_without_amount":1,"part_payments":0}'::jsonb,
+  '{"orders":1,"packs":0,"amount_in":2550,"paid_orders":7,"paid_without_amount":1,"part_payments":0,
+    "grams_made":0,"samples":{"orders":0,"packs":0}}'::jsonb,
   'this week''s other keys keep their meaning: the no-amount order is still in paid_orders and paid_without_amount'
 );
 
@@ -115,9 +121,9 @@ select is(
 
 select is(
   (select array_agg(k order by k) from jsonb_object_keys(current_setting('test.totals')::jsonb #> '{weeks,this}') k),
-  array['amount_by_method', 'amount_in', 'by_product', 'days', 'ends_at', 'orders', 'packs',
-        'paid_orders', 'paid_without_amount', 'part_payments', 'starts_at'],
-  'this week: the keys from 20260926000006, plus amount_by_method'
+  array['amount_by_method', 'amount_in', 'by_product', 'days', 'ends_at', 'grams_made', 'orders', 'packs',
+        'paid_orders', 'paid_without_amount', 'part_payments', 'samples', 'starts_at'],
+  'this week: the keys from 20260926000006, plus amount_by_method, grams_made and samples'
 );
 
 select * from finish();

@@ -1,17 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ClipboardPaste, Copy, Globe, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
+import { ArrowRight, Check, ClipboardPaste, Copy, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
 import { useAdminMe } from '../auth';
-import { firstName, formatAgo, formatDay, formatMoney, formatPhone, formatTime } from '../format';
+import { firstName, formatDay, formatMoney, formatPhone, formatTime } from '../format';
 import { AdminLink } from '../router';
 import { Field } from '../parts';
+import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import { useUnsavedWork } from '../unsavedWork';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
-import { Code, Thumb, Via } from './OrderCard';
-import { itemsText, nextOf, normalisePhone, productName, sortLines } from './model';
+import { Code, FromWebsite, Thumb, Via } from './OrderCard';
+import { MOVE_TO_PACKING, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
+import { historyDetailText } from './giveText';
 import { PaymentsBlock } from './PaymentsBlock';
 import { usePriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
@@ -19,16 +21,14 @@ import type { PaymentActions } from './usePayments';
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
 const copy = adminCopy.order;
-type Change = (order: Order, changes: OrderChanges) => void;
+type Change = (order: Order, changes: OrderChanges) => void | Promise<void>;
 
 /** Code and came-via, the name, when and where. Spans only: the page puts it in an h1, the popup in its h2. */
 export const OrderHead: React.FC<{ order: Order; nameRef?: React.Ref<HTMLSpanElement> }> = ({ order: o, nameRef }) => (
   <>
     <span className="adm-od-no">
       <Code code={o.code} />
-      {o.source === 'site'
-        ? <span className="adm-od-via"><Globe size={14} aria-hidden="true" />{adminCopy.orders.via.site}</span>
-        : <Via source={o.source} />}
+      {o.source === 'site' ? <FromWebsite /> : <Via source={o.source} />}
     </span>
     <span className="adm-od-name" ref={nameRef} tabIndex={-1}>{o.name ?? (o.phone && formatPhone(o.phone))}</span>
     <span className="adm-od-meta">
@@ -49,15 +49,18 @@ export const OrderNotes: React.FC<{ order: Order }> = ({ order: o }) => {
   );
 };
 
-const STEPS: Exclude<OrderStatus, 'cancelled'>[] = ['new', 'confirmed', 'sent', 'delivered'];
+const STEPS: Exclude<OrderStatus, 'cancelled'>[] = ['cooking', 'packing', 'ready', 'delivered'];
 
 const hintOf = (o: Order) => {
-  if (o.stale) return copy.staleHint(formatAgo(o.created_at));
+  if (o.status === 'cooking') {
+    return copy.hints.cooking(o.kitchen.filter((k) => k.waiting).map((k) => productName(k.product_id)));
+  }
   if (o.status === 'delivered') {
+    if (o.free_sample) return copy.hints.freeSample;
     if (o.paid) return copy.hints.done;
     return o.payment_state === 'part_paid' ? adminCopy.payments.restToCome : copy.hints.delivered;
   }
-  return copy.hints[o.status as keyof typeof copy.hints];
+  return o.status === 'cancelled' ? '' : copy.hints[o.status];
 };
 
 /** Steps, the hint under them, and the order's money. Key it by order id. */
@@ -67,7 +70,9 @@ export const StatusCard: React.FC<{
   payments: PaymentActions;
   /** Opens "How did they pay?" for whatever is left. */
   onPayRest: (order: Order) => void;
-}> = ({ order: o, change, payments, onPayRest }) => {
+  /** Priority was just turned on (and saved): offer it packed food from other orders. */
+  onPriorityOn?: (order: Order) => void;
+}> = ({ order: o, change, payments, onPayRest, onPriorityOn }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
   const lastChange = o.status_changed_at;
@@ -88,27 +93,60 @@ export const StatusCard: React.FC<{
       {cancelled ? (
         <p className="adm-steps__hint adm-od-cancelled">
           {copy.cancelledOn(formatDay(lastChange))}
-          <button type="button" className="adm-btn adm-btn--quiet adm-btn--xs" onClick={() => change(o, { status: 'new' })}>{copy.bringBack}</button>
+          <button type="button" className="adm-btn adm-btn--quiet adm-btn--xs" onClick={() => change(o, { status: 'cooking' })}>{copy.bringBack}</button>
         </p>
       ) : (
         <p className="adm-steps__hint">{hintOf(o)}</p>
       )}
-      <PaymentsBlock order={o} payments={payments} onPayRest={onPayRest} />
+      {/* Skip the line: only while it cooks, since that's the only place it changes anything. */}
+      {o.status === 'cooking' && (
+        <div className="adm-od-priority">
+          <span><b>{adminCopy.orderPriority.label}</b><small>{adminCopy.orderPriority.hint}</small></span>
+          <Switch checked={o.priority} label={adminCopy.orderPriority.switchLabel(firstName(o.name) || o.code)}
+            onChange={async (priority) => {
+              await change(o, { priority });
+              if (priority) onPriorityOn?.(o);
+            }} />
+        </div>
+      )}
+      {/* A free sample has no money to take. */}
+      {!o.free_sample && <PaymentsBlock order={o} payments={payments} onPayRest={onPayRest} />}
     </section>
+  );
+};
+
+/**
+ * Per product, while it's being cooked: "Still to cook", or "Ready, made Thu 17 Sep" (the days
+ * its batches were made; plain "Ready" when it was covered by hand). Past Cooking it says nothing:
+ * the steps already do.
+ */
+const LineState: React.FC<{ order: Order; productId: string }> = ({ order, productId }) => {
+  if (order.status !== 'cooking') return null;
+  const state = lineState(order, productId);
+  if (!state) return null;
+  if (!state.ready) return <small className="adm-lstate is-wait">{copy.stillToCook}</small>;
+  return (
+    <small className="adm-lstate is-ready">
+      <Check size={14} aria-hidden="true" />{state.madeOn.length ? copy.readyMade(state.madeOn.map(madeOnDay)) : copy.ready}
+    </small>
   );
 };
 
 export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
   <section className="adm-card">
     <div className="adm-card__h">
-      <h2>{copy.packs(o.packs)}</h2>
+      <h2>{packsText(o)}</h2>
       <AdminLink className="adm-text-btn" to={`/admin/orders/${o.code}/edit`}><Pencil size={15} aria-hidden="true" />{copy.edit}</AdminLink>
     </div>
     <ul className="adm-items">
-      {sortLines(o.lines).map((l) => (
+      {sortLines(o.lines).map((l, i, lines) => (
         <li key={l.product_id + l.size}>
           <Thumb id={l.product_id} />
-          <span><b className="adm-pname">{productName(l.product_id)}</b><small>{l.size}</small></span>
+          <span>
+            <b className="adm-pname">{productName(l.product_id)}</b><small>{sizeText(l.size)}</small>
+            {/* Once per product, under its last line. */}
+            {lines[i + 1]?.product_id !== l.product_id && <LineState order={o} productId={l.product_id} />}
+          </span>
           <span className="adm-items__q">× {l.quantity}</span>
         </li>
       ))}
@@ -161,10 +199,10 @@ const shownValue = (o: Order, key: FieldKey) =>
 
 /** A detail field that saves 600ms after typing stops, and on leaving it. Key it by order id. */
 const AutoField: React.FC<{
-  order: Order; field: FieldKey; onSaved: (o: Order) => void; inputRef?: React.Ref<HTMLInputElement>;
+  order: Order; field: FieldKey; onSaved: (o: Order) => void;
   /** The total: the worked-out one, offered as a tap. Never filled in by itself, since this field saves. */
   worked?: number | null;
-}> = ({ order, field, onSaved, inputRef, worked }) => {
+}> = ({ order, field, onSaved, worked }) => {
   const [value, setValue] = useState(() => shownValue(order, field));
   const [status, setStatus] = useState('');
   const latest = useRef(order);
@@ -192,7 +230,7 @@ const AutoField: React.FC<{
     const current = latest.current[field];
     if (parsed.value === (current ?? null)) { unsaved.current = false; return setStatus(''); }
     try {
-      onSaved(await updateOrder(latest.current.id, { [field]: parsed.value }));
+      onSaved(orderOnly(await updateOrder(latest.current.id, { [field]: parsed.value })));
       unsaved.current = false;
       setStatus(copy.saved);
     } catch (err) {
@@ -243,7 +281,7 @@ const AutoField: React.FC<{
     >
       {field === 'note'
         ? <textarea {...common} rows={3} placeholder={copy.notePlaceholder} />
-        : <input {...common} ref={inputRef} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
+        : <input {...common} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
             placeholder={field === 'phone' ? copy.phonePlaceholder : copy.totalPlaceholder} />}
     </Field>
     {offer && (
@@ -263,7 +301,7 @@ const replyLink = (o: Order, from: string | null) => {
     name: firstName(o.name),
     from: firstName(from),
     code: o.message_code,
-    packs: copy.packs(o.packs),
+    packs: packsText(o),
     total: o.amount != null ? formatMoney(o.amount) : null,
   });
   return `https://wa.me/${o.phone}?text=${encodeURIComponent(text)}`;
@@ -273,8 +311,7 @@ const replyLink = (o: Order, from: string | null) => {
 export const DetailsCard: React.FC<{
   order: Order & Partial<Pick<OrderDetail, 'phone_suggestion'>>;
   onSaved: (o: Order) => void;
-  phoneRef?: React.Ref<HTMLInputElement>;
-}> = ({ order: o, onSaved, phoneRef }) => {
+}> = ({ order: o, onSaved }) => {
   const me = useAdminMe();
   const suggestion = !o.phone && o.phone_suggestion;
   const [busy, setBusy] = useState(false);
@@ -284,18 +321,19 @@ export const DetailsCard: React.FC<{
   const useSuggestion = async () => {
     if (!suggestion) return;
     setBusy(true);
-    try { onSaved(await updateOrder(o.id, { phone: suggestion.phone })); } catch { /* the field stays empty */ }
+    try { onSaved(orderOnly(await updateOrder(o.id, { phone: suggestion.phone }))); } catch { /* the field stays empty */ }
     setBusy(false);
   };
   return (
     <section className="adm-card adm-stack" key={o.id}>
-      <AutoField key={`p${o.id}`} order={o} field="phone" onSaved={onSaved} inputRef={phoneRef} />
+      <AutoField key={`p${o.id}`} order={o} field="phone" onSaved={onSaved} />
       {suggestion && (
         <button type="button" className="adm-text-btn" disabled={busy} onClick={useSuggestion}>
           {copy.useSuggestion(formatPhone(suggestion.phone), formatDay(suggestion.created_at))}
         </button>
       )}
-      <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />
+      {/* A free sample order has no total, as in Add and Edit. */}
+      {!o.free_sample && <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />}
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
       <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
       {o.phone && (
@@ -317,7 +355,8 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
       <ol>
         {history.map((h, i) => (
           <li key={i}>
-            <b>{copy.events[h.event]}</b> · {formatDay(h.at)}, {formatTime(h.at)}{h.by_name && ` · ${firstName(h.by_name)}`}
+            <b>{historyDetailText(h.detail) || (h.auto && copy.autoEvents[h.event]) || copy.events[h.event]}</b> · {formatDay(h.at)}, {formatTime(h.at)}
+            {h.by_name && !h.auto && ` · ${firstName(h.by_name)}`}
           </li>
         ))}
       </ol>
@@ -325,27 +364,21 @@ export const History: React.FC<{ history?: OrderDetail['history'] }> = ({ histor
   ) : null;
 
 /**
- * The pinned button: the order's next step, or "All done." A stale order gets
- * "They messaged, confirm it", with Still waiting next to it.
+ * The pinned button: the order's next step, or "All done." once it's done. Cooking has
+ * none (it moves on by itself; "Move to Packing" is in ⋯), so nothing shows.
  */
 export const PrimaryAction: React.FC<{ order: Order; change: Change; onNext?: () => void }> = ({ order, change, onNext }) => {
   const next = nextOf(order);
+  if (order.status === 'cooking') return null;
   if (!next) return <span className="adm-od-alldone">{adminCopy.orders.allDone}</span>;
-  const go = (
+  return (
     <button type="button" className="adm-btn adm-btn--primary adm-od-go" onClick={onNext ?? (() => change(order, next.changes))}>
       <Check size={20} aria-hidden="true" />{next.labels[1]}
     </button>
   );
-  if (next.lane !== 'stale') return go;
-  return (
-    <span className="adm-od-pair">
-      <button type="button" className="adm-btn adm-btn--tonal" onClick={() => change(order, { kept: true })}>{adminCopy.orders.stillWaiting}</button>
-      {go}
-    </span>
-  );
 };
 
-/** ⋯: edit, copy, mark not paid (when money came in), cancel, delete (with its own confirm). */
+/** ⋯: move a Cooking order to Packing, edit, copy, mark not paid (when money came in), cancel, delete (with its own confirm). */
 export const OrderMenu: React.FC<{
   order: Order; change: Change; payments: PaymentActions; onDeleted: () => void; up?: boolean;
 }> = ({ order: o, change, payments, onDeleted, up }) => {
@@ -385,6 +418,11 @@ export const OrderMenu: React.FC<{
         <MoreHorizontal size={20} aria-hidden="true" />{up && copy.more}
       </button>
       <div className="adm-menu" hidden={!open}>
+        {o.status === 'cooking' && (
+          <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); change(o, MOVE_TO_PACKING); }}>
+            <ArrowRight size={18} aria-hidden="true" />{copy.menu.moveToPacking}
+          </button>
+        )}
         <AdminLink className="adm-menu__item" to={`/admin/orders/${o.code}/edit`}><Pencil size={18} aria-hidden="true" />{copy.menu.edit}</AdminLink>
         <button type="button" className="adm-menu__item" onClick={copyDetails}><Copy size={18} aria-hidden="true" />{copy.menu.copy}</button>
         {o.payments.length > 0 && (

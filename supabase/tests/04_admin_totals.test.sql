@@ -1,5 +1,7 @@
 -- 20260926000006: get_admin_totals() for the per-product Home,
--- get_admin_orders(p_product), and admin_users.home_view. Who can call them, zeros on an empty
+-- get_admin_orders(p_product), and admin_users.home_view. Since
+-- 20260929000001 the stages are the kitchen's, samples are their own packs,
+-- and a free sample order never counts as money. Who can call them, zeros on an empty
 -- database, every stage per product and overall, weights, money, the week
 -- boundaries, and the product filter. Test data is fake (9198000000xx,
 -- example.com) and everything rolls back at the end.
@@ -16,6 +18,11 @@ select plan(39);
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.admin_users;
 
@@ -43,17 +50,17 @@ reset role;
 select ok(
   not has_function_privilege('public', 'public.get_admin_totals()', 'execute')
   and not has_function_privilege('anon',
-    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text)', 'execute')
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean,boolean)', 'execute')
   and has_function_privilege('authenticated',
-    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text)', 'execute'),
+    'public.get_admin_orders(text,text[],boolean,text,text,text,timestamptz,timestamptz,timestamptz,integer,text,boolean,boolean)', 'execute'),
   'grants: PUBLIC cannot run get_admin_totals; get_admin_orders is authenticated only'
 );
 
 select is(
   (select array_agg(p.oid::regprocedure::text) from pg_proc p
    where p.pronamespace = 'public'::regnamespace and p.proname = 'get_admin_orders'),
-  array['get_admin_orders(text,text[],boolean,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,integer,text)'],
-  'get_admin_orders has one signature, with p_product; the old 10-argument one is gone'
+  array['get_admin_orders(text,text[],boolean,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,integer,text,boolean,boolean)'],
+  'get_admin_orders has one signature, with p_product, p_free_sample and p_samples; the older ones are gone'
 );
 
 -- ─── 2. An empty database gives zeros ───────────────────
@@ -68,15 +75,14 @@ select is(current_setting('test.empty')::jsonb -> 'products', '[]'::jsonb, 'empt
 select is(
   current_setting('test.empty')::jsonb -> 'overall',
   '{
-    "to_confirm": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
-    "to_send":    {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
-    "on_the_way": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
+    "cooking":    {"orders":0,"packs":0,"samples":0,"free_samples":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
+    "packing":    {"orders":0,"packs":0,"samples":0,"free_samples":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0},
+    "ready":      {"orders":0,"packs":0,"samples":0,"free_samples":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
                    "unpaid_names":[],"part_paid_names":[]},
-    "to_collect": {"orders":0,"packs":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
-                   "without_amount_names":[],"part_paid_names":[]},
-    "stale":      {"orders":0,"packs":0}
+    "to_collect": {"orders":0,"packs":0,"samples":0,"free_samples":0,"amount":0,"without_amount":0,"paid":0,"unpaid_amount":0,"amount_due":0,"part_paid":0,
+                   "without_amount_names":[],"part_paid_names":[]}
   }'::jsonb,
-  'empty: every overall stage is zeros, the name lists are empty, and stale has no money keys'
+  'empty: every overall stage is zeros and the name lists are empty'
 );
 
 select is(
@@ -88,7 +94,8 @@ select is(
 select is(
   (select jsonb_object_agg(w.key, w.value - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'])
    from jsonb_each(current_setting('test.empty')::jsonb -> 'weeks') w),
-  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0,"part_payments":0}'::jsonb)
+  (select jsonb_object_agg(k, '{"orders":0,"packs":0,"amount_in":0,"paid_orders":0,"paid_without_amount":0,"part_payments":0,
+                                "grams_made":0,"samples":{"orders":0,"packs":0}}'::jsonb)
    from unnest(array['this', 'last', 'last_so_far']) k),
   'empty: every week is zeros'
 );
@@ -142,40 +149,39 @@ select is(
 -- ─── 3. Stages, per product and overall ─────────────────
 
 -- Created a few microseconds apart, newest first in the list below.
-insert into public.orders (code, source, status, name, pincode, phone, amount, paid_at, created_at) values
-  -- to_confirm
-  ('SN-NEW22', 'site',      'new',       'Asha Example',  '415001', null, 300,  null,  now() - interval '1 microsecond'),
-  -- stale: New for 3 days (set below), must not be in to_confirm
-  ('SN-STX22', 'site',      'new',       'Stale Example', '415001', null, null, null,  now() - interval '2 microseconds'),
-  -- to_send, mixed: two products, two sizes and a kilo; paid before delivery
-  ('SN-MXD22', 'whatsapp',  'confirmed', 'Mixed Example', null, '919800000061', 800, now(), now() - interval '3 microseconds'),
-  -- to_send, no amount yet; '250g' with no space
-  ('SN-CNF22', 'call',      'confirmed', 'Conf Example',  null, '919800000062', null, null, now() - interval '4 microseconds'),
-  -- on_the_way
-  ('SN-SNT22', 'instagram', 'sent',      'Sent Example',  null, null, 500,  null,  now() - interval '5 microseconds'),
+insert into public.orders (code, source, status, name, pincode, phone, amount, paid_at, free_sample, created_at) values
+  -- cooking
+  ('SN-NEW22', 'site',      'cooking',   'Asha Example',  '415001', null, 300,  null,  false, now() - interval '1 microsecond'),
+  -- ready, a free sample order: in the stage's work, never in its money
+  ('SN-STX22', 'in_person', 'ready',     'Sample Example', null, '919800000060', null, null, true, now() - interval '2 microseconds'),
+  -- packing, mixed: two products, two sizes, a kilo and a free taster; paid before delivery
+  ('SN-MXD22', 'whatsapp',  'packing',   'Mixed Example', null, '919800000061', 800, now(), false, now() - interval '3 microseconds'),
+  -- packing, no amount yet; '250g' with no space
+  ('SN-CNF22', 'call',      'packing',   'Conf Example',  null, '919800000062', null, null, false, now() - interval '4 microseconds'),
+  -- ready
+  ('SN-SNT22', 'instagram', 'ready',     'Sent Example',  null, null, 500,  null,  false, now() - interval '5 microseconds'),
   -- to_collect, one with an amount and one without
-  ('SN-DVR22', 'site',      'delivered', 'Owed Example',  '415001', null, 600, null, now() - interval '6 microseconds'),
-  ('SN-DVR33', 'in_person', 'delivered', 'Owed Example',  null, null, null, null,  now() - interval '7 microseconds'),
+  ('SN-DVR22', 'site',      'delivered', 'Owed Example',  '415001', null, 600, null, false, now() - interval '6 microseconds'),
+  ('SN-DVR33', 'in_person', 'delivered', 'Owed Example',  null, null, null, null,  false, now() - interval '7 microseconds'),
   -- done (delivered and paid) and cancelled: in no stage
-  ('SN-DNE22', 'site',      'delivered', 'Done Example',  '415001', null, 900, now(), now() - interval '8 microseconds'),
-  ('SN-CXN22', 'site',      'cancelled', 'Cancel Example', '415001', null, 700, now(), now() - interval '9 microseconds');
-
-update public.orders set status_changed_at = now() - interval '3 days' where code = 'SN-STX22';
+  ('SN-DNE22', 'site',      'delivered', 'Done Example',  '415001', null, 900, now(), false, now() - interval '8 microseconds'),
+  ('SN-CXN22', 'site',      'cancelled', 'Cancel Example', '415001', null, 700, now(), false, now() - interval '9 microseconds');
 
 insert into public.order_lines (order_id, product_id, size, quantity)
 select o.id, l.product_id, l.size, l.quantity
 from (values
-  ('SN-NEW22', 'raggi-jaggi', '250 g', 2),
-  ('SN-STX22', 'raggi-jaggi', '500 g', 9),
-  ('SN-MXD22', 'raggi-jaggi', '250 g', 2),
-  ('SN-MXD22', 'raggi-jaggi', '500 g', 1),
-  ('SN-MXD22', 'muesli',      '1 kg',  1),
-  ('SN-CNF22', 'raggi-jaggi', '250g',  1),
-  ('SN-SNT22', 'muesli',      '500 g', 2),
-  ('SN-DVR22', 'date-bites',  '250 g', 3),
-  ('SN-DVR33', 'date-bites',  '250 g', 1),
-  ('SN-DNE22', 'muesli',      '250 g', 9),
-  ('SN-CXN22', 'muesli',      '500 g', 9)
+  ('SN-NEW22', 'raggi-jaggi', '250 g',  2),
+  ('SN-STX22', 'raggi-jaggi', 'sample', 2),
+  ('SN-MXD22', 'raggi-jaggi', '250 g',  2),
+  ('SN-MXD22', 'raggi-jaggi', '500 g',  1),
+  ('SN-MXD22', 'muesli',      '1 kg',   1),
+  ('SN-MXD22', 'muesli',      'sample', 1),
+  ('SN-CNF22', 'raggi-jaggi', '250g',   1),
+  ('SN-SNT22', 'muesli',      '500 g',  2),
+  ('SN-DVR22', 'date-bites',  '250 g',  3),
+  ('SN-DVR33', 'date-bites',  '250 g',  1),
+  ('SN-DNE22', 'muesli',      '250 g',  9),
+  ('SN-CXN22', 'muesli',      '500 g',  9)
 ) as l(code, product_id, size, quantity)
 join public.orders o on o.code = l.code;
 
@@ -199,36 +205,34 @@ select is(
 select is(
   pg_temp.product('raggi-jaggi'),
   '{
-    "to_confirm": {"orders":1,"packs":2,"grams":500,"by_size":[{"size":"250 g","grams_each":250,"packs":2}]},
-    "to_send":    {"orders":2,"packs":4,"grams":1250,"by_size":[{"size":"250 g","grams_each":250,"packs":3},
-                                                                {"size":"500 g","grams_each":500,"packs":1}]},
-    "on_the_way": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "to_collect": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "stale":      {"orders":1,"packs":9,"grams":4500,"by_size":[{"size":"500 g","grams_each":500,"packs":9}]}
+    "cooking":    {"orders":1,"packs":2,"samples":0,"grams":500,"by_size":[{"size":"250 g","grams_each":250,"packs":2}]},
+    "packing":    {"orders":2,"packs":4,"samples":0,"grams":1250,"by_size":[{"size":"250 g","grams_each":250,"packs":3},
+                                                                           {"size":"500 g","grams_each":500,"packs":1}]},
+    "ready":      {"orders":1,"packs":0,"samples":2,"grams":40,"by_size":[{"size":"sample","grams_each":20,"packs":2}]},
+    "to_collect": {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]}
   }'::jsonb,
-  'raggi-jaggi: the stale order is only in stale; 250g and 250 g are one size; grams add up'
+  'raggi-jaggi: 250g and 250 g are one size; samples are their own size, out of packs but in grams'
 );
 
 select is(
   pg_temp.product('muesli'),
   '{
-    "to_confirm": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "to_send":    {"orders":1,"packs":1,"grams":1000,"by_size":[{"size":"1 kg","grams_each":1000,"packs":1}]},
-    "on_the_way": {"orders":1,"packs":2,"grams":1000,"by_size":[{"size":"500 g","grams_each":500,"packs":2}]},
-    "to_collect": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "stale":      {"orders":0,"packs":0,"grams":0,"by_size":[]}
+    "cooking":    {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]},
+    "packing":    {"orders":1,"packs":1,"samples":1,"grams":1020,"by_size":[{"size":"1 kg","grams_each":1000,"packs":1},
+                                                                           {"size":"sample","grams_each":20,"packs":1}]},
+    "ready":      {"orders":1,"packs":2,"samples":0,"grams":1000,"by_size":[{"size":"500 g","grams_each":500,"packs":2}]},
+    "to_collect": {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]}
   }'::jsonb,
-  'muesli: the mixed order counts once here too, with its kilo; done and cancelled are in no stage'
+  'muesli: the mixed order counts once here too, with its kilo and taster; done and cancelled are in no stage'
 );
 
 select is(
   pg_temp.product('date-bites'),
   '{
-    "to_confirm": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "to_send":    {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "on_the_way": {"orders":0,"packs":0,"grams":0,"by_size":[]},
-    "to_collect": {"orders":2,"packs":4,"grams":1000,"by_size":[{"size":"250 g","grams_each":250,"packs":4}]},
-    "stale":      {"orders":0,"packs":0,"grams":0,"by_size":[]}
+    "cooking":    {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]},
+    "packing":    {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]},
+    "ready":      {"orders":0,"packs":0,"samples":0,"grams":0,"by_size":[]},
+    "to_collect": {"orders":2,"packs":4,"samples":0,"grams":1000,"by_size":[{"size":"250 g","grams_each":250,"packs":4}]}
   }'::jsonb,
   'date-bites: delivered and not paid is to collect'
 );
@@ -236,22 +240,21 @@ select is(
 select is(
   current_setting('test.totals')::jsonb -> 'overall',
   '{
-    "to_confirm": {"orders":1,"packs":2,"amount":300,"without_amount":0,"paid":0,"unpaid_amount":300,
-                   "amount_due":300,"part_paid":0},
-    "to_send":    {"orders":2,"packs":5,"amount":800,"without_amount":1,"paid":1,"unpaid_amount":0,
-                   "amount_due":0,"part_paid":0},
-    "on_the_way": {"orders":1,"packs":2,"amount":500,"without_amount":0,"paid":0,"unpaid_amount":500,
-                   "amount_due":500,"part_paid":0,"unpaid_names":["Sent"],"part_paid_names":[]},
-    "to_collect": {"orders":2,"packs":4,"amount":600,"without_amount":1,"paid":0,"unpaid_amount":600,
-                   "amount_due":600,"part_paid":0,"without_amount_names":["Owed"],"part_paid_names":[]},
-    "stale":      {"orders":1,"packs":9}
+    "cooking":    {"orders":1,"packs":2,"samples":0,"free_samples":0,"amount":300,"without_amount":0,"paid":0,
+                   "unpaid_amount":300,"amount_due":300,"part_paid":0},
+    "packing":    {"orders":2,"packs":5,"samples":1,"free_samples":0,"amount":800,"without_amount":1,"paid":1,
+                   "unpaid_amount":0,"amount_due":0,"part_paid":0},
+    "ready":      {"orders":2,"packs":2,"samples":2,"free_samples":1,"amount":500,"without_amount":0,"paid":0,
+                   "unpaid_amount":500,"amount_due":500,"part_paid":0,"unpaid_names":["Sent"],"part_paid_names":[]},
+    "to_collect": {"orders":2,"packs":4,"samples":0,"free_samples":0,"amount":600,"without_amount":1,"paid":0,
+                   "unpaid_amount":600,"amount_due":600,"part_paid":0,"without_amount_names":["Owed"],"part_paid_names":[]}
   }'::jsonb,
-  'overall: orders, packs, amount, without amount, paid and unpaid amount per stage; no money on stale'
+  'overall: the free sample order counts as work in Ready but never in without_amount, unpaid or the names'
 );
 
 select ok(
   (current_setting('test.totals')::jsonb ->> 'first_order_at')::timestamptz = now() - interval '8 microseconds',
-  'first_order_at is the earliest real order (the done one), not the older-looking new or cancelled ones'
+  'first_order_at is the earliest real order (the done one), not the cancelled one'
 );
 
 select is(
@@ -260,15 +263,18 @@ select is(
     'last_so_far', current_setting('test.totals')::jsonb #> '{weeks,last_so_far,by_product}'),
   '{"this":[{"product_id":"date-bites","packs":4,"orders":2},
             {"product_id":"muesli","packs":12,"orders":3},
-            {"product_id":"raggi-jaggi","packs":4,"orders":2}],
+            {"product_id":"raggi-jaggi","packs":6,"orders":3}],
     "last_so_far":[]}'::jsonb,
-  'by_product: packs and orders per product in real orders; the mixed order counts for both products'
+  'by_product: packs and orders per product in real orders, samples left out; the mixed order counts for both'
 );
 
 select is(
   (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'amount_by_method'],
-  '{"orders":6,"packs":20,"amount_in":1700,"paid_orders":2,"paid_without_amount":0,"part_payments":0}'::jsonb,
-  'this week: real orders only (not new, stale or cancelled); money in skips the cancelled order'
+  '{"orders":7,"packs":22,"amount_in":1700,"paid_orders":2,"paid_without_amount":0,"part_payments":0,
+    "grams_made":0,"samples":{"orders":2,"packs":3}}'::jsonb,
+  'this week: real orders (not cancelled or free samples), packs without samples; samples counted apart '
+  '(orders carrying one: the free sample order and the paid order with a taster); '
+  'money in skips the cancelled order'
 );
 
 select is(
@@ -333,14 +339,14 @@ insert into public.orders (code, source, status, name, pincode, phone, amount, p
   ('SN-NMK22', 'site',     'delivered', 'tanvi Other',    '415001', null, null, null, now() - interval '12 microseconds'),
   -- Delivered, not paid, with a total: not named.
   ('SN-NMF22', 'site',     'delivered', 'Zara Example',   '415001', null, 100,  null, now() - interval '10 microseconds'),
-  -- Sent: three not paid (Neha twice), one paid.
-  ('SN-NMG22', 'site',     'sent',      'Neha Example',   '415001', null, null, null,  now() - interval '4 microseconds'),
-  ('SN-NMH22', 'site',     'sent',      'Asha Example',   '415001', null, null, now(), now() - interval '11 microseconds'),
-  ('SN-NMJ22', 'site',     'sent',      'Ravi Example',   '415001', null, null, null,  now() - interval '3 microseconds'),
-  ('SN-NMM22', 'site',     'sent',      'Neha Other',     '415001', null, null, null,  now() - interval '2 microseconds');
+  -- Ready: three not paid (Neha twice), one paid.
+  ('SN-NMG22', 'site',     'ready',      'Neha Example',   '415001', null, null, null,  now() - interval '4 microseconds'),
+  ('SN-NMH22', 'site',     'ready',      'Asha Example',   '415001', null, null, now(), now() - interval '11 microseconds'),
+  ('SN-NMJ22', 'site',     'ready',      'Ravi Example',   '415001', null, null, null,  now() - interval '3 microseconds'),
+  ('SN-NMM22', 'site',     'ready',      'Neha Other',     '415001', null, null, null,  now() - interval '2 microseconds');
 
--- When each was delivered or sent. to_collect names follow delivery;
--- on_the_way names follow created_at, so Ravi's earlier send doesn't move him.
+-- When each was delivered or packed. to_collect names follow delivery;
+-- ready names follow created_at, so Ravi's earlier packing doesn't move him.
 update public.orders o set status_changed_at = now() - d.ago
 from (values
   ('SN-NMD22', interval '7 days'), ('SN-NMB22', interval '6 days'), ('SN-NMA22', interval '5 days'),
@@ -357,18 +363,18 @@ reset role;
 select is(
   jsonb_build_object(
     'to_collect', current_setting('test.names')::jsonb #> '{overall,to_collect}',
-    'on_the_way', current_setting('test.names')::jsonb #> '{overall,on_the_way}'),
-  '{"to_collect": {"orders":7,"packs":0,"amount":100,"without_amount":6,"paid":0,"unpaid_amount":100,
+    'ready', current_setting('test.names')::jsonb #> '{overall,ready}'),
+  '{"to_collect": {"orders":7,"packs":0,"samples":0,"free_samples":0,"amount":100,"without_amount":6,"paid":0,"unpaid_amount":100,
                    "amount_due":100,"part_paid":0,"without_amount_names":["Meera","Tanvi","Farah"],"part_paid_names":[]},
-    "on_the_way": {"orders":4,"packs":0,"amount":0,"without_amount":4,"paid":1,"unpaid_amount":0,
+    "ready":      {"orders":4,"packs":0,"samples":0,"free_samples":0,"amount":0,"without_amount":4,"paid":1,"unpaid_amount":0,
                    "amount_due":0,"part_paid":0,"unpaid_names":["Neha","Ravi"],"part_paid_names":[]}}'::jsonb,
   'names: first names, each once (first spelling wins), at most 3; to_collect by delivery date, '
-  'on_the_way by created_at; counts stay per order and include the unnamed one'
+  'ready by created_at; counts stay per order and include the unnamed one'
 );
 
 -- ─── 6. Week boundaries ─────────────────────────────────
 
--- Clears the orders and puts pairs on each edge of each week. Confirmed
+-- Clears the orders and puts pairs on each edge of each week. The SN-WK
 -- orders carry 1, 2, 4… packs, and paid ones ₹1, ₹2, ₹4…, so every total
 -- says exactly which orders were counted:
 --   this Monday 00:00 IST     created 1 pack  / paid ₹1
@@ -390,14 +396,14 @@ begin
   delete from public.orders;
 
   insert into public.orders (code, source, status, phone, amount, paid_at, created_at)
-  select 'SN-WK' || t.tag || '22', 'whatsapp', 'confirmed', '9198000000' || (70 + t.n), null, null, t.at
+  select 'SN-WK' || t.tag || '22', 'whatsapp', 'packing', '9198000000' || (70 + t.n), null, null, t.at
   from (values
     ('A', 1, v_this), ('B', 2, v_this - interval '1 microsecond'),
     ('C', 3, v_last), ('D', 4, v_last - interval '1 microsecond'),
     ('E', 5, v_ago),  ('F', 6, v_ago - interval '1 microsecond')
   ) as t(tag, n, at)
   union all
-  select 'SN-PY' || t.tag || '22', 'whatsapp', 'new', '9198000000' || (80 + t.n), t.amount, t.at, '2020-01-01'
+  select 'SN-PY' || t.tag || '22', 'whatsapp', 'cooking', '9198000000' || (80 + t.n), t.amount, t.at, '2020-01-01'
   from (values
     ('A', 1, 1, v_this), ('B', 2, 2, v_this - interval '1 microsecond'),
     ('C', 3, 4, v_last), ('D', 4, 8, v_last - interval '1 microsecond'),
@@ -454,10 +460,8 @@ select is(
   'by_product: the same week edges as the totals'
 );
 select ok(
-  (current_setting('test.weeksfull')::jsonb ->> 'first_order_at')::timestamptz
-    = (date_trunc('week', now() at time zone 'Asia/Kolkata') - interval '7 days') at time zone 'Asia/Kolkata'
-      - interval '1 microsecond',
-  'first_order_at: the earliest real order, even before last week; paid-only new orders do not count'
+  (current_setting('test.weeksfull')::jsonb ->> 'first_order_at')::timestamptz = '2020-01-01',
+  'first_order_at: the earliest order that is not cancelled, however long ago (the SN-PY ones, now in Cooking)'
 );
 
 -- ─── 7. home_view and get_admin_me ──────────────────────

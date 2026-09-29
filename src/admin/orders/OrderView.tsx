@@ -9,9 +9,10 @@ import { AdminLink } from '../router';
 import type { Order } from '../types';
 import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
-import { laneOf, nextOf } from './model';
+import { type WorkLane, laneOf, nextOf } from './model';
 import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
 import { PaidSheet } from './PaidMethod';
+import { useOfferOnArrival, usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
 import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 
@@ -42,14 +43,14 @@ const OrderBody: React.FC<{
   show: (o: Order) => void;
   payments: PaymentActions;
   onPayRest: (o: Order) => void;
-  phoneRef?: React.Ref<HTMLInputElement>;
-}> = ({ order, change, show, payments, onPayRest, phoneRef }) => (
+  onPriorityOn: (o: Order) => void;
+}> = ({ order, change, show, payments, onPayRest, onPriorityOn }) => (
   <>
     <OrderNotes order={order} />
-    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} />
+    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
-      <DetailsCard order={order} onSaved={show} phoneRef={phoneRef} />
+      <DetailsCard order={order} onSaved={show} />
     </div>
     <History history={order.history} />
   </>
@@ -58,15 +59,30 @@ const OrderBody: React.FC<{
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
-/** Phone: the order as its own page, with the next step pinned above the tab bar. */
-export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
+/**
+ * Phone: the order as its own page, with the next step pinned above the tab bar. The board
+ * stays mounted behind it, so every change goes back into the board's list (`putInList`),
+ * and a kitchen move or a delete loads the board again: Back shows the new stages and counts.
+ */
+export const OrderPage: React.FC<{
+  code: string;
+  putInList?: (o: Order) => void;
+  onDeleted?: (o: Order) => void;
+  /** The kitchen moved other orders: load the board again. */
+  onKitchen?: () => void;
+}> = ({ code, putInList, onDeleted, onKitchen }) => {
   const navigate = useNavigate();
-  // Back to the same board: a product filter or a search stays.
-  const board = `/admin/orders${useLocation().search}`;
-  const { order, show, detail } = useOrder(code);
-  const change = useOrderChange(show);
+  // Back to the same board: a product filter or a search stays, and on a phone the stage it came from (#packing).
+  const { search, hash } = useLocation();
+  const board = `/admin/orders${search}${hash}`;
+  const { order, show, detail } = useOrder(code, undefined, putInList);
+  // A priority order can take food from others: after that, load this one and the board again.
+  const kitchenMoved = () => { detail.reload(); onKitchen?.(); };
+  const change = useOrderChange(show, kitchenMoved);
   const payments = usePayments(show);
   const [paying, setPaying] = useState<Order | null>(null);
+  const give = usePriorityGive(kitchenMoved);
+  useOfferOnArrival(give.offer);
 
   if (!order) {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
@@ -80,10 +96,10 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
     <div className="adm-page adm-od">
       <div className="adm-od-top">
         {back}
-        <OrderMenu order={order} change={change} payments={payments} onDeleted={() => navigate(board, { replace: true })} />
+        <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted?.(order); navigate(board, { replace: true }); }} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -93,6 +109,7 @@ export const OrderPage: React.FC<{ code: string }> = ({ code }) => {
         </div>
       )}
       <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
+      {give.popup}
     </div>
   );
 };
@@ -109,17 +126,20 @@ export const OrderPopup: React.FC<{
   putInList: (o: Order) => void;
   onDeleted: (o: Order) => void;
   onClose: () => void;
-  focusPhone?: boolean;
-}> = ({ code, sequence, putInList, onDeleted, onClose, focusPhone }) => {
+  /** The kitchen moved other orders (priority took food, or was given it): load the board again. */
+  onKitchen?: () => void;
+}> = ({ code, sequence, putInList, onDeleted, onClose, onKitchen }) => {
   const navigate = useNavigate();
   // Moving between orders keeps the board's query, so a filtered board stays filtered behind.
   const { search } = useLocation();
   const fromList = sequence.find((o) => o.code === code);
   const { order, show, detail } = useOrder(code, fromList, putInList);
-  const change = useOrderChange(show);
+  const kitchenMoved = () => { detail.reload(); onKitchen?.(); };
+  const change = useOrderChange(show, kitchenMoved);
+  const give = usePriorityGive(kitchenMoved);
+  useOfferOnArrival(give.offer);
   const payments = usePayments(show);
   const nameRef = useRef<HTMLSpanElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on
   // to the next order, like every next step; from the money block or P it stays.
   const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
@@ -129,15 +149,12 @@ export const OrderPopup: React.FC<{
     const to = sequence[at + step];
     if (at >= 0 && to) navigate(`/admin/orders/${to.code}${search}`, { replace: true });
   };
-  // The board draws stale orders at the bottom of To confirm, and ← → walk
-  // through them there, so the counter counts them as to confirm too.
-  const group = (o: Order) => (laneOf(o) === 'stale' ? 'confirm' : laneOf(o));
-  const lane = order ? group(order) : 'done';
-  const inLane = sequence.filter((o) => group(o) === lane);
+  const lane = order ? laneOf(order) : 'done';
+  const inLane = sequence.filter((o) => laneOf(o) === lane);
   const next = order && nextOf(order);
 
   // Enter (or the main button) does the next step, then moves on to the next
-  // order in the lane this one came from, so To confirm is Enter, Enter, Enter.
+  // order in the lane this one came from, so Packing is Enter, Enter, Enter.
   // The last one left in its lane stays open, showing where it went.
   // Mark paid first asks how they paid (the sheet), then moves on the same way.
   const doNext = (how?: HowPaid) => {
@@ -151,12 +168,12 @@ export const OrderPopup: React.FC<{
   };
 
   // A deep link can open the popup before the order has loaded, so focus lands
-  // on ×. Once the order is there, move it to the name (or the phone, for Confirm).
+  // on ×. Once the order is there, move it to the name.
   const placed = useRef(false);
   useEffect(() => {
     if (placed.current || !order) return;
     placed.current = true;
-    const target = (focusPhone ? phoneRef : nameRef).current;
+    const target = nameRef.current;
     if (target && !isTyping(document.activeElement)) target.focus();
   });
 
@@ -172,8 +189,8 @@ export const OrderPopup: React.FC<{
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1); }
       else if (e.key === 'Enter' && !target.closest('button, a, summary') && o) { e.preventDefault(); step(); }
       // P: paid → not paid at once (Undo); not or part paid → pay the rest, focus on UPI.
-      // A cancelled order takes no new money, the same as its money block.
-      else if (e.key.toLowerCase() === 'p' && o) {
+      // A cancelled order takes no new money, the same as its money block; a free sample has none.
+      else if (e.key.toLowerCase() === 'p' && o && !o.free_sample) {
         e.preventDefault();
         if (o.paid) void pay.markNotPaid(o);
         else if (o.status !== 'cancelled') ask({ order: o, moveOn: false });
@@ -192,11 +209,11 @@ export const OrderPopup: React.FC<{
       closeLabel={adminCopy.close}
       width={760}
       className="adm-od-popup"
-      initialFocus={focusPhone ? phoneRef : nameRef}
+      initialFocus={nameRef}
       actions={at >= 0 && (
         <>
           {inLane.length > 0 && lane !== 'done' && (
-            <span className="adm-od-pos">{copy.position(inLane.indexOf(fromList!) + 1, inLane.length, adminCopy.orders.lanes[lane][0])}</span>
+            <span className="adm-od-pos">{copy.position(inLane.indexOf(fromList!) + 1, inLane.length, adminCopy.orderStages.names[lane as WorkLane])}</span>
           )}
           <button type="button" className="adm-iconbtn" aria-label={copy.prev} disabled={at <= 0} onClick={() => go(-1)}><ChevronLeft size={20} aria-hidden="true" /></button>
           <button type="button" className="adm-iconbtn" aria-label={copy.nextOrder} disabled={at >= sequence.length - 1} onClick={() => go(1)}><ChevronRight size={20} aria-hidden="true" /></button>
@@ -215,7 +232,8 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} phoneRef={phoneRef} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} />}
+      {give.popup}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
     </AdminSheet>

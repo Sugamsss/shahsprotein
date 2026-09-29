@@ -1,42 +1,49 @@
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { ORDER_CODE_ALPHABET } from '../../utils/orderCode';
-import { firstName } from '../format';
-import type { Order, OrderChanges, OrderLine, TotalsByMethod } from '../types';
+import { firstName, formatDay, formatWeight, istDateValue } from '../format';
+import type { KitchenEffects, Order, OrderChanges, OrderKitchen, OrderLine, TotalsByMethod, UpdatedOrder } from '../types';
 
 // The order book's rules in one place: which lane an order is in, its next
 // step, and what a change says and how it's undone. No React here.
 
 const copy = adminCopy.orders;
 
-export type Lane = 'confirm' | 'send' | 'way' | 'collect' | 'stale' | 'done';
-/** The four working lanes, in board order. Stale sits under To confirm; Done is its own page. */
-export const LANES = ['confirm', 'send', 'way', 'collect'] as const;
+/** Pack size of a free sample (admin only, always free, never priced). */
+export const SAMPLE = 'sample';
+
+/**
+ * Cooking → Packing → Ready → Delivered (not paid in full: collect) → Done.
+ * Done = delivered and (paid in full, or a free sample order), or cancelled.
+ */
+export type Lane = 'cooking' | 'packing' | 'ready' | 'collect' | 'done';
+/** The working lanes, in board order. Done is its own page. */
+export const LANES = ['cooking', 'packing', 'ready', 'collect'] as const;
+export type WorkLane = (typeof LANES)[number];
 
 export const laneOf = (o: Order): Lane => {
-  if (o.status === 'cancelled' || (o.status === 'delivered' && o.paid)) return 'done';
-  if (o.status === 'delivered') return 'collect';
-  if (o.status === 'sent') return 'way';
-  if (o.status === 'confirmed') return 'send';
-  return o.stale ? 'stale' : 'confirm';
+  if (o.status === 'cancelled') return 'done';
+  if (o.status === 'delivered') return o.paid || o.free_sample ? 'done' : 'collect';
+  return o.status;
 };
 
 /**
- * The one-tap next step for a lane. Confirm goes through the Confirm sheet (or the popup).
- * A stale order confirms the same way, once their message finally arrives.
+ * The one-tap next step for a lane. Cooking has none: an order leaves it by itself once its
+ * food is logged; by hand it's "Move to Packing" (MOVE_TO_PACKING) in the ⋯ menu.
  */
-export const NEXT: Record<Exclude<Lane, 'done'>, OrderChanges> = {
-  confirm: { status: 'confirmed' },
-  stale: { status: 'confirmed' },
-  send: { status: 'sent' },
-  way: { status: 'delivered' },
+export const NEXT: Record<Exclude<WorkLane, 'cooking'>, OrderChanges> = {
+  packing: { status: 'ready' },
+  ready: { status: 'delivered' },
   // Every Mark paid asks how they paid first (PaidSheet), then sends paid_method too.
   collect: { paid: true },
 };
 
+/** A Cooking order moved on by hand: its missing food is covered "by hand". */
+export const MOVE_TO_PACKING: OrderChanges = { status: 'packing' };
+
 export const nextOf = (o: Order) => {
   const lane = laneOf(o);
-  return lane === 'done' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
+  return lane === 'done' || lane === 'cooking' ? null : { lane, changes: NEXT[lane], labels: copy.next[lane] };
 };
 
 /** "UPI", "Cash", "Bank transfer", "Other: paid by her brother", or null when there's no method (not paid, or an old order). */
@@ -73,8 +80,43 @@ export const changeText = (o: Order, changes: OrderChanges): string => {
   const name = firstName(o.name) || o.code;
   const t = copy.toasts;
   if (changes.status) return t[changes.status](name);
-  if (changes.paid !== undefined) return changes.paid ? t.paid(name, paidByText(changes)) : t.unpaid(name);
-  return t.kept(name);
+  if (changes.priority !== undefined) return changes.priority ? t.priority(name) : t.notPriority(name);
+  return changes.paid ? t.paid(name, paidByText(changes)) : t.unpaid(name);
+};
+
+/**
+ * What the kitchen did besides this order's move, for the toast's second sentence:
+ * its food back as spare ("500 g Date Bites back as spare."), food a priority order took
+ * from others ("Took 250 g Raggi Jaggi from Neha's order."), and other orders that moved
+ * ("Meera's order moved to Packing."). Empty when nothing else changed.
+ */
+export const effectsText = (order: Order, effects: KitchenEffects | null): string => {
+  if (!effects) return '';
+  const k = adminCopy.kitchenEffects;
+  const own = effects.orders.find((e) => e.id === order.id);
+  const back = (own?.grams ?? []).filter((g) => g.change < 0)
+    .map((g) => `${formatWeight(-g.change)} ${productName(g.product_id)}`);
+  // A priority order takes food from others (orders still cooking, or packed pouches).
+  const took = effects.orders.filter((e) => e.id !== order.id).flatMap((e) => {
+    const items = e.grams.filter((g) => g.change < 0).map((g) => `${formatWeight(-g.change)} ${productName(g.product_id)}`);
+    return items.length ? [k.took(items, firstName(e.name) || e.code)] : [];
+  });
+  const moved = effects.orders.filter((e) => e.id !== order.id && e.from !== e.to && e.to !== 'cancelled')
+    .map((e) => k.moved(firstName(e.name) || e.code, e.to));
+  return [back.length ? k.backAsSpare(back) : '', ...took, ...moved].filter(Boolean).join(' ');
+};
+
+/**
+ * How a change is undone: every status or priority change comes back with kitchen_effects
+ * and an action_id, and goes back through undo_admin_kitchen, which puts status,
+ * status_changed_at, priority and the kitchen back exactly and deletes the history the
+ * move wrote. An answer without an action id (an older database, or the save hasn't
+ * answered) sends the reverse keys.
+ */
+export type UndoPlan = { kitchen: string } | { changes: OrderChanges };
+export const undoPlanOf = (before: Order, changes: OrderChanges, saved: UpdatedOrder | null): UndoPlan => {
+  const actionId = saved?.kitchen_effects?.action_id;
+  return actionId ? { kitchen: actionId } : { changes: reverseOf(before, changes) };
 };
 
 /**
@@ -83,21 +125,16 @@ export const changeText = (o: Order, changes: OrderChanges): string => {
  * gets plain `paid: true`, which leaves it with no method.
  */
 export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
-  ...(changes.status !== undefined && { status: o.status }),
+  ...(changes.status !== undefined && { status: o.status, status_changed_at: o.status_changed_at }),
+  ...(changes.priority !== undefined && { priority: o.priority }),
   ...(changes.paid !== undefined && { paid: o.paid }),
   ...(changes.paid !== undefined && o.paid && o.paid_method && {
     paid_method: o.paid_method,
     ...(o.paid_method === 'other' && o.paid_note && { paid_note: o.paid_note }),
   }),
-  ...(changes.kept !== undefined && { kept: false }),
 });
 
-/**
- * The change as the list should show it before the server answers. The server
- * owns `stale`; locally it only ever clears it, because a status change or
- * Still waiting restarts the server's clock. Undoing Still waiting leaves it
- * to the server's answer.
- */
+/** The change as the list should show it before the server answers. The kitchen part (what's covered) is the server's. */
 export const applyLocal = (o: Order, c: OrderChanges): Order => ({
   ...o,
   ...c,
@@ -108,9 +145,18 @@ export const applyLocal = (o: Order, c: OrderChanges): Order => ({
     paid_method: c.paid ? c.paid_method ?? o.paid_method : null,
     paid_note: c.paid ? (c.paid_method ? c.paid_note ?? null : o.paid_note) : null,
   }),
-  stale: c.status || c.kept ? false : o.stale,
-  kept: c.kept ?? o.kept,
 } as Order);
+
+/**
+ * Whether a change moved or touched other orders too, so a board should load them again.
+ * kitchen_effects comes back for every status or priority change, so non-null alone
+ * doesn't mean anything else changed.
+ */
+export const movedOthers = (order: Order, effects: KitchenEffects | null | undefined): boolean =>
+  Boolean(effects?.orders.some((e) => e.id !== order.id));
+
+/** An answer from update_admin_order as the list keeps it: the order, without the effects. */
+export const orderOnly = ({ kitchen_effects: _, ...order }: UpdatedOrder): Order => order;
 
 // The code in a WhatsApp message, e.g. "…Order code: SN-7KQ4M". A hand-added
 // clash carries -2, -3 and so on. Same alphabet as the site's codes.
@@ -184,19 +230,56 @@ export const thumbOf = (id: string, dark: boolean) => {
   return (dark ? p?.orderThumbDark : p?.orderThumb) ?? '';
 };
 
-/** Lines in the site's order: product, then pack size. */
+/** Lines in the site's order: product, then pack size, a sample last. */
 export const sortLines = (lines: OrderLine[]): OrderLine[] => {
   const rank = (l: OrderLine) => {
     const i = productsData.findIndex((p) => p.id === l.product_id);
     const sizes = productsData[i]?.weightOptions ?? [];
-    return (i < 0 ? 99 : i) * 100 + Math.max(0, sizes.indexOf(l.size));
+    return (i < 0 ? 99 : i) * 100 + (l.size === SAMPLE ? 99 : Math.max(0, sizes.indexOf(l.size)));
   };
   return [...lines].sort((a, b) => rank(a) - rank(b));
 };
 
-/** "Raggi Jaggi 250 g × 1, Muesli 500 g × 2" */
+/** A line's size as it reads after the product name: "250 g", or "sample" ("Date Bites sample"). */
+export const sizeText = (size: string): string => (size === SAMPLE ? adminCopy.samples.word : size);
+
+/** "Raggi Jaggi 250 g × 1, Date Bites sample × 1" */
 export const itemsText = (o: Order) =>
-  sortLines(o.lines).map((l) => `${productName(l.product_id)} ${l.size} × ${l.quantity}`).join(', ');
+  sortLines(o.lines).map((l) => `${productName(l.product_id)} ${sizeText(l.size)} × ${l.quantity}`).join(', ');
+
+/** "3 packs", "1 pack · 1 sample", "2 samples". */
+export const packsText = (o: Pick<Order, 'packs' | 'samples'>): string =>
+  [o.packs || !o.samples ? adminCopy.order.packs(o.packs) : '', o.samples ? adminCopy.samples.count(o.samples) : '']
+    .filter(Boolean).join(' · ');
+
+/**
+ * Where a product of an order stands in the kitchen: waiting (Cooking and short of it),
+ * or ready, with the days its food was made where it came from logged batches
+ * (none when it was all covered by hand). Null when the order has no such product.
+ */
+export const lineState = (o: Order, productId: string): { ready: false } | { ready: true; madeOn: string[] } | null => {
+  const k = o.kitchen?.find((x: OrderKitchen) => x.product_id === productId);
+  if (!k) return null;
+  if (k.waiting) return { ready: false };
+  return { ready: true, madeOn: [...new Set(k.batches.map((b) => b.made_on))] };
+};
+
+/**
+ * Every product of an order, in the site's order, with where it stands: the order view's
+ * "Still to cook" / "Ready, made …", a card's marks, a compact Cooking row.
+ */
+export const productStates = (o: Order): { product_id: string; ready: boolean; madeOn: string[] }[] =>
+  [...new Set(sortLines(o.lines).map((l) => l.product_id))].flatMap((id) => {
+    const state = lineState(o, id);
+    return state ? [{ product_id: id, ready: state.ready, madeOn: state.ready ? state.madeOn : [] }] : [];
+  });
+
+/** A Cooking order where some products are ready and some aren't: its card marks each line. */
+export const isPartlyCooked = (o: Order): boolean =>
+  o.status === 'cooking' && (o.kitchen ?? []).some((k) => k.waiting) && (o.kitchen ?? []).some((k) => !k.waiting);
+
+/** "Wed 23 Sep" from an India day ("2026-09-23"). */
+export const madeOnDay = (day: string): string => formatDay(`${day}T12:00:00+05:30`);
 
 /** A product id from the URL, or null when it isn't one of ours (then there's no filter). */
 export const productFilter = (raw: string | null): string | null =>
@@ -229,4 +312,38 @@ export const pileOf = (lines: OrderLine[], top?: string | null): string[] => {
   const ids = [...new Set(sortLines(lines).map((l) => l.product_id))];
   if (!top || !ids.includes(top)) return ids.slice(0, 2);
   return [...ids.filter((id) => id !== top).slice(0, 1), top];
+};
+
+// ---- Orders, one stage at a time (O1) ---------------------------------------------------
+
+/**
+ * The stage a link asks for: "#packing", or Home's "#lane-collect" ("to_collect" too).
+ * Null for anything else, and for Done (its own page).
+ */
+export const stageFromHash = (hash: string): WorkLane | null => {
+  const name = hash.replace(/^#/, '').replace(/^lane-/, '').replace(/^to_collect$/, 'collect');
+  return (LANES as readonly string[]).includes(name) ? (name as WorkLane) : null;
+};
+
+/**
+ * Where Orders opens on a phone, worked out fresh each visit (never saved). The cook lands
+ * on Cooking. Everyone else on their first stage with work: Packing, then Ready, then
+ * To collect; with nothing anywhere, Packing.
+ */
+export const landingStage = (counts: Record<WorkLane, number>, cook: boolean): WorkLane => {
+  if (cook) return 'cooking';
+  return (['packing', 'ready', 'collect'] as const).find((s) => counts[s] > 0) ?? 'packing';
+};
+
+/** Cooking in the kitchen's turn: priority orders first, then oldest first (the same order the fill serves them). */
+export const byKitchenTurn = (orders: Order[]): Order[] =>
+  [...orders].sort((a, b) => Number(b.priority) - Number(a.priority) || a.created_at.localeCompare(b.created_at));
+
+/** A Ready card says "Waiting N days" from this many days on; a day or so in Ready is normal. */
+export const WAITING_FROM_DAYS = 2;
+
+/** Whole India calendar days since the order got to where it is (status_changed_at): 0 on the same day. */
+export const daysInStage = (o: Pick<Order, 'status_changed_at'>, now = Date.now()): number => {
+  const day = (v: string | number) => Date.parse(`${istDateValue(v)}T00:00:00Z`);
+  return Math.max(0, Math.round((day(now) - day(o.status_changed_at)) / 86_400_000));
 };

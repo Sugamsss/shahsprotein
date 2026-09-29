@@ -1,6 +1,150 @@
 import { describe, expect, it } from 'vitest';
-import type { Order, OrderLine, Payment } from '../types';
-import { applyLocal, cleanPastedPhone, contactNumbers, linesFirst, moneyByMethod, namesOneOrder, packsOf, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter, reverseOf, searchFor } from './model';
+import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOrder } from '../types';
+import {
+  changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
+  namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
+  reverseOf, searchFor, sortLines, undoPlanOf, movedOthers, byKitchenTurn, daysInStage, landingStage, stageFromHash,
+} from './model';
+
+// The kitchen flow's stages: which lane an order is in, and its one-tap next step.
+
+const staged = (status: Order['status'], extra: Partial<Order> = {}) => ({ status, paid: false, free_sample: false, ...extra }) as Order;
+
+describe('laneOf and nextOf', () => {
+  it.each([
+    [staged('cooking'), 'cooking', null],
+    [staged('packing'), 'packing', 'ready'],
+    [staged('ready'), 'ready', 'delivered'],
+    [staged('delivered'), 'collect', null],
+    [staged('delivered', { paid: true }), 'done', null],
+    // A free sample has nothing to collect: delivered is done.
+    [staged('delivered', { free_sample: true }), 'done', null],
+    [staged('cancelled'), 'done', null],
+  ] as const)('%o is in %s, next status %s', (order, lane, nextStatus) => {
+    expect(laneOf(order)).toBe(lane);
+    expect(nextOf(order)?.changes.status ?? null).toBe(nextStatus);
+  });
+
+  it('Cooking has no next step (it moves on by itself); To collect asks to be paid', () => {
+    expect(nextOf(staged('cooking'))).toBeNull();
+    expect(nextOf(staged('delivered'))?.changes).toEqual({ paid: true });
+  });
+});
+
+// Undo: a move that changed the kitchen goes back through undo_admin_kitchen; the rest by reverse keys.
+
+const effects = (orders: KitchenEffects['orders'], action_id: string | null = 'act-1') =>
+  ({ preview: false, action_id, batches: [], orders, kitchen: {} }) as unknown as KitchenEffects;
+const answer = (order: Order, kitchen_effects: KitchenEffects | null) => ({ ...order, kitchen_effects }) as UpdatedOrder;
+
+describe('undoPlanOf', () => {
+  const asha = { ...staged('cooking'), id: 'o-asha', name: 'Asha Patil' } as Order;
+
+  it('undoes a kitchen move with its action, not by moving the status back', () => {
+    const saved = answer({ ...asha, status: 'cancelled' }, effects([]));
+    expect(undoPlanOf(asha, { status: 'cancelled' }, saved)).toEqual({ kitchen: 'act-1' });
+  });
+
+  it('undoes a plain stage move with its action too, so its history goes with it', () => {
+    const packed = { ...staged('packing'), id: 'o-p' } as Order;
+    const only = effects([{ id: 'o-p', code: packed.code, name: null, from: 'packing', to: 'ready', grams: [], waiting: [] }], 'act-2');
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, only))).toEqual({ kitchen: 'act-2' });
+    expect(undoPlanOf(packed, { priority: true }, answer({ ...packed, priority: true }, effects([], 'act-3')))).toEqual({ kitchen: 'act-3' });
+  });
+
+  it('sends the reverse keys when the answer has no action id, or the save has not answered', () => {
+    const packed = staged('packing');
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, null))).toEqual({ changes: { status: 'packing' } });
+    expect(undoPlanOf(packed, { status: 'ready' }, answer({ ...packed, status: 'ready' }, effects([], null)))).toEqual({ changes: { status: 'packing' } });
+    expect(undoPlanOf(packed, { status: 'ready' }, null)).toEqual({ changes: { status: 'packing' } });
+  });
+});
+
+describe('a move that touched only this order', () => {
+  const packed = { ...staged('packing'), id: 'o-p', name: 'Asha Patil' } as Order;
+  const only = effects([{ id: 'o-p', code: packed.code, name: 'Asha Patil', from: 'packing', to: 'ready', grams: [], waiting: [] }]);
+
+  it('does not reload the board or add a sentence to the toast', () => {
+    expect(movedOthers(packed, only)).toBe(false);
+    expect(movedOthers(packed, effects([]))).toBe(false);
+    expect(movedOthers(packed, null)).toBe(false);
+    expect(effectsText(packed, only)).toBe('');
+  });
+
+  it('reloads when another order moved', () => {
+    const other = { id: 'o-x', code: 'SN-X', name: 'Neha', from: 'cooking' as const, to: 'packing' as const, grams: [], waiting: [] };
+    expect(movedOthers(packed, effects([...only.orders, other]))).toBe(true);
+  });
+});
+
+describe('effectsText', () => {
+  it('says what a priority order took from other orders, then who moved', () => {
+    const meera = { id: 'm', code: 'SN-K8M9N', name: 'Meera Kulkarni' } as Order;
+    const e = { orders: [
+      { id: 'm', code: 'SN-K8M9N', name: 'Meera Kulkarni', from: 'cooking', to: 'packing', grams: [{ product_id: 'raggi-jaggi', change: 250 }], waiting: [] },
+      { id: 'n', code: 'SN-S4T5V', name: 'Neha Pawar', from: 'cooking', to: 'cooking', grams: [{ product_id: 'raggi-jaggi', change: -250 }], waiting: ['raggi-jaggi'] },
+    ] } as KitchenEffects;
+    expect(effectsText(meera, e)).toBe("Took 250 g Raggi Jaggi from Neha's order.");
+  });
+
+  const asha = { id: 'o-asha', name: 'Asha Patil', code: 'SN-A2B3C' } as Order;
+
+  it("says what came back as spare and who moved on because of it", () => {
+    const e = effects([
+      { id: 'o-asha', code: 'SN-A2B3C', name: 'Asha Patil', from: 'cooking', to: 'cancelled', grams: [{ product_id: 'bites', change: -500 }], waiting: [] },
+      { id: 'o-meera', code: 'SN-K8M9N', name: 'Meera Kulkarni', from: 'cooking', to: 'packing', grams: [{ product_id: 'bites', change: 500 }], waiting: [] },
+    ]);
+    expect(effectsText(asha, e)).toBe("500 g Date Bites back as spare. Meera's order moved to Packing.");
+  });
+
+  it('says nothing more when the kitchen only covered this order by hand', () => {
+    const e = effects([{ id: 'o-asha', code: 'SN-A2B3C', name: 'Asha Patil', from: 'cooking', to: 'packing', grams: [], waiting: [] }]);
+    expect(effectsText(asha, e)).toBe('');
+    expect(effectsText(asha, null)).toBe('');
+  });
+});
+
+// Per product in the kitchen: waiting, or ready with the days its food was made.
+
+const k = (product_id: string, waiting: boolean, made: string[] = []): OrderKitchen =>
+  ({ product_id, need: 500, covered: waiting ? 0 : 500, by_hand: 0, waiting, batches: made.map((made_on) => ({ made_on, grams: 250 })) });
+
+describe('line states on a Cooking order', () => {
+  const partly = staged('cooking', { kitchen: [k('bites', false, ['2026-09-17', '2026-09-17', '2026-09-19']), k('raggi-jaggi', true)] });
+
+  it('marks a card only when some products are ready and some are not', () => {
+    expect(isPartlyCooked(partly)).toBe(true);
+    expect(isPartlyCooked(staged('cooking', { kitchen: [k('raggi-jaggi', true)] }))).toBe(false);
+    expect(isPartlyCooked({ ...partly, status: 'packing' })).toBe(false);
+  });
+
+  it('lists every product in the site\'s order with its state', () => {
+    const o = { ...partly, lines: [line('bites', '250 g', 2), line('raggi-jaggi', '500 g', 1)] } as Order;
+    expect(productStates(o)).toEqual([
+      { product_id: 'raggi-jaggi', ready: false, madeOn: [] },
+      { product_id: 'bites', ready: true, madeOn: ['2026-09-17', '2026-09-19'] },
+    ]);
+  });
+
+  it('gives each ready product its made-on days once, and none when covered by hand', () => {
+    expect(lineState(partly, 'bites')).toEqual({ ready: true, madeOn: ['2026-09-17', '2026-09-19'] });
+    expect(lineState(partly, 'raggi-jaggi')).toEqual({ ready: false });
+    expect(lineState(staged('cooking', { kitchen: [k('muesli', false)] }), 'muesli')).toEqual({ ready: true, madeOn: [] });
+  });
+});
+
+describe('samples in an order', () => {
+  it('sort after the packs of their product', () => {
+    const lines = [line('bites', 'sample', 1), line('muesli', '250 g', 1), line('bites', '250 g', 2)];
+    expect(sortLines(lines).map((l) => `${l.product_id} ${l.size}`)).toEqual(['muesli 250 g', 'bites 250 g', 'bites sample']);
+  });
+
+  it('count apart from packs', () => {
+    expect(packsText({ packs: 3, samples: 0 })).toBe('3 packs');
+    expect(packsText({ packs: 1, samples: 1 })).toBe('1 pack · 1 sample');
+    expect(packsText({ packs: 0, samples: 2 })).toBe('2 samples');
+  });
+});
 
 // "Find an order": a pasted WhatsApp message searches just its code.
 
@@ -84,6 +228,24 @@ describe('a card on a filtered board', () => {
 const paidOrder = (paid_method: Order['paid_method'], paid_note: string | null = null) =>
   ({ paid: true, paid_at: '2026-09-26T10:00:00Z', paid_method, paid_note } as Order);
 const unpaidOrder = { paid: false, paid_at: null, paid_method: null, paid_note: null } as Order;
+
+describe('undoing a status tap', () => {
+  it('sends back the old status and when the order entered it, so "waiting 4 days" survives', () => {
+    const o = { status: 'ready', status_changed_at: '2026-09-25T10:00:00Z' } as Order;
+    expect(reverseOf(o, { status: 'delivered' })).toEqual({ status: 'ready', status_changed_at: '2026-09-25T10:00:00Z' });
+  });
+});
+
+describe('priority', () => {
+  it('undoing a priority change sends the old value back, and says so in the toast', () => {
+    const o = { name: 'Meera Kulkarni', code: 'SN-K8M9N', priority: false } as Order;
+    expect(reverseOf(o, { priority: true })).toEqual({ priority: false });
+    expect(undoPlanOf(o, { priority: true }, { ...o, priority: true, kitchen_effects: null } as UpdatedOrder))
+      .toEqual({ changes: { priority: false } });
+    expect(changeText(o, { priority: true })).toBe("Meera's order is priority");
+    expect(changeText(o, { priority: false })).toBe("Meera's order is back in line");
+  });
+});
 
 describe('paying with a method', () => {
   it('undoing Not paid puts the method and note back', () => {
@@ -222,5 +384,58 @@ describe('cleanPastedPhone', () => {
 
   it('leaves a paste it cannot read, so the error can show', () => {
     expect(cleanPastedPhone('', 'call me', 'insertFromPaste')).toBeNull();
+  });
+});
+
+describe('Orders, one stage at a time', () => {
+  const counts = (packing: number, ready: number, collect: number, cooking = 5) => ({ cooking, packing, ready, collect });
+
+  it('lands the cook on Cooking, whatever else is waiting', () => {
+    expect(landingStage(counts(1, 2, 3), true)).toBe('cooking');
+  });
+
+  it.each([
+    [counts(1, 2, 3), 'packing'],
+    [counts(0, 2, 3), 'ready'],
+    [counts(0, 0, 3), 'collect'],
+    // Only Cooking has orders, or nothing does: Packing, where the next job will land.
+    [counts(0, 0, 0), 'packing'],
+    [counts(0, 0, 0, 0), 'packing'],
+  ] as const)('lands everyone else on the first stage with work: %o → %s', (c, stage) => {
+    expect(landingStage(c, false)).toBe(stage);
+  });
+
+  it.each([
+    ['#packing', 'packing'],
+    ['#lane-ready', 'ready'],
+    ['#lane-collect', 'collect'],
+    ['#to_collect', 'collect'],
+    ['#lane-done', null],
+    ['#nonsense', null],
+    ['', null],
+  ] as const)('reads the stage from the link %j', (hash, stage) => {
+    expect(stageFromHash(hash)).toBe(stage);
+  });
+
+  it('puts priority orders first in Cooking, each group oldest first', () => {
+    const at = (name: string, created_at: string, priority = false) => ({ name, created_at, priority }) as Order;
+    const turn = byKitchenTurn([
+      at('Neha', '2026-09-27T10:00:00+05:30'),
+      at('Meera', '2026-09-29T09:00:00+05:30', true),
+      at('Asha', '2026-09-26T10:00:00+05:30'),
+      at('Kavya', '2026-09-28T09:00:00+05:30', true),
+    ]);
+    expect(turn.map((o) => o.name)).toEqual(['Kavya', 'Meera', 'Asha', 'Neha']);
+  });
+
+  it('counts days in a stage by India calendar day, not 24-hour spans', () => {
+    const since = (iso: string) => ({ status_changed_at: iso });
+    const now = Date.parse('2026-09-29T09:00:00+05:30');
+    expect(daysInStage(since('2026-09-25T18:30:00+05:30'), now)).toBe(4);
+    // Late last night is one day, though it's under 24 hours.
+    expect(daysInStage(since('2026-09-28T23:30:00+05:30'), now)).toBe(1);
+    // 11 pm UTC is already the next morning in India.
+    expect(daysInStage(since('2026-09-28T23:00:00Z'), now)).toBe(0);
+    expect(daysInStage(since('2026-09-29T08:00:00+05:30'), now)).toBe(0);
   });
 });

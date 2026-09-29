@@ -12,8 +12,8 @@ export interface UndoableRun {
   apply: () => () => void;
   /** Saves it. Put the saved answer on screen in here. */
   save: () => Promise<unknown>;
-  /** The toast sentence, e.g. "Anjali's order is confirmed". */
-  text: string;
+  /** The toast sentence, e.g. "Anjali's order is packed". A function is read after the save, so it can say what the save did. */
+  text: string | (() => string);
   /** The reverse, usually the same kind of run with `quiet: true`. */
   undo: () => void;
   /** An Undo: no new Undo toast, since the toast already says "Undone.". */
@@ -31,7 +31,7 @@ export const runUndoable = async (toast: ToastApi, run: UndoableRun): Promise<vo
     else toast.error(() => void runUndoable(toast, run)); // the same run, quiet or not
     return;
   }
-  if (!run.quiet) toast.show({ text: run.text, action: { label: adminCopy.toast.undo, onAction: run.undo } });
+  if (!run.quiet) toast.show({ text: typeof run.text === 'function' ? run.text() : run.text, action: { label: adminCopy.toast.undo, onAction: run.undo } });
 };
 
 export const useUndoable = (): ((run: UndoableRun) => Promise<void>) => {

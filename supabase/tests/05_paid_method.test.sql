@@ -12,6 +12,11 @@ select plan(35);
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.admin_users;
 
@@ -68,8 +73,9 @@ select is(pg_temp.how(current_setting('test.a')::json),
 
 select is(
   public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"cash"}')::jsonb
-    - array['id', 'code', 'message_code', 'source', 'status', 'paid', 'kept', 'stale', 'name', 'pincode', 'phone',
-            'note', 'amount', 'coupon', 'lines', 'packs', 'customer', 'created_at', 'updated_at', 'status_changed_at',
+    - array['id', 'code', 'message_code', 'source', 'status', 'paid', 'free_sample', 'priority', 'name', 'pincode', 'phone',
+            'note', 'amount', 'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'customer',
+            'created_at', 'updated_at', 'status_changed_at',
             'payment_state', 'payments', 'amount_paid', 'amount_due', 'amount_extra'],
   jsonb_build_object('paid_at', current_setting('test.a')::jsonb -> 'paid_at', 'paid_method', 'cash', 'paid_note', null),
   'Cash on a paid order changes the method and keeps paid_at'
@@ -269,13 +275,13 @@ select throws_ok(
 
 delete from public.orders;
 insert into public.orders (code, source, status, paid_at, paid_method, name, amount, created_at) values
-  ('SN-44444', 'call', 'sent', now(), 'cash', 'Neha Example', 300, now() - interval '1 hour');
+  ('SN-44444', 'call', 'ready', now(), 'cash', 'Neha Example', 300, now() - interval '1 hour');
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
 select is(
-  (public.get_admin_totals()::jsonb #> '{overall,on_the_way}') - array['unpaid_names', 'part_paid_names'],
-  '{"orders":1,"packs":0,"amount":300,"without_amount":0,"paid":1,"unpaid_amount":0,"amount_due":0,"part_paid":0}'::jsonb,
+  (public.get_admin_totals()::jsonb #> '{overall,ready}') - array['unpaid_names', 'part_paid_names'],
+  '{"orders":1,"packs":0,"samples":0,"free_samples":0,"amount":300,"without_amount":0,"paid":1,"unpaid_amount":0,"amount_due":0,"part_paid":0}'::jsonb,
   'totals: an order paid by cash counts as paid'
 );
 reset role;

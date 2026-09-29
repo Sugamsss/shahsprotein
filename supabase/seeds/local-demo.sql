@@ -1,15 +1,23 @@
--- Local demo data for the admin: an order book with every payment state, for
--- trying the UI and taking screenshots. LOCAL ONLY. It's not in config.toml's
--- seed paths, so `supabase db reset` doesn't load it and `db push` never sends it.
--- Load it by hand after a reset:
+-- Local demo data for the admin: the kitchen flow's shared scenario (see the
+-- design brief) plus every payment state, for trying the UI and taking
+-- screenshots. LOCAL ONLY. It's not in config.toml's seed paths, so
+-- `supabase db reset` doesn't load it and `db push` never sends it.
+-- Load it by hand after a reset, in one transaction that stops at the first
+-- error (without these flags psql runs past the empty-database guard below
+-- and half-loads the data a second time):
 --
---   psql "$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')" -f supabase/seeds/local-demo.sql
+--   psql "$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')" \
+--     -v ON_ERROR_STOP=1 --single-transaction -f supabase/seeds/local-demo.sql
 --
--- Everyone here is made up: names, phones (9198000000xx) and codes. The two
--- sign-ins are local test accounts:
+-- Everyone here is made up: names, phones (9198000000xx), codes and prices.
+-- The two sign-ins are local test accounts:
 --   username demo  (full admin Home)   password local-demo-pass
 --   username cook  (the cook's Home)   password local-demo-pass
 -- Dates are relative to now, so "this week" always has something in it.
+--
+-- The kitchen is built through the real functions, in the order it would
+-- have happened: the cook logs the batches, then the orders arrive oldest
+-- first and take from spare as they come. Nothing writes allocations by hand.
 
 -- Refuse anywhere with real data: production has users and orders.
 do $$
@@ -44,27 +52,32 @@ insert into public.admin_users (id, email, display_name, home_view) values
   ('00000000-0000-4000-8000-00000000d001', 'demo@admin.shahsnutrition.food', 'Demo', 'admin'),
   ('00000000-0000-4000-8000-00000000d002', 'cook@admin.shahsnutrition.food', 'Cook', 'cook');
 
--- ─── Orders ─────────────────────────────────────────────
+-- ─── Helpers ────────────────────────────────────────────
 
--- One order with its lines. Every order starts not paid; payments come after.
+-- Act as one of the two sign-ins (the admin RPCs check is_admin()).
+create function pg_temp.act_as(p_user text) returns void language sql as $$
+  select set_config('request.jwt.claims', json_build_object(
+    'sub', case p_user when 'cook' then '00000000-0000-4000-8000-00000000d002'
+                       else '00000000-0000-4000-8000-00000000d001' end,
+    'role', 'authenticated')::text, false);
+$$;
+
+-- One order added by hand, as the admin form does it. Lines are
+-- [product, size, quantity]; a size of "sample" is a free sample.
 create function pg_temp.demo_order(
   p_code text, p_source text, p_status text, p_name text, p_phone text, p_pincode text,
-  p_amount integer, p_created interval, p_status_changed interval, p_lines jsonb
-) returns uuid language plpgsql as $$
-declare
-  v_id uuid;
-begin
-  insert into public.orders (code, source, status, name, phone, pincode, amount, created_at, status_changed_at, created_by)
-  values (p_code, p_source, p_status, p_name, p_phone, p_pincode, p_amount,
-    now() - p_created, now() - p_status_changed,
-    case when p_source <> 'site' then '00000000-0000-4000-8000-00000000d001'::uuid end)
-  returning id into v_id;
+  p_amount integer, p_created interval, p_lines jsonb
+) returns uuid language sql as $$
+  select (public.save_admin_order(null, jsonb_build_object(
+    'source', p_source, 'code', p_code, 'status', p_status, 'name', p_name, 'phone', p_phone,
+    'pincode', p_pincode, 'amount', p_amount, 'created_at', now() - p_created,
+    'lines', (select jsonb_agg(jsonb_build_object('product_id', l ->> 0, 'size', l ->> 1, 'quantity', (l ->> 2)::integer))
+              from jsonb_array_elements(p_lines) l)
+  ))::jsonb ->> 'id')::uuid;
+$$;
 
-  insert into public.order_lines (order_id, product_id, size, quantity)
-  select v_id, l ->> 0, l ->> 1, (l ->> 2)::integer from jsonb_array_elements(p_lines) l;
-
-  return v_id;
-end;
+create function pg_temp.move(p_code text, p_status text) returns void language sql as $$
+  select public.update_admin_order((select id from public.orders where code = p_code), jsonb_build_object('status', p_status));
 $$;
 
 -- One payment: amount (null = paid with no total yet), method, note, how long ago.
@@ -75,67 +88,137 @@ returns void language sql as $$
   from public.orders o where o.code = p_code;
 $$;
 
--- To confirm, and one stale site order.
-select pg_temp.demo_order('SN-A2B3C', 'site', 'new', 'Asha Patil', null, '415001', null,
-  '2 hours', '2 hours', '[["raggi-jaggi","500 g",1],["bites","250 g",2]]');
-select pg_temp.demo_order('SN-D4E5F', 'whatsapp', 'new', 'Ravi Deshmukh', '919800000001', '415002', 640,
-  '5 hours', '5 hours', '[["muesli","500 g",1]]');
-select pg_temp.demo_order('SN-G6H7J', 'site', 'new', 'Kavya Joshi', null, '415003', null,
-  '3 days', '3 days', '[["bites","250 g",1]]');
+create function pg_temp.day(p_ago integer) returns text language sql as $$
+  select to_char((now() at time zone 'Asia/Kolkata')::date - p_ago, 'YYYY-MM-DD');
+$$;
 
--- To send.
-select pg_temp.demo_order('SN-K8M9N', 'whatsapp', 'confirmed', 'Meera Kulkarni', '919800000002', '415001', 780,
-  '1 day', '20 hours', '[["raggi-jaggi","250 g",2],["muesli","250 g",1]]');
-select pg_temp.demo_order('SN-P2Q3R', 'call', 'confirmed', 'Sameer Shinde', '919800000003', '415004', 1200,
-  '1 day', '22 hours', '[["raggi-jaggi","500 g",2],["bites","250 g",2]]');
-select pg_temp.demo_order('SN-S4T5V', 'instagram', 'confirmed', 'Neha Pawar', '919800000004', null, null,
-  '10 hours', '9 hours', '[["muesli","250 g",1]]');
+-- ─── The kitchen, before the orders ─────────────────────
 
--- On the way.
-select pg_temp.demo_order('SN-W6X7Y', 'whatsapp', 'sent', 'Farah Shaikh', '919800000005', '415002', 450,
-  '3 days', '1 day', '[["bites","250 g",3]]');
-select pg_temp.demo_order('SN-Z8A2B', 'call', 'sent', 'Tanvi More', '919800000006', '415001', 960,
-  '3 days', '1 day', '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]');
+-- Pranjali's batches: Date Bites 12 days ago (15-day shelf life, so 3 days
+-- left), and Raggi Jaggi and Muesli 5 days ago, enough for Tanvi's order and
+-- Anil's samples.
+select pg_temp.act_as('cook');
+select public.log_admin_batches(jsonb_build_array(
+  jsonb_build_object('product_id', 'bites', 'grams', 1565, 'made_on', pg_temp.day(12)),
+  jsonb_build_object('product_id', 'raggi-jaggi', 'grams', 520, 'made_on', pg_temp.day(5)),
+  jsonb_build_object('product_id', 'muesli', 'grams', 520, 'made_on', pg_temp.day(5))
+));
 
--- To collect: delivered, money still due.
-select pg_temp.demo_order('SN-C3D4E', 'whatsapp', 'delivered', 'Rohan Jadhav', '919800000007', '415003', 1500,
-  '5 days', '2 days', '[["raggi-jaggi","500 g",2],["muesli","500 g",1],["bites","250 g",1]]');
-select pg_temp.demo_order('SN-F5G6H', 'in_person', 'delivered', 'Pooja Gaikwad', null, null, null,
-  '4 days', '1 day', '[["muesli","250 g",2]]');
-select pg_temp.demo_order('SN-J7K8M', 'whatsapp', 'delivered', 'Vikram Salunkhe', '919800000008', '415004', 520,
-  '6 days', '3 days', '[["raggi-jaggi","250 g",2]]');
+-- ─── Orders, oldest first ───────────────────────────────
 
--- Done: delivered and paid, in every way.
-select pg_temp.demo_order('SN-N9P2Q', 'whatsapp', 'delivered', 'Anjali Bhosale', '919800000009', '415001', 700,
-  '7 days', '2 days', '[["raggi-jaggi","500 g",1],["bites","250 g",1]]');
-select pg_temp.demo_order('SN-R3S4T', 'call', 'delivered', 'Nikhil Mane', '919800000010', '415002', 350,
-  '4 days', '2 days', '[["muesli","250 g",1]]');
-select pg_temp.demo_order('SN-V5W6X', 'whatsapp', 'delivered', 'Sneha Kadam', '919800000011', '415003', null,
-  '3 days', '1 day', '[["bites","250 g",2]]');
-select pg_temp.demo_order('SN-Y7Z8A', 'instagram', 'delivered', 'Priya Chavan', '919800000012', '415001', 600,
-  '5 days', '2 days', '[["raggi-jaggi","250 g",1],["muesli","250 g",1]]');
+select pg_temp.act_as('demo');
+
+-- Done: delivered and paid, in every way. Delivered orders are covered by hand.
 select pg_temp.demo_order('SN-B2C3D', 'whatsapp', 'delivered', 'Kiran Sawant', '919800000013', '415004', 480,
-  '12 days', '9 days', '[["muesli","500 g",1]]');
+  '12 days', '[["muesli","500 g",1]]');
 select pg_temp.demo_order('SN-E4F5G', 'whatsapp', 'delivered', 'Deepa Yadav', '919800000014', '415002', 900,
-  '11 days', '8 days', '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]');
+  '11 days', '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]');
+select pg_temp.demo_order('SN-N9P2Q', 'whatsapp', 'delivered', 'Anjali Bhosale', '919800000009', '415001', 700,
+  '7 days', '[["raggi-jaggi","500 g",1],["bites","250 g",1]]');
+select pg_temp.demo_order('SN-Y7Z8A', 'instagram', 'delivered', 'Priya Chavan', '919800000012', '415001', 600,
+  '5 days', '[["raggi-jaggi","250 g",1],["muesli","250 g",1],["bites","sample",1]]');
+select pg_temp.demo_order('SN-R3S4T', 'call', 'delivered', 'Nikhil Mane', '919800000010', '415002', 350,
+  '4 days', '[["muesli","250 g",1]]');
+select pg_temp.demo_order('SN-V5W6X', 'whatsapp', 'delivered', 'Sneha Kadam', '919800000011', '415003', null,
+  '3 days', '[["bites","250 g",2]]');
+
+-- Delivered, money still due.
+select pg_temp.demo_order('SN-J7K8M', 'whatsapp', 'delivered', 'Vikram Salunkhe', '919800000008', '415004', 520,
+  '6 days', '[["raggi-jaggi","250 g",2]]');
+select pg_temp.demo_order('SN-C3D4E', 'whatsapp', 'delivered', 'Rohan Jadhav', '919800000007', '415003', 1180,
+  '5 days', '[["raggi-jaggi","500 g",1],["muesli","500 g",1],["bites","250 g",1]]');
+select pg_temp.demo_order('SN-F5G6H', 'in_person', 'delivered', 'Pooja Gaikwad', null, null, null,
+  '4 days', '[["muesli","250 g",2]]');
 
 -- Cancelled after an advance.
 select pg_temp.demo_order('SN-H6J7K', 'whatsapp', 'cancelled', 'Aditya Nikam', '919800000015', '415003', 400,
-  '6 days', '5 days', '[["bites","250 g",2]]');
+  '6 days', '[["bites","250 g",2]]');
+
+-- Farah: Date Bites from the old batch, packed and waiting to be dropped off.
+select pg_temp.demo_order('SN-W6X7Y', 'whatsapp', 'cooking', 'Farah Shaikh', '919800000005', '415002', 540,
+  '5 days', '[["bites","250 g",3]]');
+select pg_temp.move('SN-W6X7Y', 'ready');
+
+-- Tanvi: covered by the Raggi Jaggi and Muesli batch, in Packing.
+select pg_temp.demo_order('SN-Z8A2B', 'call', 'cooking', 'Tanvi More', '919800000006', '415001', 930,
+  '4 days', '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]');
+
+-- Anil: a free sample of each, packed and ready.
+select pg_temp.demo_order('SN-M2N3P', 'in_person', 'cooking', 'Anil Kale', '919800000016', '415002', null,
+  '3 days 3 hours', '[["raggi-jaggi","sample",1],["muesli","sample",1],["bites","sample",1]]');
+select pg_temp.move('SN-M2N3P', 'ready');
+
+-- Asha, from the website: her Date Bites come from spare, Raggi Jaggi waits.
+select public.submit_order('SN-A2B3C',
+  '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1},{"product_id":"bites","size":"250 g","quantity":2}]',
+  'Asha Patil', '415001');
+
+-- Still to cook.
+select pg_temp.demo_order('SN-D4E5F', 'whatsapp', 'cooking', 'Ravi Deshmukh', '919800000001', '415002', 450,
+  '2 days 3 hours', '[["muesli","500 g",1]]');
+select pg_temp.demo_order('SN-S4T5V', 'instagram', 'cooking', 'Neha Pawar', '919800000004', null, null,
+  '2 days', '[["raggi-jaggi","250 g",2],["muesli","250 g",1]]');
+select pg_temp.demo_order('SN-P2Q3R', 'call', 'cooking', 'Sameer Shinde', '919800000003', '415004', 480,
+  '1 day', '[["raggi-jaggi","500 g",1],["bites","sample",1]]');
+select pg_temp.demo_order('SN-K8M9N', 'whatsapp', 'cooking', 'Meera Kulkarni', '919800000002', '415001', 480,
+  '2 hours', '[["raggi-jaggi","500 g",1]]');
+-- Meera's order skips the line: nothing is spare for it yet, so this only
+-- puts her first for the next Raggi Jaggi.
+update public.orders set priority = true where code = 'SN-K8M9N';
+
+-- A small fresh Date Bites batch from yesterday: nobody is waiting on Date
+-- Bites, so all of it is spare, next to the old one.
+select pg_temp.act_as('cook');
+select public.log_admin_batches(jsonb_build_array(
+  jsonb_build_object('product_id', 'bites', 'grams', 150, 'made_on', pg_temp.day(1))
+));
+select set_config('request.jwt.claims', '', false);
+
+-- ─── When things happened ───────────────────────────────
+
+-- The functions stamp everything "now". Put each order's times where the
+-- story has them: Asha ordered on the site 3 days ago, and each order has
+-- sat in its stage since (Farah's has been Ready for 4 days).
+update public.orders set created_at = now() - interval '3 days' where code = 'SN-A2B3C';
+
+update public.orders o set status_changed_at = coalesce(now() - d.ago, o.created_at)
+from (values
+  ('SN-A2B3C', null::interval), ('SN-D4E5F', null), ('SN-S4T5V', null), ('SN-P2Q3R', null), ('SN-K8M9N', null),
+  ('SN-Z8A2B', null), ('SN-W6X7Y', interval '4 days'), ('SN-M2N3P', interval '1 day'),
+  ('SN-F5G6H', interval '1 day'), ('SN-C3D4E', interval '2 days'), ('SN-J7K8M', interval '3 days'),
+  ('SN-N9P2Q', interval '2 days'), ('SN-R3S4T', interval '2 days'), ('SN-V5W6X', interval '1 day'),
+  ('SN-Y7Z8A', interval '2 days'), ('SN-B2C3D', interval '9 days'), ('SN-E4F5G', interval '8 days'),
+  ('SN-H6J7K', interval '5 days')
+) as d(code, ago)
+where o.code = d.code;
+
+-- History: spread each order's events from when it was made to when it
+-- reached its stage, in the order they happened.
+update public.order_events e
+set at = x.at
+from (
+  select e2.id,
+    o.created_at + (o.status_changed_at - o.created_at)
+      * (row_number() over (partition by e2.order_id order by e2.id) - 1)
+      / greatest(count(*) over (partition by e2.order_id) - 1, 1) as at
+  from public.order_events e2
+  join public.orders o on o.id = e2.order_id
+) x
+where e.id = x.id;
 
 -- ─── Payments ───────────────────────────────────────────
 
--- Part paid while still new: an advance.
-select pg_temp.demo_pay('SN-D4E5F', 300, 'upi', null, '4 hours');
+-- An advance on an order still cooking.
+select pg_temp.demo_pay('SN-D4E5F', 300, 'upi', null, '2 days');
 -- Paid in full up front.
-select pg_temp.demo_pay('SN-K8M9N', 780, 'upi', null, '20 hours');
+select pg_temp.demo_pay('SN-K8M9N', 480, 'upi', null, '1 hour');
 -- 75% up front.
-select pg_temp.demo_pay('SN-P2Q3R', 900, 'upi', null, '22 hours');
--- Two parts, two methods, still ₹260 due.
-select pg_temp.demo_pay('SN-Z8A2B', 500, 'cash', null, '2 days');
+select pg_temp.demo_pay('SN-P2Q3R', 360, 'upi', null, '22 hours');
+-- Two parts, two methods, still ₹230 due.
+select pg_temp.demo_pay('SN-Z8A2B', 500, 'cash', null, '4 days');
 select pg_temp.demo_pay('SN-Z8A2B', 200, 'upi', null, '1 day');
 -- Delivered with ₹375 still due.
-select pg_temp.demo_pay('SN-C3D4E', 1125, 'upi', null, '5 days');
+select pg_temp.demo_pay('SN-C3D4E', 805, 'upi', null, '5 days');
 -- Paid in two parts, the rest on delivery.
 select pg_temp.demo_pay('SN-N9P2Q', 525, 'bank', null, '7 days');
 select pg_temp.demo_pay('SN-N9P2Q', 175, 'cash', null, '2 days');
@@ -173,11 +256,30 @@ insert into public.coupon_prices (coupon_id, product_id, size, price, updated_by
   ('00000000-0000-4000-c000-00000000d010', 'muesli', '250 g', 215, '00000000-0000-4000-8000-00000000d001')
 on conflict do nothing;
 
--- What you should see.
-select o.code, o.status, o.amount,
-  (public.admin_order_json(o) ->> 'payment_state') as state,
-  (public.admin_order_json(o) ->> 'amount_paid') as paid,
+-- ─── What you should see ────────────────────────────────
+
+-- Orders by stage, oldest first. "food" is per product: ✓ covered, or what's
+-- still waiting. Cooking: Asha (Date Bites ✓, Raggi Jaggi waiting), Ravi,
+-- Neha, Sameer (sample ✓), Meera (priority). Packing: Tanvi. Ready: Farah (4 days) and
+-- Anil's free samples. Delivered, not paid: Pooja (no total), Rohan (₹375
+-- due), Vikram. Then the done ones and Aditya, cancelled.
+select o.code, o.name, o.status,
+  case when o.free_sample then 'free sample' else public.admin_order_json(o) ->> 'payment_state' end as money,
   (public.admin_order_json(o) ->> 'amount_due') as due,
-  (public.admin_order_json(o) ->> 'amount_extra') as extra
+  case when o.status <> 'cancelled' then (
+    select string_agg(c.product_id || case when c.covered >= c.need then ' ✓' else ' waiting ' || (c.need - c.covered) || ' g' end,
+      ', ' order by c.product_id)
+    from public.kitchen_order_cover(o.id) c) end as food
 from public.orders o
-order by o.created_at desc;
+order by array_position(array['cooking', 'packing', 'ready', 'delivered', 'cancelled'], o.status),
+  (o.status = 'delivered' and o.paid_at is not null), o.created_at;
+
+-- The kitchen: Raggi Jaggi 2 kg to cook for 4 orders, Muesli 750 g for 2,
+-- Date Bites nothing. Spare: Date Bites 285 g made 12 days ago (near, 3 days
+-- left) and 150 g from yesterday.
+select p ->> 'product_id' as product, (p ->> 'to_cook')::integer as to_cook,
+  jsonb_array_length(p -> 'queue') as orders_waiting, (p ->> 'spare')::integer as spare,
+  (select string_agg((b ->> 'grams') || ' g made ' || (b ->> 'made_on') || ' (' || (b ->> 'state') || ', '
+     || (b ->> 'days_left') || ' days left)', '; ')
+   from jsonb_array_elements(p -> 'spare_batches') b) as on_the_shelf
+from jsonb_array_elements(public.kitchen_state_json() -> 'products') p;

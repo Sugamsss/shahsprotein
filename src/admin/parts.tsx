@@ -97,15 +97,20 @@ export const SheetForm: React.FC<{
  * A few choices in one pill (Email list's filter, Customers, Appearance): native
  * radios, so arrow keys move between them. The picked one gets the site's white thumb.
  */
-export function Segmented<T extends string>({ label, options, value, onChange }: {
+/**
+ * Native radios in a pill. `slide`: the selected thumb glides between choices (2 to 4),
+ * as in the kitchen sheets (Today / Yesterday, Days / Months, Used up / Thrown out).
+ */
+export function Segmented<T extends string>({ label, options, value, onChange, slide }: {
   label: string;
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  slide?: boolean;
 }) {
   const name = useId();
   return (
-    <fieldset className="adm-segmented">
+    <fieldset className={`adm-segmented${slide ? ' adm-segmented--slide' : ''}`}>
       <legend className="visually-hidden">{label}</legend>
       {options.map((option) => (
         <label key={option.value}>

@@ -1,15 +1,15 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Not Undo2: the site's order popup uses it, and sharing it would move it out of the popup's chunk.
-import { History, IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
+import { ChevronsUp, Gift, History, IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
-import { getCouponUses, getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
-import { formatDay, formatMoney, istDateValue } from '../format';
+import { getCouponUses, getKitchen, getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
+import { formatDay, formatMoney, formatWeight, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
@@ -18,7 +18,8 @@ import { useToast } from '../toast';
 import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
 import { useUnsavedWork } from '../unsavedWork';
-import { cleanPastedPhone, normalisePhone, plainPhone, productName } from '../orders/model';
+import { SAMPLE, cleanPastedPhone, normalisePhone, packsText, plainPhone, productName } from '../orders/model';
+import { isSamplesOnly, moneyInput } from '../orders/samples';
 import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
@@ -28,6 +29,7 @@ import OrdersPage, { useLaptop } from '../orders/OrdersPage';
 
 const copy = adminCopy.orderForm;
 const orderCopy = adminCopy.order;
+const kx = adminCopy.kitchenForms;
 
 // Add an order by hand, or edit one (spec 2.8). Phone: a full page. Laptop: a
 // 920px popup over the Orders board. /admin/orders/new(?code=…) and /admin/orders/:code/edit.
@@ -39,12 +41,21 @@ const SOURCES: { value: Source; icon: React.ReactNode }[] = [
   { value: 'instagram', icon: <Instagram size={20} strokeWidth={1.75} /> },
   { value: 'in_person', icon: <User size={20} strokeWidth={1.75} /> },
 ];
-const STEPS = ['new', 'confirmed', 'sent', 'delivered'] as const;
+const STEPS = ['cooking', 'packing', 'ready', 'delivered'] as const;
 type Step = (typeof STEPS)[number];
 const STATUSES = STEPS.map((value) => ({ value, label: orderCopy.steps[value] }));
 const PACKS = productsData.flatMap((p) => p.weightOptions.map((size) => ({ product: p, size, key: `${p.id}|${size}` })));
+/** Every size the form counts: the packs, then a sample of each product (always free). */
+const LINES = [...PACKS, ...productsData.map((p) => ({ product: p, size: SAMPLE, key: `${p.id}|${SAMPLE}` }))];
 const PINCODE = /^[1-9][0-9]{5}$/;
 const PAID_OPTIONS = PAID_METHODS.map((value) => ({ value, label: adminCopy.paidBy.methods[value] }));
+
+/**
+ * An order that turned priority on this save (new, or an edit that switched it on). The page
+ * it lands on offers it packed food ("Give it to Meera?"); see useOfferOnArrival.
+ */
+const giveState = (saved: Order, before: Order | null) =>
+  (saved.priority && !before?.priority ? { give: { id: saved.id, name: saved.name, code: saved.code } } : {});
 
 type Errors = Partial<Record<'lines' | 'name' | 'via' | 'pincode' | 'phone' | 'amount' | 'paidMethod' | 'paidNote' | 'form', string>>;
 
@@ -55,6 +66,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const toast = useToast();
   const { reload: reloadCounts } = useOverview();
   const stock = useRpc(getStock, []);
+  // Only for the sample weights ("Sample · 20 g · free"); without it the rows just say free.
+  const kitchen = useRpc(getKitchen, []);
   // Its own quiet calls: without them (an old database, a failure) there's no coupon picker and the
   // total is typed, as before. Edit still sends the order's coupon back unchanged.
   const book = usePriceBook();
@@ -65,8 +78,10 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [name, setName] = useState(order?.name ?? '');
   const [pincode, setPincode] = useState(order?.pincode ?? '');
   const [via, setVia] = useState<OrderSource | null>(order?.source ?? null);
-  const [status, setStatus] = useState<Step>('confirmed');
+  const [status, setStatus] = useState<Step>('cooking');
   const [paid, setPaid] = useState(false);
+  // An edit sends back what the order has, so saving never drops it by accident.
+  const [priority, setPriority] = useState(order?.priority ?? false);
   // Nothing picked until they pick: '' is "not yet".
   const [paidMethod, setPaidMethod] = useState<PaidMethod | ''>('');
   const [paidNote, setPaidNote] = useState('');
@@ -96,8 +111,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   useUnsavedWork(() => dirty.current || saving);
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
-  const packs = Object.values(qty).reduce((sum, n) => sum + n, 0);
-  const lines = PACKS.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
+  const lines = LINES.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
+  const packs = lines.reduce((sum, l) => sum + (l.size === SAMPLE ? 0 : l.quantity), 0);
+  const samples = lines.reduce((sum, l) => sum + (l.size === SAMPLE ? l.quantity : 0), 0);
+  // Only samples: a free sample order, with no total, coupon or payment (the server refuses them).
+  const samplesOnly = isSamplesOnly(lines);
+  const count = packsText({ packs, samples });
 
   // Filled in by itself: only on a new order, only while he hasn't picked, only with the coupon list shown.
   const digits = normalisePhone(phone);
@@ -110,7 +129,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const total = totalMode === 'auto' ? (workedTotal != null ? String(workedTotal) : '') : amount;
   const typedTotal = /^\d+$/.test(total.replace(/[₹,\s]/g, '')) ? Number(total.replace(/\D/g, '')) : null;
   const couponNow = coupon && book.coupons ? couponState(coupon, book.coupons, new Date()) : null;
-  const linesChanged = order !== null && PACKS.some(({ key }) =>
+  const linesChanged = order !== null && LINES.some(({ key }) =>
     (qty[key] ?? 0) !== (order.lines.find((l) => `${l.product_id}|${l.size}` === key)?.quantity ?? 0));
 
   // A past customer or a contact: their name and number, and their last pincode if none is typed.
@@ -164,14 +183,14 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
 
   // Checked live once Save has been tried, so each error goes as soon as it's fixed.
   const problems: Errors = {};
-  if (packs === 0) problems.lines = copy.errors.lines;
+  if (!lines.length) problems.lines = kx.linesError;
   if (name.trim().length < 2) problems.name = copy.errors.name;
   if (!via) problems.via = copy.errors.via;
   if (pincode.trim() && !PINCODE.test(pincode.trim())) problems.pincode = copy.errors.pincode;
   if (phone.trim() && !digits) problems.phone = orderCopy.phoneError;
-  if (total.trim() && typedTotal == null) problems.amount = orderCopy.totalError;
-  if (!order && paid && !paidMethod) problems.paidMethod = adminCopy.paidBy.pickOne;
-  if (!order && paid && paidMethod === 'other' && !paidNote.trim()) problems.paidNote = adminCopy.paidBy.noteMissing;
+  if (!samplesOnly && total.trim() && typedTotal == null) problems.amount = orderCopy.totalError;
+  if (!order && !samplesOnly && paid && !paidMethod) problems.paidMethod = adminCopy.paidBy.pickOne;
+  if (!order && !samplesOnly && paid && paidMethod === 'other' && !paidNote.trim()) problems.paidNote = adminCopy.paidBy.noteMissing;
   const errors: Errors = attempt ? { ...problems, form: formError || undefined } : {};
 
   const save = async () => {
@@ -184,19 +203,14 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       phone: digits,
       pincode: pincode.trim() || null,
       note: note.trim() || null,
-      amount: typedTotal,
       lines,
-      // save_admin_order has always taken `coupon`, so this works on the old database too.
-      ...(order
-        ? { coupon: coupon || null }
-        : {
-            ...(coupon && { coupon }),
-            status, paid,
-            ...(paid && paidMethod && { paid_method: paidMethod }),
-            ...(paid && paidMethod === 'other' && { paid_note: paidNote.trim() }),
-            ...(code && { code: `SN-${code}` }),
-            ...(shown.earlier && when.date && { created_at: `${when.date}T${when.time || '12:00'}:00+05:30` }),
-          }),
+      priority,
+      ...moneyInput({ samplesOnly, editing: !!order, total: typedTotal, coupon, paid, paidMethod, paidNote }),
+      ...(!order && {
+        status,
+        ...(code && { code: `SN-${code}` }),
+        ...(shown.earlier && when.date && { created_at: `${when.date}T${when.time || '12:00'}:00+05:30` }),
+      }),
     };
     setSaving(true);
     try {
@@ -206,7 +220,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         text: copy.saved(saved.code),
         action: order ? undefined : { label: copy.view, onAction: () => navigate(`/admin/orders/${saved.code}`) },
       });
-      navigate(order ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id } });
+      // A priority order just saved may take packed food: the page it lands on asks (useOfferOnArrival).
+      navigate(order ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id, ...giveState(saved, order) } });
     } catch (err) {
       const error = toAdminError(err);
       setFormError(error.kind === 'message' ? error.message : adminCopy.toast.failed);
@@ -218,41 +233,71 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const setPack = (key: string, n: number) => edit(setQty)({ ...qty, [key]: Math.max(0, Math.min(99, n)) });
   const out = (productId: string, size: string) => stock.data?.some((r) => r.product_id === productId && r.size === size);
 
+  // One pack size, or a product's sample: + Add (a round + for a sample), then the stepper.
+  const stepper = (key: string, item: string, sample: boolean) => {
+    const n = qty[key] ?? 0;
+    if (n === 0) {
+      return sample ? (
+        <button type="button" className="adm-of__add-sample" aria-label={copy.addLabel(item)} onClick={() => setPack(key, 1)}>
+          <Plus size={16} aria-hidden="true" />
+        </button>
+      ) : (
+        <button type="button" className="adm-btn adm-btn--tonal adm-btn--sm" aria-label={copy.addLabel(item)} onClick={() => setPack(key, 1)}>
+          <Plus size={18} strokeWidth={1.75} aria-hidden="true" />{copy.add}
+        </button>
+      );
+    }
+    return (
+      <span className="qty-stepper" role="group" aria-label={item}>
+        <button type="button" className={`qty-stepper__btn${n === 1 ? ' is-remove' : ''}`} aria-label={n === 1 ? copy.remove(item) : copy.less(item)} onClick={() => setPack(key, n - 1)}>
+          {n === 1 ? <Trash2 size={16} aria-hidden="true" /> : <Minus size={16} aria-hidden="true" />}
+        </button>
+        <span className="qty-stepper__value">{n}</span>
+        <button type="button" className="qty-stepper__btn qty-stepper__btn--more" aria-label={copy.more(item)} aria-disabled={n >= 99 || undefined} onClick={() => setPack(key, n + 1)}>
+          <Plus size={16} aria-hidden="true" />
+        </button>
+      </span>
+    );
+  };
+  // A sample line already on the order keeps the weight it was saved with; a new one takes today's.
+  const sampleGrams = (productId: string) =>
+    order?.lines.find((l) => l.product_id === productId && l.size === SAMPLE)?.grams_each
+    ?? kitchen.data?.products.find((p) => p.product_id === productId)?.sample_grams;
+
   const ordered = (
     <section className="adm-of__section adm-of--ordered" aria-labelledby={`${id}-ordered`}>
       <div className="adm-of__h">
         <h2 id={`${id}-ordered`}>{copy.ordered}</h2>
-        <span>{packs ? orderCopy.packs(packs) : copy.tapToAdd}</span>
+        <span>{lines.length ? count : copy.tapToAdd}</span>
       </div>
       {linesChanged && order?.source === 'site' && <p className="adm-of__note">{copy.siteNote}</p>}
       {errors.lines && <p className="adm-field__error" data-error>{errors.lines}</p>}
       <ul className="adm-card adm-of__packs">
-        {PACKS.map(({ product, size, key }) => {
-          const n = qty[key] ?? 0;
-          const item = `${product.name} ${size}`;
+        {productsData.map((product) => {
+          const sampleKey = `${product.id}|${SAMPLE}`;
+          const grams = sampleGrams(product.id);
           return (
-            <li key={key}>
-              <OrderThumb product={product} className="adm-of__thumb" />
-              <span className="adm-list__main">
-                <b className="adm-pname">{product.name}</b>
-                <small>{size}{out(product.id, size) && <> · <em>{copy.backSoon}</em></>}</small>
-              </span>
-              {n === 0 ? (
-                <button type="button" className="adm-btn adm-btn--tonal adm-btn--sm" aria-label={copy.addLabel(item)} onClick={() => setPack(key, 1)}>
-                  <Plus size={18} strokeWidth={1.75} aria-hidden="true" />{copy.add}
-                </button>
-              ) : (
-                <span className="qty-stepper" role="group" aria-label={item}>
-                  <button type="button" className={`qty-stepper__btn${n === 1 ? ' is-remove' : ''}`} aria-label={n === 1 ? copy.remove(item) : copy.less(item)} onClick={() => setPack(key, n - 1)}>
-                    {n === 1 ? <Trash2 size={16} aria-hidden="true" /> : <Minus size={16} aria-hidden="true" />}
-                  </button>
-                  <span className="qty-stepper__value">{n}</span>
-                  <button type="button" className="qty-stepper__btn qty-stepper__btn--more" aria-label={copy.more(item)} aria-disabled={n >= 99 || undefined} onClick={() => setPack(key, n + 1)}>
-                    <Plus size={16} aria-hidden="true" />
-                  </button>
+            <React.Fragment key={product.id}>
+              {product.weightOptions.map((size) => (
+                <li key={size}>
+                  <OrderThumb product={product} className="adm-of__thumb" />
+                  <span className="adm-list__main">
+                    <b className="adm-pname">{product.name}</b>
+                    <small>{size}{out(product.id, size) && <> · <em>{copy.backSoon}</em></>}</small>
+                  </span>
+                  {stepper(`${product.id}|${size}`, `${product.name} ${size}`, false)}
+                </li>
+              ))}
+              {/* Tucked under its product: a gift where the photo would be, and never a price. */}
+              <li className="adm-of__sample">
+                <span className="adm-of__gift" aria-hidden="true"><Gift size={16} strokeWidth={1.75} /></span>
+                <span className="adm-list__main">
+                  <b><span className="visually-hidden">{product.name} </span>{kx.sample}</b>
+                  <small>{[grams && formatWeight(grams), kx.free].filter(Boolean).map((t) => ` · ${t}`).join('')}</small>
                 </span>
-              )}
-            </li>
+                {stepper(sampleKey, kx.sampleItem(product.name), true)}
+              </li>
+            </React.Fragment>
           );
         })}
       </ul>
@@ -317,30 +362,56 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     </fieldset>
   );
 
+  // Priority: jumps the kitchen's line for food not given out yet. Either person can set it.
+  const priorityRow = (
+    <div className="adm-paidrow adm-of__priority">
+      <span className={`adm-paidrow__icon${priority ? ' is-on' : ''}`} aria-hidden="true"><ChevronsUp size={18} /></span>
+      <span><b>{kx.priority}</b><small>{kx.priorityHint}</small></span>
+      <Switch checked={priority} label={kx.priority} onChange={edit(setPriority)} />
+    </div>
+  );
+  const paidRows = samplesOnly ? (
+    <p className="adm-of__free"><Gift size={16} strokeWidth={1.75} aria-hidden="true" />{kx.onlySamplesPaid}</p>
+  ) : (
+    <>
+      <div className="adm-paidrow">
+        <span className={`adm-paidrow__icon${paid ? ' is-paid' : ''}`} aria-hidden="true"><IndianRupee size={18} /></span>
+        <span><b>{paid ? adminCopy.orders.paid : orderCopy.notPaidYet}</b><small>{paid ? adminCopy.paidBy.question : copy.paidHint}</small></span>
+        <Switch checked={paid} label={adminCopy.orders.paid} onChange={edit(setPaid)} />
+      </div>
+      {/* A plain choice saved with the form, so radios fit here (the order itself uses buttons that save). */}
+      {paid && (
+        <div className="adm-paychoose adm-stack" data-error={errors.paidMethod ? '' : undefined}>
+          {errors.paidMethod && <p className="adm-field__error">{errors.paidMethod}</p>}
+          <Segmented label={adminCopy.paidBy.question} options={PAID_OPTIONS} value={paidMethod} onChange={edit(setPaidMethod)} />
+          {paidMethod === 'other' && (
+            <Field label={adminCopy.paidBy.noteLabel} error={errors.paidNote}>
+              <input className="adm-input" maxLength={60} autoComplete="off" value={paidNote} placeholder={adminCopy.paidBy.notePlaceholder}
+                onChange={(e) => edit(setPaidNote)(e.target.value)} />
+            </Field>
+          )}
+        </div>
+      )}
+    </>
+  );
   // Status and Paid are set here only for a new order; afterwards they live on the order itself.
-  const whereAt = order ? null : (
+  // An edit shows Priority only while the order is in Cooking, as the order view does.
+  const whereAt = order ? (
+    order.status !== 'cooking' ? null : (
+      <section className="adm-of__section adm-of--where" aria-label={kx.priority}>
+        <div className="adm-card adm-of__paid">{priorityRow}</div>
+      </section>
+    )
+  ) : (
     <section className="adm-of__section adm-of--where" aria-labelledby={`${id}-where`}>
       <h2 id={`${id}-where`} className="adm-of__h">{copy.where}</h2>
-      <Segmented label={copy.where} options={STATUSES} value={status} onChange={edit(setStatus)} />
+      <div className="adm-of__status">
+        <Segmented label={copy.where} options={STATUSES} value={status} onChange={edit(setStatus)} slide />
+        {status === 'cooking' && <p className="adm-of__hint">{kx.shelfFirst}</p>}
+      </div>
       <div className="adm-card adm-of__paid">
-        <div className="adm-paidrow">
-          <span className={`adm-paidrow__icon${paid ? ' is-paid' : ''}`} aria-hidden="true"><IndianRupee size={18} /></span>
-          <span><b>{paid ? adminCopy.orders.paid : orderCopy.notPaidYet}</b><small>{paid ? adminCopy.paidBy.question : copy.paidHint}</small></span>
-          <Switch checked={paid} label={adminCopy.orders.paid} onChange={edit(setPaid)} />
-        </div>
-        {/* A plain choice saved with the form, so radios fit here (the order itself uses buttons that save). */}
-        {paid && (
-          <div className="adm-paychoose adm-stack" data-error={errors.paidMethod ? '' : undefined}>
-            {errors.paidMethod && <p className="adm-field__error">{errors.paidMethod}</p>}
-            <Segmented label={adminCopy.paidBy.question} options={PAID_OPTIONS} value={paidMethod} onChange={edit(setPaidMethod)} />
-            {paidMethod === 'other' && (
-              <Field label={adminCopy.paidBy.noteLabel} error={errors.paidNote}>
-                <input className="adm-input" maxLength={60} autoComplete="off" value={paidNote} placeholder={adminCopy.paidBy.notePlaceholder}
-                  onChange={(e) => edit(setPaidNote)(e.target.value)} />
-              </Field>
-            )}
-          </div>
-        )}
+        {priorityRow}
+        {paidRows}
       </div>
     </section>
   );
@@ -377,7 +448,10 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const paidSoFar = order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : '';
   let workedLine: React.ReactNode = null;
   if (totalMode === 'auto' && workedTotal != null) {
-    workedLine = <WorkedFrom code={couponNow === 'live' ? coupon : null} />;
+    // Samples ride along free, so the line says so rather than leaving it to guess.
+    workedLine = samples ? (
+      <span className="adm-worked"><Gift size={14} strokeWidth={1.75} aria-hidden="true" />{kx.fromPrices(couponNow === 'live' ? coupon : null, samples)}</span>
+    ) : <WorkedFrom code={couponNow === 'live' ? coupon : null} />;
   } else if (totalMode === 'manual' && workedTotal != null && workedTotal !== typedTotal) {
     const money = formatMoney(workedTotal);
     const [before] = orderCopy.workedIs(money, !!order).split(money);
@@ -410,7 +484,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       <h2 id={`${id}-extras`} className="adm-of__h">{copy.ifYouHave}</h2>
       <div className="adm-card adm-form">
         {/* The cause above the effect: the coupon sits over the total it changes. */}
-        {book.ready && couponShown && (
+        {samplesOnly && <p className="adm-of__free"><Gift size={16} strokeWidth={1.75} aria-hidden="true" />{kx.onlySamplesTotal}</p>}
+        {!samplesOnly && book.ready && couponShown && (
           <Field label={copy.coupon} hint={couponHint}>
             <select ref={couponInput} className={`adm-input adm-select${coupon ? '' : ' is-none'}`} value={coupon}
               onChange={(e) => pickCoupon(e.target.value)}>
@@ -426,10 +501,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           </Field>
         )}
         {/* Editing an order with money in: say how much, so a new total's due or extra is no surprise. */}
-        <Field label={orderCopy.total} prefix="₹" error={errors.amount} hint={totalHint}>
-          <input className="adm-input" inputMode="numeric" autoComplete="off" value={total} placeholder={orderCopy.totalPlaceholder}
-            onChange={(e) => { setTotalMode('manual'); edit(setAmount)(e.target.value); }} />
-        </Field>
+        {!samplesOnly && (
+          <Field label={orderCopy.total} prefix="₹" error={errors.amount} hint={totalHint}>
+            <input className="adm-input" inputMode="numeric" autoComplete="off" value={total} placeholder={orderCopy.totalPlaceholder}
+              onChange={(e) => { setTotalMode('manual'); edit(setAmount)(e.target.value); }} />
+          </Field>
+        )}
         {shown.note && (
           <Field label={orderCopy.note}>
             <textarea className="adm-input" rows={3} value={note} placeholder={orderCopy.notePlaceholder} onChange={(e) => edit(setNote)(e.target.value)} />
@@ -448,7 +525,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           </div>
         )}
         <div className="adm-of__links">
-          {book.ready && !couponShown && more('coupon', copy.addCoupon)}
+          {!samplesOnly && book.ready && !couponShown && more('coupon', copy.addCoupon)}
           {more('note', copy.addNote)}
           {!order && more('code', copy.addCode)}
           {!order && more('earlier', copy.earlier)}
@@ -460,7 +537,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const title = order ? copy.editTitle(order.code) : copy.newTitle;
   const bar = (
     <div className="adm-of__bar">
-      <span>{orderCopy.packs(packs)}</span>
+      <span>{count}</span>
       <button type="submit" form={`${id}-form`} className="adm-btn adm-btn--primary" disabled={saving}>
         {saving ? copy.saving : order ? copy.saveEdit : copy.save}
       </button>

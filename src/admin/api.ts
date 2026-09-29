@@ -1,8 +1,8 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
-  AdminMe, AdminUser, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Order, OrderChanges,
-  OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview, PaymentInput, PayRestInput,
-  PriceChange, Prices, RestorePayment, Totals,
+  AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
+  KitchenSettings, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
 import { holdUntilDone } from './unsavedWork';
 
@@ -89,8 +89,12 @@ export const setNotesSeen = (id: string) => rpc<void>('set_admin_notes_seen', { 
 export const getOrders = (filters: OrderFilters = {}) => rpc<OrderPage>('get_admin_orders', filters);
 /** null when no order has that code. The code may carry `SN-` or `#`, any case. */
 export const getOrder = (code: string) => rpc<OrderDetail | null>('get_admin_order', { code });
+/**
+ * Every status or priority change answers with `kitchen_effects` and an action_id (other
+ * orders may or may not have moved); Undo is undoKitchen(that action_id).
+ */
 export const updateOrder = (id: string, changes: OrderChanges) =>
-  rpc<Order>('update_admin_order', { id, changes });
+  rpc<UpdatedOrder>('update_admin_order', { id, changes });
 /** Creates an order when `id` is left out; otherwise a full edit. */
 export const saveOrder = (order: OrderInput, id?: string) => rpc<Order>('save_admin_order', { id, order });
 export const deleteOrder = (id: string) => rpc<void>('delete_admin_order', { id });
@@ -102,13 +106,48 @@ export const addPayment = (orderId: string, payment: PaymentInput) =>
 /** "Mark paid": one payment for whatever is left. */
 export const payRest = (orderId: string, payment: PayRestInput) =>
   rpc<Order>('pay_admin_order_rest', { order_id: orderId, payment });
-export const deletePayment = (id: string) => rpc<Order>('delete_admin_payment', { id });
+/**
+ * The × on a payment, or (`undo`) the Undo of Mark paid / Part payment: then the server also
+ * removes the "paid" event that payment wrote. `p_undo` is sent only when true.
+ */
+export const deletePayment = (id: string, undo = false) =>
+  rpc<Order>('delete_admin_payment', { id, undo: undo || undefined });
 /** Undo for deletePayment and for `paid: false`: pass the payments as the order listed them. Repeats are skipped. */
 export const restorePayments = (orderId: string, payments: RestorePayment[]) =>
   rpc<Order>('restore_admin_payments', {
     order_id: orderId,
     payments: payments.map(({ id, amount, method, note, paid_at }) => ({ id, amount, method, note, paid_at })),
   });
+
+// The kitchen: batches, spare, shelf life. Every change returns its effects; with
+// `preview` it runs for real and rolls back, so the preview can't drift from the save.
+export const getKitchen = () => rpc<Kitchen>('get_admin_kitchen');
+/** "Log a batch": 1 to 10 at once. */
+export const logBatches = (batches: BatchInput[], preview = false) =>
+  rpc<KitchenEffects>('log_admin_batches', { batches, preview });
+/** Fix a batch's grams or made-on day. */
+export const updateBatch = (id: string, changes: { grams?: number; made_on?: string }, preview = false) =>
+  rpc<KitchenEffects>('update_admin_batch', { id, changes, preview });
+export const deleteBatch = (id: string, preview = false) => rpc<KitchenEffects>('delete_admin_batch', { id, preview });
+/** Used up / thrown out: `grams` null is all of the batch's spare. Only when kitchen.can_write_off. */
+export const writeOffSpare = (batchId: string, grams: number | null, reason: WriteOffReason) =>
+  rpc<KitchenEffects>('write_off_admin_spare', { batch_id: batchId, grams, reason });
+/**
+ * Undo of any kitchen action (a batch, a write-off, a status move with kitchen_effects).
+ * A second call is a no-op. If anything moved since, it fails with a plain message (kind 'message').
+ */
+export const undoKitchen = (actionId: string) =>
+  rpc<{ undone: boolean; kitchen: Kitchen }>('undo_admin_kitchen', { action_id: actionId });
+/**
+ * A priority order in Cooking takes whole packed pouches (same product and size) from non-priority
+ * orders in Packing or Ready, newest first; those go back to Cooking unless still covered.
+ * `preview` changes nothing. Undo with undoKitchen(action_id). A refusal is a plain 22023 message.
+ */
+export const givePriority = (orderId: string, preview = false) =>
+  rpc<PriorityGiveEffects>('give_admin_priority', { order_id: orderId, preview });
+/** Products page: sample weight and shelf life. Returns the kitchen. */
+export const setKitchenProduct = (productId: string, settings: KitchenSettings) =>
+  rpc<Kitchen>('set_admin_kitchen_product', { product_id: productId, settings });
 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
 /** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */

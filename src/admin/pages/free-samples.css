@@ -1,0 +1,15 @@
+/* Free samples (FreeSamplesPage.tsx): the order cards of orders.css, only their sample lines,
+   in groups: not delivered yet, then by day. Two or three across on a laptop. */
+.adm-samples__group { display: grid; gap: 10px; }
+.adm-samples__day { margin-top: 8px; font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+.adm-samples__cards { display: grid; gap: 12px; }
+.adm-samples__more { justify-self: center; }
+/* Where a sample went matters here, so the pincode is never cut or hidden (the Orders
+   cards let it give way): code and pincode stay whole on one line, and the stage word
+   drops under them when the row is too narrow. */
+.adm-scard .adm-ocard__meta { flex: 0 0 auto; }
+.adm-scard .adm-ocard__place { display: inline; flex: none; width: auto; overflow: visible; }
+@media (min-width: 960px) {
+  .adm-samples { max-width: 1120px; margin: 0 auto; }
+  .adm-samples__cards { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-items: start; }
+}

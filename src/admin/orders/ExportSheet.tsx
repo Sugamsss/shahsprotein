@@ -21,6 +21,8 @@ const statusWord = (o: Order) =>
   o.status === 'cancelled' ? adminCopy.orders.cancelled : adminCopy.order.steps[o.status];
 
 const paidWord = { paid: adminCopy.orders.paid, part_paid: adminCopy.orders.partPaid, not_paid: adminCopy.orders.notPaid };
+/** Paid, or "Free sample" for an order that's all samples (nothing to pay). */
+const paidOf = (o: Order) => (o.free_sample ? adminCopy.orders.freeSample : paidWord[o.payment_state]);
 
 /**
  * Paid on is when it was paid in full. Amount paid and Due are blank when there's no
@@ -28,8 +30,8 @@ const paidWord = { paid: adminCopy.orders.paid, part_paid: adminCopy.orders.part
  */
 const row = (o: Order) => [
   o.code, istDateValue(o.created_at), formatTime(o.created_at), o.name, o.phone && formatPhone(o.phone), o.pincode,
-  itemsText(o), o.packs, o.coupon?.code, adminCopy.orders.via[o.source], statusWord(o),
-  paidWord[o.payment_state], o.paid_at && istDateValue(o.paid_at), paymentsByText(o),
+  itemsText(o), o.packs, o.samples, o.coupon?.code, adminCopy.orders.via[o.source], statusWord(o),
+  paidOf(o), o.paid_at && istDateValue(o.paid_at), paymentsByText(o),
   o.amount, o.amount != null ? o.amount_paid : null, o.amount_due, o.note,
 ];
 

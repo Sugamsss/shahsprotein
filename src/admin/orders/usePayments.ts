@@ -15,7 +15,7 @@ export interface HowPaid { method: PaidMethod; note?: string }
 /**
  * Every money change on an order, on the shared useUndoable: show it at once,
  * save it, offer Undo, and go back if the save fails. Each Undo is exact:
- *   Mark paid / Part payment  → removes the payment it added
+ *   Mark paid / Part payment  → removes the payment it added (p_undo, so its "paid" event goes too)
  *   Remove one payment        → puts that payment back (same id and date)
  *   Mark not paid             → puts every payment back
  * Never send `paid: true/false` through useOrderChange for these: `paid: false`
@@ -53,7 +53,7 @@ export const usePayments = (show: (order: Order) => void) => {
     const added = addedPayment(before, saved);
     if (!added) return;
     void go(saved, recount(saved, saved.payments.filter((p) => p.id !== added.id)),
-      () => deletePayment(added.id), '', () => undefined, true);
+      () => deletePayment(added.id, true), '', () => undefined, true);
   }, [go]);
 
   /** Puts payments back, quietly: the Undo of a remove. */

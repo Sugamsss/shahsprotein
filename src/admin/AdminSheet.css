@@ -75,3 +75,17 @@
 @media (prefers-reduced-motion: reduce) {
   .adm-sheet-layer, .adm-sheet, .adm-sheet-layer.is-closing, .adm-sheet-layer.is-closing .adm-sheet { animation: none; }
 }
+
+/* ---- Centred at every size (a short question, e.g. giving packed food to a priority order) ---- */
+.adm-sheet-layer--centred { align-items: center; padding: 16px; }
+.adm-sheet.adm-sheet--centred {
+  width: min(440px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px);
+  border-bottom: 1px solid var(--adm-edge); border-radius: 28px; animation: adm-popup-in 0.2s ease-out both;
+}
+.adm-sheet-layer--centred.is-closing .adm-sheet { animation: overlay-out 0.24s ease both; }
+.adm-sheet--centred .adm-sheet__grab { display: none; }
+.adm-sheet--centred .adm-sheet__head { padding-top: 16px; }
+.adm-sheet--centred .adm-sheet__bar { padding-bottom: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .adm-sheet.adm-sheet--centred, .adm-sheet-layer--centred.is-closing .adm-sheet { animation: none; }
+}

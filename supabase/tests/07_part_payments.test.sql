@@ -12,6 +12,11 @@ select plan(56);
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.admin_users;
 
@@ -61,7 +66,7 @@ reset role;
 select ok(
   not has_function_privilege('anon', 'public.add_admin_payment(uuid,jsonb)', 'execute')
   and not has_function_privilege('anon', 'public.pay_admin_order_rest(uuid,jsonb)', 'execute')
-  and not has_function_privilege('anon', 'public.delete_admin_payment(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.delete_admin_payment(uuid,boolean)', 'execute')
   and not has_function_privilege('anon', 'public.restore_admin_payments(uuid,jsonb)', 'execute'),
   'anon can''t call the payment RPCs'
 );
@@ -95,7 +100,7 @@ insert into public.orders (id, code, source, status, name, phone, amount, paid_a
    '2026-09-20 10:00+05:30', 'upi', null, null),
   ('00000000-0000-4000-a000-0000000000b2', 'SN-BFB22', 'call', 'delivered', 'Ravi Example', '919800000012', null,
    '2026-09-21 10:00+05:30', null, null, '00000000-0000-4000-8000-000000000001'),
-  ('00000000-0000-4000-a000-0000000000b3', 'SN-BFC22', 'call', 'sent', 'Meera Example', '919800000013', 450,
+  ('00000000-0000-4000-a000-0000000000b3', 'SN-BFC22', 'call', 'ready', 'Meera Example', '919800000013', 450,
    '2026-09-22 10:00+05:30', 'other', 'Paid by a friend', null),
   ('00000000-0000-4000-a000-0000000000b4', 'SN-BFD22', 'call', 'delivered', 'Farah Example', '919800000014', 300,
    null, null, null, null);
@@ -267,14 +272,14 @@ reset role;
 select results_eq(
   $$select e.event from public.order_events e
     where e.order_id = '00000000-0000-4000-a000-00000000000a' order by e.id$$,
-  $$values ('created'::text), ('paid'), ('unpaid'), ('paid'), ('unpaid'), ('paid')$$,
-  'history: paid only when the total was covered, unpaid only when it stopped being covered'
+  $$values ('created'::text), ('paid')$$,
+  'history: paid when the total was covered; each removal was undone, so it left no unpaid or paid line behind'
 );
 
 -- ─── 7. Refusals ────────────────────────────────────────
 
 insert into public.orders (id, code, source, status, name, phone, amount) values
-  ('00000000-0000-4000-a000-00000000000c', 'SN-PPC22', 'whatsapp', 'sent', 'Asha Example', '919800000003', null);
+  ('00000000-0000-4000-a000-00000000000c', 'SN-PPC22', 'whatsapp', 'ready', 'Asha Example', '919800000003', null);
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
@@ -415,7 +420,7 @@ insert into public.orders (id, code, source, status, name, phone, amount, create
   -- ₹1,000: ₹750 last week, ₹250 this week.
   ('00000000-0000-4000-a000-0000000000e1', 'SN-WKA22', 'whatsapp', 'delivered', 'Neha Example', '919800000021', 1000, '2020-01-01'),
   -- ₹500 paid in full this week.
-  ('00000000-0000-4000-a000-0000000000e2', 'SN-WKB22', 'whatsapp', 'sent', 'Asha Example', '919800000022', 500, '2020-01-01'),
+  ('00000000-0000-4000-a000-0000000000e2', 'SN-WKB22', 'whatsapp', 'ready', 'Asha Example', '919800000022', 500, '2020-01-01'),
   -- Delivered, ₹900 with ₹300 up front this week: still to collect.
   ('00000000-0000-4000-a000-0000000000e3', 'SN-WKC22', 'whatsapp', 'delivered', 'Ravi Example', '919800000023', 900, '2020-01-01'),
   -- Cancelled after a ₹200 advance this week: never counted.
@@ -438,8 +443,10 @@ reset role;
 
 select is(
   jsonb_build_object(
-    'this', (current_setting('test.totals')::jsonb #> '{weeks,this}') - array['starts_at', 'ends_at', 'days', 'by_product', 'orders', 'packs'],
-    'last', (current_setting('test.totals')::jsonb #> '{weeks,last}') - array['starts_at', 'ends_at', 'days', 'orders', 'packs']),
+    'this', (current_setting('test.totals')::jsonb #> '{weeks,this}')
+      - array['starts_at', 'ends_at', 'days', 'by_product', 'orders', 'packs', 'grams_made', 'samples'],
+    'last', (current_setting('test.totals')::jsonb #> '{weeks,last}')
+      - array['starts_at', 'ends_at', 'days', 'orders', 'packs', 'grams_made', 'samples']),
   '{"this": {"amount_in":1050,"paid_orders":2,"paid_without_amount":0,"part_payments":2,
              "amount_by_method":{"upi":300,"cash":250,"bank":500,"other":0,"not_recorded":0}},
     "last": {"amount_in":750,"paid_orders":0,"paid_without_amount":0,"part_payments":1}}'::jsonb,
@@ -447,7 +454,7 @@ select is(
 );
 
 select is(
-  (current_setting('test.totals')::jsonb #> '{overall,to_collect}') - 'without_amount_names',
+  (current_setting('test.totals')::jsonb #> '{overall,to_collect}') - array['without_amount_names', 'samples', 'free_samples'],
   '{"orders":2,"packs":0,"amount":1250,"without_amount":0,"paid":0,"unpaid_amount":1250,"amount_due":950,"part_paid":1,
     "part_paid_names":["Ravi"]}'::jsonb,
   'to collect: the part-paid delivered order is in, with ₹600 of the ₹950 due on it, and named'

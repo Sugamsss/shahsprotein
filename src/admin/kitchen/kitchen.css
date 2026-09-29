@@ -1,0 +1,183 @@
+/* The kitchen sheets (temp/kitchen-flow, lane A): Log cooking, Fix a batch, Take some
+   off the shelf, and the kg + g wheels. @imported by admin.css; built on the admin's
+   tokens and type scale. The warning colour is only for spare getting old. */
+
+/* ---- The sheets' bodies ------------------------------------------------------- */
+.adm-kx-body { display: grid; align-content: start; gap: 22px; padding-top: 4px; }
+.adm-kx-label { display: block; margin-bottom: 8px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; }
+:where(.adm-sheet-layer) h3.adm-kx-label { font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; letter-spacing: 0; }
+.adm-kx-group { display: grid; }
+.adm-kx-thumb { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 12px; overflow: hidden; }
+.adm-kx-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.adm-kx-main { min-height: 56px; gap: 10px; }
+
+/* Made on: the sliding switch, and a date field under it for Pick a day. */
+.adm-kx-madeon { display: grid; }
+.adm-kx-madeon .adm-segmented span { min-height: 44px; }
+.adm-kx-madeon__day { display: block; margin-top: 10px; }
+.adm-kx-madeon__day .adm-input { min-height: 48px; }
+
+/* ---- Log cooking: a row per product, the amount pill, the wheels under it -------- */
+.adm-kx-rows { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--adm-edge); border-radius: 20px; overflow: hidden; }
+.adm-kx-row + .adm-kx-row { border-top: 1px solid var(--adm-hairline); }
+.adm-kx-row { transition: background-color 200ms ease; }
+.adm-kx-row.is-open { padding-bottom: 12px; background: color-mix(in srgb, var(--adm-well) 60%, transparent); }
+.adm-kx-row__head { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 76px; padding: 12px; }
+.adm-kx-row__name { display: grid; gap: 1px; min-width: 0; }
+.adm-kx-row__name b { font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+.adm-kx-row__name span { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-kx-row__sub > span, .adm-kx-nowrap { white-space: nowrap; }
+.adm-kx-row.is-off .adm-kx-row__name b { color: var(--adm-ink-2); }
+.adm-kx-row.is-off .adm-kx-thumb { opacity: 0.55; }
+.adm-kx-row .adm-wheel { margin: 0 12px; }
+
+.adm-kx-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 104px; min-height: 48px; padding: 0 12px 0 16px;
+  border-radius: 16px; background: var(--adm-well); color: var(--adm-ink-1);
+  font-size: var(--adm-text-head); font-weight: 700; white-space: nowrap; touch-action: manipulation;
+  transition: background-color 200ms ease, box-shadow 200ms ease, transform 120ms ease;
+}
+.adm-kx-pill__chev { color: var(--adm-ink-3); transform: rotate(90deg); transition: transform 200ms ease; }
+.adm-kx-pill:active { transform: scale(0.97); background: var(--adm-well-press); }
+.adm-kx-pill.is-open { background: var(--color-choice-selected-bg); box-shadow: var(--shadow-choice-selected), 0 0 0 2px var(--color-accent-primary); }
+.adm-kx-pill.is-open .adm-kx-pill__chev { transform: rotate(-90deg); }
+.adm-kx-pill.is-add {
+  min-width: 0; padding: 0 16px 0 12px; background: var(--adm-accent-tint); color: var(--adm-accent-text);
+  font-size: var(--adm-text-body); font-weight: 600;
+}
+.adm-kx-pill.is-add:active { background: var(--adm-accent-tint-press); }
+
+/* Products nobody waits on: a quiet dashed "+ Date Bites  Nothing needed" at the end. */
+.adm-kx-extras { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-kx-extra {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px 0 14px;
+  border: 1.5px dashed var(--adm-track-off); border-radius: var(--radius-full); color: var(--adm-ink-1); font-weight: 600;
+  touch-action: manipulation; transition: transform 120ms ease;
+}
+.adm-kx-extra svg { color: var(--adm-ink-2); }
+.adm-kx-extra span { margin-left: 4px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; }
+.adm-kx-extra:active { transform: scale(0.97); background: var(--adm-well); }
+
+/* ---- The wheels ----------------------------------------------------------------
+   kg and g side by side, one band across both. 40px rows, the band in the middle, one
+   full row above and below it and a part row fading out. Native scroll with snap. */
+.adm-wheel {
+  position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 176px;
+  border: 1px solid var(--color-choice-track-border); border-radius: 18px; background: var(--color-toggle-track);
+  overflow: hidden;
+}
+.adm-wheel--one { grid-template-columns: 1fr; }
+.adm-wheel__band {
+  position: absolute; left: 5px; right: 5px; top: 67px; height: 40px; border-radius: 12px; pointer-events: none;
+  background: var(--color-choice-selected-bg); box-shadow: var(--shadow-choice-selected);
+}
+.adm-wheel__col {
+  position: relative; min-width: 0; height: 174px; padding: 67px 0; overflow-y: auto; scrollbar-width: none;
+  scroll-snap-type: y mandatory; overscroll-behavior: contain; touch-action: pan-y; outline: none;
+  -webkit-mask-image: linear-gradient(transparent, #000 34%, #000 66%, transparent);
+  mask-image: linear-gradient(transparent, #000 34%, #000 66%, transparent);
+}
+.adm-wheel__col::-webkit-scrollbar { display: none; }
+/* A hairline between the two wheels. */
+.adm-wheel__col + .adm-wheel__col { border-left: 1px solid var(--adm-hairline); }
+.adm-wheel__col:focus-visible { box-shadow: inset 0 0 0 2px var(--color-accent-primary); border-radius: 16px; }
+.adm-wheel__row {
+  display: grid; grid-template-columns: 1fr 1fr; align-items: center; column-gap: 8px; height: 40px;
+  scroll-snap-align: center; color: var(--adm-ink-3); cursor: pointer; user-select: none; -webkit-user-select: none;
+  font-size: var(--adm-text-title); font-weight: 500; line-height: 40px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+}
+.adm-wheel__row b { justify-self: end; font-weight: inherit; }
+.adm-wheel__row span { justify-self: start; font-size: var(--adm-text-head); font-weight: 600; letter-spacing: -0.01em; color: var(--adm-ink-2); opacity: 0; }
+.adm-wheel__row.is-on { color: var(--adm-ink-1); font-weight: 600; }
+.adm-wheel__row.is-on span { opacity: 1; }
+
+/* ---- "When you log this": the preview in sentences --------------------------------- */
+.adm-kx-outcomes { display: grid; transition: opacity 160ms ease; }
+.adm-kx-outcomes.is-stale { opacity: 0.55; }
+.adm-kx-outcomes__list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; animation: adm-kx-fade 160ms ease both; }
+.adm-kx-outcome { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: start; gap: 14px; }
+.adm-kx-outcome > span:last-child { display: grid; gap: 1px; padding-top: 6px; line-height: 1.45; text-wrap: pretty; }
+.adm-kx-outcome b { color: var(--adm-ink-1); font-weight: 600; }
+.adm-kx-outcome b + span { color: var(--adm-ink-2); }
+.adm-kx-outcome__icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--adm-well); color: var(--adm-ink-2); }
+.adm-kx-outcome__icon.is-ok { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
+.adm-kx-outcomes__quiet { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-kx-outcomes__list .adm-kx-outcomes__quiet { padding-left: 50px; }
+@keyframes adm-kx-fade { from { opacity: 0; } }
+
+/* ---- The pinned bar ---------------------------------------------------------------- */
+.adm-kx-bar { display: grid; gap: 12px; }
+/* The big-amount check: gentle, above the buttons, not a second popup. */
+.adm-kx-check {
+  padding: 12px 16px; border: 1px solid var(--adm-warn-edge); border-radius: 16px; background: var(--adm-warn-tint);
+  color: var(--adm-ink-1); line-height: 1.45; text-wrap: pretty;
+}
+.adm-kx-check b { color: var(--adm-warn-text); font-weight: 600; }
+.adm-kx-bar__pair { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
+.adm-kx-bar__pair > .adm-btn { min-height: 52px; }
+.adm-kx-bar__pair > .adm-btn:last-child { white-space: normal; line-height: 1.2; text-align: center; }
+.adm-kx-delete { color: var(--color-error-text); }
+
+/* ---- Fix a batch --------------------------------------------------------------------- */
+.adm-kx-howmuch { display: grid; }
+.adm-kx-howmuch__value { display: flex; align-items: baseline; gap: 10px; margin: -2px 0 10px; }
+.adm-kx-howmuch__value s { color: var(--adm-ink-3); font-weight: 500; }
+.adm-kx-howmuch__value b { color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600; }
+
+/* ---- Take some off the shelf ------------------------------------------------------- */
+.adm-kx-batches { display: grid; gap: 8px; }
+.adm-kx-batch {
+  position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 14px;
+  padding: 12px 14px; border: 1px solid transparent; border-radius: 18px; background: var(--adm-well);
+}
+.adm-kx-batch.is-choice { cursor: pointer; transition: border-color 200ms ease, transform 120ms ease; }
+.adm-kx-batch.is-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-kx-batch.is-choice.is-on { border-color: var(--color-accent-primary); background: var(--color-choice-selected-bg); }
+.adm-kx-batch.is-choice:has(input:focus-visible) { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-kx-batch.is-choice:active { transform: scale(0.99); }
+.adm-kx-batch__text { display: grid; gap: 2px; min-width: 0; }
+.adm-kx-batch__text > b { font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+/* Part of it: the wheel folds open under the switch. */
+.adm-kx-reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 220ms var(--ease-glide), opacity 220ms ease; }
+.adm-kx-reveal > div { min-height: 0; overflow: hidden; }
+.adm-kx-reveal.is-open { grid-template-rows: 1fr; opacity: 1; }
+.adm-kx-reveal.is-open > div { padding-top: 14px; }
+.adm-kx-stays { margin-top: 10px; color: var(--adm-ink-2); text-align: center; }
+.adm-kx-stays b { color: var(--adm-ink-1); font-weight: 600; }
+
+/* One batch's spare: "285 g spare · 3 days left". Amber when near, red when past. */
+.adm-kx-spare {
+  display: flex; align-items: flex-start; gap: 6px; min-width: 0; color: var(--adm-ink-2);
+  font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; text-align: start;
+}
+.adm-kx-spare svg { flex: 0 0 auto; margin-top: 1px; }
+.adm-kx-spare > span { display: grid; min-width: 0; }
+.adm-kx-spare.is-near { color: var(--adm-warn-text); }
+.adm-kx-spare.is-past { color: var(--color-error-text); }
+.adm-kx-spare.is-past > span > span:last-child { font-weight: 500; }
+
+/* "Logged this week": 72px rows with a thumb. */
+.adm-list.adm-kx-logged > button { grid-template-columns: 48px minmax(0, 1fr) auto; padding: 12px 20px; }
+
+@media (hover: hover) {
+  .adm-kx-pill:hover { background: var(--adm-well-press); }
+  .adm-kx-pill.is-open:hover { background: var(--color-choice-selected-bg); }
+  .adm-kx-pill.is-add:hover { background: var(--adm-accent-tint-press); }
+  .adm-kx-extra:hover { background: var(--adm-well); }
+  .adm-kx-batch.is-choice:not(.is-on):hover { border-color: var(--adm-track-off); }
+  .adm-list.adm-kx-logged > button:hover { background: var(--adm-well); }
+}
+
+@media (max-width: 359px) {
+  .adm-kx-row__head { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px; }
+  .adm-kx-thumb { width: 40px; height: 40px; }
+  .adm-kx-pill { min-width: 88px; padding: 0 8px 0 12px; }
+  .adm-wheel__row { font-size: 1.5rem; }
+  .adm-list.adm-kx-logged > button { padding-inline: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-kx-row, .adm-kx-pill, .adm-kx-pill__chev, .adm-kx-extra, .adm-kx-batch.is-choice, .adm-kx-reveal, .adm-kx-outcomes { transition: none; }
+  .adm-kx-outcomes__list { animation: none; }
+  .adm-kx-pill:active, .adm-kx-extra:active, .adm-kx-batch.is-choice:active { transform: none; }
+}

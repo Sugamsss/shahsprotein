@@ -101,17 +101,19 @@ export const formatMoneyShort = (amount: number): string => {
   return `₹${(Math.floor(rupees / 1000) / 100).toFixed(2)}L`;
 };
 
-const QUARTERS: Record<number, string> = { 0: '', 250: '¼', 500: '½', 750: '¾' };
-
 /**
- * A weight the way a cook writes it: "750 g", "1 kg", "1¾ kg", "4¾ kg". Packs are
- * 250 g and 500 g, so totals land on quarter kilos; anything else stays in whole
- * grams ("1,100 g") rather than rounding to a weight nobody has to make.
+ * A weight the way people in the kitchen say it: "750 g", "2 kg", "1½ kg", "2 kg 250 g",
+ * "1 kg 285 g". Under a kilo it's grams; a half kilo is ½; any other part stays in grams,
+ * never rounded to a weight nobody made.
  */
 export const formatWeight = (grams: number): string => {
-  const g = Math.round(grams);
-  if (g < 1000 || g % 250 !== 0) return `${g.toLocaleString('en-IN')} g`;
-  return `${Math.floor(g / 1000)}${QUARTERS[g % 1000]} kg`;
+  const g = Math.max(0, Math.round(grams));
+  const kg = Math.floor(g / 1000);
+  const rest = g % 1000;
+  if (!kg) return `${rest} g`;
+  if (!rest) return `${kg} kg`;
+  if (rest === 500) return `${kg}½ kg`;
+  return `${kg} kg ${rest} g`;
 };
 
 /** "+91 98231 50764" for an Indian mobile; any other number as "+" and its digits. */

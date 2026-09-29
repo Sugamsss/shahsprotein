@@ -3,6 +3,10 @@
 .adm-card.adm-product { display: grid; padding: 16px 16px 4px; }
 .adm-product__head { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; }
 .adm-product__thumb { width: 56px; height: 56px; border-radius: 14px; }
+/* The name, and under it "Sample 20 g · Keeps 6 months" in the head's empty space. */
+.adm-product__name { display: grid; gap: 2px; min-width: 0; }
+.adm-product__name small span { white-space: nowrap; }
+.adm-product__name small { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 /* 60px: the size over its status line, the switch on the right. */
 .adm-product__size {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'size switch' 'status switch';
@@ -39,6 +43,22 @@
 .adm-phint { margin-top: -6px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 @media (max-width: 374px) { .adm-pgrid { --cell: 82px; } }
 @media (min-width: 960px) { .adm-pgrid { --cell: 120px; } }
+
+/* Sample and shelf life: a label, then a number with its unit inside, or the number and Days / Months.
+   On the narrowest phones the pair wraps under its label. */
+.adm-pkeep { display: grid; gap: 12px; }
+.adm-psheet > * + .adm-pkeep { padding-top: 18px; border-top: 1px solid var(--adm-hairline); }
+.adm-pkeep h3 { font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+.adm-pkeep .adm-phint { margin-top: -8px; }
+.adm-pkeep__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-height: 52px; }
+.adm-pkeep__row > label { font-weight: 600; }
+.adm-pkeep__pair { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.adm-pkeep__pair .adm-segmented { flex: none; }
+.adm-pkeep .adm-input { min-height: 44px; border-radius: 12px; font-variant-numeric: tabular-nums; }
+.adm-pkeep .adm-pkeep__n { flex: none; width: 64px; padding: 0 8px; text-align: center; }
+.adm-unitbox { position: relative; display: block; width: 96px; }
+.adm-unitbox .adm-input { width: 100%; padding: 0 30px 0 14px; }
+.adm-unitbox > span { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: var(--adm-ink-2); pointer-events: none; }
 
 /* One ₹ box. The base price keeps the full field; coupon cells are quiet wells, so the grid isn't a wall of boxes. */
 .adm-price { position: relative; display: block; min-width: 0; }

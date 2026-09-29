@@ -1,16 +1,21 @@
 -- Order book, public side: who can touch what, submit_order(),
--- get_product_stock(), the history trigger and the stale rule.
+-- get_product_stock() and the history trigger.
 -- Test data is fake: EXAMPLE10-style coupons, 9198000000xx phones,
 -- example.com emails. Everything rolls back at the end.
 
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(48);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
 delete from public.orders;
+-- The kitchen too: a seeded local database has batches and spare.
+delete from public.kitchen_writeoffs;
+delete from public.kitchen_allocations;
+delete from public.kitchen_batches;
+delete from public.kitchen_actions;
 delete from public.order_rate_limits;
 delete from public.product_stock;
 delete from public.coupons;
@@ -213,8 +218,8 @@ select results_eq(
 select results_eq(
   $$select name, pincode, source, status, paid_at is null, coupon_code, coupon_valid, coupon_id is not null
     from public.orders where code = 'SN-7KQ4M'$$,
-  $$values ('Neha Example'::text, '415001'::text, 'site'::text, 'new'::text, true, 'EXAMPLE10'::text, true, true)$$,
-  'the name is cleaned, the order starts new and not paid, the coupon is matched'
+  $$values ('Neha Example'::text, '415001'::text, 'site'::text, 'cooking'::text, true, 'EXAMPLE10'::text, true, true)$$,
+  'the name is cleaned, the order starts in Cooking and not paid, the coupon is matched'
 );
 
 select results_eq(
@@ -342,113 +347,28 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
 select lives_ok(
-  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"status":"confirmed","paid":true}')$$,
-  'confirm and mark paid'
+  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"status":"packing","paid":true}')$$,
+  'move to Packing and mark paid'
 );
 select lives_ok(
-  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"paid":true,"kept":true}')$$,
-  'paid again (no change) and keep'
+  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"paid":true}')$$,
+  'paid again (no change)'
 );
 select lives_ok(
-  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"status":"confirmed","kept":false,"paid":false}')$$,
-  'same status, unkeep, unpaid'
+  $$select public.update_admin_order(current_setting('test.order_id')::uuid, '{"status":"packing","paid":false}')$$,
+  'same status, unpaid'
 );
 reset role;
 
 select results_eq(
-  $$select e.event, e.by from public.order_events e join public.orders o on o.id = e.order_id
+  $$select e.event, e.by, e.auto from public.order_events e join public.orders o on o.id = e.order_id
     where o.code = 'SN-9XWZT' order by e.id$$,
   $$values
-    ('created'::text, null::uuid),
-    ('confirmed', '00000000-0000-4000-8000-000000000001'::uuid),
-    ('paid', '00000000-0000-4000-8000-000000000001'::uuid),
-    ('kept', '00000000-0000-4000-8000-000000000001'::uuid),
-    ('unpaid', '00000000-0000-4000-8000-000000000001'::uuid),
-    ('unkept', '00000000-0000-4000-8000-000000000001'::uuid)$$,
-  'history: created by the site, then one event per real change, by the admin'
-);
-
--- ─── 7. The stale rule ──────────────────────────────────
-
--- SN-7KQ4M-3 is new. Age it by moving status_changed_at directly (the status
--- doesn't change, so the trigger leaves it alone).
-update public.orders set status_changed_at = now() - interval '47 hours' where code = 'SN-7KQ4M-3';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
-  'false', 'new for 47 hours is not stale'
-);
-
-update public.orders
-set status_changed_at = now() - interval '49 hours', created_at = now() - interval '49 hours'
-where code = 'SN-7KQ4M-3';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
-  'true', 'new for 49 hours is stale'
-);
-
-update public.orders set kept_at = now() where code = 'SN-7KQ4M-3';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
-  'false', 'a kept order is never stale'
-);
-
-update public.orders set kept_at = null, status = 'confirmed' where code = 'SN-7KQ4M-3';
-update public.orders set status = 'new' where code = 'SN-7KQ4M-3';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
-  'false', 'undoing a Confirm back to New restarts the clock (old created_at, fresh status_changed_at)'
-);
-
-update public.orders set status = 'confirmed' where code = 'SN-7KQ4M-3';
-update public.orders set status_changed_at = now() - interval '10 days' where code = 'SN-7KQ4M-3';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-3'),
-  'false', 'only New orders can be stale'
-);
-
--- "Still waiting" (Keep) restarts the clock rather than hiding the order
--- for good (20260926000003). SN-7KQ4M-4 is new; age both clocks.
-select set_config('test.wait_id', (select id::text from public.orders where code = 'SN-7KQ4M-4'), true);
-update public.orders
-set status_changed_at = now() - interval '5 days', kept_at = now() - interval '49 hours'
-where code = 'SN-7KQ4M-4';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-4'),
-  'true', 'kept more than 48 hours ago: stale again'
-);
-
-update public.orders set kept_at = now() - interval '47 hours' where code = 'SN-7KQ4M-4';
-select is(
-  (select public.admin_order_json(o) ->> 'stale' from public.orders o where code = 'SN-7KQ4M-4'),
-  'false', 'kept less than 48 hours ago: not stale'
-);
-
-update public.orders set kept_at = now() - interval '3 days' where code = 'SN-7KQ4M-4';
-set local role authenticated;
-set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
-select is(
-  public.update_admin_order(current_setting('test.wait_id')::uuid, '{"kept":true}')::jsonb ->> 'stale',
-  'false', 'a re-tap on an already kept order takes it off the list again'
-);
-reset role;
-select ok(
-  (select kept_at = timezone('utc', now()) from public.orders where code = 'SN-7KQ4M-4')
-  and (select e.event || '/' || e.by from public.order_events e
-       where e.order_id = current_setting('test.wait_id')::uuid order by e.id desc limit 1)
-      = 'kept/00000000-0000-4000-8000-000000000001',
-  'the re-tap refreshes kept_at to now and logs a kept event'
-);
-
-set local role authenticated;
-select is(
-  public.update_admin_order(current_setting('test.wait_id')::uuid, '{"kept":false}')::jsonb ->> 'stale',
-  'true', 'Undo clears kept_at, so the order is stale again'
-);
-reset role;
-select is(
-  (select event from public.order_events e
-   where e.order_id = current_setting('test.wait_id')::uuid order by e.id desc limit 1),
-  'unkept', 'Undo logs unkept'
+    ('created'::text, null::uuid, false),
+    ('packing', '00000000-0000-4000-8000-000000000001'::uuid, false),
+    ('paid', '00000000-0000-4000-8000-000000000001'::uuid, false),
+    ('unpaid', '00000000-0000-4000-8000-000000000001'::uuid, false)$$,
+  'history: created by the site, then one event per real change, by the admin, none of them auto'
 );
 
 select * from finish();
