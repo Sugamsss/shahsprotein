@@ -8,8 +8,8 @@ import { LoadError } from '../parts';
 import type { Metrics, MetricsPeriodKey } from '../types';
 import {
   METRIC_KEYS, PERIOD_KEYS, avgOrder, barChart, barReadout, changeLine, changeOf, chipChange, chipValue, hourReadout,
-  lineChart, loadingWords, noCompareLine, notes, productRows, profit, profitLabel, rangeLine, sentence, showValue,
-  spokenSummary, totalOf, type BarChart, type LineChart, type MetricKey, type Readout,
+  lineChart, loadingTicks, loadingWords, noCompareLine, notes, productRows, profit, profitLabel, rangeLine, sentence, showValue,
+  spokenSummary, totalOf, waitingOnTotals, withUnit, type BarChart, type LineChart, type MetricKey, type Readout,
 } from './metrics';
 
 const copy = adminCopy.homePage.metrics;
@@ -166,7 +166,7 @@ const Chart: React.FC<{
     key = (
       <p className="adm-hm-key">
         <span><i className="adm-hm-sw is-line" />{copy.today}</span>
-        {yesterdayByNow !== null && <span><i className="adm-hm-sw is-ghost" />{copy.yesterdayByNow(showValue(metric, yesterdayByNow))}</span>}
+        {yesterdayByNow !== null && <span><i className="adm-hm-sw is-ghost" />{copy.yesterdayByNow(withUnit(metric, yesterdayByNow))}</span>}
       </p>
     );
   } else if (chart) {
@@ -181,24 +181,83 @@ const Chart: React.FC<{
   }
 
   return (
-    <figure className={`adm-hm-chart adm-hm-n${size}${chart?.kind === 'line' ? ' is-line' : ''}`} style={{ '--n': n } as Css}>
+    <figure className={`adm-hm-chart adm-hm-n${size}${chart?.kind === 'line' ? ' is-line' : ''}${chart?.empty ? ' is-empty' : ''}`} style={{ '--n': n } as Css}>
       <div className="adm-hm-plot" role="slider" tabIndex={0} aria-label={name} aria-valuemin={1} aria-valuemax={n}
         aria-valuenow={(pick ?? nowIndex) + 1} aria-valuetext={valueText} onClick={onClick} onKeyDown={onKeyDown}>
         {!chart ? <Pulse className="adm-pulse--bars adm-hm-pulse-bars" /> : (
           <>
-            <span className="adm-hm-top" aria-hidden="true">{chart.topLabel}</span>
+            {!chart.empty && <span className="adm-hm-top" aria-hidden="true">{chart.topLabel}</span>}
             {chart.kind === 'line' ? <LinePlot chart={chart} picked={pick} metric={metric} /> : <BarPlot chart={chart} picked={pick} />}
           </>
         )}
       </div>
       <div className="adm-hm-x" aria-hidden="true">
-        {chart?.ticks.map((t) => (
+        {(chart?.ticks ?? loadingTicks(periodKey)).map((t) => (
           <span key={`${t.label}-${t.pos}`} className={[t.now && 'is-now', t.minor && 'is-minor', t.align && `is-${t.align}`].filter(Boolean).join(' ') || undefined}
             style={{ '--pos': `${t.pos}%` } as Css}>{t.label}</span>
         ))}
       </div>
       <figcaption>{readout ? <ReadoutLine readout={readout} /> : key}</figcaption>
     </figure>
+  );
+};
+
+// ---- The story: the sentence and what's under it, for one chip -----------------------------------
+
+const Story: React.FC<{ periodKey: MetricsPeriodKey; metrics: Metrics | null; metric: MetricKey }> = ({ periodKey, metrics, metric }) => {
+  const period = metrics?.periods[periodKey];
+  if (!metrics || !period) {
+    return (
+      <>
+        <p className="adm-hm-sentence"><Pulse className="adm-hm-pulse-figure" />{loadingWords(periodKey, metric)}</p>
+        <p className="adm-hm-change"><Pulse className="adm-hm-pulse-line" /></p>
+        {metric === 'came_in' && <><Pulse className="adm-hm-pulse-split" /><p className="adm-hm-methods"><Pulse className="adm-hm-pulse-methods" /></p></>}
+      </>
+    );
+  }
+  const t = period.totals;
+  const s = sentence(periodKey, metric, t, metrics.first_order_at !== null);
+  const before = periodKey !== 'lifetime' && period.previous ? totalOf(period.previous.totals, metric) : null;
+  const change = periodKey !== 'lifetime' ? changeOf(totalOf(t, metric), before) : null;
+  const line = change && before !== null && periodKey !== 'lifetime'
+    ? changeLine(periodKey, metric, change, before, waitingOnTotals(metric, change, t)) : null;
+  const quiet = line ? null : noCompareLine(periodKey, metrics);
+  const small = notes(metric, t, change);
+  const methods = metric === 'came_in' ? moneyByMethod(t.came_in.by_method) : [];
+  const ChangeIcon = line?.icon === 'up' ? ArrowUp : line?.icon === 'down' ? ArrowDown : null;
+  return (
+    <>
+      <p className="adm-hm-sentence"><b className={s.money ? 'is-money' : undefined}>{s.figure}</b>{s.rest}</p>
+      {line && (
+        <p className={`adm-hm-change${line.up ? ' is-up' : ''}`}>
+          {ChangeIcon && <ChangeIcon size={16} aria-hidden="true" />}
+          <span>
+            {line.text}
+            {line.from && <span className="adm-hm-change__quiet"> {line.from}</span>}
+            {line.note && <><span aria-hidden="true"> ·</span> <span className="adm-hm-change__quiet">{line.note}</span></>}
+          </span>
+        </p>
+      )}
+      {quiet && <p className="adm-hm-change is-none">{quiet}</p>}
+      {methods.length > 0 && (
+        <>
+          <div className="adm-hm-split" aria-hidden="true">
+            {methods.map((x) => <i key={x.key} className={`is-${x.key}`} style={{ '--w': x.amount } as Css} />)}
+          </div>
+          <ul className="adm-hm-methods" aria-label={copy.byMethod}>
+            {methods.map((x) => <li key={x.key}><i className={`is-${x.key}`} />{x.label} <b>{formatMoney(x.amount)}</b></li>)}
+          </ul>
+        </>
+      )}
+      {small.length > 0 && (
+        <p className="adm-hm-notes">
+          {/* Each note stays whole; the line breaks only at the space between notes. */}
+          {small.map((x, i) => (
+            <React.Fragment key={x}>{i > 0 && ' '}<span>{x}{i < small.length - 1 && <span aria-hidden="true"> ·</span>}</span></React.Fragment>
+          ))}
+        </p>
+      )}
+    </>
   );
 };
 
@@ -225,16 +284,9 @@ export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; o
   const period = metrics?.periods[periodKey];
   const t = period?.totals;
   const prev = periodKey !== 'lifetime' ? period?.previous?.totals ?? null : null;
-  const s = t ? sentence(periodKey, metric, t) : null;
-  const now = t ? totalOf(t, metric) : 0;
-  const before = prev ? totalOf(prev, metric) : null;
-  const change = periodKey !== 'lifetime' ? changeOf(now, before) : null;
-  const line = change && before !== null && periodKey !== 'lifetime' ? changeLine(periodKey, metric, change, before) : null;
-  const quiet = metrics && !line ? noCompareLine(periodKey, metrics) : null;
-  const small = t ? notes(metric, t) : [];
-  const methods = t && metric === 'came_in' ? moneyByMethod(t.came_in.by_method) : [];
   const avg = t ? avgOrder(t) : null;
-  const ChangeIcon = line?.icon === 'up' ? ArrowUp : line?.icon === 'down' ? ArrowDown : null;
+  // While it loads, chips keep the height they'll have: Today and Week nearly always compare.
+  const chipsCompare = loading ? periodKey === 'today' || periodKey === 'week' : Boolean(prev);
 
   let body: React.ReactNode;
   if (failed && !metrics) {
@@ -244,40 +296,20 @@ export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; o
       <>
         <div className="adm-hm-story">
           <p className="adm-hm-range">{metrics ? rangeLine(periodKey, metrics) : <Pulse className="adm-hm-pulse-range" />}</p>
-          <p className="adm-hm-sentence">
-            {s ? <><b className={s.money ? 'is-money' : undefined}>{s.figure}</b> {s.rest}</>
-              : <><Pulse className="adm-hm-pulse-figure" /> {loadingWords(periodKey, metric)}</>}
-          </p>
-          {loading && <p className="adm-hm-change"><Pulse className="adm-hm-pulse-line" /></p>}
-          {line && (
-            <p className={`adm-hm-change${line.up ? ' is-up' : ''}`}>
-              {ChangeIcon && <ChangeIcon size={16} aria-hidden="true" />}<span>{line.text}</span>
-            </p>
-          )}
-          {quiet && <p className="adm-hm-change is-none">{quiet}</p>}
-          {methods.length > 0 && (
-            <>
-              <div className="adm-hm-split" aria-hidden="true">
-                {methods.map((x) => <i key={x.key} className={`is-${x.key}`} style={{ '--w': x.amount } as Css} />)}
+          {/* All four chips' stories share one cell, so it's always as tall as the tallest and
+              nothing under it moves when a chip is tapped. Only the chosen one shows. */}
+          <div className="adm-hm-stories">
+            {METRIC_KEYS.map((key) => (
+              <div key={key} className="adm-hm-variant" aria-hidden={key !== metric || undefined}>
+                <Story periodKey={periodKey} metrics={metrics} metric={key} />
               </div>
-              <ul className="adm-hm-methods" aria-label={copy.byMethod}>
-                {methods.map((x) => <li key={x.key}><i className={`is-${x.key}`} />{x.label} <b>{formatMoney(x.amount)}</b></li>)}
-              </ul>
-            </>
-          )}
-          {small.length > 0 && (
-            <p className="adm-hm-notes">
-              {/* Each note stays whole; the line breaks only at the space between notes. */}
-              {small.map((x, i) => (
-                <React.Fragment key={x}>{i > 0 && ' '}<span>{x}{i < small.length - 1 && <span aria-hidden="true"> ·</span>}</span></React.Fragment>
-              ))}
-            </p>
-          )}
+            ))}
+          </div>
         </div>
 
         <Chart periodKey={periodKey} metrics={metrics} metric={metric} picked={picked} onPick={setPicked} />
 
-        <div className={`adm-hm-chips${prev ? ' has-change' : ''}`} role="group" aria-label={copy.showOnChart}>
+        <div className={`adm-hm-chips${chipsCompare ? ' has-change' : ''}`} role="group" aria-label={copy.showOnChart}>
           {METRIC_KEYS.map((key) => {
             const v = t ? totalOf(t, key) : 0;
             const was = prev ? totalOf(prev, key) : null;
@@ -318,7 +350,7 @@ export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; o
                 <span className="adm-hm-prod__main">
                   <span className="adm-hm-prod__name">
                     <b>{row.product.name}</b>
-                    <span>{loading ? <Pulse /> : row.packs ? <><span className="adm-hm-nowrap">{formatWeight(row.grams)} ·</span> {row.share}%</> : copy.productNone}</span>
+                    <span>{loading ? <Pulse /> : row.packs ? <><span className="adm-hm-nowrap">{formatWeight(row.grams)}</span> <span className="adm-hm-nowrap">· {row.share}%</span></> : copy.productNone}</span>
                   </span>
                   <span className="adm-hm-prod__track"><i style={{ '--w': `${row.share}%` } as Css} /></span>
                 </span>

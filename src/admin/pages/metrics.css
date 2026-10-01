@@ -39,13 +39,18 @@
   cursor: pointer; touch-action: manipulation; transition: color 200ms ease;
 }
 .adm-hm-seg input:checked + span { color: var(--color-choice-selected-text); }
-.adm-hm-seg input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-hm-seg input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 0; }
 .adm-hm-seg label:active span { transform: scale(0.97); }
 @media (hover: hover) { .adm-hm-seg input:not(:checked) + span:hover { color: var(--adm-ink-1); } }
-@container hm (max-width: 310px) { .adm-hm-seg span { padding: 0 5px; font-size: var(--adm-text-small); } }
+/* 3px a side keeps all five words inside a 320 phone's track, thumb and all. */
+@container hm (max-width: 310px) { .adm-hm-seg span { padding: 0 3px; font-size: var(--adm-text-small); } }
 
 /* ---- The sentence: the answer, then how it compares ---------------------------------------- */
 .adm-hm-story { display: grid; gap: 6px; }
+/* The four chips' stories in one cell: as tall as the tallest, only the chosen one seen. */
+.adm-hm-stories { display: grid; }
+.adm-hm-variant { grid-area: 1 / 1; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.adm-hm-variant[aria-hidden='true'] { visibility: hidden; }
 .adm-hm-range { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-hm-sentence {
   color: var(--adm-ink-3); text-wrap: balance; font-variant-numeric: proportional-nums;
@@ -58,7 +63,11 @@
   color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; line-height: 1.35; text-wrap: pretty;
 }
 .adm-hm-change svg { flex: 0 0 auto; margin-top: 2px; }
+/* A line's height even when it only holds a pulse (they're flex boxes, so no text strut). */
+.adm-hm-change, .adm-hm-methods { min-height: 1.35em; }
 .adm-hm-change.is-up { color: var(--adm-success-text); }
+/* "(from ₹480)" and "2 orders have no total yet" stay calm, so the green is the change itself. */
+.adm-hm-change__quiet { color: var(--adm-ink-2); white-space: nowrap; }
 .adm-hm-change.is-none { color: var(--adm-ink-3); font-size: var(--adm-text-small); }
 .adm-hm-notes { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-hm-notes > span { white-space: nowrap; }
@@ -143,7 +152,9 @@
 
 /* Under the chart: the key, or a tapped bar's numbers. Two lines' room on narrow cards, where
    a readout wraps, so tapping a bar never moves the chips. */
-.adm-hm-chart figcaption { min-height: 41px; }
+.adm-hm-chart figcaption { min-height: 43px; }
+/* All zeros: no made-up top value, only the flat line or zero stubs. */
+.adm-hm-chart.is-empty .adm-hm-plot::before { display: none; }
 .adm-hm-key, .adm-hm-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; line-height: 1.35; }
 .adm-hm-key { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; }
 .adm-hm-key > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -217,14 +228,20 @@
 .adm-hm-prod li.is-none .adm-hm-thumb { opacity: 0.6; }
 
 /* ---- Loading: labels stay, numbers pulse, nothing jumps ---------------------------------------- */
-.adm-hm .adm-pulse.adm-hm-pulse-figure { width: 4.2em; height: 0.9em; }
-.adm-hm .adm-pulse.adm-hm-pulse-line { width: 180px; height: 1em; }
+/* About a real figure's width ("₹1,320"), so the loading sentence wraps where the real one does. */
+.adm-hm .adm-pulse.adm-hm-pulse-figure { width: 3.4em; height: 0.9em; }
+.adm-hm .adm-pulse.adm-hm-pulse-line { display: inline-block; width: 180px; height: 1em; vertical-align: middle; }
+/* Came in's split bar and legend line, so the stories keep their loaded height. */
+.adm-hm .adm-pulse.adm-hm-pulse-split { width: 100%; height: 8px; margin-top: 8px; border-radius: 4px; }
+.adm-hm .adm-pulse.adm-hm-pulse-methods { display: inline-block; width: 60%; height: 1em; vertical-align: middle; }
 .adm-hm .adm-pulse.adm-hm-pulse-range { width: 140px; height: 1em; }
 .adm-hm .adm-pulse.adm-hm-pulse-chip { width: 56px; height: 18px; }
 
 /* ---- By the card's width -------------------------------------------------------------------- */
 @container hm (max-width: 270px) {
   .adm-hm-x span.is-minor { display: none; }
+  /* The key's size, so a readout stays within its two lines. */
+  .adm-hm-readout { font-size: var(--adm-text-small); }
   .adm-hm-quiet { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .adm-hm-quiet > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 }
