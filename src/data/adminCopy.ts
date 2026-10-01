@@ -1006,26 +1006,8 @@ export const adminCopy = {
     namesNotPaid: (names: string[], count: number) => `${namesAndMore(names, count)} ${count === 1 ? "hasn't" : "haven't"} paid yet`,
     allPaid: 'All paid',
 
-    // This week vs last, Sunit's.
-    vsTitle: 'This week vs last',
-    vsMeta: 'By this time last week',
-    vsOrders: (n: number) => (n === 1 ? 'order' : 'orders'),
-    vsCameIn: 'came in',
-    vsUp: (last: string) => `Up from ${last}`,
-    vsDown: (last: string) => `Down from ${last}`,
-    vsSame: (last: string) => `Same as ${last}`,
-    vsFirst: 'Nothing to compare yet',
-    vsNoTotal: (n: number) => `+ ${n} paid with no total`,
-    // Under ₹ came in: UPI, Cash, Bank, Other (paidBy.methods), then orders paid before methods existed.
-    vsByMethod: 'How it was paid',
+    // Under ₹ came in, after UPI, Cash, Bank and Other: payments from before methods existed.
     notRecorded: 'Not recorded',
-    vsBars: 'Orders each day, this week and last',
-    vsDay: (day: string, orders: number, last: number | null) =>
-      `${day}: ${orders} ${orders === 1 ? 'order' : 'orders'}${last === null ? '' : `, ${last} last week`}`,
-    vsDayAhead: (day: string, last: number | null) => `${day}: still to come${last === null ? '' : `, ${last} last week`}`,
-    thisWeek: 'This week',
-    lastWeek: 'Last week',
-    dayLetters: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
 
     // Stock: only when something is off the site.
     offTheSite: 'Off the site',

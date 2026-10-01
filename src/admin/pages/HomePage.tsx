@@ -24,7 +24,6 @@ import { useUndoable } from '../useUndoable';
 import { ProductCards } from './HomeProducts';
 import { readyHint, packingHint } from './homeHints';
 import { HomeMetrics } from './HomeMetrics';
-import { AdminWeek } from './HomeWeek';
 
 const copy = adminCopy.homePage;
 const payCopy = adminCopy.payments;
@@ -241,11 +240,10 @@ const HomePage: React.FC = () => {
   const totalsRpc = useRpc(getTotals, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   const stock = useRpc(getStock, []);
   const metricsRpc = useRpc(getMetrics, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
-  // A database without 20261001000000: Sunit keeps the old week card, Pranjali gets nothing.
-  // Drop this, and HomeWeek.tsx, once the migration is live.
-  const metricsMissing = metricsRpc.error?.kind === 'missing';
-  const metricsBlock = metricsMissing ? null : (
-    <HomeMetrics metrics={metricsRpc.data} failed={Boolean(metricsRpc.error)} onRetry={() => void metricsRpc.reload()} />
+  const metricsBlock = (
+    <div className="adm-home__aside">
+      <HomeMetrics metrics={metricsRpc.data} failed={Boolean(metricsRpc.error)} onRetry={() => void metricsRpc.reload()} />
+    </div>
   );
   // undefined while it loads (labels stay, numbers pulse), null if it couldn't.
   const totals = totalsRpc.data ?? (totalsRpc.error ? null : undefined);
@@ -277,7 +275,7 @@ const HomePage: React.FC = () => {
     below = (
       <div className="adm-home__grid adm-home__grid--split">
         {kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}
-        {metricsBlock && <div className="adm-home__aside">{metricsBlock}</div>}
+        {metricsBlock}
         <Stock stock={stock} />
       </div>
     );
@@ -287,9 +285,7 @@ const HomePage: React.FC = () => {
     below = (
       <div className="adm-home__grid adm-home__grid--split">
         <Waiting queue={overview.data.queue} totals={totals} />
-        {metricsMissing
-          ? totals !== null && <div className="adm-home__aside"><AdminWeek totals={totals} /></div>
-          : <div className="adm-home__aside">{metricsBlock}</div>}
+        {metricsBlock}
         <Stock stock={stock} />
         <Coupons coupons={overview.data.coupons} />
       </div>

@@ -2,8 +2,8 @@
    phones, a shelf of pouches on a tablet, wide product photos on a laptop), spare at
    their foot. Pranjali's (temp/kitchen-flow, "one action"): the headline, the spare
    warning, one Log cooking button, the cards, Logged this week. Sunit's: Waiting on
-   you, this week vs last, stock when something is off, and coupons.
-   Phone: one column. Laptop: two. */
+   you, stock when something is off, and coupons. Both get How it's going (metrics.css).
+   Phone: one column. Laptop: two, the work on the left and How it's going on the right. */
 .adm-home__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .adm-home__logo { width: 124px; height: auto; }
 /* The greeting steps back to head; the answer line is the loudest thing on the page,
@@ -142,49 +142,6 @@ button.adm-home__warn:active { opacity: 0.7; }
 /* A product thumb in the Stock card's rows. */
 .adm-home__thumb { width: 52px; height: 52px; border-radius: 12px; }
 
-/* ---- This week vs last (Sunit) ---------------------------------------------------------- */
-.adm-home__vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.adm-home__vs > div { display: grid; align-content: start; justify-items: start; gap: 2px; min-width: 0; }
-.adm-home__vs b { font-size: var(--adm-text-title); line-height: 1.15; letter-spacing: -0.022em; white-space: nowrap; }
-.adm-home__vs b.is-money { color: var(--color-success-text); }
-.adm-home__vs > div > span { color: var(--adm-ink-2); }
-.adm-home__vs em {
-  display: inline-flex; align-items: center; gap: 4px; margin-top: 6px;
-  color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-style: normal; font-weight: 500;
-}
-.adm-home__vs em svg { flex: 0 0 auto; }
-.adm-home__vs em.is-up { color: var(--color-success-text); }
-.adm-home__vs small { color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; }
-/* ₹ came in by how it was paid: label, then the amount, the amounts lined up. */
-.adm-home__methods {
-  display: grid; grid-template-columns: minmax(0, max-content) max-content; gap: 2px 10px; margin: 8px 0 2px; padding: 0;
-  list-style: none; font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35;
-}
-/* A subgrid, not display: contents, so each row stays a list item for screen readers. */
-.adm-home__methods li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
-.adm-home__methods li > span:first-child { color: var(--adm-ink-3); }
-.adm-home__methods li > span:last-child { color: var(--adm-ink-1); font-weight: 600; text-align: right; }
-/* Under the money, only in a week with a part payment: why ₹ came in can differ from the totals. */
-.adm-home__vsnote { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; text-wrap: pretty; }
-.adm-home__bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
-.adm-home__bars li { display: grid; grid-template-rows: 104px auto; justify-items: center; gap: 8px; min-width: 0; }
-.adm-home__slot { position: relative; width: 100%; max-width: 36px; height: 100%; }
-.adm-home__bar, .adm-home__ghost { position: absolute; right: 0; bottom: 0; left: 0; }
-.adm-home__bar {
-  height: max(2px, var(--h)); border-radius: 8px 8px 3px 3px;
-  background: color-mix(in srgb, var(--color-accent-primary) 34%, transparent);
-}
-/* Last week's height: a dashed line over the bar, so both read at once. */
-.adm-home__ghost { z-index: 1; height: var(--g); border-top: 2px dashed var(--adm-ink-3); opacity: 0.55; }
-.adm-home__bars li.is-today .adm-home__bar { background: var(--color-accent-gradient); }
-.adm-home__bars li.is-zero .adm-home__bar { height: 2px; border-radius: 1px; background: var(--adm-track-off); }
-.adm-home__day { color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; }
-.adm-home__bars li.is-today .adm-home__day { color: var(--adm-ink-1); font-weight: 600; }
-.adm-home__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--adm-ink-3); font-size: var(--adm-text-small); line-height: 1.35; font-weight: 500; }
-.adm-home__legend span { display: inline-flex; align-items: center; gap: 6px; }
-.adm-home__legend i { width: 12px; height: 12px; border-radius: 3px; background: color-mix(in srgb, var(--color-accent-primary) 34%, transparent); }
-.adm-home__legend i.is-ghost { height: 0; border-top: 2px dashed var(--adm-ink-3); border-radius: 0; background: none; opacity: 0.55; }
-
 /* ---- Stock and coupons ------------------------------------------------------------------ */
 .adm-home__stock { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 14px; }
 .adm-home__stock .adm-btn { grid-column: 1 / -1; }
@@ -199,7 +156,6 @@ button.adm-home__warn:active { opacity: 0.7; }
   .adm-list.adm-home__rows > a { padding-inline: 16px; }
   /* "Tap one to fix it" can't sit beside its heading here; the chevrons say it. */
   .adm-home__head > span.adm-home__meta-wide { display: none; }
-  .adm-home__bars { gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
