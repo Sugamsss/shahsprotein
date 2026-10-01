@@ -5,7 +5,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LOG_COOKING_STATE, useLogCookingQuiet, useOverview } from '../AdminLayout';
-import { getStock, getTotals, setStock } from '../api';
+import { getMetrics, getStock, getTotals, setStock } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatAge, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
 import { FixBatchSheet } from '../kitchen/FixBatchSheet';
@@ -23,6 +23,7 @@ import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 import { ProductCards } from './HomeProducts';
 import { readyHint, packingHint } from './homeHints';
+import { HomeMetrics } from './HomeMetrics';
 import { AdminWeek } from './HomeWeek';
 
 const copy = adminCopy.homePage;
@@ -33,8 +34,10 @@ const kitchenCopy = adminCopy.kitchen;
 // to cook in one sentence, one "Log cooking" button, the product cards in kitchen
 // words with spare at their foot, and the batches she logged this week (tap one to
 // fix it). Anyone else gets Sunit's: what to pack and drop off and the money still
-// out, the cards by stage, Waiting on you, this week vs last. The totals are Home's
-// own call and carry the kitchen; the overview is the layout's (the Orders badge).
+// out, the cards by stage, Waiting on you. Both get "How it's going" (HomeMetrics), the
+// same block in the same place in their column order. The totals and the metrics are
+// Home's own calls (the totals carry the kitchen); the overview is the layout's (the
+// Orders badge).
 
 // ---- The line under the date --------------------------------------------------------
 
@@ -236,6 +239,13 @@ const HomePage: React.FC = () => {
   useEffect(() => { void overview.reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const totalsRpc = useRpc(getTotals, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   const stock = useRpc(getStock, []);
+  const metricsRpc = useRpc(getMetrics, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
+  // A database without 20261001000000: Sunit keeps the old week card, Pranjali gets nothing.
+  // Drop this, and HomeWeek.tsx, once the migration is live.
+  const metricsMissing = metricsRpc.error?.kind === 'missing';
+  const metricsBlock = metricsMissing ? null : (
+    <HomeMetrics metrics={metricsRpc.data} failed={Boolean(metricsRpc.error)} onRetry={() => void metricsRpc.reload()} />
+  );
   // undefined while it loads (labels stay, numbers pulse), null if it couldn't.
   const totals = totalsRpc.data ?? (totalsRpc.error ? null : undefined);
   const kitchen = totals?.kitchen;
@@ -265,7 +275,10 @@ const HomePage: React.FC = () => {
   if (cook) {
     below = (
       <div className="adm-home__grid">
-        <div className="adm-home__col">{kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}</div>
+        <div className="adm-home__col">
+          {kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}
+          {metricsBlock}
+        </div>
         <div className="adm-home__col"><Stock stock={stock} /></div>
       </div>
     );
@@ -276,7 +289,7 @@ const HomePage: React.FC = () => {
       <div className="adm-home__grid">
         <div className="adm-home__col"><Waiting queue={overview.data.queue} totals={totals} /></div>
         <div className="adm-home__col">
-          {totals !== null && <AdminWeek totals={totals} />}
+          {metricsMissing ? totals !== null && <AdminWeek totals={totals} /> : metricsBlock}
           <Stock stock={stock} />
           <Coupons coupons={overview.data.coupons} />
         </div>
