@@ -54,17 +54,19 @@ const batch = (id: string, product_id: string, grams: number, spare: number, mad
   ({ id, product_id, grams, made_on, to_orders: grams - spare, spare, written_off: 0, deleted: false });
 
 describe('what to cook', () => {
-  it('pre-fills Log cooking with every product to cook at exactly its need, in the site order', () => {
+  it('opens Log cooking with every product to cook at 0, its need kept only as a guide, in the site order', () => {
     expect(prefill(seed())).toEqual([
-      { product_id: 'raggi-jaggi', need: 2000, grams: 2000 },
-      { product_id: 'muesli', need: 750, grams: 750 },
+      { product_id: 'raggi-jaggi', need: 2000, grams: 0 },
+      { product_id: 'muesli', need: 750, grams: 0 },
     ]);
   });
 
-  it('caps a need bigger than the wheels at 25 kg 950 g, so the pill and the wheel agree', () => {
+  it('logs nothing until an amount is rolled: no row is made on its own, however big its need', () => {
     const k = seed();
     k.products = k.products.map((p) => (p.product_id === 'raggi-jaggi' ? { ...p, to_cook: 30_040 } : p));
-    expect(prefill(k)[0]).toEqual({ product_id: 'raggi-jaggi', need: 30_040, grams: 25_950 });
+    const rows = prefill(k);
+    expect(rows[0]).toEqual({ product_id: 'raggi-jaggi', need: 30_040, grams: 0 });
+    expect(rows.filter((r) => r.grams > 0)).toEqual([]);
   });
 
   it('has nothing to cook once everything is covered', () => {

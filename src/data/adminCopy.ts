@@ -763,7 +763,7 @@ export const adminCopy = {
     ifYouDelete: 'If you delete it',
     checking: 'Working it out…',
     previewFailed: "Couldn't work out what this does. You can still go ahead.",
-    pickSomething: 'Roll an amount up from 0 to log it.',
+    pickSomething: 'Tap Add on what you cooked and set how much.',
     logIt: 'Log it',
     logging: 'Logging…',
     // Over 10 kg in one batch.

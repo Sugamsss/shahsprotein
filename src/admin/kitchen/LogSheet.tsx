@@ -10,20 +10,19 @@ import { formatWeight } from '../format';
 import { productName } from '../orders/model';
 import type { BatchInput, Kitchen, KitchenEffects } from '../types';
 import { MadeOn } from './MadeOn';
-import { BIG_BATCH, WHEEL_MAX, inSiteOrder, packedCount, prefill, type LogRow } from './model';
+import { BIG_BATCH, inSiteOrder, packedCount, prefill, type LogRow } from './model';
 import { Outcomes } from './Outcomes';
 import { AmountWheel } from './Wheel';
 
 const copy = adminCopy.kitchen;
 
-// Log cooking (A+ one step, design/pranjali-action-*.png "the sheet"): every product
-// that needs cooking is already there at exactly what's needed, so the usual log is
-// two taps (Log cooking, Log it). A pill opens that row's kg + g wheels; a row rolled
-// to 0 dims to "not made" with "+ Add". Products nobody waits on can be added (spare
-// cooking). The sentences under it are the server's preview of exactly this log.
-
-/** A product added with nothing waiting on it starts at half a kilo. */
-const ADDED_START = 500;
+// Log cooking (design/pranjali-action-*.png "the sheet"): every product that needs
+// cooking is listed with what it needs as a guide, and every amount starts at 0, "not
+// made". Nothing is logged until the cook taps "+ Add" on what she really cooked and
+// rolls the kg + g wheels to the amount (the need never fills itself in: that once
+// logged food nobody had cooked). A row rolled back to 0 dims to "not made" again.
+// Products nobody waits on can be added too (spare cooking), also starting at 0. The
+// sentences under it are the server's preview of exactly this log.
 
 const productOf = (id: string) => productsData.find((p) => p.id === id);
 
@@ -92,11 +91,10 @@ export const LogSheet: React.FC<{
     setError('');
     setRows((list) => list.map((r) => (r.product_id === productId ? { ...r, grams } : r)));
   };
+  // Choosing a product opens its wheels at 0: the amount is the cook's to roll.
   const add = (productId: string) => {
-    const row = rows.find((r) => r.product_id === productId);
-    if (row) setGrams(productId, Math.min(row.need, WHEEL_MAX) || ADDED_START);
-    else {
-      setRows((list) => inSiteOrder([...list, { product_id: productId, need: 0, grams: ADDED_START }]));
+    if (!rows.some((r) => r.product_id === productId)) {
+      setRows((list) => inSiteOrder([...list, { product_id: productId, need: 0, grams: 0 }]));
       setBig(null);
     }
     setOpen(productId);
@@ -145,7 +143,7 @@ export const LogSheet: React.FC<{
               // Each part stays whole ("Need 2 kg" never breaks); a narrow row wraps between them.
               const sub = (row.need
                 ? [copy.need(formatWeight(row.need)), row.grams === 0 && copy.notMade]
-                : [copy.nothingNeeded, copy.goesSpare]).filter(Boolean) as string[];
+                : [copy.nothingNeeded, row.grams === 0 ? copy.notMade : copy.goesSpare]).filter(Boolean) as string[];
               return (
                 <li key={row.product_id} className={`adm-kx-row${off ? ' is-off' : ''}${isOpen ? ' is-open' : ''}`}>
                   <div className="adm-kx-row__head">

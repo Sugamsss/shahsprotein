@@ -17,15 +17,19 @@ const rank = (productId: string) => {
 export const inSiteOrder = <T extends { product_id: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => rank(a.product_id) - rank(b.product_id));
 
-/** What to cook, product by product in the site's order: the headline and the sheet's pre-fill. */
+/** What to cook, product by product in the site's order: the headline and the sheet's guide amounts. */
 export const toCook = (kitchen: Kitchen): { product_id: string; grams: number }[] =>
   inSiteOrder(kitchen.products).filter((p) => p.to_cook > 0).map((p) => ({ product_id: p.product_id, grams: p.to_cook }));
 
 export interface LogRow { product_id: string; need: number; grams: number }
 
-/** What Log cooking opens with: every product to cook, at exactly its need. */
+/**
+ * What Log cooking opens with: every product to cook is listed with its need as a guide,
+ * and nothing is made until the cook says so (grams 0). Logging what was merely needed,
+ * not what was cooked, put food on orders that had none (2026-09-30).
+ */
 export const prefill = (kitchen: Kitchen): LogRow[] =>
-  toCook(kitchen).map((c) => ({ product_id: c.product_id, need: c.grams, grams: Math.min(c.grams, WHEEL_MAX) }));
+  toCook(kitchen).map((c) => ({ product_id: c.product_id, need: c.grams, grams: 0 }));
 
 /** Distinct orders waiting on the kitchen. */
 export const ordersWaiting = (kitchen: Kitchen): number =>
@@ -98,8 +102,6 @@ export const spareWarnings = (kitchen: Kitchen): { product_id: string; batch: Sp
 export const GRAM_STEP = 50;
 /** The kg wheel's top: 25 kg 950 g is the most one row can log. */
 export const KG_MAX = 25;
-/** The most the wheels show, 25 kg 950 g: a bigger need pre-fills this, so the pill and the wheel agree. */
-export const WHEEL_MAX = KG_MAX * 1000 + 1000 - 50;
 /** Bigger than this in one batch asks first ("30 kg of Muesli? That's a lot, just checking"). */
 export const BIG_BATCH = 10_000;
 
