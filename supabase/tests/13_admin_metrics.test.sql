@@ -85,7 +85,7 @@ select is(
    from jsonb_each(current_setting('test.empty')::jsonb -> 'periods') p),
   (select jsonb_object_agg(k, jsonb_build_object(
       'totals', '{"orders":0,"packs":0,"grams":0,"sales":0,"with_total":0,"without_total":0,"paid_of_sales":0,
-                  "samples":{"orders":0,"packs":0},
+                  "samples":{"orders":0,"packs":0,"free_orders":0},
                   "came_in":{"amount":0,"payments":0,"without_amount":0,
                              "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
       'previous', null, 'products', '[]'::jsonb, 'chart_previous', null))
@@ -206,10 +206,10 @@ $$;
 select is(
   pg_temp.period('today') -> 'totals',
   '{"orders":2,"packs":3,"grams":1000,"sales":500,"with_total":1,"without_total":1,"paid_of_sales":500,
-    "samples":{"orders":2,"packs":3},
+    "samples":{"orders":2,"packs":3,"free_orders":1},
     "came_in":{"amount":500,"payments":3,"without_amount":1,
                "by_method":{"upi":300,"cash":200,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
-  'today: real orders by India time; samples on their own; cancelled and free sample orders out; part payments each count'
+  'today: real orders by India time; samples on their own (one free sample order, one paid order with a taster); cancelled and free sample orders out; part payments each count'
 );
 
 select is(
@@ -217,7 +217,7 @@ select is(
   jsonb_build_object(
     'starts_at', pg_temp.ist('2027-03-30 00:00'), 'ends_at', pg_temp.ist('2027-03-30 14:00'),
     'totals', '{"orders":1,"packs":2,"grams":500,"sales":400,"with_total":1,"without_total":0,"paid_of_sales":0,
-                "samples":{"orders":0,"packs":0},
+                "samples":{"orders":0,"packs":0,"free_orders":0},
                 "came_in":{"amount":0,"payments":0,"without_amount":0,
                            "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb),
   'today: compared with yesterday up to 14:00, so the order and payment after it are left out (paid_of_sales too)'

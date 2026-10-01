@@ -2,8 +2,8 @@
 -- Home's metrics block: orders, packs, sales, money in and per-product packs
 -- for Today, Week, Month, Year and Lifetime, each against the same moment in
 -- the previous period, with a chart series per period. Admin only, read only,
--- add only: nothing existing changes. temp/home-metrics/contract.md has the
--- shape and every definition; this file builds exactly that.
+-- add only: nothing existing changes. supabase/README.md has the shape and
+-- the definitions; this file builds exactly that.
 --
 -- The definitions are get_admin_totals()'s weeks, so the two never disagree:
 --   real order   not cancelled and not a free sample order, any stage, by
@@ -12,7 +12,8 @@
 --   sales        orders.amount on real orders that have one (₹, per order,
 --                never split by product).
 --   samples      orders carrying a sample line and sample packs, on any order
---                that isn't cancelled.
+--                that isn't cancelled; free_orders is the free sample orders
+--                among them (the ones left out of orders and sales).
 --   came in      every payment on an order that isn't cancelled, by its own
 --                paid_at, split by method.
 --   paid of sales payments on the window's real orders that have a total,
@@ -108,7 +109,8 @@ as $$
       where ro.amount is not null
     ),
     'samples', (
-      select jsonb_build_object('orders', count(distinct o.id), 'packs', coalesce(sum(l.quantity), 0))
+      select jsonb_build_object('orders', count(distinct o.id), 'packs', coalesce(sum(l.quantity), 0),
+        'free_orders', count(distinct o.id) filter (where o.free_sample))
       from public.orders o
       join public.order_lines l on l.order_id = o.id and l.size = 'sample'
       where o.status <> 'cancelled' and o.created_at >= p_from and o.created_at < p_to

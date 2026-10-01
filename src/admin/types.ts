@@ -379,8 +379,11 @@ export interface MetricsTotals {
    * "₹X of ₹sales paid". Never compare it with came_in, which is money by payment date.
    */
   paid_of_sales: number;
-  /** Orders carrying a sample (free sample orders too) and sample packs. Never in orders, packs or ₹. */
-  samples: { orders: number; packs: number };
+  /**
+   * Orders carrying a sample (paid orders with a taster too) and sample packs, which are never in packs.
+   * free_orders: the free sample orders among them, the only ones left out of orders and ₹.
+   */
+  samples: { orders: number; packs: number; free_orders: number };
   /** Payments by when each came in; by_method adds up to amount. without_amount: paid with no total (adds ₹0). */
   came_in: { amount: number; payments: number; without_amount: number; by_method: TotalsByMethod };
 }
