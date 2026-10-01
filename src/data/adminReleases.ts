@@ -26,7 +26,7 @@ export const adminReleases: AdminRelease[] = [
     for: ['admin', 'cook'],
     kind: 'new',
     title: 'See how it’s going',
-    body: 'Home shows sales, money in, orders and packs for today, this week, month, year or since we started, against the same time before. Tap a bar for that day. Profit is an estimate at 25% of sales.',
+    body: 'Home shows sales, money in, orders and packs for today, this week, month, year or since we started, against the same time before. Tap the chart for a closer look. Profit is an estimate at 25% of sales.',
   },
   {
     id: '2026-09-29-kitchen-stages',
