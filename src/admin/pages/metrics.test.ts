@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Metrics, MetricsBucket, MetricsPeriod, MetricsTotals } from '../types';
 import {
   barChart, barReadout, changeLine, changeOf, chipChange, hourReadout, lineChart, nice, noCompareLine, notes, productRows,
-  profit, profitLabel, rangeLine, sentence,
+  profit, profitLabel, rangeLine, sentence, spokenSummary, waitingOnTotals,
 } from './metrics';
 
 // Home's "How it's going" block: the words and maths the browser adds to get_admin_metrics().
@@ -12,7 +12,7 @@ const FIRST = '2026-09-23T10:00:00+05:30';
 
 const totals = (t: Partial<MetricsTotals> = {}): MetricsTotals => ({
   orders: 0, packs: 0, grams: 0, sales: 0, with_total: 0, without_total: 0, paid_of_sales: 0,
-  samples: { orders: 0, packs: 0 },
+  samples: { orders: 0, packs: 0, free_orders: 0 },
   came_in: { amount: 0, payments: 0, without_amount: 0, by_method: { upi: 0, cash: 0, bank: 0, other: 0, not_recorded: 0 } },
   ...t,
 });
@@ -30,6 +30,8 @@ const metrics = (asOf: string, first: string | null, periods: Partial<Metrics['p
   first_order_at: first,
   periods: { today: flat('hour'), week: flat('day'), month: flat('day'), year: flat('month'), lifetime: flat('week'), ...periods },
 });
+/** A non-breaking space, written so the tests read. */
+const NB = '\u00a0';
 const days = (from: string, n: number, sales: (i: number) => number) => Array.from({ length: n }, (_, i) => {
   const d = new Date(Date.parse(`${from}T00:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10);
   return bucket(d, { sales: sales(i) });
@@ -52,17 +54,44 @@ describe('change: the contract helper, as kinds', () => {
 
 describe('the change line under the sentence', () => {
   it('says the % against the same moment, and the before number when the % is 100 or more', () => {
-    expect(changeLine('today', 'sales', changeOf(1190, 1450)!, 1450)).toEqual({ text: 'Down 18% vs this time yesterday', icon: 'down', up: false });
-    expect(changeLine('week', 'packs', changeOf(30, 13)!, 13)).toEqual({ text: 'Up 131% vs this time last week (from 13)', icon: 'up', up: true });
-    expect(changeLine('week', 'sales', changeOf(8090, 3650)!, 3650).text).toBe('Up 122% vs this time last week (from ₹3,650)');
+    expect(changeLine('today', 'sales', changeOf(1190, 1450)!, 1450)).toEqual({ text: 'Down 18% vs this time yesterday', from: null, note: null, icon: 'down', up: false });
+    expect(changeLine('week', 'packs', changeOf(30, 13)!, 13)).toMatchObject({ text: 'Up 131% vs this time last week', from: '(from 13)', icon: 'up', up: true });
+    expect(changeLine('week', 'sales', changeOf(8090, 3650)!, 3650).from).toBe('(from ₹3,650)');
     expect(changeLine('month', 'sales', changeOf(1001, 1000)!, 1000).text).toBe('Up under 1% vs this time last month');
   });
 
   it('has no arrow when nothing moved, and is never glum on an empty morning', () => {
-    expect(changeLine('today', 'orders', changeOf(3, 3)!, 3)).toEqual({ text: 'Same as this time yesterday', icon: null, up: false });
-    expect(changeLine('today', 'sales', changeOf(0, 0)!, 0)).toEqual({ text: 'Nothing by this time yesterday either', icon: null, up: false });
-    expect(changeLine('today', 'sales', changeOf(0, 500)!, 500)).toEqual({ text: 'Yesterday had ₹500 by now.', icon: null, up: false });
-    expect(changeLine('year', 'orders', changeOf(2, 0)!, 0)).toEqual({ text: 'New: none by this time last year', icon: 'up', up: true });
+    expect(changeLine('today', 'orders', changeOf(3, 3)!, 3)).toMatchObject({ text: 'Same as this time yesterday', icon: null, up: false });
+    expect(changeLine('today', 'sales', changeOf(0, 0)!, 0)).toMatchObject({ text: 'Nothing by this time yesterday either', icon: null });
+    expect(changeLine('today', 'sales', changeOf(0, 500)!, 500)).toMatchObject({ text: 'Yesterday had ₹500 by now.', icon: null });
+    expect(changeLine('year', 'orders', changeOf(2, 0)!, 0)).toMatchObject({ text: 'New: none by this time last year', icon: 'up', up: true });
+  });
+});
+
+describe('sales down while orders still need a total', () => {
+  // Website orders arrive with no total; yesterday's have had a day to get theirs.
+  const t = totals({ orders: 4, sales: 400, with_total: 1, without_total: 3 });
+
+  it('says so on the change line, keeping the %, and not again in the small print', () => {
+    const change = changeOf(400, 1400)!;
+    expect(waitingOnTotals('sales', change, t)).toBe(3);
+    expect(changeLine('today', 'sales', change, 1400, 3)).toMatchObject({ text: 'Down 71% vs this time yesterday', note: '3 orders have no total yet' });
+    expect(notes('sales', t, change)).toEqual([]);
+    // "none yet" gives the note its place instead of the full stop.
+    expect(changeLine('today', 'sales', changeOf(0, 1400)!, 1400, 3).text).toBe('Yesterday had ₹1,400 by now');
+  });
+
+  it('leaves it in the small print when sales are up, or for a chip totals can\'t skew', () => {
+    expect(waitingOnTotals('sales', changeOf(400, 300), t)).toBe(0);
+    expect(waitingOnTotals('orders', changeOf(4, 5), t)).toBe(0);
+    expect(notes('sales', t, changeOf(400, 300))).toEqual(['3 orders without a total']);
+  });
+
+  it('is said aloud too', () => {
+    const m = metrics('2026-10-22T11:00:00+05:30', FIRST, {
+      today: period({ totals: t, previous: { starts_at: '', ends_at: '', totals: totals({ sales: 1400 }) }, chart: flat('hour').chart }),
+    });
+    expect(spokenSummary('today', 'sales', m)).toBe('₹400 in sales today, down 71% vs this time yesterday, 3 orders have no total yet.');
   });
 });
 
@@ -102,8 +131,11 @@ describe('no comparison: said once, with the day comparisons start', () => {
   it('a period that compares has no such line; Lifetime always has one', () => {
     const compared = period({ starts_at: '2026-10-22T00:00:00+05:30', previous: { starts_at: '', ends_at: '', totals: totals() }, chart: flat('hour').chart });
     expect(noCompareLine('today', metrics('2026-10-22T16:10:00+05:30', FIRST, { today: compared }))).toBeNull();
-    expect(noCompareLine('lifetime', metrics('2026-10-22T16:10:00+05:30', FIRST))).toBe('Everything since the first order on 23 Sep.');
-    expect(noCompareLine('lifetime', metrics('2027-03-18T16:10:00+05:30', FIRST))).toBe('Everything since the first order on 23 Sep 2026.');
+    expect(noCompareLine('lifetime', metrics('2026-10-22T16:10:00+05:30', FIRST))).toBe(`Everything since the first order on 23${NB}Sep.`);
+    // The date never splits over two lines.
+    expect(noCompareLine('lifetime', metrics('2027-03-18T16:10:00+05:30', FIRST))).toBe(`Everything since the first order on 23${NB}Sep${NB}2026.`);
+    expect(spokenSummary('lifetime', 'orders', metrics('2026-10-22T16:10:00+05:30', FIRST)))
+      .toBe('No orders yet since we started. Everything since the first order on 23 Sep.');
     expect(noCompareLine('lifetime', metrics('2026-10-22T16:10:00+05:30', null))).toBe('Your first order will show here.');
   });
 });
@@ -126,14 +158,25 @@ describe('the range line', () => {
 });
 
 describe('the sentence and its small print', () => {
+  const read = (s: { figure: string; rest: string }) => s.figure + s.rest;
   it('names nothing as nothing, but Came in always shows its ₹', () => {
-    expect(sentence('today', 'sales', totals())).toMatchObject({ figure: 'No sales', rest: 'yet today', money: false });
-    expect(sentence('today', 'came_in', totals())).toMatchObject({ figure: '₹0', rest: 'came in today', money: true });
-    expect(sentence('week', 'orders', totals({ orders: 1 }))).toMatchObject({ figure: '1 order', rest: 'this week' });
+    expect(sentence('today', 'sales', totals())).toMatchObject({ figure: `No${NB}sales`, rest: `${NB}yet today`, money: false, none: true });
+    expect(sentence('today', 'came_in', totals())).toMatchObject({ figure: '₹0', money: true, none: false });
+    expect(read(sentence('week', 'orders', totals({ orders: 1 })))).toBe(`1${NB}order this week`);
   });
-  it('Packs leads with the weight; Came in only notes payments with no amount', () => {
-    const t = totals({ packs: 6, grams: 4500, without_total: 1, samples: { orders: 2, packs: 2 } });
-    expect(notes('packs', t)).toEqual(['4½ kg', '1 order without a total', 'Not counting 2 free samples']);
+  it('can only break before the period\'s words', () => {
+    expect(read(sentence('week', 'came_in', totals({ came_in: { ...totals().came_in, amount: 4765 } })))).toBe(`₹4,765${NB}came${NB}in this week`);
+    expect(read(sentence('year', 'sales', totals({ sales: 70_060 })))).toBe(`₹70,060${NB}in${NB}sales this year`);
+  });
+  it('before the first order, Lifetime has no "since we started"', () => {
+    expect(read(sentence('lifetime', 'sales', totals(), false))).toBe(`No${NB}sales${NB}yet`);
+  });
+  it('notes only what was left out: free sample orders from orders and ₹, sample packs from packs', () => {
+    // One free sample order (2 packs) and one paid order with a 1-pack taster.
+    const t = totals({ orders: 3, packs: 6, grams: 4500, without_total: 1, samples: { orders: 2, packs: 3, free_orders: 1 } });
+    expect(notes('sales', t)).toEqual(['1 order without a total', 'Not counting 1 free sample']);
+    expect(notes('packs', t)).toEqual(['4½ kg', '1 order without a total', 'Not counting 3 sample packs']);
+    expect(notes('orders', { ...t, samples: { orders: 1, packs: 1, free_orders: 0 } })).toEqual(['1 order without a total']);
     expect(notes('came_in', { ...t, came_in: { ...t.came_in, without_amount: 1 } })).toEqual(['1 payment had no amount']);
   });
   it('profit is one share of sales, and its label reads that share', () => {
@@ -150,9 +193,10 @@ describe('the chart scale', () => {
 
 describe("Today's running total", () => {
   const hours = (sales: Record<number, number>) => Array.from({ length: 24 }, (_, h) => bucket('2026-10-22', { hour: h, sales: sales[h] ?? 0 }));
+  // Yesterday's 4 pm hour had ₹300, all of it after 4:30, so by now it was still ₹1,450.
   const today = period({
     previous: { starts_at: '', ends_at: '', totals: totals({ sales: 1450 }) },
-    chart: { grain: 'hour', now_index: 16, current: hours({ 9: 640, 13: 550 }), previous: hours({ 8: 520, 14: 930, 18: 1000 }) },
+    chart: { grain: 'hour', now_index: 16, current: hours({ 9: 640, 13: 550 }), previous: hours({ 8: 520, 14: 930, 16: 300, 18: 1000 }) },
   });
   const chart = lineChart(today, 'sales', '2026-10-22T16:30:00+05:30');
 
@@ -160,9 +204,11 @@ describe("Today's running total", () => {
     expect(chart.cur[10]).toBe(640);
     expect(chart.total).toBe(1190);
     expect(chart.nowX).toBe(16.5);
+    // The hollow dot is the exact "by now" the words say, not a guess within the hour.
     expect(chart.ghostAtNow).toBe(1450);
     // Room for yesterday's whole day, not only up to now.
-    expect(chart.top).toBe(2500);
+    expect(chart.top).toBe(3000);
+    expect(chart.empty).toBe(false);
     // 6 pm is within 3.4 hours of now, so it gives way.
     expect(chart.ticks.map((t) => t.label)).toEqual(['12 am', '6 am', '12 pm', 'Now']);
   });
@@ -202,6 +248,20 @@ describe('bars', () => {
     expect(c.startedIn).toBe('We started in Sep');
     expect(c.ghost).toBeNull();
     expect(barReadout('year', c, 2, 'sales')).toMatchObject({ when: 'March 2026', dim: 'Before we started' });
+  });
+
+  it('an empty chart has no top value to show', () => {
+    const c = barChart('week', metrics('2026-10-22T16:10:00+05:30', null, { week: period({ chart: { grain: 'day', now_index: 3, current: days('2026-10-19', 7, () => 0), previous: null } }) }), 'sales');
+    expect(c.empty).toBe(true);
+  });
+
+  it('lifetime by month says the year on the first month and every January with room for it', () => {
+    // Oct 2024 to Oct 2026: Jan 25 is three months in, too close to "Oct 24" to fit.
+    const short = Array.from({ length: 25 }, (_, i) => bucket(new Date(Date.UTC(2024, 9 + i, 1)).toISOString().slice(0, 10)));
+    const c = barChart('lifetime', metrics('2026-10-22T16:10:00+05:30', '2024-10-31T10:00:00+05:30', {
+      lifetime: period({ chart: { grain: 'month', now_index: 24, current: short, previous: null } }),
+    }), 'orders');
+    expect(c.ticks.map((t) => t.label)).toEqual(['Oct 24', 'Jan 26', 'Oct']);
   });
 
   it('lifetime by week labels every 4th Monday and now', () => {

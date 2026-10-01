@@ -1076,7 +1076,9 @@ export const adminCopy = {
       same: (by: string) => `Same as ${by}`,
       fresh: (by: string) => `New: none by ${by}`,
       bothZero: (by: string) => `Nothing by ${by} either`,
-      noneYet: (before: string, value: string) => `${before} had ${value} by now.`,
+      noneYet: (before: string, value: string) => `${before} had ${value} by now`,
+      /** Sales down while orders wait for a total: said on the change line itself, after " · ". */
+      noTotalYet: (n: number) => `${n} ${n === 1 ? 'order has' : 'orders have'} no total yet`,
       chipFrom: (before: string) => `from ${before}`,
       chipSame: 'Same',
       chipNew: 'New',
@@ -1107,6 +1109,7 @@ export const adminCopy = {
       // Small print under the change line, joined with " · ".
       withoutTotal: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} without a total`,
       notCountingSamples: (n: number) => `Not counting ${n} free ${n === 1 ? 'sample' : 'samples'}`,
+      notCountingSamplePacks: (n: number) => `Not counting ${n} sample ${n === 1 ? 'pack' : 'packs'}`,
       noAmount: (n: number) => `${n} ${n === 1 ? 'payment' : 'payments'} had no amount`,
       byMethod: 'How it came in',
 
@@ -1135,6 +1138,8 @@ export const adminCopy = {
       grainLower: { hour: 'by hour', day: 'by day', week: 'by week', month: 'by month' },
       sliderPick: (label: string, value: string, before: string | null) => `${label}: ${value}.${before ? ` ${before}.` : ''}`,
       sliderPeriod: (sentence: string, change: string) => `${sentence}${change ? `, ${change}` : ''}.`,
+      /** With a quiet line, which is a sentence of its own. */
+      sliderPeriodQuiet: (sentence: string, line: string) => `${sentence}. ${line}`,
 
       // Profit and avg order: quiet figures.
       /** "Profit, est. at 25%": the share is PROFIT_SHARE in pages/metrics.ts, never written here. */

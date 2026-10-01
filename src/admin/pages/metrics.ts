@@ -25,10 +25,15 @@ export const isMoney = (metric: MetricKey) => metric === 'sales' || metric === '
 export const totalOf = (t: MetricsTotals, metric: MetricKey): number => (metric === 'came_in' ? t.came_in.amount : t[metric]);
 const bucketOf = (b: MetricsBucket, metric: MetricKey): number => b[metric];
 
+/** Spaces that never break, so "₹4,765 came in" or "31 Oct 2024" stays on one line. */
+const keep = (s: string) => s.replace(/ /g, '\u00a0');
+
 /** A figure as it reads: "₹1,190", "1,254". */
 export const showValue = (metric: MetricKey, n: number) => (isMoney(metric) ? formatMoney(n) : n.toLocaleString('en-IN'));
 /** A chip's figure: lakhs from ₹10,00,000, so it fits. Pair with showValue for its name. */
 export const chipValue = (metric: MetricKey, n: number) => (isMoney(metric) && n >= 1_000_000 ? formatMoneyShort(n) : showValue(metric, n));
+/** With its unit when it's a count: "₹1,890", "5 packs". */
+export const withUnit = (metric: MetricKey, n: number) => (metric === 'orders' || metric === 'packs' ? copy.count(n, metric) : showValue(metric, n));
 const axisValue = (metric: MetricKey, n: number) => (isMoney(metric) ? formatMoneyAxis(n) : n.toLocaleString('en-IN'));
 
 export const profit = (sales: number) => Math.round(sales * PROFIT_SHARE);
@@ -56,20 +61,37 @@ export const changeOf = (now: number, before: number | null): Change | null => {
   return { kind: now > before ? 'up' : 'down', pct, big: pct >= 100 };
 };
 
-export interface ChangeLine { text: string; icon: 'up' | 'down' | null; up: boolean }
+/**
+ * Sales fell, but some orders have no total yet (website orders always arrive without one),
+ * so the fall may only be totals still to type. Then the change line says so itself.
+ */
+export const waitingOnTotals = (metric: MetricKey, change: Change | null, t: MetricsTotals): number =>
+  (metric === 'sales' && (change?.kind === 'down' || change?.kind === 'none-yet') ? t.without_total : 0);
+
+export interface ChangeLine {
+  text: string;
+  /** "(from ₹480)" at 100% or more; quieter than the rest. */
+  from: string | null;
+  /** "2 orders have no total yet", after " · ". */
+  note: string | null;
+  icon: 'up' | 'down' | null;
+  up: boolean;
+}
 
 /** Under the sentence: "Down 18% vs this time yesterday". It's green only when up. */
-export const changeLine = (key: ComparableKey, metric: MetricKey, change: Change, before: number): ChangeLine => {
+export const changeLine = (key: ComparableKey, metric: MetricKey, change: Change, before: number, waiting = 0): ChangeLine => {
+  const note = waiting > 0 ? copy.noTotalYet(waiting) : null;
+  const line = (text: string, icon: ChangeLine['icon'] = null, from: string | null = null) => ({ text, from, note, icon, up: icon === 'up' });
   switch (change.kind) {
     case 'up':
-    case 'down': {
-      const words = (change.kind === 'up' ? copy.up : copy.down)(change.pct, copy.vs[key]);
-      return { text: change.big ? `${words} ${copy.from(showValue(metric, before))}` : words, icon: change.kind, up: change.kind === 'up' };
-    }
-    case 'same': return { text: copy.same(copy.by[key]), icon: null, up: false };
-    case 'new': return { text: copy.fresh(copy.by[key]), icon: 'up', up: true };
-    case 'both-zero': return { text: copy.bothZero(copy.by[key]), icon: null, up: false };
-    case 'none-yet': return { text: copy.noneYet(copy.before[key], showValue(metric, before)), icon: null, up: false };
+    case 'down':
+      return line((change.kind === 'up' ? copy.up : copy.down)(change.pct, copy.vs[key]), change.kind,
+        change.big ? copy.from(showValue(metric, before)) : null);
+    case 'same': return line(copy.same(copy.by[key]));
+    case 'new': return line(copy.fresh(copy.by[key]), 'up');
+    case 'both-zero': return line(copy.bothZero(copy.by[key]));
+    // A sentence of its own; the note follows it instead of the full stop.
+    case 'none-yet': return line(`${copy.noneYet(copy.before[key], showValue(metric, before))}${note ? '' : '.'}`);
   }
 };
 
@@ -147,7 +169,7 @@ export const noCompareLine = (key: MetricsPeriodKey, m: Metrics): string | null 
   const period = m.periods[key];
   const first = m.first_order_at;
   const nowYear = istDateValue(m.as_of).slice(0, 4);
-  if (key === 'lifetime') return first ? copy.lifetimeSince(dayMonth(istDateValue(first), nowYear)) : copy.lifetimeEmpty;
+  if (key === 'lifetime') return first ? copy.lifetimeSince(keep(dayMonth(istDateValue(first), nowYear))) : copy.lifetimeEmpty;
   if (period.previous) return null;
   // With no orders yet, the first one could be now.
   const firstDay = istDateValue(first ?? m.as_of);
@@ -168,16 +190,26 @@ export const noCompareLine = (key: MetricsPeriodKey, m: Metrics): string | null 
   }
 };
 
+/**
+ * The figure (bold) and the rest, drawn with no space between: rest starts with its own.
+ * Only the space before the period's words can break, so it reads "₹70,060 in sales /
+ * this year", never "₹70,060 in / sales this year" or "₹4,765 came / in".
+ */
 export interface Sentence { figure: string; rest: string; money: boolean; none: boolean }
 
-/** "₹1,190" + "in sales today"; "No sales" + "yet today". Came in at 0 still says "₹0 came in today". */
-export const sentence = (key: MetricsPeriodKey, metric: MetricKey, t: MetricsTotals): Sentence => {
+/**
+ * "₹1,190" + " in sales today"; "No sales" + " yet today". Came in at 0 still says "₹0 came
+ * in today". Lifetime before the first order has no "since we started": "No sales yet".
+ */
+export const sentence = (key: MetricsPeriodKey, metric: MetricKey, t: MetricsTotals, started = true): Sentence => {
   const n = totalOf(t, metric);
-  const when = copy.when[key];
-  if (metric === 'came_in') return { figure: formatMoney(n), rest: `${copy.moneyWords.came_in} ${when}`, money: true, none: false };
-  if (n === 0) return { figure: copy.none[metric], rest: `${copy.yet} ${when}`, money: false, none: true };
-  if (metric === 'sales') return { figure: formatMoney(n), rest: `${copy.moneyWords.sales} ${when}`, money: true, none: false };
-  return { figure: copy.count(n, metric), rest: when, money: false, none: false };
+  const when = key === 'lifetime' && !started ? '' : ` ${copy.when[key]}`;
+  const make = (figure: string, words: string, money: boolean, none = false): Sentence =>
+    ({ figure: keep(figure), rest: `${words ? `\u00a0${keep(words)}` : ''}${when}`, money, none });
+  if (metric === 'came_in') return make(formatMoney(n), copy.moneyWords.came_in, true);
+  if (n === 0) return make(copy.none[metric], copy.yet, false, true);
+  if (metric === 'sales') return make(formatMoney(n), copy.moneyWords.sales, true);
+  return make(copy.count(n, metric), '', false);
 };
 
 /** "₹2,440" + "in sales", "3" + "orders": a figure and its words, for the readout. */
@@ -186,29 +218,40 @@ export const figureParts = (metric: MetricKey, n: number): { figure: string; wor
     ? { figure: n.toLocaleString('en-IN'), words: copy.units[metric](n) }
     : { figure: formatMoney(n), words: copy.moneyWords[metric] });
 
-/** While it loads, the sentence keeps its words around a pulse: "▭ in sales today". */
+/** While it loads, the sentence keeps its words after a pulse: "▭ in sales today" (drawn right after it). */
 export const loadingWords = (key: MetricsPeriodKey, metric: MetricKey) =>
-  `${metric === 'orders' || metric === 'packs' ? metric : copy.moneyWords[metric]} ${copy.when[key]}`;
+  `\u00a0${keep(metric === 'orders' || metric === 'packs' ? metric : copy.moneyWords[metric])} ${copy.when[key]}`;
 
 /** The sentence and its change, said when someone picks a period or a chip, and as the chart's value. */
 export const spokenSummary = (key: MetricsPeriodKey, metric: MetricKey, m: Metrics): string => {
   const p = m.periods[key];
-  const s = sentence(key, metric, p.totals);
+  const s = sentence(key, metric, p.totals, m.first_order_at !== null);
+  const said = `${s.figure}${s.rest}`.replace(/\u00a0/g, ' ');
   const now = totalOf(p.totals, metric);
   const change = key !== 'lifetime' && p.previous ? changeOf(now, totalOf(p.previous.totals, metric)) : null;
-  const said = change && key !== 'lifetime' && p.previous
-    ? chipChange(key, metric, change, totalOf(p.previous.totals, metric))?.spoken ?? copy.spokenBothZero(copy.by[key])
-    : noCompareLine(key, m)?.replace(/\.$/, '') ?? '';
-  return copy.sliderPeriod(`${s.figure} ${s.rest}`, said);
+  if (!change || key === 'lifetime' || !p.previous) {
+    const quiet = noCompareLine(key, m);
+    return quiet ? copy.sliderPeriodQuiet(said, quiet.replace(/\u00a0/g, ' ')) : copy.sliderPeriod(said, '');
+  }
+  const spoken = chipChange(key, metric, change, totalOf(p.previous.totals, metric))?.spoken ?? copy.spokenBothZero(copy.by[key]);
+  const waiting = waitingOnTotals(metric, change, p.totals);
+  return copy.sliderPeriod(said, waiting ? `${spoken}, ${copy.noTotalYet(waiting)}` : spoken);
 };
 
-/** The small print under the change line. */
-export const notes = (metric: MetricKey, t: MetricsTotals): string[] => {
+/**
+ * The small print under the change line. Each says what was actually left out: free sample
+ * orders from orders and ₹, sample packs from packs (a paid order's taster counts as an
+ * order but never as a pack). "Without a total" moves up to the change line when it's why
+ * sales look down (waitingOnTotals), so it's never said twice.
+ */
+export const notes = (metric: MetricKey, t: MetricsTotals, change: Change | null = null): string[] => {
   if (metric === 'came_in') return t.came_in.without_amount ? [copy.noAmount(t.came_in.without_amount)] : [];
   return [
     metric === 'packs' && t.packs > 0 && formatWeight(t.grams),
-    t.without_total > 0 && copy.withoutTotal(t.without_total),
-    t.samples.orders > 0 && copy.notCountingSamples(t.samples.orders),
+    t.without_total > 0 && !waitingOnTotals(metric, change, t) && copy.withoutTotal(t.without_total),
+    metric === 'packs'
+      ? t.samples.packs > 0 && copy.notCountingSamplePacks(t.samples.packs)
+      : t.samples.free_orders > 0 && copy.notCountingSamples(t.samples.free_orders),
   ].filter((x): x is string => Boolean(x));
 };
 
@@ -243,10 +286,12 @@ export interface LineChart {
   /** Hours since midnight, to the minute. */
   nowX: number;
   total: number;
-  /** Yesterday at nowX, on its dashed line (for the hollow dot). */
+  /** Yesterday by now, exactly as the key and the change line say it (for the hollow dot). */
   ghostAtNow: number | null;
   top: number;
   topLabel: string;
+  /** Nothing to draw: no top label or top line, only the flat line. */
+  empty: boolean;
   line: string;
   area: string;
   ghost: string | null;
@@ -261,8 +306,9 @@ export const lineChart = (p: MetricsPeriod, metric: MetricKey, asOf: string): Li
   const cur = runningTotals(p.chart.current, metric);
   const prev = p.chart.previous ? runningTotals(p.chart.previous, metric) : null;
   const total = cur[nowIndex + 1];
-  const ghostAtNow = prev ? prev[nowIndex] + (prev[nowIndex + 1] - prev[nowIndex]) * (nowX - nowIndex) : null;
-  const top = nice(Math.max(total, prev ? prev[prev.length - 1] : 0));
+  const ghostAtNow = p.previous ? totalOf(p.previous.totals, metric) : null;
+  const max = Math.max(total, prev ? prev[prev.length - 1] : 0, ghostAtNow ?? 0);
+  const top = nice(max);
   const points = cur.slice(0, nowIndex + 1).map((v, h) => `${h} ${yOf(v, top)}`);
   points.push(`${Number(nowX.toFixed(3))} ${yOf(total, top)}`);
   const line = `M${points.join(' L')}`;
@@ -271,12 +317,19 @@ export const lineChart = (p: MetricsPeriod, metric: MetricKey, asOf: string): Li
     .map((h) => ({ label: copy.hours[h / 6], pos: (h / 24) * 100, minor: h % 12 !== 0, align: h === 0 ? 'start' as const : undefined }));
   ticks.push({ label: copy.nowTick, pos: (nowX / 24) * 100, now: true, align: nowX > 22 ? 'end' : undefined });
   return {
-    kind: 'line', n: 24, cur, prev, nowIndex, nowX, total, ghostAtNow, top, topLabel: axisValue(metric, top),
+    kind: 'line', n: 24, cur, prev, nowIndex, nowX, total, ghostAtNow, top, topLabel: axisValue(metric, top), empty: max === 0,
     line,
     area: `${line} L${Number(nowX.toFixed(3))} 100 L0 100 Z`,
     ghost: prev ? `M${prev.map((v, h) => `${h} ${yOf(v, top)}`).join(' L')}` : null,
     ticks,
   };
+};
+
+/** Today's and Week's labels need no data, so they show while it loads; the rest wait for it. */
+export const loadingTicks = (key: MetricsPeriodKey): Tick[] => {
+  if (key === 'today') return copy.hours.map((label, i) => ({ label, pos: i * 25, minor: i % 2 === 1, align: i === 0 ? 'start' as const : undefined }));
+  if (key === 'week') return copy.dayLetters.map((label, i) => ({ label, pos: ((i + 0.5) / 7) * 100 }));
+  return [];
 };
 
 export type SlotState = 'past' | 'now' | 'ahead' | 'before';
@@ -289,6 +342,7 @@ export interface BarChart {
   nowIndex: number;
   top: number;
   topLabel: string;
+  empty: boolean;
   /** Last period as one stepped dashed line over the bars (viewBox 0 0 n 100), or null. */
   ghost: string | null;
   ticks: Tick[];
@@ -317,7 +371,8 @@ export const barChart = (key: MetricsPeriodKey, m: Metrics, metric: MetricKey): 
     const long = grain === 'week' ? copy.weekOf(day) : grain === 'month' ? `${monthName(b.date, 'long')} ${b.date.slice(0, 4)}` : day;
     return { value: bucketOf(b, metric), ghost: ghostOf(i), state, long };
   });
-  const top = nice(Math.max(0, ...slots.map((s) => s.value), ...slots.map((s) => s.ghost ?? 0)));
+  const max = Math.max(0, ...slots.map((s) => s.value), ...slots.map((s) => s.ghost ?? 0));
+  const top = nice(max);
 
   let ghost: string | null = null;
   if (previous) {
@@ -340,6 +395,17 @@ export const barChart = (key: MetricsPeriodKey, m: Metrics, metric: MetricKey): 
       if (i === 0 || isEnd || i === nowIndex) return { text: String(i + 1) };
       return (i + 1) % 5 === 0 && n - 1 - i >= 3 ? { text: String(i + 1), minor: true } : null;
     }
+    if (grain === 'month' && key === 'lifetime') {
+      // Over a year or more, initials can't say which October: the first month and every
+      // January carry the year ("Oct 24", "Jan 25"); a short run adds every third month. A
+      // January too close to the first label or to now gives way, so labels never collide.
+      const month = monthName(b.date, 'short');
+      const room = Math.ceil(n / 5);
+      if (i === 0) return { text: `${month} ${b.date.slice(2, 4)}` };
+      if (b.date.slice(5, 7) === '01' && i >= room && nowIndex - i >= room) return { text: `${month} ${b.date.slice(2, 4)}` };
+      if (i === nowIndex) return { text: month };
+      return n <= 18 && i % 3 === 0 ? { text: month, minor: true } : null;
+    }
     if (grain === 'month') {
       const every = Math.ceil(n / 12);
       return i % every === 0 || i === nowIndex ? { text: monthName(b.date, 'short').charAt(0) } : null;
@@ -359,7 +425,7 @@ export const barChart = (key: MetricsPeriodKey, m: Metrics, metric: MetricKey): 
   });
 
   return {
-    kind: 'bars', n, slots, nowIndex, top, topLabel: axisValue(metric, top), ghost, ticks,
+    kind: 'bars', n, slots, nowIndex, top, topLabel: axisValue(metric, top), empty: max === 0, ghost, ticks,
     grainLabel: key === 'week' ? copy.grain.weekDays : copy.grain[grain === 'hour' ? 'day' : grain],
     startedIn: firstDay && slots.some((s) => s.state === 'before') ? copy.startedIn(monthName(firstDay, 'short')) : null,
   };
