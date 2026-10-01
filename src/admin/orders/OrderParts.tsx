@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, ClipboardPaste, Copy, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Copy, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
@@ -12,7 +12,7 @@ import { useToast } from '../toast';
 import { useUnsavedWork } from '../unsavedWork';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
 import { Code, FromWebsite, Thumb, Via } from './OrderCard';
-import { MOVE_TO_PACKING, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
+import { MOVE_BACK_TO_COOKING, MOVE_TO_PACKING, canMoveBack, isHeld, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
 import { historyDetailText } from './giveText';
 import { PaymentsBlock } from './PaymentsBlock';
 import { usePriceBook } from './usePriceBook';
@@ -53,7 +53,8 @@ const STEPS: Exclude<OrderStatus, 'cancelled'>[] = ['cooking', 'packing', 'ready
 
 const hintOf = (o: Order) => {
   if (o.status === 'cooking') {
-    return copy.hints.cooking(o.kitchen.filter((k) => k.waiting).map((k) => productName(k.product_id)));
+    const waiting = o.kitchen.filter((k) => k.waiting).map((k) => productName(k.product_id));
+    return isHeld(o) ? copy.hints.held(waiting) : copy.hints.cooking(waiting);
   }
   if (o.status === 'delivered') {
     if (o.free_sample) return copy.hints.freeSample;
@@ -421,6 +422,11 @@ export const OrderMenu: React.FC<{
         {o.status === 'cooking' && (
           <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); change(o, MOVE_TO_PACKING); }}>
             <ArrowRight size={18} aria-hidden="true" />{copy.menu.moveToPacking}
+          </button>
+        )}
+        {canMoveBack(o) && (
+          <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); change(o, MOVE_BACK_TO_COOKING); }}>
+            <ArrowLeft size={18} aria-hidden="true" />{copy.menu.moveBack}
           </button>
         )}
         <AdminLink className="adm-menu__item" to={`/admin/orders/${o.code}/edit`}><Pencil size={18} aria-hidden="true" />{copy.menu.edit}</AdminLink>

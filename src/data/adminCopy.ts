@@ -435,12 +435,18 @@ export const adminCopy = {
     notFound: (code: string) => `No order matches “${code}”. Check the code in the chat.`,
     messageSays: (code: string) => `The message says ${code}.`,
     steps: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', delivered: 'Delivered' },
+    /** The quiet label on a held order's card. */
+    held: 'Held in Cooking',
     stepsLabel: 'Status',
     hints: {
       /** "Waiting on the Raggi Jaggi. It moves to Packing by itself once that's cooked." */
       cooking: (waiting: string[]) => (waiting.length
         ? `Waiting on the ${andList(waiting)}. It moves to Packing by itself once ${waiting.length === 1 ? 'that’s' : 'they’re'} cooked.`
         : 'It moves to Packing by itself once it’s all cooked.'),
+      /** A held order: it stays until someone moves it. "Held in Cooking, waiting on the Raggi Jaggi. …" */
+      held: (waiting: string[]) => (waiting.length
+        ? `Held in Cooking, still waiting on the ${andList(waiting)}. It stays here until you move it to Packing.`
+        : 'Held in Cooking. Its food is kept for it. It stays here until you move it to Packing.'),
       packing: 'Cooked. Pack it, then mark it packed.',
       ready: 'Packed. Mark delivered once it reaches them.',
       delivered: 'Delivered. Mark paid when the money comes in.',
@@ -512,7 +518,7 @@ export const adminCopy = {
     } as Partial<Record<string, string>>,
     more: 'More',
     moreLabel: 'More for this order',
-    menu: { moveToPacking: 'Move to Packing', edit: 'Edit order', copy: 'Copy details', cancel: 'Cancel order', delete: 'Delete order' },
+    menu: { moveToPacking: 'Move to Packing', moveBack: 'Move back to Cooking', edit: 'Edit order', copy: 'Copy details', cancel: 'Cancel order', delete: 'Delete order' },
     deleteTitle: 'Delete this order?',
     deleteBody: "It's gone for good and stops counting on Home. To keep a record, cancel it instead.",
     keep: 'Keep it',

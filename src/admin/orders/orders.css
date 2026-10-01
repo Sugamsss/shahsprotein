@@ -121,6 +121,7 @@
 }
 .adm-ocard__extra { grid-area: extra; display: grid; gap: 6px; margin-top: 8px; }
 .adm-ocard__extra:empty { display: none; }
+.adm-ocard__held { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 .adm-ocard__note { display: flex; gap: 6px; overflow: hidden; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-style: italic; font-weight: 500; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .adm-ocard__note svg { flex: 0 0 auto; margin: 1px 6px 0 0; vertical-align: -2px; }

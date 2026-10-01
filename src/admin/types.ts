@@ -91,6 +91,8 @@ export interface Order {
   free_sample: boolean;
   /** Skips the line in the kitchen: fills before the others, never taking food already given. Only matters in Cooking. */
   priority: boolean;
+  /** In Cooking by a person's move back from Packing: never promoted by itself. Absent on a database from before holds: then there's no hold UI. */
+  held?: boolean;
   name: string | null;
   pincode: string | null;
   phone: string | null;

@@ -6,7 +6,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { formatDay, formatMoney, formatWhen } from '../format';
 import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
-import { WAITING_FROM_DAYS, daysInStage, isPartlyCooked, laneOf, lineState, linesFirst, nextOf, pileOf, productName, sizeText, thumbOf } from './model';
+import { WAITING_FROM_DAYS, daysInStage, isHeld, isPartlyCooked, laneOf, lineState, linesFirst, nextOf, pileOf, productName, sizeText, thumbOf } from './model';
 import { paidShare } from './payments';
 
 const copy = adminCopy.orders;
@@ -137,6 +137,7 @@ export const OrderCard: React.FC<{
   const act = (a: CardAction) => () => onAction?.(o, a);
   // Partly cooked: a line whose product is already covered says "✓ ready"; waiting lines stay plain.
   const marks = isPartlyCooked(o);
+  const held = isHeld(o);
   const waited = lane === 'ready' ? daysInStage(o) : 0;
   const chips: React.ReactNode[] = [];
   if (lane === 'cooking' && o.priority) chips.push(<PriorityMark key="!" />);
@@ -188,9 +189,10 @@ export const OrderCard: React.FC<{
           );
         })}
       </ul>
-      {(o.note || (!light && chipRow)) && (
+      {(o.note || held || (!light && chipRow)) && (
         <div className="adm-ocard__extra">
           {!light && chipRow}
+          {held && <span className="adm-ocard__held">{adminCopy.order.held}</span>}
           {o.note && <span className="adm-ocard__note"><StickyNote size={14} aria-hidden="true" />{o.note}</span>}
         </div>
       )}
