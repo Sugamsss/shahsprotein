@@ -11,7 +11,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(26);
+select plan(29);
 
 delete from public.orders;
 delete from public.kitchen_writeoffs;
@@ -38,9 +38,11 @@ create function pg_temp.m(p text) returns jsonb language sql as $$
   select public.admin_metrics_json(pg_temp.ist(p))::jsonb;
 $$;
 
--- Buckets with something in them, keyed by index, so the zeros don't swamp the test.
+-- Buckets with something in them, keyed by index, so the zeros don't swamp
+-- the test: just orders, packs, sales and came in (the splits have their own tests).
 create function pg_temp.busy(p_series jsonb) returns jsonb language sql as $$
-  select coalesce(jsonb_object_agg((b.i - 1)::text, b.v - 'date' - 'hour' order by b.i), '{}'::jsonb)
+  select coalesce(jsonb_object_agg((b.i - 1)::text, jsonb_build_object('orders', b.v -> 'orders',
+      'packs', b.v -> 'packs', 'sales', b.v -> 'sales', 'came_in', b.v -> 'came_in') order by b.i), '{}'::jsonb)
   from jsonb_array_elements(p_series) with ordinality as b(v, i)
   where (b.v ->> 'orders')::int > 0 or (b.v ->> 'came_in')::int > 0
 $$;
@@ -82,7 +84,7 @@ select is(
       'chart_previous', p.value #> '{chart,previous}'))
    from jsonb_each(current_setting('test.empty')::jsonb -> 'periods') p),
   (select jsonb_object_agg(k, jsonb_build_object(
-      'totals', '{"orders":0,"packs":0,"grams":0,"sales":0,"with_total":0,"without_total":0,
+      'totals', '{"orders":0,"packs":0,"grams":0,"sales":0,"with_total":0,"without_total":0,"paid_of_sales":0,
                   "samples":{"orders":0,"packs":0},
                   "came_in":{"amount":0,"payments":0,"without_amount":0,
                              "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
@@ -100,7 +102,8 @@ select is(
     'first_order_at', null, 'lifetime_starts_at', null,
     'lifetime_chart', jsonb_build_object('grain', 'week', 'now_index', 0, 'previous', null, 'current', jsonb_build_array(
       jsonb_build_object('date', date_trunc('week', now() at time zone 'Asia/Kolkata')::date,
-        'orders', 0, 'packs', 0, 'sales', 0, 'came_in', 0)))),
+        'orders', 0, 'with_total', 0, 'packs', 0, 'sales', 0, 'came_in', 0,
+        'came_in_by_method', '{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}'::jsonb, 'products', '[]'::jsonb)))),
   'empty: no first order; lifetime is this week, one zero bucket'
 );
 
@@ -182,7 +185,11 @@ from (values
   -- yesterday after 14:00
   ('SN-YDA22', 400,  'bank',  null, '2027-03-30 15:00'),
   -- February's order, paid on 1 March at 09:00
-  ('SN-FBA22', 1000, 'other', 'By a friend', '2027-03-01 09:00')
+  ('SN-FBA22', 1000, 'other', 'By a friend', '2027-03-01 09:00'),
+  -- ₹50 more than its ₹350 total
+  ('SN-WKB22', 400,  'upi',   null, '2027-03-29 10:00'),
+  -- last year's order, paid days later
+  ('SN-PYA22', 600,  'cash',  null, '2026-04-05 10:00')
 ) as p(code, amount, method, note, at)
 join public.orders o on o.code = p.code;
 
@@ -198,7 +205,7 @@ $$;
 
 select is(
   pg_temp.period('today') -> 'totals',
-  '{"orders":2,"packs":3,"grams":1000,"sales":500,"with_total":1,"without_total":1,
+  '{"orders":2,"packs":3,"grams":1000,"sales":500,"with_total":1,"without_total":1,"paid_of_sales":500,
     "samples":{"orders":2,"packs":3},
     "came_in":{"amount":500,"payments":3,"without_amount":1,
                "by_method":{"upi":300,"cash":200,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
@@ -209,11 +216,11 @@ select is(
   pg_temp.period('today') -> 'previous',
   jsonb_build_object(
     'starts_at', pg_temp.ist('2027-03-30 00:00'), 'ends_at', pg_temp.ist('2027-03-30 14:00'),
-    'totals', '{"orders":1,"packs":2,"grams":500,"sales":400,"with_total":1,"without_total":0,
+    'totals', '{"orders":1,"packs":2,"grams":500,"sales":400,"with_total":1,"without_total":0,"paid_of_sales":0,
                 "samples":{"orders":0,"packs":0},
                 "came_in":{"amount":0,"payments":0,"without_amount":0,
                            "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb),
-  'today: compared with yesterday up to 14:00, so the order and payment after it are left out'
+  'today: compared with yesterday up to 14:00, so the order and payment after it are left out (paid_of_sales too)'
 );
 
 select is(
@@ -282,6 +289,8 @@ select is(
     'sales', pg_temp.period('month') #> '{totals,sales}',
     'came_in', pg_temp.period('month') #> '{totals,came_in,amount}',
     'other', pg_temp.period('month') #> '{totals,came_in,by_method,other}',
+    'paid_of_sales', pg_temp.period('month') #> '{totals,paid_of_sales}',
+    'previous_paid_of_sales', pg_temp.period('month') #> '{previous,totals,paid_of_sales}',
     'previous', (pg_temp.period('month') -> 'previous') - 'totals',
     'previous_orders', pg_temp.period('month') #> '{previous,totals,orders}',
     'previous_sales', pg_temp.period('month') #> '{previous,totals,sales}',
@@ -289,11 +298,12 @@ select is(
     'ghost_buckets', jsonb_array_length(pg_temp.period('month') #> '{chart,previous}'),
     'now_index', pg_temp.period('month') #> '{chart,now_index}'),
   jsonb_build_object(
-    'orders', 6, 'packs', 8, 'sales', 1800, 'came_in', 1900, 'other', 1000,
+    'orders', 6, 'packs', 8, 'sales', 1800, 'came_in', 2300, 'other', 1000,
+    'paid_of_sales', 1250, 'previous_paid_of_sales', 0,
     'previous', jsonb_build_object('starts_at', pg_temp.ist('2027-02-01 00:00'), 'ends_at', pg_temp.ist('2027-03-01 00:00')),
     'previous_orders', 2, 'previous_sales', 1100,
     'buckets', 31, 'ghost_buckets', 28, 'now_index', 30),
-  'month on 31 March: February has no 31st, so it is the whole of February (not 28 Feb 14:00); money by when it came in'
+  'month on 31 March: February has no 31st, so it is the whole of February (not 28 Feb 14:00); money by when it came in; paid of sales capped at each total, as of the window''s end'
 );
 
 select is(
@@ -318,6 +328,8 @@ select is(
   jsonb_build_object(
     'orders', pg_temp.period('year') #> '{totals,orders}',
     'sales', pg_temp.period('year') #> '{totals,sales}',
+    'paid_of_sales', pg_temp.period('year') #> '{totals,paid_of_sales}',
+    'previous_paid_of_sales', pg_temp.period('year') #> '{previous,totals,paid_of_sales}',
     'previous', (pg_temp.period('year') -> 'previous') - 'totals',
     'previous_orders', pg_temp.period('year') #> '{previous,totals,orders}',
     'previous_sales', pg_temp.period('year') #> '{previous,totals,sales}',
@@ -326,16 +338,17 @@ select is(
     'current', pg_temp.busy(pg_temp.period('year') #> '{chart,current}'),
     'previous_chart', pg_temp.busy(pg_temp.period('year') #> '{chart,previous}')),
   jsonb_build_object(
-    'orders', 9, 'sales', 3600,
+    'orders', 9, 'sales', 3600, 'paid_of_sales', 2250, 'previous_paid_of_sales', 0,
     'previous', jsonb_build_object('starts_at', pg_temp.ist('2026-01-01 00:00'), 'ends_at', pg_temp.ist('2026-03-31 14:00')),
     'previous_orders', 1, 'previous_sales', 600,
     'months', (select jsonb_agg(to_char(d, 'YYYY-MM-DD')) from generate_series('2027-01-01'::date, '2027-12-01', '1 month') d),
     'now_index', 2,
     'current', '{"0":{"orders":1,"packs":1,"sales":700,"came_in":0},
                  "1":{"orders":2,"packs":5,"sales":1100,"came_in":0},
-                 "2":{"orders":6,"packs":8,"sales":1800,"came_in":1900}}'::jsonb,
-    'previous_chart', '{"2":{"orders":2,"packs":2,"sales":650,"came_in":0}}'::jsonb),
-  'year: against last year to 31 March 14:00; 12 months; the ghost is the whole of last year'
+                 "2":{"orders":6,"packs":8,"sales":1800,"came_in":2300}}'::jsonb,
+    'previous_chart', '{"2":{"orders":2,"packs":2,"sales":650,"came_in":0},
+                        "3":{"orders":0,"packs":0,"sales":0,"came_in":600}}'::jsonb),
+  'year: against last year to 31 March 14:00 (its order was paid later, so 0 paid then); 12 months; the ghost is the whole of last year'
 );
 
 select is(
@@ -437,6 +450,63 @@ select is(
       'by_method', (p.value #>> '{totals,came_in,amount}')::int))
    from jsonb_each(current_setting('test.m')::jsonb -> 'periods') p),
   'every period: products add up to packs and grams, with + without a total is orders, methods add up to came in'
+);
+
+-- ─── 10b. Inside the buckets ────────────────────────────
+
+select is(
+  (select jsonb_object_agg((b.i - 1)::text, jsonb_build_object('with_total', b.v -> 'with_total',
+      'products', b.v -> 'products', 'by_method', b.v -> 'came_in_by_method') order by b.i)
+   from jsonb_array_elements(pg_temp.period('today') #> '{chart,current}') with ordinality as b(v, i)
+   where b.i - 1 in (0, 9, 10, 13, 20)),
+  '{"0":{"with_total":0,"products":[{"product_id":"bites","packs":2}],
+         "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}},
+    "9":{"with_total":1,"products":[{"product_id":"raggi-jaggi","packs":1}],
+         "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}},
+    "10":{"with_total":0,"products":[],"by_method":{"upi":300,"cash":0,"bank":0,"other":0,"not_recorded":0}},
+    "13":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":200,"bank":0,"other":0,"not_recorded":0}},
+    "20":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
+  'today''s buckets: with_total, packs per product (samples and free samples out, only products with packs) and came in by method'
+);
+
+select is(
+  (select jsonb_object_agg(p.key || ':' || side, (
+      select jsonb_build_object(
+        'products_vs_packs', bool_and(coalesce((select sum((x ->> 'packs')::int) from jsonb_array_elements(b -> 'products') x), 0)
+                                     = (b ->> 'packs')::int),
+        'methods_vs_came_in', bool_and((select sum(v::int) from jsonb_each_text(b -> 'came_in_by_method') m(k, v))
+                                       = (b ->> 'came_in')::int),
+        'with_total_le_orders', bool_and((b ->> 'with_total')::int <= (b ->> 'orders')::int))
+      from jsonb_array_elements(p.value #> array['chart', side]) b))
+   from jsonb_each(current_setting('test.m')::jsonb -> 'periods') p
+   cross join unnest(array['current', 'previous']) side
+   where p.value #> array['chart', side] <> 'null'::jsonb),
+  (select jsonb_object_agg(k, '{"products_vs_packs":true,"methods_vs_came_in":true,"with_total_le_orders":true}'::jsonb)
+   from unnest(array['today:current', 'today:previous', 'week:current', 'week:previous', 'month:current',
+     'month:previous', 'year:current', 'year:previous', 'lifetime:current']) k),
+  'every bucket, current and ghost: products add up to its packs, methods to its came in'
+);
+
+select is(
+  (select jsonb_object_agg(p.key, (
+      select jsonb_build_object('with_total', sum((b ->> 'with_total')::int),
+        'by_method', jsonb_build_object(
+          'upi', sum((b #>> '{came_in_by_method,upi}')::int), 'cash', sum((b #>> '{came_in_by_method,cash}')::int),
+          'bank', sum((b #>> '{came_in_by_method,bank}')::int), 'other', sum((b #>> '{came_in_by_method,other}')::int),
+          'not_recorded', sum((b #>> '{came_in_by_method,not_recorded}')::int)),
+        'products', (select jsonb_object_agg(x.product_id, x.packs) from (
+          select pr ->> 'product_id' as product_id, sum((pr ->> 'packs')::int) as packs
+          from jsonb_array_elements(p.value #> '{chart,current}') b2
+          cross join jsonb_array_elements(b2 -> 'products') pr
+          group by 1) x))
+      from jsonb_array_elements(p.value #> '{chart,current}') b))
+   from jsonb_each(current_setting('test.m')::jsonb -> 'periods') p),
+  (select jsonb_object_agg(p.key, jsonb_build_object('with_total', p.value #> '{totals,with_total}',
+      'by_method', p.value #> '{totals,came_in,by_method}',
+      'products', (select jsonb_object_agg(x ->> 'product_id', x -> 'packs')
+                   from jsonb_array_elements(p.value -> 'products') x where (x ->> 'packs')::int > 0)))
+   from jsonb_each(current_setting('test.m')::jsonb -> 'periods') p),
+  'every period: the buckets'' with_total, methods and per-product packs add up to the totals and products'
 );
 
 -- ─── 11. The RPC is the same as the pinned function ────

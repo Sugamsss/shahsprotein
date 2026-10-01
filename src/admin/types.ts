@@ -373,6 +373,12 @@ export interface MetricsTotals {
   with_total: number;
   /** Orders with no total yet ("N without a total"). with_total + without_total = orders. */
   without_total: number;
+  /**
+   * ₹ paid so far on this window's orders that have a total, whenever it came in (up to now, or for
+   * previous up to its same moment), at most each order's total, so it's never more than sales.
+   * "₹X of ₹sales paid". Never compare it with came_in, which is money by payment date.
+   */
+  paid_of_sales: number;
   /** Orders carrying a sample (free sample orders too) and sample packs. Never in orders, packs or ₹. */
   samples: { orders: number; packs: number };
   /** Payments by when each came in; by_method adds up to amount. without_amount: paid with no total (adds ₹0). */
@@ -394,9 +400,15 @@ export interface MetricsBucket {
   date: string;
   hour?: number;
   orders: number;
+  /** Orders with a total, for avg order per bar (sales ÷ with_total). */
+  with_total: number;
   packs: number;
   sales: number;
   came_in: number;
+  /** came_in by method, all five keys; adds up to came_in. */
+  came_in_by_method: TotalsByMethod;
+  /** Packs per product (samples out), only products with packs in the bar, by product_id; adds up to packs. */
+  products: { product_id: string; packs: number }[];
 }
 
 export interface MetricsPeriod {
