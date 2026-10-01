@@ -34,8 +34,9 @@ const kitchenCopy = adminCopy.kitchen;
 // to cook in one sentence, one "Log cooking" button, the product cards in kitchen
 // words with spare at their foot, and the batches she logged this week (tap one to
 // fix it). Anyone else gets Sunit's: what to pack and drop off and the money still
-// out, the cards by stage, Waiting on you. Both get "How it's going" (HomeMetrics), the
-// same block in the same place in their column order. The totals and the metrics are
+// out, the cards by stage, Waiting on you. Both get "How it's going" (HomeMetrics): on a
+// phone right after the work list, on a laptop the right column beside the work (Waiting
+// on you or Logged, Stock, Coupons), so neither column sits empty. The totals and the metrics are
 // Home's own calls (the totals carry the kitchen); the overview is the layout's (the
 // Orders badge).
 
@@ -274,25 +275,23 @@ const HomePage: React.FC = () => {
   let below: React.ReactNode;
   if (cook) {
     below = (
-      <div className="adm-home__grid">
-        <div className="adm-home__col">
-          {kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}
-          {metricsBlock}
-        </div>
-        <div className="adm-home__col"><Stock stock={stock} /></div>
+      <div className="adm-home__grid adm-home__grid--split">
+        {kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}
+        {metricsBlock && <div className="adm-home__aside">{metricsBlock}</div>}
+        <Stock stock={stock} />
       </div>
     );
   } else if (!overview.data) {
     below = overview.error ? <LoadError onRetry={() => void overview.reload()} /> : <Skeleton cards={2} rows={3} />;
   } else {
     below = (
-      <div className="adm-home__grid">
-        <div className="adm-home__col"><Waiting queue={overview.data.queue} totals={totals} /></div>
-        <div className="adm-home__col">
-          {metricsMissing ? totals !== null && <AdminWeek totals={totals} /> : metricsBlock}
-          <Stock stock={stock} />
-          <Coupons coupons={overview.data.coupons} />
-        </div>
+      <div className="adm-home__grid adm-home__grid--split">
+        <Waiting queue={overview.data.queue} totals={totals} />
+        {metricsMissing
+          ? totals !== null && <div className="adm-home__aside"><AdminWeek totals={totals} /></div>
+          : <div className="adm-home__aside">{metricsBlock}</div>}
+        <Stock stock={stock} />
+        <Coupons coupons={overview.data.coupons} />
       </div>
     );
   }

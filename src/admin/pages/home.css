@@ -18,7 +18,8 @@
 .adm-home__lede b.is-money { color: var(--color-success-text); }
 /* Pranjali's quiet day: "Nothing to cook right now." stays the answer; who has the food is a body-size aside. */
 .adm-home__lede-more { margin-top: 6px; color: var(--adm-ink-2); font-size: var(--adm-text-body); line-height: 1.45; text-wrap: pretty; }
-.adm-home__grid, .adm-home__col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.adm-home__grid { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.adm-home__grid > * { min-width: 0; }
 .adm-home__card { display: grid; gap: 14px; }
 .adm-card.adm-home__card--flush { padding: 0; gap: 0; overflow: hidden; }
 .adm-home__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -242,7 +243,13 @@ button.adm-home__warn:active { opacity: 0.7; }
 @media (min-width: 960px) {
   .adm-home { max-width: 1120px; margin-inline: auto; }
   .adm-home__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; }
-  .adm-home__col { gap: 24px; }
+  /* Below the cards: the work on the left (Waiting on you or Logged, then Stock, Coupons) and
+     How it's going on the right, beside all of it. On phones it's one column in the page's
+     order. The last row takes the right column's extra height, so the left cards stay
+     packed at the top instead of spreading out. */
+  .adm-home__grid--split { grid-template-rows: repeat(3, auto) 1fr; }
+  .adm-home__grid--split > * { grid-column: 1; }
+  .adm-home__grid--split > .adm-home__aside { grid-column: 2; grid-row: 1 / -1; }
   .adm-home__stock .adm-btn { grid-column: 2; justify-self: start; }
 
   .adm-pcards { gap: 24px; }
