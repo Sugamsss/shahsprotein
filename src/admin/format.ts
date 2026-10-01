@@ -102,6 +102,18 @@ export const formatMoneyShort = (amount: number): string => {
 };
 
 /**
+ * The top of a chart's scale, short: "₹800", "₹2.5k", "₹80k", "₹1.5L". Tops are round
+ * numbers (1, 1.2, 1.5, 2, 2.5 … × 10ⁿ), so a decimal or two is always exact.
+ */
+export const formatMoneyAxis = (amount: number): string => {
+  const rupees = Math.round(amount);
+  const trim = (n: number, places: number) => String(Number(n.toFixed(places)));
+  if (rupees < 1000) return `₹${rupees}`;
+  if (rupees < 100_000) return `₹${trim(rupees / 1000, 1)}k`;
+  return `₹${trim(rupees / 100_000, 2)}L`;
+};
+
+/**
  * A weight the way people in the kitchen say it: "750 g", "2 kg", "1½ kg", "2 kg 250 g",
  * "1 kg 285 g". Under a kilo it's grams; a half kilo is ½; any other part stays in grams,
  * never rounded to a weight nobody made.

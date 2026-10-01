@@ -1036,5 +1036,118 @@ export const adminCopy = {
     couponsLink: 'Coupons',
     couponOrders: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'}`,
     notUsed: 'Not used yet',
+
+    // "How it's going": both Homes' metrics block (temp/home-metrics/design.md, "Final: B").
+    metrics: {
+      title: 'How it’s going',
+      periodLabel: 'Period',
+      periods: { today: 'Today', week: 'Week', month: 'Month', year: 'Year', lifetime: 'Lifetime' },
+      // "₹1,190 in sales today"
+      when: { today: 'today', week: 'this week', month: 'this month', year: 'this year', lifetime: 'since we started' },
+      vs: { today: 'vs this time yesterday', week: 'vs this time last week', month: 'vs this time last month', year: 'vs this time last year' },
+      /** "this time yesterday" for "Nothing by this time yesterday either". */
+      by: { today: 'this time yesterday', week: 'this time last week', month: 'this time last month', year: 'this time last year' },
+      before: { today: 'Yesterday', week: 'Last week', month: 'Last month', year: 'Last year' },
+      beforeLower: { today: 'yesterday', week: 'last week', month: 'last month', year: 'last year' },
+      vsShort: { today: 'vs yesterday', week: 'vs last week', month: 'vs last month', year: 'vs last year' },
+
+      // The range line over the sentence.
+      untilTime: (day: string, time: string) => `${day}, until ${time}`,
+      range: (from: string, to: string) => `${from} – ${to}`,
+      yearSoFar: (year: string) => `${year} so far`,
+      since: (day: string) => `Since ${day}`,
+      noOrdersYet: 'No orders yet',
+
+      // The four chips, and the words after a figure.
+      metricNames: { sales: 'Sales', came_in: 'Came in', orders: 'Orders', packs: 'Packs' },
+      units: { orders: (n: number) => (n === 1 ? 'order' : 'orders'), packs: (n: number) => (n === 1 ? 'pack' : 'packs') },
+      count: (n: number, metric: 'orders' | 'packs') => `${n.toLocaleString('en-IN')} ${n === 1 ? metric.slice(0, -1) : metric}`,
+      showOnChart: 'Show on the chart',
+      /** After a figure in the sentence and the readout: "₹1,190 in sales", "₹970 came in". Counts carry their own word. */
+      moneyWords: { sales: 'in sales', came_in: 'came in' },
+      /** "No sales yet today": the first part in ink-1. Came in at 0 says "₹0 came in today" instead. */
+      none: { sales: 'No sales', orders: 'No orders', packs: 'No packs' },
+      yet: 'yet',
+
+      // The change line (green only when up) and each chip's change (always grey).
+      up: (pct: number, vs: string) => `Up ${pct || 'under 1'}% ${vs}`,
+      down: (pct: number, vs: string) => `Down ${pct || 'under 1'}% ${vs}`,
+      from: (before: string) => `(from ${before})`,
+      same: (by: string) => `Same as ${by}`,
+      fresh: (by: string) => `New: none by ${by}`,
+      bothZero: (by: string) => `Nothing by ${by} either`,
+      noneYet: (before: string, value: string) => `${before} had ${value} by now.`,
+      chipFrom: (before: string) => `from ${before}`,
+      chipSame: 'Same',
+      chipNew: 'New',
+      chipNoneYet: (before: string, value: string) => `${before} ${value}`,
+      pct: (pct: number) => (pct ? `${pct}%` : '<1%'),
+      /** The chip's whole accessible name: "Sales ₹1,190, down 18% vs this time yesterday". */
+      chipName: (name: string, value: string, change: string) => `${name} ${value}${change ? `, ${change}` : ''}`,
+      spokenUp: (pct: number, vs: string, from: string | null) => `up ${pct || 'under 1'}%${from ? ` from ${from}` : ''} ${vs}`,
+      spokenDown: (pct: number, vs: string, from: string | null) => `down ${pct || 'under 1'}%${from ? ` from ${from}` : ''} ${vs}`,
+      spokenSame: (by: string) => `same as ${by}`,
+      spokenNew: (by: string) => `new, none by ${by}`,
+      spokenBothZero: (by: string) => `nothing by ${by} either`,
+      spokenNoneYet: (before: string, value: string) => `none yet, ${before.toLowerCase()} had ${value} by now`,
+
+      // No comparison (previous is null): one quiet line instead, said once.
+      firstDay: 'Our first day.',
+      firstFullDay: 'Our first full day. Comparisons start tomorrow.',
+      firstWeek: (start: string) => `Our first week. Comparisons start ${start}.`,
+      firstFullWeek: (start: string) => `Our first full week. Comparisons start ${start}.`,
+      monday: 'Monday',
+      firstMonth: (start: string) => `Our first month. Comparisons start ${start}.`,
+      firstFullMonth: (start: string) => `Our first full month. Comparisons start ${start}.`,
+      sameAsLifetime: 'Same as Lifetime until 1 Jan.',
+      firstFullYear: (start: string) => `Our first full year. Comparisons start ${start}.`,
+      lifetimeSince: (day: string) => `Everything since the first order on ${day}.`,
+      lifetimeEmpty: 'Your first order will show here.',
+
+      // Small print under the change line, joined with " · ".
+      withoutTotal: (n: number) => `${n} ${n === 1 ? 'order' : 'orders'} without a total`,
+      notCountingSamples: (n: number) => `Not counting ${n} free ${n === 1 ? 'sample' : 'samples'}`,
+      noAmount: (n: number) => `${n} ${n === 1 ? 'payment' : 'payments'} had no amount`,
+      byMethod: 'How it came in',
+
+      // The chart.
+      hours: ['12 am', '6 am', '12 pm', '6 pm'],
+      nowTick: 'Now',
+      today: 'Today',
+      yesterdayByNow: (value: string) => `Yesterday, ${value} by now`,
+      grain: { weekDays: 'This week, by day', day: 'By day', week: 'By week', month: 'By month' },
+      startedIn: (month: string) => `We started in ${month}`,
+      tapHint: 'Tap a bar',
+      clickHint: 'Click a bar',
+      dayLetters: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      /** The readout under the chart, after a tap. */
+      soFar: (label: string) => `${label}, so far`,
+      byHour: (hour: string) => `By ${hour}`,
+      byNow: 'By now',
+      midnight: 'midnight',
+      notYet: 'Not yet',
+      beforeStart: 'Before we started',
+      beforeValue: (before: string, value: string) => `${before}: ${value}`,
+      weekOf: (day: string) => `Week of ${day}`,
+      /** The chart is one slider: its name, and its value with a bar picked or not. */
+      /** "Sales this week, by day", "Sales so far today, by hour". */
+      chartName: (metric: string, when: string, grain: string) => `${metric} ${when === 'today' ? 'so far today' : when}, ${grain}`,
+      grainLower: { hour: 'by hour', day: 'by day', week: 'by week', month: 'by month' },
+      sliderPick: (label: string, value: string, before: string | null) => `${label}: ${value}.${before ? ` ${before}.` : ''}`,
+      sliderPeriod: (sentence: string, change: string) => `${sentence}${change ? `, ${change}` : ''}.`,
+
+      // Profit and avg order: quiet figures.
+      /** "Profit, est. at 25%": the share is PROFIT_SHARE in pages/metrics.ts, never written here. */
+      profit: (pct: number) => `Profit, est. at ${pct}%`,
+      avgOrder: 'Avg order',
+
+      // By product: packs, never ₹.
+      byProduct: 'By product',
+      productNone: 'None yet',
+      productMore: (n: number) => `+${n}`,
+      productFewer: (n: number) => `−${n}`,
+      productSame: 'same',
+      productNew: 'new',
+    },
   },
 };
