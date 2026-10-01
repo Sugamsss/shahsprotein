@@ -108,6 +108,69 @@ select public.log_admin_batches(jsonb_build_array(
 
 select pg_temp.act_as('demo');
 
+-- History, for Home's metrics (Month, Year, Lifetime and their comparisons):
+-- done orders from 8 days to about 23 months ago, more of them lately, from
+-- a dozen made-up regulars. Codes start SN-2, so the story below stays easy
+-- to find. Every 6th carries a Date Bites taster, every 13th has no total
+-- (paid anyway), every 17th was cancelled, and every 10th was paid in two
+-- parts a week apart. Delivered orders are covered by hand, so none of this
+-- touches the kitchen.
+create temporary table demo_history as
+select h.d,
+  'SN-2' || substr('23456789ABCDEFGHJKMNPQRSTVWXYZ', (h.d / 30) % 30 + 1, 1)
+    || substr('23456789ABCDEFGHJKMNPQRSTVWXYZ', h.d % 30 + 1, 1) || 'MQ' as code,
+  c.name, c.phone,
+  case when h.d % 13 = 0 then null else l.amount end as amount,
+  l.lines || case when h.d % 6 = 0 then '[["bites","sample",1]]'::jsonb else '[]'::jsonb end as lines,
+  (array['upi', 'upi', 'cash', 'bank'])[h.d % 4 + 1] as method
+from generate_series(8, 700) as h(d)
+join (values
+  (0, 480, '[["raggi-jaggi","500 g",1]]'::jsonb),
+  (1, 480, '[["muesli","250 g",2]]'),
+  (2, 440, '[["raggi-jaggi","250 g",1],["bites","250 g",1]]'),
+  (3, 930, '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]'),
+  (4, 360, '[["bites","250 g",2]]')
+) as l(k, amount, lines) on l.k = h.d % 5
+join (values
+  (0, 'Kavita Pisal', '919800000020'), (1, 'Suresh Ghorpade', '919800000021'),
+  (2, 'Manasi Joshi', '919800000022'), (3, 'Prakash Mohite', '919800000023'),
+  (4, 'Swati Kamble', '919800000024'), (5, 'Ganesh Shelar', '919800000025'),
+  (6, 'Rutuja Patankar', '919800000026'), (7, 'Omkar Babar', '919800000027'),
+  (8, 'Shilpa Desai', '919800000028'), (9, 'Harish Thorat', '919800000029'),
+  (10, 'Vaishali Pol', '919800000030'), (11, 'Amit Garud', '919800000031')
+) as c(k, name, phone) on c.k = h.d % 12
+where (h.d * 37) % 100 < 60 - h.d / 12;
+
+select count(pg_temp.demo_order(h.code, 'whatsapp', case when h.d % 17 = 0 then 'cancelled' else 'delivered' end,
+  h.name, h.phone, '415001', h.amount, make_interval(days => h.d, hours => h.d * 5 % 11), h.lines))
+from (select * from demo_history order by d desc) h;
+
+-- Paid the day after, or half then and the rest a week later.
+select count(pg_temp.demo_pay(h.code, p.amount, h.method, null, p.ago))
+from demo_history h
+cross join lateral (
+  select h.amount as amount, make_interval(days => h.d - 1) as ago where h.d % 10 <> 0 or h.amount is null
+  union all
+  select h.amount / 2, make_interval(days => h.d - 1) where h.d % 10 = 0 and h.amount is not null
+  union all
+  select h.amount - h.amount / 2, make_interval(days => h.d - 8) where h.d % 10 = 0 and h.amount is not null
+) p
+where h.d % 17 <> 0;
+
+-- Today and yesterday by the hour: walk-in sales, paid on the spot.
+select pg_temp.demo_order('SN-2TDYA', 'in_person', 'delivered', 'Kavita Pisal', '919800000020', null, 480,
+  '3 hours', '[["raggi-jaggi","500 g",1]]');
+select pg_temp.demo_order('SN-2TDYB', 'in_person', 'delivered', 'Omkar Babar', '919800000027', null, 360,
+  '6 hours', '[["bites","250 g",2]]');
+select pg_temp.demo_order('SN-2YSTA', 'in_person', 'delivered', 'Manasi Joshi', '919800000022', null, 930,
+  '1 day 2 hours', '[["raggi-jaggi","500 g",1],["muesli","500 g",1]]');
+select pg_temp.demo_order('SN-2YSTB', 'in_person', 'delivered', 'Harish Thorat', '919800000029', null, 480,
+  '1 day 5 hours', '[["muesli","250 g",2]]');
+select pg_temp.demo_pay('SN-2TDYA', 480, 'cash', null, '3 hours');
+select pg_temp.demo_pay('SN-2TDYB', 360, 'upi', null, '6 hours');
+select pg_temp.demo_pay('SN-2YSTA', 930, 'upi', null, '1 day 2 hours');
+select pg_temp.demo_pay('SN-2YSTB', 480, 'cash', null, '1 day 5 hours');
+
 -- Done: delivered and paid, in every way. Delivered orders are covered by hand.
 select pg_temp.demo_order('SN-B2C3D', 'whatsapp', 'delivered', 'Kiran Sawant', '919800000013', '415004', 480,
   '12 days', '[["muesli","500 g",1]]');
@@ -192,6 +255,11 @@ from (values
 ) as d(code, ago)
 where o.code = d.code;
 
+-- The history orders were delivered (or cancelled) the day after; the walk-ins
+-- on the spot.
+update public.orders set status_changed_at = least(created_at + interval '1 day', now())
+where code ~ '^SN-2';
+
 -- History: spread each order's events from when it was made to when it
 -- reached its stage, in the order they happened.
 update public.order_events e
@@ -271,8 +339,16 @@ select o.code, o.name, o.status,
       ', ' order by c.product_id)
     from public.kitchen_order_cover(o.id) c) end as food
 from public.orders o
+where o.code !~ '^SN-2'
 order by array_position(array['cooking', 'packing', 'ready', 'delivered', 'cancelled'], o.status),
   (o.status = 'delivered' and o.paid_at is not null), o.created_at;
+
+-- Home's metrics: each period so far against the same moment last time
+-- (blank = no comparison), and the money that came in.
+select m.key as period, m.value #>> '{totals,orders}' as orders, m.value #>> '{totals,sales}' as sales,
+  m.value #>> '{totals,came_in,amount}' as came_in,
+  m.value #>> '{previous,totals,orders}' as orders_before, m.value #>> '{previous,totals,sales}' as sales_before
+from json_each(public.admin_metrics_json(now()) -> 'periods') m;
 
 -- The kitchen: Raggi Jaggi 2 kg to cook for 4 orders, Muesli 750 g for 2,
 -- Date Bites nothing. Spare: Date Bites 285 g made 12 days ago (near, 3 days
