@@ -441,7 +441,7 @@ describe('Orders, one stage at a time', () => {
 });
 
 describe('the hold: moving a Packing or Ready order back to Cooking', () => {
-  it('canMoveBack is only for Packing, and only where the database has holds', () => {
+  it('canMoveBack is only for Packing and Ready, and only where the database has holds', () => {
     expect(canMoveBack(staged('packing', { held: false }))).toBe(true);
     expect(canMoveBack(staged('packing'))).toBe(false);
     expect(canMoveBack(staged('cooking', { held: true }))).toBe(false);
