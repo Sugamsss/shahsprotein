@@ -41,12 +41,12 @@ export const NEXT: Record<Exclude<WorkLane, 'cooking'>, OrderChanges> = {
 /** A Cooking order moved on by hand: its missing food is covered "by hand". */
 export const MOVE_TO_PACKING: OrderChanges = { status: 'packing' };
 
-/** A Packing order sent back to Cooking by hand: it keeps its food and is held there (the server sets the hold). */
+/** A Packing or Ready order sent back to Cooking by hand: it keeps its food and is held there (the server sets the hold). */
 export const MOVE_BACK_TO_COOKING: OrderChanges = { status: 'cooking' };
 
 /** Holds are live only when the database says `held` on its orders (an old one doesn't). */
 export const canMoveBack = (o: Pick<Order, 'status' | 'held'>): boolean =>
-  o.status === 'packing' && typeof o.held === 'boolean';
+  (o.status === 'packing' || o.status === 'ready') && typeof o.held === 'boolean';
 
 /** In Cooking and held: never moves on by itself. */
 export const isHeld = (o: Pick<Order, 'status' | 'held'>): boolean => o.status === 'cooking' && o.held === true;
@@ -148,9 +148,9 @@ export const reverseOf = (o: Order, changes: OrderChanges): OrderChanges => ({
 export const applyLocal = (o: Order, c: OrderChanges): Order => ({
   ...o,
   ...c,
-  // Packing -> Cooking by hand is held; any other move out of Cooking drops the hold. Only where holds exist.
+  // Packing or Ready -> Cooking by hand is held; any other move out of Cooking drops the hold. Only where holds exist.
   ...(c.status !== undefined && typeof o.held === 'boolean' && {
-    held: o.status === 'packing' && c.status === 'cooking',
+    held: (o.status === 'packing' || o.status === 'ready') && c.status === 'cooking',
   }),
   // Paid keeps its day and, without a new method, its method; not paid clears all three.
   ...(c.paid !== undefined && {

@@ -440,12 +440,15 @@ describe('Orders, one stage at a time', () => {
   });
 });
 
-describe('the hold: moving a Packing order back to Cooking', () => {
+describe('the hold: moving a Packing or Ready order back to Cooking', () => {
   it('canMoveBack is only for Packing, and only where the database has holds', () => {
     expect(canMoveBack(staged('packing', { held: false }))).toBe(true);
     expect(canMoveBack(staged('packing'))).toBe(false);
     expect(canMoveBack(staged('cooking', { held: true }))).toBe(false);
-    expect(canMoveBack(staged('ready', { held: false }))).toBe(false);
+    expect(canMoveBack(staged('ready', { held: false }))).toBe(true);
+    expect(canMoveBack(staged('ready'))).toBe(false);
+    expect(canMoveBack(staged('delivered', { held: false }))).toBe(false);
+    expect(canMoveBack(staged('cancelled', { held: false }))).toBe(false);
   });
 
   it('isHeld means Cooking and held', () => {
@@ -458,6 +461,8 @@ describe('the hold: moving a Packing order back to Cooking', () => {
     expect(applyLocal(staged('packing', { held: false }), { status: 'cooking' }).held).toBe(true);
     expect(applyLocal(staged('cooking', { held: true }), { status: 'packing' }).held).toBe(false);
     expect(applyLocal(staged('cooking', { held: true }), { status: 'cancelled' }).held).toBe(false);
+    expect(applyLocal(staged('ready', { held: false }), { status: 'cooking' }).held).toBe(true);
+    expect(applyLocal(staged('ready', { held: false }), { status: 'delivered' }).held).toBe(false);
     // Reopening a cancelled order is not a hold.
     expect(applyLocal(staged('cancelled', { held: false }), { status: 'cooking' }).held).toBe(false);
     // A change that is not a status leaves it alone.
