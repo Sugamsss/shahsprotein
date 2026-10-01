@@ -9,7 +9,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(52);
+select plan(61);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -506,34 +506,128 @@ select ok(
 select pg_temp.undo(current_setting('t.give')::jsonb);
 select ok(pg_temp.snap() = current_setting('t.sg')::jsonb, 'Undo of the give puts everything back, hold included');
 
--- ─── 11. Ready and Delivered keep their rule ────────────
+-- ─── 11. Delivered keeps its rule ──────────────────────
 
 select pg_temp.clean();
 select pg_temp.ord('SN-KHP22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
 select pg_temp.log('p', 'raggi-jaggi', 500);
 select pg_temp.move('SN-KHP22', 'ready');
-
-select throws_ok(
-  $$select pg_temp.move('SN-KHP22', 'cooking')$$,
-  '22023', 'Its food is already logged. Undo, or fix the batch.',
-  'Ready to Cooking is still refused when batches cover it all'
+select pg_temp.move('SN-KHP22', 'cooking');
+select ok(
+  pg_temp.sh('SN-KHP22') = 'cooking held' and pg_temp.cover('SN-KHP22') = 'raggi-jaggi:p=500',
+  'Ready to Cooking by hand is held, like Packing, and keeps its batch food'
 );
 
 select pg_temp.move('SN-KHP22', 'delivered');
 select throws_ok(
   $$select pg_temp.move('SN-KHP22', 'cooking')$$,
   '22023', 'Its food is already logged. Undo, or fix the batch.',
-  'and so is Delivered to Cooking'
+  'Delivered to Cooking is still refused when batches cover it all'
 );
 
 select pg_temp.ord('SN-KHQ22', 12, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
-select pg_temp.move('SN-KHQ22', 'ready');
-select pg_temp.move('SN-KHQ22', 'cooking');
-select is(pg_temp.sh('SN-KHQ22'), 'cooking -', 'Ready to Cooking is allowed when no batch food covers it, and it is not held');
-
 select pg_temp.move('SN-KHQ22', 'delivered');
 select pg_temp.move('SN-KHQ22', 'cooking');
-select is(pg_temp.sh('SN-KHQ22'), 'cooking -', 'so is Delivered to Cooking, and it is not held');
+select is(pg_temp.sh('SN-KHQ22'), 'cooking -', 'Delivered to Cooking is allowed when no batch food covers it, and it is not held');
+
+-- ─── 11b. Ready to Cooking, held ────────────────────────
+
+-- Fully covered by batches, Ready for 4 days.
+select pg_temp.clean();
+select pg_temp.ord('SN-KJA22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('ja', 'raggi-jaggi', 800);
+select pg_temp.move('SN-KJA22', 'ready');
+update public.orders set status_changed_at = now() - interval '4 days' where code = 'SN-KJA22';
+select set_config('t.ja0', pg_temp.snap()::text, true);
+select set_config('t.jat', (select status_changed_at::text from public.orders where code = 'SN-KJA22'), true);
+select set_config('t.ja', pg_temp.move('SN-KJA22', 'cooking')::text, true);
+
+select ok(
+  pg_temp.sh('SN-KJA22') = 'cooking held' and (current_setting('t.ja')::jsonb ->> 'held')::boolean
+  and (pg_temp.snap() - 'orders') = (current_setting('t.ja0')::jsonb - 'orders')
+  and pg_temp.spare('ja') = 300,
+  'Ready to Cooking, fully batch-covered: held, allocations byte-identical, nothing became spare'
+);
+
+select pg_temp.undo(current_setting('t.ja')::jsonb);
+select ok(
+  pg_temp.snap() = current_setting('t.ja0')::jsonb
+  and (select status_changed_at::text from public.orders where code = 'SN-KJA22') = current_setting('t.jat'),
+  'Undo: Ready again, not held, allocations identical, and Ready''s waiting days exactly as before'
+);
+
+-- A by-hand part from a manual advance.
+select pg_temp.clean();
+select pg_temp.ord('SN-KJB22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('jb', 'raggi-jaggi', 200);
+select pg_temp.move('SN-KJB22', 'ready');
+select pg_temp.move('SN-KJB22', 'cooking');
+
+select ok(
+  pg_temp.sh('SN-KJB22') = 'cooking held' and pg_temp.cover('SN-KJB22') = 'raggi-jaggi:jb=200'
+  and pg_temp.kp('raggi-jaggi') ->> 'to_cook' = '300' and pg_temp.queue('raggi-jaggi') = '["SN-KJB22"]',
+  'Ready with a by-hand part: it goes, the batch food stays, the order is short, in the queue and to_cook, held'
+);
+
+select pg_temp.log('jb2', 'raggi-jaggi', 300);
+select ok(
+  pg_temp.sh('SN-KJB22') = 'cooking held' and pg_temp.cover('SN-KJB22') = 'raggi-jaggi:jb=200,raggi-jaggi:jb2=300',
+  'a new batch tops the held ex-Ready order up and does not promote it'
+);
+
+-- By-hand food that a batch shrink made while it was Ready goes too.
+select pg_temp.clean();
+select pg_temp.ord('SN-KJC22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('jc', 'raggi-jaggi', 500);
+select pg_temp.move('SN-KJC22', 'ready');
+select public.update_admin_batch(pg_temp.bid('jc'), '{"grams":300}');
+select is(pg_temp.sh('SN-KJC22') || ' ' || pg_temp.cover('SN-KJC22'), 'ready - raggi-jaggi:jc=300,raggi-jaggi:hand=200',
+  'setup: the shrink turned the lost grams into by-hand food on the Ready order');
+
+select pg_temp.move('SN-KJC22', 'cooking');
+select ok(
+  pg_temp.sh('SN-KJC22') = 'cooking held' and pg_temp.cover('SN-KJC22') = 'raggi-jaggi:jc=300'
+  and pg_temp.kp('raggi-jaggi') ->> 'to_cook' = '200',
+  'the shrink''s by-hand part goes too (the old Ready rule): short 200, held'
+);
+
+select set_config('t.jp', pg_temp.move('SN-KJC22', 'packing')::text, true);
+select ok(
+  pg_temp.sh('SN-KJC22') = 'packing -' and pg_temp.cover('SN-KJC22') = 'raggi-jaggi:jc=300,raggi-jaggi:hand=200',
+  'Move to Packing from a held ex-Ready order: hold gone, short part covered by hand'
+);
+
+select pg_temp.undo(current_setting('t.jp')::jsonb);
+select ok(
+  pg_temp.sh('SN-KJC22') = 'cooking held' and pg_temp.cover('SN-KJC22') = 'raggi-jaggi:jc=300',
+  'Undo of that move: back in Cooking held'
+);
+
+-- Cancel, and priority.
+select pg_temp.clean();
+select pg_temp.ord('SN-KJD22', 48, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.ord('SN-KJE22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('jd', 'raggi-jaggi', 500);
+select pg_temp.move('SN-KJD22', 'ready');
+select pg_temp.move('SN-KJD22', 'cooking');
+select pg_temp.move('SN-KJD22', 'cancelled');
+select ok(
+  pg_temp.sh('SN-KJD22') = 'cancelled -' and pg_temp.cover('SN-KJD22') = ''
+  and pg_temp.sh('SN-KJE22') = 'packing -' and pg_temp.cover('SN-KJE22') = 'raggi-jaggi:jd=500',
+  'cancel from a held ex-Ready order: hold cleared, its food goes to the next order'
+);
+
+select pg_temp.clean();
+select pg_temp.ord('SN-KJF22', 48, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
+select pg_temp.log('jf', 'raggi-jaggi', 500);
+select pg_temp.move('SN-KJF22', 'ready');
+select pg_temp.move('SN-KJF22', 'cooking');
+select public.save_admin_order(null, '{"source":"call","code":"SN-KJG22","name":"Priority Example","priority":true,
+  "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]}');
+select ok(
+  pg_temp.cover('SN-KJF22') = 'raggi-jaggi:jf=500' and pg_temp.cover('SN-KJG22') = '',
+  'a held ex-Ready order is not a donor to a priority order'
+);
 
 -- ─── 12. The flag's own guards ──────────────────────────
 

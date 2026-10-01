@@ -603,13 +603,13 @@ select is(
 
 select pg_temp.ord('SN-KNA22', 0, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
 select pg_temp.log('nn', 'raggi-jaggi', 800);
--- From Packing it is allowed (held, see 12_kitchen_hold); from Ready it is
--- still refused when batches cover it all.
-select pg_temp.move('SN-KNA22', 'ready');
+-- From Packing or Ready it is allowed (held, see 12_kitchen_hold); from
+-- Delivered it is still refused when batches cover it all.
+select pg_temp.move('SN-KNA22', 'delivered');
 select throws_ok(
   $$select pg_temp.move('SN-KNA22', 'cooking')$$,
   '22023', 'Its food is already logged. Undo, or fix the batch.',
-  'back to Cooking from Ready is refused when batches cover it all'
+  'back to Cooking from Delivered is refused when batches cover it all'
 );
 
 -- ─── 12. Used up / thrown out ───────────────────────────

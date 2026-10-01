@@ -1,12 +1,16 @@
 -- Held in Cooking (2026-09-30).
 --
--- Sunit can take an order from Packing back to Cooking by hand. The order goes
--- to Cooking "held": it keeps its real batch food (nothing becomes spare), its
--- by-hand part goes (that was never food), and the kitchen never moves it to
--- Packing by itself again. It leaves Cooking only when a person moves it
--- (Move to Packing, any other status, or cancel). Only Packing -> Cooking
--- holds; Ready and Delivered -> Cooking and every automatic move to Cooking
--- are as before.
+-- Sunit can take an order from Packing or Ready back to Cooking by hand. The
+-- order goes to Cooking "held": it keeps its real batch food (nothing becomes
+-- spare), its by-hand part goes (that was never food), and the kitchen never
+-- moves it to Packing by itself again. It leaves Cooking only when a person
+-- moves it (Move to Packing, any other status, or cancel). Only Packing ->
+-- Cooking and Ready -> Cooking hold; Delivered -> Cooking and every automatic
+-- move to Cooking are as before.
+--
+-- A Ready order's by-hand part can include food that kitchen_take_back turned
+-- into by-hand when a batch shrank while the order was Ready. That was already
+-- the rule for Ready -> Cooking, and it stays: that part goes too.
 --
 -- Additive: an old admin ignores the new `held` key. Everything below is
 -- create or replace of the kitchen_flow functions, with the hold added.
@@ -227,10 +231,10 @@ $$;
 revoke all on function public.kitchen_fill(text) from public, anon, authenticated;
 
 -- What a status change does to the kitchen, as in kitchen_flow. The one
--- change: → cooking from Packing is allowed when the order is held (the
--- caller sets kitchen_hold in the same update as the status). The by-hand part
+-- change: → cooking from Packing or Ready is allowed when the order is held
+-- (the caller sets kitchen_hold in the same update as the status). The by-hand part
 -- goes, the batch food stays, the fill can top it up but not promote it.
--- Ready and Delivered → Cooking still refuse when batch food covers it all.
+-- Delivered → Cooking still refuses when batch food covers it all.
 create or replace function public.kitchen_order_moved(p_order_id uuid, p_from text, p_to text)
 returns void
 language plpgsql
@@ -254,7 +258,7 @@ begin
     select o.kitchen_hold into v_held from public.orders o where o.id = p_order_id;
 
     if p_from in ('packing', 'ready', 'delivered')
-       and not (p_from = 'packing' and coalesce(v_held, false))
+       and not (p_from in ('packing', 'ready') and coalesce(v_held, false))
        and exists (select 1 from public.order_lines l where l.order_id = p_order_id)
        and not exists (
          select 1 from public.kitchen_order_cover(p_order_id) c where c.covered - c.by_hand < c.need
@@ -505,8 +509,8 @@ revoke all on function public.admin_order_json(public.orders) from public, anon,
 -- 6. Moving back to Cooking holds
 -- ═══════════════════════════════════════════════════════
 
--- As in kitchen_flow, plus: a call that moves the order from Packing to
--- Cooking sets kitchen_hold in the same update as the status, before the fill
+-- As in kitchen_flow, plus: a call that moves the order from Packing or Ready
+-- to Cooking sets kitchen_hold in the same update as the status, before the fill
 -- runs. Nothing else sets it, and any other update leaves it as it was (the
 -- trigger clears it when the status leaves Cooking).
 create or replace function public.update_admin_order(p_id uuid, p_changes jsonb)
@@ -618,7 +622,7 @@ begin
   update public.orders
   set
     status = v_order.status,
-    kitchen_hold = case when v_from = 'packing' and v_order.status = 'cooking' then true else kitchen_hold end,
+    kitchen_hold = case when v_from in ('packing', 'ready') and v_order.status = 'cooking' then true else kitchen_hold end,
     status_changed_at = coalesce(v_changed_at, status_changed_at),
     priority = v_order.priority,
     phone = v_order.phone,
