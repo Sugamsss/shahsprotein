@@ -603,10 +603,13 @@ select is(
 
 select pg_temp.ord('SN-KNA22', 0, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
 select pg_temp.log('nn', 'raggi-jaggi', 800);
+-- From Packing it is allowed (held, see 12_kitchen_hold); from Ready it is
+-- still refused when batches cover it all.
+select pg_temp.move('SN-KNA22', 'ready');
 select throws_ok(
   $$select pg_temp.move('SN-KNA22', 'cooking')$$,
   '22023', 'Its food is already logged. Undo, or fix the batch.',
-  'back to Cooking is refused when batches cover it all'
+  'back to Cooking from Ready is refused when batches cover it all'
 );
 
 -- ─── 12. Used up / thrown out ───────────────────────────
@@ -649,7 +652,7 @@ select set_config('t.fs', public.save_admin_order(null, '{
 select is(
   current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'note', 'coupon',
     'customer', 'created_at', 'updated_at', 'status_changed_at', 'payments', 'paid_at', 'paid_method', 'paid_note', 'kitchen'],
-  '{"status":"cooking","free_sample":true,"priority":false,"paid":false,"payment_state":"not_paid","amount":null,"amount_paid":0,
+  '{"status":"cooking","free_sample":true,"priority":false,"held":false,"paid":false,"payment_state":"not_paid","amount":null,"amount_paid":0,
     "amount_due":null,"amount_extra":null,"packs":0,"samples":2,
     "lines":[{"product_id":"bites","size":"sample","quantity":1,"grams_each":15},
              {"product_id":"raggi-jaggi","size":"sample","quantity":1,"grams_each":20}]}'::jsonb,
