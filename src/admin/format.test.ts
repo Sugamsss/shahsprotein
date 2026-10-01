@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endOfDayIst, firstName, formatAge, formatAgo, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatMoneyShort, formatPhone, formatWeight, formatWhen, istDateValue } from './format';
+import { endOfDayIst, firstName, formatAge, formatAgo, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatMoneyAxis, formatMoneyShort, formatPhone, formatWeight, formatWhen, istDateValue } from './format';
 
 // Spec 2.1 "Formats". Every date is India time, so these hold whatever
 // timezone the machine running them is in. "Now" is Fri 25 Sep 2026, 2:00 pm IST.
@@ -125,6 +125,15 @@ describe('formatMoneyShort', () => {
     [12_34_567, '₹12.34L'],
   ])('%d → %s', (amount, expected) => {
     expect(formatMoneyShort(amount)).toBe(expected);
+  });
+});
+
+describe('formatMoneyAxis: the top of a chart\'s scale', () => {
+  it.each([
+    [800, '₹800'], [999, '₹999'], [1000, '₹1k'], [1200, '₹1.2k'], [2500, '₹2.5k'],
+    [80_000, '₹80k'], [100_000, '₹1L'], [150_000, '₹1.5L'], [1_200_000, '₹12L'], [1_250_000, '₹12.5L'],
+  ])('%i → %s', (amount, expected) => {
+    expect(formatMoneyAxis(amount)).toBe(expected);
   });
 });
 

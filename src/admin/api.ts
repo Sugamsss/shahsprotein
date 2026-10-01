@@ -1,7 +1,7 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
-  KitchenSettings, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
 import { holdUntilDone } from './unsavedWork';
@@ -152,6 +152,8 @@ export const setKitchenProduct = (productId: string, settings: KitchenSettings) 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
 /** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */
 export const getTotals = () => rpc<Totals>('get_admin_totals');
+/** Home's metrics block: Today, Week, Month, Year and Lifetime, each against the same moment last time. 'missing' until 20261001000000 is live. */
+export const getMetrics = () => rpc<Metrics>('get_admin_metrics');
 export const getCustomers = (search?: string) => rpc<CustomerList>('get_admin_customers', { search });
 
 export const getStock = () => rpc<OutOfStock>('get_product_stock');

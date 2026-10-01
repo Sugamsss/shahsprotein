@@ -1,0 +1,258 @@
+/* "How it's going": both Homes' metrics block (HomeMetrics.tsx, temp/home-metrics/design.md
+   "Final: B"). It sizes itself by its own inner width (container hm), so the same block
+   works at 248px inside a 320 phone, ~303 at 375, ~600 on a tablet and 508 in a laptop
+   column. Colours are the admin's and the themes' tokens; the chart's mixes are named once. */
+.adm-card.adm-hm {
+  --hm-bar: color-mix(in srgb, var(--color-accent-primary) 34%, transparent);
+  --hm-area: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+  --hm-upi: var(--adm-success-text);
+  --hm-cash: color-mix(in srgb, var(--adm-success-text) 55%, transparent);
+  --hm-bank: color-mix(in srgb, var(--adm-success-text) 30%, transparent);
+  --hm-other: var(--adm-ink-3);
+  --hm-unrecorded: var(--adm-track-off);
+  container: hm / inline-size;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0;
+}
+/* One column that never grows past the card, whatever is inside. */
+.adm-hm-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.adm-hm :is(b, dd, small, .adm-hm-x, .adm-hm-top, .adm-hm-delta, .adm-hm-dotlabel, .adm-hm-prod__name > span) { font-variant-numeric: tabular-nums; }
+/* Couldn't load: the admin's message and Retry, flat inside this card. */
+.adm-hm .adm-load-error { padding: 0; border: 0; background: none; box-shadow: none; }
+
+/* ---- The period switch: five words, one measured sliding thumb ---------------------------- */
+.adm-hm-seg {
+  --x: 4px; --w: 20%;
+  position: relative; isolation: isolate; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr);
+  padding: 4px; border: 1px solid var(--color-choice-track-border); border-radius: var(--radius-full); background: var(--color-toggle-track);
+}
+.adm-hm-seg::before {
+  content: ''; position: absolute; z-index: -1; top: 4px; bottom: 4px; left: var(--x); width: var(--w);
+  border-radius: var(--radius-full); background: var(--color-choice-selected-bg); box-shadow: var(--shadow-choice-selected);
+  transition: left 260ms var(--ease-glide), width 260ms var(--ease-glide);
+}
+.adm-hm-seg[data-still='1']::before { transition: none; }
+.adm-hm-seg label { position: relative; display: grid; }
+.adm-hm-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-hm-seg span {
+  display: grid; place-items: center; min-height: 40px; padding: 0 8px; border-radius: var(--radius-full);
+  color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 600; line-height: 1; white-space: nowrap;
+  cursor: pointer; touch-action: manipulation; transition: color 200ms ease;
+}
+.adm-hm-seg input:checked + span { color: var(--color-choice-selected-text); }
+.adm-hm-seg input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 0; }
+.adm-hm-seg label:active span { transform: scale(0.97); }
+@media (hover: hover) { .adm-hm-seg input:not(:checked) + span:hover { color: var(--adm-ink-1); } }
+/* 3px a side keeps all five words inside a 320 phone's track, thumb and all. */
+@container hm (max-width: 310px) { .adm-hm-seg span { padding: 0 3px; font-size: var(--adm-text-small); } }
+
+/* ---- The sentence: the answer, then how it compares ---------------------------------------- */
+.adm-hm-story { display: grid; gap: 6px; }
+/* The four chips' stories in one cell: as tall as the tallest, only the chosen one seen. */
+.adm-hm-stories { display: grid; }
+.adm-hm-variant { grid-area: 1 / 1; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.adm-hm-variant[aria-hidden='true'] { visibility: hidden; }
+.adm-hm-range { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-sentence {
+  color: var(--adm-ink-3); text-wrap: balance; font-variant-numeric: proportional-nums;
+  font-size: var(--adm-text-title); font-weight: 700; line-height: 1.15; letter-spacing: -0.022em;
+}
+.adm-hm-sentence b { color: var(--adm-ink-1); font-weight: 700; }
+.adm-hm-sentence b.is-money { color: var(--adm-success-text); }
+.adm-hm-change {
+  display: flex; align-items: flex-start; gap: 6px; margin-top: 2px;
+  color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; line-height: 1.35; text-wrap: pretty;
+}
+.adm-hm-change svg { flex: 0 0 auto; margin-top: 2px; }
+/* A line's height even when it only holds a pulse (they're flex boxes, so no text strut). */
+.adm-hm-change, .adm-hm-methods { min-height: 1.35em; }
+.adm-hm-change.is-up { color: var(--adm-success-text); }
+/* "(from ₹480)" and "2 orders have no total yet" stay calm, so the green is the change itself. */
+.adm-hm-change__quiet { color: var(--adm-ink-2); white-space: nowrap; }
+.adm-hm-change.is-none { color: var(--adm-ink-3); font-size: var(--adm-text-small); }
+.adm-hm-notes { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-notes > span { white-space: nowrap; }
+
+/* Came in, by how it was paid: one split bar, the words carry it. */
+.adm-hm-split { display: flex; gap: 2px; height: 8px; margin-top: 8px; overflow: hidden; border-radius: 4px; }
+.adm-hm-split i { flex: var(--w) 1 0; min-width: 4px; }
+.adm-hm-methods {
+  display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 2px 0 0; padding: 0; list-style: none;
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35;
+}
+.adm-hm-methods li { display: inline-flex; align-items: center; gap: 6px; }
+.adm-hm-methods b { color: var(--adm-ink-1); font-weight: 600; }
+.adm-hm-methods i { width: 10px; height: 10px; border-radius: 3px; }
+:is(.adm-hm-split, .adm-hm-methods) .is-upi { background: var(--hm-upi); }
+:is(.adm-hm-split, .adm-hm-methods) .is-cash { background: var(--hm-cash); }
+:is(.adm-hm-split, .adm-hm-methods) .is-bank { background: var(--hm-bank); }
+:is(.adm-hm-split, .adm-hm-methods) .is-other { background: var(--hm-other); }
+:is(.adm-hm-split, .adm-hm-methods) .is-not_recorded { background: var(--hm-unrecorded); }
+
+/* ---- The chart ---------------------------------------------------------------------------- */
+.adm-hm-chart { --plot: 148px; --gap: 10px; display: grid; gap: 8px; min-width: 0; margin: 0; }
+.adm-hm-nm { --gap: 6px; }
+.adm-hm-nl { --gap: 3px; }
+.adm-hm-nxl { --gap: 2px; }
+.adm-hm-plot {
+  position: relative; height: var(--plot); border-bottom: 1px solid var(--adm-hairline); border-radius: 2px;
+  cursor: pointer; touch-action: pan-y; -webkit-user-select: none; user-select: none;
+}
+.adm-hm-plot:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 4px; }
+/* The top of the scale: its value, and a faint dashed line, so a height means something. */
+.adm-hm-top {
+  position: absolute; z-index: 2; top: 0; left: 0; padding-right: 6px;
+  color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 16px;
+}
+.adm-hm-plot::before { content: ''; position: absolute; top: 20px; right: 0; left: 0; border-top: 1px dashed var(--adm-hairline); }
+.adm-hm-bars, .adm-hm-ghost, .adm-hm-area-box, .adm-hm-pulse-bars { position: absolute; top: 20px; right: 0; bottom: 0; left: 0; }
+.adm-hm .adm-pulse.adm-hm-pulse-bars { width: auto; height: auto; }
+
+.adm-hm-bars { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.adm-hm-bars li { position: relative; height: 100%; }
+.adm-hm-bars i {
+  position: absolute; bottom: 0; left: calc(var(--gap) / 2); right: calc(var(--gap) / 2); height: var(--h, 0);
+  border-radius: min(6px, calc(var(--gap) * 1.5)) min(6px, calc(var(--gap) * 1.5)) 1px 1px; background: var(--hm-bar);
+}
+.adm-hm-bars li.is-now i { background: var(--color-accent-gradient); }
+.adm-hm-bars li.is-zero i { height: 2px; border-radius: 1px; background: var(--adm-track-off); }
+.adm-hm-bars li.is-ahead i { left: 50%; right: auto; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: var(--adm-track-off); }
+.adm-hm-bars li.is-before i { display: none; }
+/* A tapped bar: a soft column behind it, from the top line to the baseline. */
+.adm-hm-bars li.is-picked::before { content: ''; position: absolute; top: -20px; bottom: 0; left: 0; right: 0; border-radius: 6px 6px 0 0; background: var(--adm-well-press); }
+/* Last period: one stepped dashed line, its skyline. */
+.adm-hm-ghost { z-index: 1; width: 100%; height: calc(100% - 20px); overflow: visible; pointer-events: none; }
+.adm-hm-ghost path { fill: none; stroke: var(--adm-ink-3); stroke-width: 1.5px; stroke-dasharray: 4 3; stroke-linejoin: round; opacity: 0.75; }
+
+/* Today: running totals. Today solid with a soft fill to now; yesterday's whole day dashed. */
+.adm-hm-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.adm-hm-line { fill: none; stroke: var(--color-accent-primary); stroke-width: 2.5px; stroke-linejoin: round; stroke-linecap: round; }
+.adm-hm-area { fill: var(--hm-area); }
+.adm-hm-ghostline { fill: none; stroke: var(--adm-ink-3); stroke-width: 1.5px; stroke-dasharray: 4 3; stroke-linejoin: round; opacity: 0.8; }
+.adm-hm-dot {
+  position: absolute; left: var(--px); bottom: var(--py); width: 12px; height: 12px; margin: 0 0 -6px -6px; border-radius: 50%;
+  background: var(--color-accent-primary); box-shadow: 0 0 0 3px var(--adm-surface-solid);
+}
+.adm-hm-dot.is-ghost { width: 9px; height: 9px; margin: 0 0 -4.5px -4.5px; background: var(--adm-surface-solid); box-shadow: inset 0 0 0 2px var(--adm-ink-3); }
+.adm-hm-dotlabel {
+  position: absolute; left: var(--px); bottom: var(--py); margin: 0 0 10px 10px; padding: 1px 6px; border-radius: 6px;
+  background: var(--adm-surface-solid); color: var(--adm-ink-1);
+  font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; white-space: nowrap;
+}
+.adm-hm-dotlabel.is-left { margin-left: -10px; transform: translateX(-100%); }
+.adm-hm-cursor { position: absolute; top: -20px; bottom: 0; left: var(--px); width: 0; border-left: 1.5px solid var(--adm-ink-2); opacity: 0.5; }
+
+.adm-hm-x { position: relative; height: 18px; }
+.adm-hm-x span {
+  position: absolute; left: var(--pos); transform: translateX(-50%);
+  color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 18px; white-space: nowrap;
+}
+.adm-hm-x span.is-start { left: 0; transform: none; }
+.adm-hm-x span.is-end { left: auto; right: 0; transform: none; }
+.adm-hm-x span.is-now { color: var(--adm-ink-1); font-weight: 600; }
+
+/* Under the chart: the key, or a tapped bar's numbers. Two lines' room on narrow cards, where
+   a readout wraps, so tapping a bar never moves the chips. */
+.adm-hm-chart figcaption { min-height: 43px; }
+/* All zeros: no made-up top value, only the flat line or zero stubs. */
+.adm-hm-chart.is-empty .adm-hm-plot::before { display: none; }
+.adm-hm-key, .adm-hm-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; line-height: 1.35; }
+.adm-hm-key { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; }
+.adm-hm-key > span { display: inline-flex; align-items: center; gap: 6px; }
+.adm-hm-sw { width: 12px; height: 12px; border-radius: 3px; background: var(--hm-bar); }
+.adm-hm-sw.is-ghost { height: 0; border-top: 2px dashed var(--adm-ink-3); border-radius: 0; background: none; opacity: 0.75; }
+.adm-hm-sw.is-line { height: 0; border-top: 2.5px solid var(--color-accent-primary); border-radius: 2px; background: none; }
+.adm-hm-key > .adm-hm-hint { margin-left: auto; }
+.adm-hm-hint--click { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .adm-hm-hint--tap { display: none; }
+  .adm-hm-hint--click { display: inline; }
+}
+.adm-hm-readout { align-items: baseline; color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; }
+.adm-hm-readout .adm-hm-when, .adm-hm-readout b { color: var(--adm-ink-1); font-weight: 600; }
+.adm-hm-dim { color: var(--adm-ink-3); }
+
+/* ---- The chips: tap one, it becomes the sentence and the chart ------------------------------ */
+.adm-hm-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.adm-hm-chip {
+  display: grid; align-content: start; justify-items: start; gap: 1px; min-width: 0; min-height: 64px; padding: 10px 12px;
+  border-radius: 14px; background: var(--adm-well); color: var(--adm-ink-1); text-align: start; touch-action: manipulation;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+.adm-hm-chips.has-change .adm-hm-chip { min-height: 84px; }
+.adm-hm-chip__label { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; white-space: nowrap; }
+.adm-hm-chip > b { font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; white-space: nowrap; }
+.adm-hm-chip.is-on { background: var(--adm-accent-tint); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-accent-primary) 55%, transparent); }
+.adm-hm-chip.is-on .adm-hm-chip__label, .adm-hm-chip.is-on > b { color: var(--adm-accent-text); }
+.adm-hm-chip.is-on .adm-hm-chip__label { font-weight: 600; }
+.adm-hm-chip:active { transform: scale(0.98); background: var(--adm-well-press); }
+.adm-hm-chip.is-on:active { background: var(--adm-accent-tint-press); }
+.adm-hm-chip:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+@media (hover: hover) { .adm-hm-chip:not(.is-on):hover { background: var(--adm-well-press); } }
+/* Changes are grey on chips: an arrow and the number say it. */
+.adm-hm-delta {
+  display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 2px;
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35;
+}
+.adm-hm-delta svg { flex: 0 0 auto; }
+.adm-hm-from { flex-basis: 100%; font-weight: 500; white-space: nowrap; }
+
+/* Profit and avg order: figures, not charted, so quieter. */
+.adm-hm-quiet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: -8px 0 0; padding: 0 12px; }
+.adm-hm-quiet > div { display: grid; }
+.adm-hm-quiet dt { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-quiet dd { margin: 0; color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; }
+
+/* ---- By product: packs and their share, never ₹ ---------------------------------------------- */
+.adm-hm-prod { display: grid; gap: 4px; padding-top: 16px; border-top: 1px solid var(--adm-hairline); }
+.adm-hm-sub { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.adm-hm-sub h3 { color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; }
+.adm-hm-sub > span { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-prod ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.adm-hm-prod li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; }
+.adm-hm-prod li + li { border-top: 1px solid var(--adm-hairline); }
+.adm-hm-thumb { position: relative; width: 40px; height: 40px; overflow: hidden; border-radius: 10px; }
+.adm-hm-thumb::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--adm-hairline); }
+.adm-hm-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.adm-hm-prod__main { display: grid; gap: 6px; min-width: 0; }
+.adm-hm-prod__name { display: grid; min-width: 0; }
+.adm-hm-prod__name b { color: var(--adm-ink-1); font-weight: 600; line-height: 1.3; white-space: nowrap; }
+/* The weight never splits; the share drops under it if it must. */
+.adm-hm-nowrap { white-space: nowrap; }
+.adm-hm-prod__name > span { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-prod__track { position: relative; height: 6px; overflow: hidden; border-radius: 3px; background: var(--adm-well-press); }
+.adm-hm-prod__track i { position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: 3px; background: var(--adm-ink-2); }
+.adm-hm-prod__end { display: grid; justify-items: end; min-width: 44px; }
+.adm-hm-prod__end b { color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.adm-hm-prod__end small { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
+.adm-hm-prod li.is-none :is(.adm-hm-prod__name b, .adm-hm-prod__end b) { color: var(--adm-ink-3); }
+.adm-hm-prod li.is-none .adm-hm-thumb { opacity: 0.6; }
+
+/* ---- Loading: labels stay, numbers pulse, nothing jumps ---------------------------------------- */
+/* About a real figure's width ("₹1,320"), so the loading sentence wraps where the real one does. */
+.adm-hm .adm-pulse.adm-hm-pulse-figure { width: 3.4em; height: 0.9em; }
+.adm-hm .adm-pulse.adm-hm-pulse-line { display: inline-block; width: 180px; height: 1em; vertical-align: middle; }
+/* Came in's split bar and legend line, so the stories keep their loaded height. */
+.adm-hm .adm-pulse.adm-hm-pulse-split { width: 100%; height: 8px; margin-top: 8px; border-radius: 4px; }
+.adm-hm .adm-pulse.adm-hm-pulse-methods { display: inline-block; width: 60%; height: 1em; vertical-align: middle; }
+.adm-hm .adm-pulse.adm-hm-pulse-range { width: 140px; height: 1em; }
+.adm-hm .adm-pulse.adm-hm-pulse-chip { width: 56px; height: 18px; }
+
+/* ---- By the card's width -------------------------------------------------------------------- */
+@container hm (max-width: 270px) {
+  .adm-hm-x span.is-minor { display: none; }
+  /* The key's size, so a readout stays within its two lines. */
+  .adm-hm-readout { font-size: var(--adm-text-small); }
+  .adm-hm-quiet { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .adm-hm-quiet > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+}
+@container hm (min-width: 460px) {
+  .adm-hm-chart { --plot: 176px; }
+  .adm-hm-chart figcaption { min-height: 21px; }
+  .adm-hm-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .adm-hm-quiet { display: flex; gap: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-hm-seg::before, .adm-hm-seg span, .adm-hm-chip { transition: none; }
+  .adm-hm-chip:active, .adm-hm-seg label:active span { transform: none; }
+}

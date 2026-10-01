@@ -358,6 +358,90 @@ export interface Totals {
   kitchen: Kitchen;
 }
 
+// ---- Home's metrics block (20261001000000, temp/home-metrics/contract.md) ---------
+
+export type MetricsPeriodKey = 'today' | 'week' | 'month' | 'year' | 'lifetime';
+
+/** One window's numbers. Real orders: not cancelled, not a free sample, by when they were placed. Zeros, never null. */
+export interface MetricsTotals {
+  orders: number;
+  /** Packs on those orders, samples left out, and their grams. */
+  packs: number;
+  grams: number;
+  /** ₹ on the orders that have a total. Profit and avg order are worked out in the browser. */
+  sales: number;
+  with_total: number;
+  /** Orders with no total yet ("N without a total"). with_total + without_total = orders. */
+  without_total: number;
+  /**
+   * ₹ paid so far on this window's orders that have a total, whenever it came in (up to now, or for
+   * previous up to its same moment), at most each order's total, so it's never more than sales.
+   * "₹X of ₹sales paid". Never compare it with came_in, which is money by payment date.
+   */
+  paid_of_sales: number;
+  /**
+   * Orders carrying a sample (paid orders with a taster too) and sample packs, which are never in packs.
+   * free_orders: the free sample orders among them, the only ones left out of orders and ₹.
+   */
+  samples: { orders: number; packs: number; free_orders: number };
+  /** Payments by when each came in; by_method adds up to amount. without_amount: paid with no total (adds ₹0). */
+  came_in: { amount: number; payments: number; without_amount: number; by_method: TotalsByMethod };
+}
+
+/** Per product: real orders carrying it, packs and grams. Never ₹ (money is per order). */
+export interface MetricsProduct {
+  product_id: string;
+  orders: number;
+  packs: number;
+  grams: number;
+  /** The previous period up to the same moment; null when the period isn't compared. */
+  previous: { orders: number; packs: number; grams: number } | null;
+}
+
+/** One chart bar. date is the India date it starts on (the day, the week's Monday or the month's 1st); hour only on hours. */
+export interface MetricsBucket {
+  date: string;
+  hour?: number;
+  orders: number;
+  /** Orders with a total, for avg order per bar (sales ÷ with_total). */
+  with_total: number;
+  packs: number;
+  sales: number;
+  came_in: number;
+  /** came_in by method, all five keys; adds up to came_in. */
+  came_in_by_method: TotalsByMethod;
+  /** Packs per product (samples out), only products with packs in the bar, by product_id; adds up to packs. */
+  products: { product_id: string; packs: number }[];
+}
+
+export interface MetricsPeriod {
+  /** 00:00 India time on the period's first day; lifetime: the first order (null with none). */
+  starts_at: string | null;
+  ends_at: string;
+  totals: MetricsTotals;
+  /** The previous period up to the same moment. null: don't compare (the business hadn't started by its start). */
+  previous: { starts_at: string; ends_at: string; totals: MetricsTotals } | null;
+  /** Every product with packs in this period or the previous one so far, by product_id. */
+  products: MetricsProduct[];
+  chart: {
+    grain: 'hour' | 'day' | 'week' | 'month';
+    /** The bar holding now; later bars are the future. */
+    now_index: number;
+    /** The whole period (24 hours, 7 days, every day of the month, 12 months; lifetime up to now). Adds up to totals. */
+    current: MetricsBucket[];
+    /** The whole previous period as a ghost, aligned by index; null with previous. */
+    previous: MetricsBucket[] | null;
+  };
+}
+
+/** get_admin_metrics(): both Homes' metrics block, all five periods in one call. */
+export interface Metrics {
+  as_of: string;
+  /** The first real order, or null. */
+  first_order_at: string | null;
+  periods: Record<MetricsPeriodKey, MetricsPeriod>;
+}
+
 // ---- The kitchen: batches, spare, shelf life (20260929000001) -------------------
 
 /** fresh; near: less than a fifth of its shelf life left (at least 2 days); past: from expires_on on. Past spare never fills an order. */
