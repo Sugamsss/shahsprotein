@@ -23,8 +23,10 @@ To keep the admin on a phone like an app, open `/admin` in Safari (or Chrome on 
 
 ## Getting started
 
+Use Node.js 22 LTS or 24 and newer (Node 23 is not supported by Vitest). Supabase already requires Node 22 or newer; the test runner has the same minimum.
+
 ```bash
-npm install
+npm ci           # install the versions in package-lock.json
 npm run dev      # local server
 npm run build    # type check + build. Run it before every commit
 npm run lint     # type check only

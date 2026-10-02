@@ -10,9 +10,12 @@ The voice is first-person founder (Pranjali): warm, honest, everyday Indian. Not
 
 ## Stack and commands
 
-React 18 + TypeScript + Vite + plain CSS + Lucide icons. Supabase handles data, orders and the admin. Loops runs the email list (Resend sends the owners' sign-up alerts). The site is hosted on Vercel.
+React 18 + TypeScript + Vite 6 + Vitest 4 + plain CSS + Lucide icons. Supabase handles data, orders and the admin. Loops runs the email list (Resend sends the owners' sign-up alerts). The site is hosted on Vercel.
+
+Use Node.js 22 LTS or 24 and newer; Node 23 is not supported by Vitest. Run `npm ci` in a new checkout or after dependency changes to install the lockfile's versions.
 
 ```bash
+npm ci           # install the versions in package-lock.json
 npm run dev      # local dev server (Vite)
 npm run build    # tsc + vite build → dist/  (run this before every commit)
 npm run lint     # type check only
