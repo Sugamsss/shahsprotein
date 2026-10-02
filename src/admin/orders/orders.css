@@ -420,20 +420,29 @@
 
 /* ---- The delivered bill -------------------------------------------------------- */
 .adm-bill__sub { margin-top: 2px; font-size: var(--adm-text-small); font-weight: 400; color: var(--adm-ink-2); }
+.adm-bill-sheet { height: 88vh; height: 88dvh; }
+.adm-bill-sheet .adm-sheet__body { display: flex; }
+.adm-bill__preview { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; min-height: 0; }
+.adm-bill__preview .adm-bill__zoom { align-self: flex-end; min-height: 44px; flex-shrink: 0; }
 .adm-bill__stage {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 70vh;
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   padding: 24px 16px;
   border-radius: 16px;
   background: var(--adm-well);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
-@media (max-width: 359px) { .adm-bill__stage { padding: 12px; } }
+.adm-bill__stage.is-zoomed .adm-bill__img { width: max(200%, 560px); max-width: none; height: auto; margin: 0; }
+@media (max-width: 959px) { .adm-bill__stage { padding: 0; background: transparent; } }
 .adm-bill__img {
   display: block;
   width: min(100%, 560px);
-  height: auto;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
   margin: auto;
   border-radius: 8px;
   opacity: 1;
@@ -501,6 +510,16 @@
   width: 100%;
 }
 .adm-bill__actions, .adm-bill__main { width: 100%; }
+/* The bill's feedback belongs inside its pinned bar, not above the clipped sheet. */
+.adm-bill__actions .adm-toast-slot {
+  position: static;
+  padding: 0 0 8px;
+}
+.adm-bill__actions .adm-toast { width: 100%; }
+@media (max-height: 480px) {
+  .adm-bill-sheet { overflow-y: auto; display: block; }
+  .adm-bill-sheet .adm-sheet__body { height: 280px; }
+}
 @media (min-width: 400px) {
   .adm-bill__bar {
     flex-direction: row;
@@ -526,6 +545,7 @@
    Laptop: the board, the popup, the table
    ============================================================================ */
 @media (min-width: 960px) {
+  .adm-bill-sheet { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
   /* Board lanes are about 250px: the name gets two lines, and the pincode goes
      (it's in the popup) rather than being cut to "411…". */
   .adm-ocard__place { display: none; }

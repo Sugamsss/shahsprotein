@@ -530,6 +530,9 @@ export const adminCopy = {
   },
 
   bill: {
+    zoom: 'Zoom in',
+    fit: 'Fit bill',
+    preview: 'Bill preview',
     titleDelivered: "Delivered. Here's the bill",
     title: 'Bill',
     // Paper

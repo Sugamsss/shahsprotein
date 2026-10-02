@@ -35,6 +35,12 @@ export const BillSheet: React.FC<BillSheetProps> = ({
   const [painting, setPainting] = useState(false);
   const [paintError, setPaintError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setZoomed(false);
+    previewRef.current?.scrollTo(0, 0);
+  }, [isOpen, order?.id]);
 
   // Bill model
   const bill = useMemo(() => {
@@ -197,6 +203,7 @@ export const BillSheet: React.FC<BillSheetProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         width={760}
+        className="adm-bill-sheet"
         title={titleNode}
         closeLabel={adminCopy.close}
         bar={
@@ -323,31 +330,42 @@ export const BillSheet: React.FC<BillSheetProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       width={760}
+      className="adm-bill-sheet"
       title={titleNode}
       closeLabel={adminCopy.close}
       bar={barNode}
     >
-      <div className="adm-bill__stage">
-        {paintError ? (
-          <div className="adm-bill__error">
-            <p>{adminCopy.bill.failed}</p>
-            <button
-              type="button"
-              className="adm-btn adm-btn--quiet adm-btn--sm"
-              onClick={() => setRetryKey((k) => k + 1)}
-            >
-              {adminCopy.bill.retry}
-            </button>
-          </div>
-        ) : imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={altText}
-            className={`adm-bill__img${painting ? ' is-painting' : ''}`}
-          />
-        ) : (
-          <div className="adm-bill__placeholder" aria-hidden="true" />
+      <div className="adm-bill__preview">
+        {imageUrl && !paintError && (
+          <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm adm-bill__zoom"
+            aria-pressed={zoomed} onClick={() => { setZoomed((value) => !value); previewRef.current?.scrollTo(0, 0); }}>
+            {zoomed ? adminCopy.bill.fit : adminCopy.bill.zoom}
+          </button>
         )}
+        <div ref={previewRef} tabIndex={zoomed ? 0 : undefined} role={zoomed ? 'region' : undefined}
+          aria-label={zoomed ? adminCopy.bill.preview : undefined}
+          className={`adm-bill__stage${zoomed ? ' is-zoomed' : ''}`}>
+          {paintError ? (
+            <div className="adm-bill__error">
+              <p>{adminCopy.bill.failed}</p>
+              <button
+                type="button"
+                className="adm-btn adm-btn--quiet adm-btn--sm"
+                onClick={() => setRetryKey((k) => k + 1)}
+              >
+                {adminCopy.bill.retry}
+              </button>
+            </div>
+          ) : imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={altText}
+              className={`adm-bill__img${painting ? ' is-painting' : ''}`}
+            />
+          ) : (
+            <div className="adm-bill__placeholder" aria-hidden="true" />
+          )}
+        </div>
       </div>
     </AdminSheet>
   );
