@@ -21,7 +21,10 @@ import { siteConfig } from './data/siteConfig';
 
 const AdminRedirect: React.FC = () => {
   React.useEffect(() => {
-    window.location.replace('/admin');
+    const target = window.location.pathname.startsWith('/admin')
+      ? window.location.pathname + window.location.search + window.location.hash
+      : '/admin';
+    window.location.replace(target);
   }, []);
   return null;
 };

@@ -45,7 +45,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      // Both pages load the same entry (src/main.tsx); only their heads differ.
+      // Each page has its own entry (index.html -> main.tsx, admin.html -> adminMain.tsx).
       input: {
         index: path.resolve(__dirname, 'index.html'),
         admin: path.resolve(__dirname, 'admin.html'),
