@@ -10,7 +10,6 @@ import { namesOneOrder, searchFor } from './orders/model';
 import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
-import { useAppUpdates } from './update/appUpdate';
 import { WhatsNewDialog } from './update/WhatsNewDialog';
 
 type OverviewState = ReturnType<typeof useRpc<Awaited<ReturnType<typeof getOverview>>>>;
@@ -213,7 +212,6 @@ const TabBar: React.FC<{ badge: number }> = ({ badge }) => {
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const overview = useRpc(getOverview, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   // New builds install themselves at a safe moment; "What's new" shows on Home afterwards.
-  useAppUpdates();
   // The Orders badge is what's waiting on Sunit: orders to pack. The cook gets none; her Home answers her.
   const cook = useAdminMe().home_view === 'cook';
   const badge = cook ? 0 : overview.data?.queue.packing.count ?? 0;

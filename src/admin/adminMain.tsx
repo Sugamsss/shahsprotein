@@ -4,10 +4,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '../context/ThemeContext';
 import { listenForStaleChunks } from '../utils/staleChunk';
 import AdminApp from './AdminApp';
+import { eagerCheckUpdate } from './update/appUpdate';
 // Preload anchor: allows Vite to discover and modulepreload Supabase directly in admin.html.
 import '../services/supabaseClient';
 
 listenForStaleChunks();
+eagerCheckUpdate();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -43,6 +43,13 @@ export const adminReleases: AdminRelease[] = [
     body: 'Home shows sales, money in, orders and packs for today, this week, month, year or since we started, against the same time before. Tap the chart for a closer look. Profit is an estimate at 25% of sales.',
   },
   {
+    id: '2026-09-30-held-in-cooking',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'Hold an order in Cooking',
+    body: 'Move a Packing or Ready order back to Cooking from its menu. Its cooked food stays reserved, and it will only move on when you choose Move to Packing.',
+  },
+  {
     id: '2026-09-29-kitchen-stages',
     for: ['admin', 'cook'],
     kind: 'new',

@@ -6,7 +6,7 @@ import { hasUnsavedWork } from '../unsavedWork';
 // Updates install themselves (temp/changelog-brief.md). No service worker: each
 // build writes /admin-release.json ({ build }, served no-store) and bakes the
 // same id in here. The open admin asks for that file when it comes back into
-// view, on focus and every 5 minutes, and when the ids differ it reloads, but
+// view, on focus and every minute, and when the ids differ it reloads, but
 // only at a safe moment:
 //   - no sheet or popup open, no field focused, not on Add or Edit order;
 //   - nothing unsaved (useUnsavedWork: typing, a save as you type, a toast
@@ -23,9 +23,9 @@ import { hasUnsavedWork } from '../unsavedWork';
 export const BUILD = __ADMIN_BUILD__;
 
 const RELEASE_URL = '/admin-release.json';
-const CHECK_EVERY_MS = 5 * 60_000;
+const CHECK_EVERY_MS = 60_000;
 /** A focus right after a check doesn't ask again. */
-const CHECK_THROTTLE_MS = 10_000;
+const CHECK_THROTTLE_MS = 2_000;
 /** "Left alone": no tap, key, scroll or wheel for this long. */
 const IDLE_MS = 20_000;
 const IDLE_POLL_MS = 5_000;
@@ -53,6 +53,13 @@ const latestBuild = async (): Promise<string | null> => {
   } catch {
     return null;
   }
+};
+
+/** Start the release-file request as soon as the admin entry is evaluated. */
+export const eagerCheckUpdate = (): void => {
+  if (!import.meta.env.DEV) void latestBuild().then((latest) => {
+    if (latest && latest !== BUILD && latest !== reloadedFor()) pending = latest;
+  });
 };
 
 const reloadedFor = (): string | null => {
@@ -122,6 +129,8 @@ export const useAppUpdates = (): void => {
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', onFocus);
+    const onPageShow = () => { if (Date.now() - lastCheck > CHECK_THROTTLE_MS) void check('now'); };
+    window.addEventListener('pageshow', onPageShow);
     const checkTimer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void check('idle');
     }, CHECK_EVERY_MS);
@@ -134,11 +143,12 @@ export const useAppUpdates = (): void => {
       tryReload('now');
     });
 
-    void check('idle');
+    void check('now');
     return () => {
       inputs.forEach((type) => window.removeEventListener(type, onInput, { capture: true }));
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pageshow', onPageShow);
       window.clearInterval(checkTimer);
       window.clearInterval(idleTimer);
       onStaleChunk(null);

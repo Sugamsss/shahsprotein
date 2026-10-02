@@ -6,6 +6,7 @@ import { AdminLayout } from './AdminLayout';
 import { adminCopy as copy } from '../data/adminCopy';
 import { Redirect } from './router';
 import { Splash } from './Splash';
+import { useAppUpdates } from './update/appUpdate';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 const OrdersPage = React.lazy(() => import('./orders/OrdersPage'));
@@ -39,6 +40,7 @@ const returnPath = (state: unknown): string => {
 };
 
 const AdminApp: React.FC = () => {
+  useAppUpdates();
   const session = useSession();
   const location = useLocation();
   // Admin screens name the tab themselves; leaving the admin puts the site's title back.
