@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { AlertCircle, CheckCircle, Info, Loader2, TicketPercent } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { siteConfig } from '../../data/siteConfig';
+import { cancelCouponConfetti, fireCouponConfetti, shouldCelebrate } from './couponConfetti';
 
 const copy = siteConfig.order;
 
@@ -18,9 +19,34 @@ export const CouponField: React.FC = () => {
   } = useOrder();
   const inputRef = useRef<HTMLInputElement>(null);
   const focusField = useRef(false);
+  const prevCouponRef = useRef(coupon);
+  const isFirstMount = useRef(true);
   const id = useId();
   const inputId = `${id}-code`;
   const resultId = `${id}-result`;
+
+  // Confetti celebration when a coupon is newly accepted.
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      prevCouponRef.current = coupon;
+      return;
+    }
+    const prev = prevCouponRef.current;
+    prevCouponRef.current = coupon;
+    if (shouldCelebrate(prev, coupon)) {
+      // The green chip replaces the field in this same commit. Wait until it
+      // is on screen, so the burst starts there and not at the dialog center.
+      const frame = requestAnimationFrame(() => fireCouponConfetti());
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [coupon]);
+
+  useEffect(() => {
+    return () => {
+      cancelCouponConfetti();
+    };
+  }, []);
 
   // Opening the field or removing a code puts focus in the field once it's there.
   useEffect(() => {
