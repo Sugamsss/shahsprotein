@@ -174,6 +174,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const linesRef = useRef(storedLines);
   const couponInputRef = useRef(couponInput);
   const couponRef = useRef(coupon);
+  const couponCheckVersion = useRef(0);
   const sentRef = useRef(sent);
   const stockRef = useRef(stock);
   stockRef.current = stock;
@@ -249,6 +250,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setCouponInput = useCallback((value: string) => {
     const next = value.replace(/\s/g, '').toUpperCase().slice(0, 24);
+    if (next !== couponInputRef.current) couponCheckVersion.current += 1;
     couponInputRef.current = next;
     setCouponInputState(next);
     // A new value needs a new check; an answer for the old one no longer applies.
@@ -260,15 +262,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const code = normalizeCouponCode(couponInputRef.current);
     const current = couponRef.current;
     if (!code || (current.status !== 'idle' && current.code === code)) return;
+    const version = ++couponCheckVersion.current;
     updateCoupon({ status: 'checking', code });
     void checkCoupon(code).then((result) => {
-      // Ignore an answer for a code the person has since changed.
-      if (normalizeCouponCode(couponInputRef.current) !== result.code) return;
+      // Removing or changing a code ends that check, even if the same code is
+      // typed again (including on a new order while the old check is pending).
+      if (version !== couponCheckVersion.current || normalizeCouponCode(couponInputRef.current) !== result.code) return;
       updateCoupon(result);
     });
   }, [updateCoupon]);
 
   const removeCoupon = useCallback(() => {
+    couponCheckVersion.current += 1;
     couponInputRef.current = '';
     setCouponInputState('');
     updateCoupon({ status: 'idle' });
