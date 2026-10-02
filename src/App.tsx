@@ -19,8 +19,12 @@ import './styles/global.css';
 import { NotFound } from './components/pages/NotFound';
 import { siteConfig } from './data/siteConfig';
 
-// The admin is loaded on demand, so landing visitors never download it or Supabase.
-const AdminApp = React.lazy(() => import('./admin/AdminApp'));
+const AdminRedirect: React.FC = () => {
+  React.useEffect(() => {
+    window.location.replace('/admin');
+  }, []);
+  return null;
+};
 
 // Desktop sections settle into place after a scroll (see the hook).
 const SectionSettle: React.FC = () => {
@@ -74,7 +78,7 @@ export const App: React.FC = () => (
       <React.Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/admin/*" element={<AdminApp />} />
+          <Route path="/admin/*" element={<AdminRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </React.Suspense>

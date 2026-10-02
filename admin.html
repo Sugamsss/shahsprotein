@@ -2,7 +2,7 @@
 <html lang="en-IN" data-theme="dark">
   <head>
     <!-- The admin's own page (Vercel serves it for /admin and /admin/*; vite.config.ts
-         does the same in dev). Same app bundle as index.html, but this head is the
+         does the same in dev). This page has a direct admin entry, while this head is the
          "Shah's Orders" home-screen app's: browsers read the manifest, icon and
          app tags from the HTML before any JS runs, so they must be here, not added
          later. Safari fetches the first manifest it sees and never looks again. -->
@@ -50,10 +50,9 @@
     </script>
 
     <link rel="preload" href="/assets/fonts/inter-latin-v1.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/assets/fonts/outfit-latin-v1.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/admin/adminMain.tsx"></script>
   </body>
 </html>
