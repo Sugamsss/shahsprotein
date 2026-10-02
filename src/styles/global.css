@@ -2305,6 +2305,16 @@ a {
   font-weight: 600;
 }
 
+/* Coupon celebration */
+.coupon-confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: var(--z-confetti, 1100);
+}
+
 /* See your message */
 .order-preview {
   margin-top: 0.5rem;
@@ -4782,6 +4792,10 @@ img {
   .waitlist-outcome,
   .toast--leaving {
     animation: none;
+  }
+
+  .coupon-confetti {
+    display: none;
   }
 
   .order-line,

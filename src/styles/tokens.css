@@ -101,6 +101,7 @@
   --z-header: 500;
   --z-modal-overlay: 900;
   --z-modal: 1000;
+  --z-confetti: 1100;
   --z-toast: 800; /* Below the popup, so a toast never covers its Order bar. */
 }
 
