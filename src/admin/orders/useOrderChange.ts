@@ -44,7 +44,7 @@ export const useOrderChange = (show: (order: Order) => void, onOthers?: () => vo
     quiet: true,
   }), [run, reloadBadge]);
 
-  const change = useCallback((order: Order, changes: OrderChanges, quiet = false): Promise<void> => {
+  const change = useCallback((order: Order, changes: OrderChanges, quiet = false): Promise<Order | null> => {
     const after = applyLocal(order, changes);
     let saved: UpdatedOrder | null = null;
     return run({
@@ -69,7 +69,7 @@ export const useOrderChange = (show: (order: Order) => void, onOthers?: () => vo
         else void change(saved ? orderOnly(saved) : after, plan.changes, true);
       },
       quiet,
-    });
+    }).then((ok) => (ok && saved ? orderOnly(saved) : null));
   }, [run, reloadBadge, undoKitchenMove]);
 
   return change;

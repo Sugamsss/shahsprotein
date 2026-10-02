@@ -77,6 +77,8 @@ The published Loops double opt-in email is branded as follows: `Pranjali from Sh
 
 ## Orders and the admin
 
+**Delivered bill (admin only).** The browser generates a PNG from the existing order and private price book. The saved `amount` owns the order total; real `order_payments` and the RPC's `amount_paid`, `amount_due` and paid state own payment accounting. The bill adds no separate discount or advance ledger and does not change payments or totals. It requires no database migration.
+
 Migrations `20260926000000` to `000004` add the order book and remove the old waitlist-era admin (its CRM, campaign and unsubscribe functions, and the empty `email_campaigns`, `email_log` and `waitlist_email_tokens` tables). `analytics_sessions` and its rows are kept, but nothing writes to it any more. `20260929000001` moves the order book to the kitchen's stages and adds batches, spare stock and samples (see **The kitchen** below). Its status rename has no down migration: back up `orders`, `order_lines`, `order_events` and `order_payments` (`supabase db dump --data-only`) before pushing it.
 
 **Tables** (RLS on, no policies, all grants revoked; the only ways in are the functions below):

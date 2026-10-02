@@ -25,7 +25,7 @@ const setup = (save: () => Promise<unknown>, quiet = false) => {
 describe('runUndoable', () => {
   it('keeps the change and offers Undo once it saves', async () => {
     const t = setup(() => Promise.resolve());
-    await runUndoable(t.toast, t.run);
+    expect(await runUndoable(t.toast, t.run)).toBe(true);
     expect(t.screen.value).toBe('after');
     expect(t.shown.map((s) => s.text)).toEqual(["Anjali's order is confirmed"]);
     t.shown[0].action?.onAction();
@@ -40,7 +40,7 @@ describe('runUndoable', () => {
 
   it('puts it back and shows the server message as it is', async () => {
     const t = setup(() => Promise.reject(new AdminError('message', 'That order code doesn’t look right.')));
-    await runUndoable(t.toast, t.run);
+    expect(await runUndoable(t.toast, t.run)).toBe(false);
     expect(t.screen.value).toBe('before');
     expect(t.shown).toEqual([{ text: 'That order code doesn’t look right.' }]);
     expect(t.retries).toEqual([]);
@@ -49,7 +49,7 @@ describe('runUndoable', () => {
   it('puts it back on a network failure, and Try again repeats the same run', async () => {
     let calls = 0;
     const t = setup(() => (calls++ === 0 ? Promise.reject(new AdminError('network')) : Promise.resolve()), true);
-    await runUndoable(t.toast, t.run);
+    expect(await runUndoable(t.toast, t.run)).toBe(false);
     expect(t.screen.value).toBe('before');
     expect(t.retries).toHaveLength(1);
 

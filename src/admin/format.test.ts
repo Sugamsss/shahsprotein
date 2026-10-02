@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endOfDayIst, firstName, formatAge, formatAgo, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatMoneyAxis, formatMoneyShort, formatPhone, formatWeight, formatWhen, istDateValue } from './format';
+import { endOfDayIst, firstName, formatAge, formatAgo, formatBillDate, formatDay, formatDayInSentence, formatLongDate, istHour, formatMoney, formatMoneyAxis, formatMoneyShort, formatPhone, formatWeight, formatWhen, istDateValue } from './format';
 
 // Spec 2.1 "Formats". Every date is India time, so these hold whatever
 // timezone the machine running them is in. "Now" is Fri 25 Sep 2026, 2:00 pm IST.
@@ -88,6 +88,14 @@ describe('Home: the hour and the long date in India', () => {
     expect(istHour(Date.parse('2026-09-25T06:30:00Z'))).toBe(12);
     expect(istHour(Date.parse('2026-09-24T18:40:00Z'))).toBe(0); // just after midnight on the 25th
     expect(formatLongDate(Date.parse('2026-09-24T18:40:00Z'))).toBe('Friday, 25 September');
+  });
+});
+
+describe('formatBillDate', () => {
+  it('formats "2 October 2026" in IST', () => {
+    expect(formatBillDate('2026-10-02T10:00:00+05:30')).toBe('2 October 2026');
+    // UTC evening on 1 Oct is 2 Oct in IST
+    expect(formatBillDate('2026-10-01T20:00:00Z')).toBe('2 October 2026');
   });
 });
 
