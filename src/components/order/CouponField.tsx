@@ -37,8 +37,9 @@ export const CouponField: React.FC = () => {
     if (shouldCelebrate(prev, coupon)) {
       // The green chip replaces the field in this same commit. Wait until it
       // is on screen, so the burst starts there and not at the dialog center.
-      const frame = requestAnimationFrame(() => fireCouponConfetti());
-      return () => cancelAnimationFrame(frame);
+      // Dev mode's double render happens when the popup opens, not when a code
+      // is accepted, so this frame isn't cancelled before it paints.
+      requestAnimationFrame(() => fireCouponConfetti());
     }
   }, [coupon]);
 
