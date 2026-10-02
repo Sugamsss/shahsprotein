@@ -6,15 +6,15 @@
  * - Light & dark palettes derived directly from site tokens
  * - Originates at the green applied chip (.order-coupon__applied)
  * - Arcs up and out, drifts down with gravity and gentle 3D flutter
- * - Fades in the final 30% of its ~1.2s duration
+ * - Fades in the final 30% of its 1.6s duration
  * - Skips entirely when prefers-reduced-motion is requested
  * - One burst at a time (cancels any in-flight burst)
  */
 
-export type ConfettiTheme = 'light' | 'dark';
-export type ConfettiShape = 'rect' | 'circle';
+type ConfettiTheme = 'light' | 'dark';
+type ConfettiShape = 'rect' | 'circle';
 
-export interface ConfettiPiece {
+interface ConfettiPiece {
   shape: ConfettiShape;
   color: string;
   width: number;
@@ -43,7 +43,7 @@ export interface ConfettiPiece {
  * Light: blue, deeper blue, success green, peach, gold, rose.
  * Dark: gold, deeper gold, success green, peach, sky, rose.
  */
-export const LIGHT_CONFETTI_COLORS = [
+const LIGHT_CONFETTI_COLORS = [
   '#3b82f6',
   '#2563eb',
   '#16a34a',
@@ -52,7 +52,7 @@ export const LIGHT_CONFETTI_COLORS = [
   '#e11d48',
 ] as const;
 
-export const DARK_CONFETTI_COLORS = [
+const DARK_CONFETTI_COLORS = [
   '#e5c158',
   '#d4af37',
   '#4ade80',
@@ -61,16 +61,16 @@ export const DARK_CONFETTI_COLORS = [
   '#fb7185',
 ] as const;
 
-export function getConfettiColors(theme: ConfettiTheme): readonly string[] {
+function getConfettiColors(theme: ConfettiTheme): readonly string[] {
   return theme === 'dark' ? DARK_CONFETTI_COLORS : LIGHT_CONFETTI_COLORS;
 }
 
-export function isReducedMotion(): boolean {
+function isReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export interface CouponTransitionState {
+interface CouponTransitionState {
   status: string;
   code?: string;
 }
@@ -92,7 +92,7 @@ export function shouldCelebrate(
 /**
  * Creates ~64 pieces (~70% rectangles, ~30% circles) evenly colored with the theme palette.
  */
-export function createConfettiPieces(options: {
+function createConfettiPieces(options: {
   count?: number;
   theme: ConfettiTheme;
   originX: number;
@@ -151,7 +151,7 @@ export function createConfettiPieces(options: {
   return pieces;
 }
 
-export function getBurstOrigin(): { x: number; y: number } {
+function getBurstOrigin(): { x: number; y: number } {
   if (typeof document === 'undefined') return { x: 0, y: 0 };
   const chip = document.querySelector<HTMLElement>('.order-coupon__applied');
   if (chip) {
@@ -216,7 +216,7 @@ export function cancelCouponConfetti(): void {
 }
 
 /**
- * Fires a 1.2s celebratory confetti blast on document.body.
+ * Fires a 1.6s celebratory confetti blast on document.body.
  * Cancels any existing burst first.
  */
 export function fireCouponConfetti(): void {
@@ -248,10 +248,16 @@ export function fireCouponConfetti(): void {
   document.body.appendChild(canvas);
 
   let animationFrameId: number | null = null;
+  const motion = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const onMotionChange = (event: MediaQueryListEvent) => {
+    if (event.matches) cancelCouponConfetti();
+  };
   const startTime = performance.now();
   const duration = 1600;
 
   const cleanup = () => {
+    motion?.removeEventListener?.('change', onMotionChange);
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
@@ -262,6 +268,7 @@ export function fireCouponConfetti(): void {
   };
 
   activeBurstCleanup = cleanup;
+  motion?.addEventListener?.('change', onMotionChange);
 
   const tick = (now: number) => {
     const elapsed = now - startTime;
