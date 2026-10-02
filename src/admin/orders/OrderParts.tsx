@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Copy, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ClipboardList, ClipboardPaste, Copy, MessageCircle, MoreHorizontal, Pencil, Phone, Ticket } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteOrder, toAdminError, updateOrder } from '../api';
@@ -21,7 +21,7 @@ import type { PaymentActions } from './usePayments';
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
 const copy = adminCopy.order;
-type Change = (order: Order, changes: OrderChanges) => void | Promise<void>;
+type Change = (order: Order, changes: OrderChanges) => void | Promise<unknown>;
 
 /** Code and came-via, the name, when and where. Spans only: the page puts it in an h1, the popup in its h2. */
 export const OrderHead: React.FC<{ order: Order; nameRef?: React.Ref<HTMLSpanElement> }> = ({ order: o, nameRef }) => (
@@ -73,7 +73,9 @@ export const StatusCard: React.FC<{
   onPayRest: (order: Order) => void;
   /** Priority was just turned on (and saved): offer it packed food from other orders. */
   onPriorityOn?: (order: Order) => void;
-}> = ({ order: o, change, payments, onPayRest, onPriorityOn }) => {
+  /** Opens the bill after marking delivered. */
+  onDelivered?: (order: Order) => void;
+}> = ({ order: o, change, payments, onPayRest, onPriorityOn, onDelivered }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
   const lastChange = o.status_changed_at;
@@ -85,7 +87,13 @@ export const StatusCard: React.FC<{
           <button key={s} type="button" disabled={cancelled}
             className={`adm-step${i < at ? ' is-done' : ''}${i === at ? ' is-now' : ''}`}
             aria-current={i === at ? 'step' : undefined}
-            onClick={() => i !== at && change(o, { status: s })}>
+            onClick={async () => {
+              if (i === at) return;
+              const ok = await change(o, { status: s });
+              if (ok !== false && s === 'delivered' && o.status !== 'delivered') {
+                onDelivered?.(o);
+              }
+            }}>
             <span className="adm-step__dot">{i < at && <Check size={12} aria-hidden="true" />}</span>
             {copy.steps[s]}
           </button>
@@ -281,8 +289,8 @@ const AutoField: React.FC<{
         : <PasteButton onPaste={(text) => { setValue(text); void save(text); }} />)}
     >
       {field === 'note'
-        ? <textarea {...common} rows={3} placeholder={copy.notePlaceholder} />
-        : <input {...common} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
+        ? <textarea {...common} data-bill-field={field} rows={3} placeholder={copy.notePlaceholder} />
+        : <input {...common} data-bill-field={field} inputMode={field === 'phone' ? 'tel' : 'numeric'} autoComplete="off"
             placeholder={field === 'phone' ? copy.phonePlaceholder : copy.totalPlaceholder} />}
     </Field>
     {offer && (
@@ -312,7 +320,8 @@ const replyLink = (o: Order, from: string | null) => {
 export const DetailsCard: React.FC<{
   order: Order & Partial<Pick<OrderDetail, 'phone_suggestion'>>;
   onSaved: (o: Order) => void;
-}> = ({ order: o, onSaved }) => {
+  onOpenBill?: (order: Order) => void;
+}> = ({ order: o, onSaved, onOpenBill }) => {
   const me = useAdminMe();
   const suggestion = !o.phone && o.phone_suggestion;
   const [busy, setBusy] = useState(false);
@@ -337,12 +346,21 @@ export const DetailsCard: React.FC<{
       {!o.free_sample && <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />}
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
       <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
-      {o.phone && (
+      {(o.phone || o.status === 'delivered') && (
         <div className="adm-od-reach">
-          <a className="adm-btn adm-btn--quiet adm-btn--sm" href={replyLink(o, me.display_name)} target="_blank" rel="noreferrer">
-            <MessageCircle size={18} aria-hidden="true" />{copy.whatsapp}
-          </a>
-          <a className="adm-btn adm-btn--quiet adm-btn--sm" href={`tel:+${o.phone}`}><Phone size={18} aria-hidden="true" />{copy.call}</a>
+          {o.phone && (
+            <>
+              <a className="adm-btn adm-btn--quiet adm-btn--sm" href={replyLink(o, me.display_name)} target="_blank" rel="noreferrer">
+                <MessageCircle size={18} aria-hidden="true" />{copy.whatsapp}
+              </a>
+              <a className="adm-btn adm-btn--quiet adm-btn--sm" href={`tel:+${o.phone}`}><Phone size={18} aria-hidden="true" />{copy.call}</a>
+            </>
+          )}
+          {o.status === 'delivered' && (
+            <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm" onClick={() => onOpenBill?.(o)}>
+              <ClipboardList size={18} aria-hidden="true" />{adminCopy.bill.title}
+            </button>
+          )}
         </div>
       )}
     </section>
@@ -382,7 +400,8 @@ export const PrimaryAction: React.FC<{ order: Order; change: Change; onNext?: ()
 /** ⋯: move a Cooking order to Packing, edit, copy, mark not paid (when money came in), cancel, delete (with its own confirm). */
 export const OrderMenu: React.FC<{
   order: Order; change: Change; payments: PaymentActions; onDeleted: () => void; up?: boolean;
-}> = ({ order: o, change, payments, onDeleted, up }) => {
+  onOpenBill?: (order: Order) => void;
+}> = ({ order: o, change, payments, onDeleted, up, onOpenBill }) => {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -431,6 +450,11 @@ export const OrderMenu: React.FC<{
         )}
         <AdminLink className="adm-menu__item" to={`/admin/orders/${o.code}/edit`}><Pencil size={18} aria-hidden="true" />{copy.menu.edit}</AdminLink>
         <button type="button" className="adm-menu__item" onClick={copyDetails}><Copy size={18} aria-hidden="true" />{copy.menu.copy}</button>
+        {o.status === 'delivered' && (
+          <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); onOpenBill?.(o); }}>
+            <ClipboardList size={18} aria-hidden="true" />{adminCopy.bill.menu}
+          </button>
+        )}
         {o.payments.length > 0 && (
           <button type="button" className="adm-menu__item" onClick={() => { setOpen(false); void payments.markNotPaid(o); }}>
             {adminCopy.payments.markNotPaid}

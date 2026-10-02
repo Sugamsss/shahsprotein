@@ -169,6 +169,7 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 - **Products** (stock switches, and per product the sample weight and shelf life), **Customers** (grouped by phone, with their orders), **Coupons** (add, edit, on/off, Repeat or One-time, how often used), **Email list** (with CSV), **Settings** (who has access, appearance, password, sign out).
 - The amount Sunit quoted is private to the admin. ₹ amounts are fine there; the "no prices" rule is for the public site.
 - Prices: a base price per product and pack size, and optionally a set price per coupon per pack size, edited on Products (one sheet per product, with its sample weight and shelf life). A blank coupon price means the base price. The order total fills in from them (before delivery) and stays editable. In Add order, a returning customer's Repeat coupon fills in by itself while it's live (removable in one tap), and a One-time coupon their number already used shows a quiet note, never a block.
+- **The delivered bill (admin only).** The PNG shows the bill coming out of a printer. The bill lists item, qty, rate and amount, and an order can also have an additional discount and advance. It is a receipt, not a tax invoice, and prices never reach the public site.
 
 ## 8. Meta
 

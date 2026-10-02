@@ -20,7 +20,7 @@ export interface UndoableRun {
   quiet?: boolean;
 }
 
-export const runUndoable = async (toast: ToastApi, run: UndoableRun): Promise<void> => {
+export const runUndoable = async (toast: ToastApi, run: UndoableRun): Promise<boolean> => {
   const rollback = run.apply();
   try {
     await run.save();
@@ -29,12 +29,13 @@ export const runUndoable = async (toast: ToastApi, run: UndoableRun): Promise<vo
     const error = toAdminError(err);
     if (error.kind === 'message') toast.show({ text: error.message });
     else toast.error(() => void runUndoable(toast, run)); // the same run, quiet or not
-    return;
+    return false;
   }
   if (!run.quiet) toast.show({ text: typeof run.text === 'function' ? run.text() : run.text, action: { label: adminCopy.toast.undo, onAction: run.undo } });
+  return true;
 };
 
-export const useUndoable = (): ((run: UndoableRun) => Promise<void>) => {
+export const useUndoable = (): ((run: UndoableRun) => Promise<boolean>) => {
   const toast = useToast();
   return useCallback((run: UndoableRun) => runUndoable(toast, run), [toast]);
 };

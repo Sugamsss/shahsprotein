@@ -98,7 +98,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [note, setNote] = useState(order?.note ?? '');
   const [code, setCode] = useState(typedCode.toUpperCase().replace(/^(#|SN-)/, ''));
   const [when, setWhen] = useState({ date: '', time: '' });
-  const [shown, setShown] = useState({ note: !!order?.note, code: !!typedCode, earlier: false, coupon: !!order?.coupon });
+  const [extraDiscount, setExtraDiscount] = useState(order?.extra_discount != null ? String(order.extra_discount) : '');
+  const [advance, setAdvance] = useState(order?.advance != null ? String(order.advance) : '');
+  const [shown, setShown] = useState({ note: !!order?.note, code: !!typedCode, earlier: false, coupon: !!order?.coupon, extraDiscount: order?.extra_discount != null, advance: order?.advance != null });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -206,6 +208,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       lines,
       priority,
       ...moneyInput({ samplesOnly, editing: !!order, total: typedTotal, coupon, paid, paidMethod, paidNote }),
+      extra_discount: samplesOnly || !extraDiscount ? null : Number(extraDiscount.replace(/\D/g, '')),
+      advance: samplesOnly || !advance ? null : Number(advance.replace(/\D/g, '')),
       ...(!order && {
         status,
         ...(code && { code: `SN-${code}` }),
@@ -507,6 +511,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
               onChange={(e) => { setTotalMode('manual'); edit(setAmount)(e.target.value); }} />
           </Field>
         )}
+        {!samplesOnly && shown.extraDiscount && <Field label={copy.extraDiscount} prefix="₹" hint={copy.extraDiscountHint}><input className="adm-input" inputMode="numeric" autoComplete="off" value={extraDiscount} onChange={(e) => edit(setExtraDiscount)(e.target.value.replace(/\D/g, ''))} /></Field>}
+        {!samplesOnly && shown.advance && <Field label={copy.advance} prefix="₹" hint={copy.advanceHint}><input className="adm-input" inputMode="numeric" autoComplete="off" value={advance} onChange={(e) => edit(setAdvance)(e.target.value.replace(/\D/g, ''))} /></Field>}
         {shown.note && (
           <Field label={orderCopy.note}>
             <textarea className="adm-input" rows={3} value={note} placeholder={orderCopy.notePlaceholder} onChange={(e) => edit(setNote)(e.target.value)} />
@@ -526,6 +532,8 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         )}
         <div className="adm-of__links">
           {!samplesOnly && book.ready && !couponShown && more('coupon', copy.addCoupon)}
+          {!samplesOnly && more('extraDiscount', copy.addExtraDiscount)}
+          {!samplesOnly && more('advance', copy.addAdvance)}
           {more('note', copy.addNote)}
           {!order && more('code', copy.addCode)}
           {!order && more('earlier', copy.earlier)}

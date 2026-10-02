@@ -27,10 +27,10 @@ export const usePayments = (show: (order: Order) => void) => {
   const showRef = useRef(show);
   showRef.current = show;
 
-  const go = useCallback((before: Order, local: Order, save: () => Promise<Order>, text: string,
+  const go = useCallback(async (before: Order, local: Order, save: () => Promise<Order>, text: string,
     undo: (saved: Order) => void, quiet = false): Promise<void> => {
     let saved = local;
-    return run({
+    await run({
       apply: () => {
         showRef.current(local);
         return () => showRef.current(before);

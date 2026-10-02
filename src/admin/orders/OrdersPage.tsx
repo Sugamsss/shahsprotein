@@ -24,6 +24,8 @@ import { useOfferOnArrival, usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
 import { usePayments } from './usePayments';
 import { useTheme } from '../../context/ThemeContext';
+import { BillSheet } from './BillSheet';
+import { useDeliveredBill } from './useDeliveredBill';
 
 const copy = adminCopy.orders;
 const filterCopy = adminCopy.ordersProduct;
@@ -163,6 +165,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const [paying, setPaying] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null); // clearing the filter moves focus here
+  const { billState, onDelivered, closeBill } = useDeliveredBill();
 
   // Each answer says which filter it's for, so clearing the chip never shows the last filter's cards.
   const list = useRpc(
@@ -171,12 +174,26 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     { refreshOnFocus: true },
   );
   const board = list.data?.for === product ? list.data : null;
+
+  // If status is no longer delivered (e.g. Undo), close the sheet
+  useEffect(() => {
+    if (billState && board) {
+      const o = board.orders.find((x) => x.id === billState.order.id);
+      if (o && o.status !== 'delivered') {
+        closeBill();
+      }
+    }
+  }, [billState, board, closeBill]);
+
   // A card that changes lane flashes where it lands.
   // Also the order just saved from the Add/Edit form (navigation state).
   const [flash, setFlash] = useState<string | null>(() => (location.state as { flash?: string } | null)?.flash ?? null);
   // A card that just left its stage stays there a beat, as it was, while it folds away.
   const [leaving, setLeaving] = useState<Record<string, Order>>({});
   const put = useCallback((o: Order) => list.setData((d) => {
+    if (billState && billState.order.id === o.id && o.status !== 'delivered') {
+      closeBill();
+    }
     if (!d) return d;
     const before = d.orders.find((x) => x.id === o.id);
     if (before && laneOf(before) !== laneOf(o)) {
@@ -185,7 +202,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       window.setTimeout(() => setLeaving(({ [o.id]: _, ...rest }) => rest), reducedMotion() ? 0 : LEAVE_MS);
     }
     return { ...d, orders: d.orders.map((x) => (x.id === o.id ? o : x)) };
-  }), [list.setData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [list.setData, billState, closeBill]);
   useEffect(() => {
     if (!flash || !board) return; // wait until the cards are on screen
     const timer = setTimeout(() => setFlash(null), 900);
@@ -272,10 +289,15 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     navigate(`/admin/orders/${only}${location.search}`);
   }, [only, settledQ]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onAction = (o: Order, action: CardAction) => {
+  const onAction = async (o: Order, action: CardAction) => {
     const lane = laneOf(o);
     if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
-    else if (action === 'next' && (lane === 'packing' || lane === 'ready')) void change(o, NEXT[lane]);
+    else if (action === 'next' && (lane === 'packing' || lane === 'ready')) {
+      const ok = await change(o, NEXT[lane]);
+      if (ok !== false && lane === 'ready') {
+        onDelivered(o);
+      }
+    }
     else if (action === 'paid') {
       if (o.paid) void payments.markNotPaid(o);
       else setPaying(o);
@@ -429,6 +451,22 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
       <PaidSheet order={paying} onClose={() => setPaying(null)} onPick={(o, how) => void payments.payTheRest(o, how)} />
       {give.popup}
       <ExportSheet isOpen={exporting} onClose={() => setExporting(false)} product={product} />
+      <BillSheet
+        isOpen={!!billState && !code}
+        onClose={closeBill}
+        order={billState?.order ?? null}
+        moment={billState?.moment}
+        onAddTotal={() => {
+          const o = billState?.order;
+          closeBill();
+          if (o) {
+            navigate(`/admin/orders/${o.code}${location.search}`);
+            requestAnimationFrame(() => {
+              document.querySelector<HTMLInputElement>('input[data-bill-field="amount"]')?.focus();
+            });
+          }
+        }}
+      />
     </div>
   );
 };

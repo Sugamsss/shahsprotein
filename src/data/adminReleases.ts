@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-02-order-bill',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'A bill when you deliver',
+    body: 'Mark an order Delivered and its bill is ready to send on WhatsApp or download. You can open it again from the order.',
+  },
+  {
     id: '2026-10-01-how-its-going',
     for: ['admin', 'cook'],
     kind: 'new',

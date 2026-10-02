@@ -12,7 +12,7 @@ The site does two jobs:
 1. The customer builds an order in the "Your order" popup and taps **Send order on WhatsApp**.
 2. WhatsApp opens with their message, which includes an order code like `SN-7KQ4M`.
 3. On the same tap, the order is saved: items, name, pincode, coupon and code. The tap never waits for the save, so WhatsApp always opens even if the save fails.
-4. In the admin, Sunit finds the order by its code, adds the phone number and the total he quoted, and moves it along: **New → Confirmed → Sent → Delivered**. Paid is a separate switch, because some people pay on delivery.
+4. In the admin, Sunit finds the order by its code, adds the phone number and the total he quoted, and moves it along: **Cooking → Packing → Ready → Delivered**. The admin-only PNG shows the bill coming out of a printer. The bill lists item, qty, rate and amount, and an order can also have an additional discount and advance. It is not a tax invoice; the public site has no prices. Paid is a separate switch, because some people pay on delivery.
 5. Orders that come in by WhatsApp, a call, Instagram or in person are added by hand.
 
 The admin's Home is different for each person. Pranjali (`home_view = cook`) sees what to make per product, in kilos and packs. Sunit and anyone else (`admin`) sees every order and rupee per product and stage. Each product card opens that product's orders. The admin also has a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.

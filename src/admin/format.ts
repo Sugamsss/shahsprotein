@@ -87,6 +87,13 @@ export const formatLongDate = (value: string | number = Date.now()): string => {
   return `${get('weekday')}, ${get('day')} ${get('month')}`;
 };
 
+/** "2 October 2026", Asia/Kolkata */
+export const formatBillDate = (value: string | number | Date = Date.now(), timeZone = IST): string => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(new Date(value));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('day')} ${get('month')} ${get('year')}`;
+};
+
 /** "₹1,240": whole rupees, Indian grouping. */
 export const formatMoney = (amount: number): string => `₹${Math.round(amount).toLocaleString('en-IN')}`;
 

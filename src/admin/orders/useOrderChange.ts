@@ -44,7 +44,7 @@ export const useOrderChange = (show: (order: Order) => void, onOthers?: () => vo
     quiet: true,
   }), [run, reloadBadge]);
 
-  const change = useCallback((order: Order, changes: OrderChanges, quiet = false): Promise<void> => {
+  const change = useCallback((order: Order, changes: OrderChanges, quiet = false): Promise<boolean> => {
     const after = applyLocal(order, changes);
     let saved: UpdatedOrder | null = null;
     return run({
