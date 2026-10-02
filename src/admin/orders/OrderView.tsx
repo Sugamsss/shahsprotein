@@ -109,8 +109,8 @@ export const OrderPage: React.FC<{
     if (next.lane === 'collect') {
       setPaying(order);
     } else if (next.lane === 'ready') {
-      const ok = await change(order, next.changes);
-      if (ok !== false) onDelivered(order);
+      const saved = await change(order, next.changes) as Order | null;
+      if (saved) onDelivered(saved);
     } else {
       void change(order, next.changes);
     }
@@ -213,11 +213,8 @@ export const OrderPopup: React.FC<{
       void payments.payTheRest(order, how);
     } else {
       const isDelivering = next.lane === 'ready';
-      const deliveredOrder = order;
-      const ok = await change(order, next.changes);
-      if (ok !== false && isDelivering) {
-        onDelivered(deliveredOrder);
-      }
+      const saved = await change(order, next.changes) as Order | null;
+      if (saved && isDelivering) onDelivered(saved);
     }
     if (then) navigate(`/admin/orders/${then.code}${search}`, { replace: true });
   };

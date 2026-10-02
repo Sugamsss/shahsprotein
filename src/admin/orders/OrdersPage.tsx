@@ -293,10 +293,8 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     const lane = laneOf(o);
     if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
     else if (action === 'next' && (lane === 'packing' || lane === 'ready')) {
-      const ok = await change(o, NEXT[lane]);
-      if (ok !== false && lane === 'ready') {
-        onDelivered(o);
-      }
+      const saved = await change(o, NEXT[lane]) as Order | null;
+      if (saved && lane === 'ready') onDelivered(saved);
     }
     else if (action === 'paid') {
       if (o.paid) void payments.markNotPaid(o);

@@ -89,10 +89,8 @@ export const StatusCard: React.FC<{
             aria-current={i === at ? 'step' : undefined}
             onClick={async () => {
               if (i === at) return;
-              const ok = await change(o, { status: s });
-              if (ok !== false && s === 'delivered' && o.status !== 'delivered') {
-                onDelivered?.(o);
-              }
+              const saved = await change(o, { status: s }) as Order | null;
+              if (saved && s === 'delivered' && o.status !== 'delivered') onDelivered?.(saved);
             }}>
             <span className="adm-step__dot">{i < at && <Check size={12} aria-hidden="true" />}</span>
             {copy.steps[s]}
