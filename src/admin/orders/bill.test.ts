@@ -80,8 +80,6 @@ describe('buildBill', () => {
       ],
       coupon: { code: 'EXAMPLE10', valid: true, known: true, description: '10% off' },
       amount: 1044,
-      extra_discount: 50,
-      advance: 200,
       paid: true,
       payment_state: 'paid',
       amount_paid: 1044,
@@ -101,8 +99,7 @@ describe('buildBill', () => {
     expect(bill?.phone).toBe('+91 98765 43210');
     expect(bill?.deliverTo).toBe('411038');
     expect(bill?.date).toBe('2 October 2026');
-    expect(bill?.total).toBe(994);
-    expect(bill?.balanceDue).toBe(794);
+    expect(bill?.total).toBe(1044);
     expect(bill?.payment).toEqual({ kind: 'paid' });
 
     // Lines in order: Raggi Jaggi 500g, Muesli 250g
@@ -124,12 +121,10 @@ describe('buildBill', () => {
       rate: 234,
     });
 
-    // Coupon, additional discount and advance are separate rows.
+    // Coupon saving reconciles the item sum to the recorded total.
     expect(bill?.sums).toEqual([
       { kind: 'items', amount: 1160 },
       { kind: 'coupon', code: 'EXAMPLE10', saving: 116 },
-      { kind: 'extraDiscount', amount: 50 },
-      { kind: 'advance', amount: 200 },
     ]);
   });
 
@@ -314,30 +309,28 @@ describe('buildBill', () => {
     expect(bill).toBeNull();
   });
 
-  it('discount floors at zero; no advance means no balance row', () => {
-    const bill = buildBill({ order: makeOrder({ amount: 10, extra_discount: 50, advance: null }), prices: basePrices, coupons: couponsList, now: dummyNow });
-    expect(bill?.total).toBe(0);
-    expect(bill?.balanceDue).toBeNull();
-    expect(bill?.sums).not.toContainEqual({ kind: 'advance', amount: 0 });
-  });
-
-  it('advance 0 or null does not add advance or balance rows', () => {
-    for (const advance of [0, null]) {
-      const bill = buildBill({ order: makeOrder({ amount: 900, advance }), prices: basePrices, coupons: couponsList, now: dummyNow });
-      expect(bill?.balanceDue).toBeNull();
-      expect(bill?.sums.some((sum) => sum.kind === 'advance')).toBe(false);
-    }
-  });
-
-  it('ignores an additional discount on a free sample order', () => {
+  it('uses a coupon pack price even when its base price has not been set', () => {
     const bill = buildBill({
-      order: makeOrder({ free_sample: true, amount: null, extra_discount: 500, advance: 200, lines: [{ product_id: 'raggi-jaggi', size: SAMPLE, quantity: 1 }] }),
-      prices: basePrices,
+      order: makeOrder({ amount: 1044, coupon: { code: 'EXAMPLE10', valid: true, known: true, description: '' } }),
+      prices: { ...basePrices, base: [] },
       coupons: couponsList,
       now: dummyNow,
     });
-    expect(bill?.total).toBe(0);
-    expect(bill?.sums).toEqual([]);
+    expect(bill?.total).toBe(1044);
+    expect(bill?.lines.map((line) => line.rate)).toEqual([405, 234]);
+    // No base price exists to prove a saving against.
+    expect(bill?.sums).toEqual([{ kind: 'coupon', code: 'EXAMPLE10', saving: null }]);
+  });
+
+  it('requires a recorded total even when every pack has a current price', () => {
+    expect(buildBill({ order: makeOrder({ amount: null }), prices: basePrices, coupons: couponsList, now: dummyNow })).toBeNull();
+  });
+
+  it('does not invent base rates or a gap while the coupon list is unavailable', () => {
+    const bill = buildBill({ order: makeOrder({ amount: 1044, coupon: { code: 'EXAMPLE10', valid: true, known: true, description: '' } }), prices: basePrices, coupons: null, now: dummyNow });
+    expect(bill?.total).toBe(1044);
+    expect(bill?.lines.map((line) => ({ rate: line.rate, amount: line.amount }))).toEqual([{ rate: null, amount: null }, { rate: null, amount: null }]);
+    expect(bill?.sums).toEqual([{ kind: 'coupon', code: 'EXAMPLE10', saving: null }]);
   });
 
   it('Missing price but amount set → a bill, no invented unit price, no gap row', () => {
@@ -359,7 +352,7 @@ describe('buildBill', () => {
     expect(bill?.lines[0]).toEqual({
       name: 'unknown-item',
       detail: '500 g · 2',
-      amount: 0,
+      amount: null,
       sample: false,
       quantity: 2,
       rate: null,

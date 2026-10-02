@@ -165,7 +165,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const [paying, setPaying] = useState<Order | null>(null);
   const [exporting, setExporting] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null); // clearing the filter moves focus here
-  const { billState, onDelivered, closeBill } = useDeliveredBill();
+  const { billState, onDelivered, closeBill, syncBill } = useDeliveredBill();
 
   // Each answer says which filter it's for, so clearing the chip never shows the last filter's cards.
   const list = useRpc(
@@ -179,11 +179,9 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   useEffect(() => {
     if (billState && board) {
       const o = board.orders.find((x) => x.id === billState.order.id);
-      if (o && o.status !== 'delivered') {
-        closeBill();
-      }
+      if (o) syncBill(o);
     }
-  }, [billState, board, closeBill]);
+  }, [billState, board, syncBill]);
 
   // A card that changes lane flashes where it lands.
   // Also the order just saved from the Add/Edit form (navigation state).

@@ -10,8 +10,8 @@ export type BillLine = {
   rate: number | null;
   /** Pack size or sample descriptor. */
   detail: string;
-  /** Whole rupees. Samples are 0. */
-  amount: number;
+  /** Whole rupees. Samples are 0; an unknown price is null. */
+  amount: number | null;
   sample: boolean;
 };
 
@@ -20,8 +20,6 @@ export type BillSum =
   | { kind: 'coupon'; code: string; saving: number | null } // null = "Applied", no fake ₹0
   | { kind: 'deliveryOther'; amount: number }
   | { kind: 'adjusted'; amount: number }
-  | { kind: 'extraDiscount'; amount: number }
-  | { kind: 'advance'; amount: number }
   | { kind: 'deliverySatara' };
 
 export type Bill = {
@@ -33,7 +31,6 @@ export type Bill = {
   lines: BillLine[];
   sums: BillSum[]; // empty when the total simply equals the items
   total: number;
-  balanceDue: number | null;
   payment:
     | { kind: 'paid' }
     | { kind: 'notPaid' }
@@ -57,7 +54,7 @@ export type BillInput = {
     | 'amount_due'
     | 'paid'
     | 'status_changed_at'
-  > & { status?: OrderStatus; extra_discount?: number | null; advance?: number | null };
+  > & { status?: OrderStatus };
   prices: Prices | null;
   coupons: Coupon[] | null;
   now: Date;
@@ -100,13 +97,16 @@ export function buildBill(input: BillInput): Bill | null {
       lines,
       sums,
       total: 0,
-      balanceDue: null,
       payment: { kind: 'freeSample' },
     };
   }
 
+  // A bill records the agreed total, never a fresh quote from today's prices.
+  if (order.amount == null) return null;
+
   // Live coupon check (same rule as quote)
   const couponCode = order.coupon?.code;
+  const trustedPrices = (!couponCode || coupons) ? prices : null;
   const coupon =
     couponCode && coupons
       ? coupons.find(
@@ -120,6 +120,7 @@ export function buildBill(input: BillInput): Bill | null {
 
   const lines: BillLine[] = [];
   let missingAnyPrice = false;
+  let missingBasePrice = false;
   let itemsSum = 0;
   let workedSum = 0;
 
@@ -138,23 +139,20 @@ export function buildBill(input: BillInput): Bill | null {
 
     const same = (r: { product_id: string; size: string }) =>
       r.product_id === l.product_id && r.size === l.size;
-    const basePrice = prices ? prices.base.find(same)?.price : undefined;
+    const basePrice = trustedPrices ? trustedPrices.base.find(same)?.price : undefined;
     const couponPrice =
-      couponId && prices
-        ? prices.coupons.find((r) => r.coupon_id === couponId && same(r))?.price
+      couponId && trustedPrices
+        ? trustedPrices.coupons.find((r) => r.coupon_id === couponId && same(r))?.price
         : undefined;
     const unitPrice = couponPrice ?? basePrice;
 
-    if (basePrice == null || unitPrice == null) {
-      if (typeof order.amount !== 'number') {
-        // Missing price and no amount set: cannot build a bill
-        return null;
-      }
+    if (basePrice == null) missingBasePrice = true;
+    if (unitPrice == null) {
       missingAnyPrice = true;
       lines.push({
         name: productName(l.product_id),
         detail: `${l.size} · ${l.quantity}`,
-        amount: 0,
+        amount: null,
         sample: false,
         quantity: l.quantity,
         rate: null,
@@ -169,7 +167,7 @@ export function buildBill(input: BillInput): Bill | null {
         quantity: l.quantity,
         rate: unitPrice,
       });
-      itemsSum += basePrice * l.quantity;
+      itemsSum += (basePrice ?? unitPrice) * l.quantity;
       workedSum += lineAmount;
     }
   }
@@ -180,7 +178,7 @@ export function buildBill(input: BillInput): Bill | null {
 
   if (missingAnyPrice) {
     // Missing prices but typed amount is set
-    total = order.amount!;
+    total = order.amount;
     if (order.coupon) {
       sums.push({
         kind: 'coupon',
@@ -193,7 +191,7 @@ export function buildBill(input: BillInput): Bill | null {
     }
   } else {
     // All non-sample lines were priced
-    total = typeof order.amount === 'number' ? order.amount : workedSum;
+    total = order.amount;
     const otherRows: BillSum[] = [];
 
     if (order.coupon) {
@@ -201,7 +199,7 @@ export function buildBill(input: BillInput): Bill | null {
       otherRows.push({
         kind: 'coupon',
         code: order.coupon.code,
-        saving: saving > 0 ? saving : null,
+        saving: !missingBasePrice && saving > 0 ? saving : null,
       });
     }
 
@@ -219,17 +217,10 @@ export function buildBill(input: BillInput): Bill | null {
     }
 
     if (otherRows.length > 0) {
-      sums = [{ kind: 'items', amount: itemsSum }, ...otherRows];
+      sums = missingBasePrice ? otherRows : [{ kind: 'items', amount: itemsSum }, ...otherRows];
     } else {
       sums = [];
     }
-  }
-
-  const extraDiscount = order.extra_discount ?? 0;
-  const advance = order.advance ?? 0;
-  if (extraDiscount > 0) {
-    sums.push({ kind: 'extraDiscount', amount: extraDiscount });
-    total = Math.max(0, total - extraDiscount);
   }
 
   let payment: Bill['payment'];
@@ -244,7 +235,6 @@ export function buildBill(input: BillInput): Bill | null {
   } else {
     payment = { kind: 'notPaid' };
   }
-  if (advance > 0) sums.push({ kind: 'advance', amount: advance });
 
   return {
     code: order.code,
@@ -255,7 +245,6 @@ export function buildBill(input: BillInput): Bill | null {
     lines,
     sums,
     total,
-    balanceDue: advance > 0 ? Math.max(0, total - advance) : null,
     payment,
   };
 }

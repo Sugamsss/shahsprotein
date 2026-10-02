@@ -60,8 +60,6 @@ export async function paintBill(bill: Bill): Promise<Blob> {
   const width = 400;
   const pad = 32;
   const right = width - pad;
-  const columnSums = bill.sums.filter((sum) => sum.kind !== 'advance');
-  const advance = bill.sums.find((sum) => sum.kind === 'advance');
 
   const draw = (ctx: CanvasRenderingContext2D): number => {
     let y = 28;
@@ -97,8 +95,26 @@ export async function paintBill(bill: Bill): Promise<Blob> {
       ctx.fillText(adminCopy.bill.for, pad, y + 11);
       ctx.font = '700 16px Inter, sans-serif';
       ctx.fillStyle = billPalette.ink;
-      ctx.fillText(who, pad, y + 32);
-      y += 40;
+      let nameLine = '';
+      let nameY = y + 32;
+      for (const word of who.split(/\s+/)) {
+        if (nameLine && ctx.measureText(`${nameLine} ${word}`).width > right - pad) {
+          ctx.fillText(nameLine, pad, nameY);
+          nameY += 21;
+          nameLine = '';
+        }
+        // Names usually wrap at spaces; an unusually long token still fits.
+        for (const character of `${nameLine ? ' ' : ''}${word}`) {
+          if (nameLine && ctx.measureText(nameLine + character).width > right - pad) {
+            ctx.fillText(nameLine.trim(), pad, nameY);
+            nameY += 21;
+            nameLine = '';
+          }
+          nameLine += character;
+        }
+      }
+      ctx.fillText(nameLine.trim(), pad, nameY);
+      y = nameY + 8;
     }
     y += 12;
     dots(ctx, pad, right, y);
@@ -108,14 +124,18 @@ export async function paintBill(bill: Bill): Promise<Blob> {
     const slip = '14px "Courier New", ui-monospace, Menlo, monospace';
     for (const line of bill.lines) {
       const label = `${line.quantity}×  ${line.name}`;
-      const size = line.sample ? adminCopy.bill.sampleRate : line.detail;
+      const size = line.sample
+        ? adminCopy.bill.sampleRate
+        : line.rate == null
+          ? line.detail
+          : adminCopy.bill.each(line.detail, line.quantity, formatMoney(line.rate));
       ctx.textAlign = 'left';
       ctx.font = `400 ${slip}`;
       ctx.fillStyle = billPalette.ink;
       ctx.fillText(label, pad, y + 14);
       ctx.fillText(size, pad, y + 32);
       ctx.textAlign = 'right';
-      const amount = formatMoney(line.amount);
+      const amount = line.amount == null ? '—' : formatMoney(line.amount);
       ctx.fillText(amount, right, y + 14);
       const nameEnd = pad + ctx.measureText(label).width;
       const amountWidth = ctx.measureText(amount).width;
@@ -138,7 +158,7 @@ export async function paintBill(bill: Bill): Promise<Blob> {
       ctx.fillText(value, right, y + 14);
       y += 24;
     };
-    for (const sum of columnSums) row(...sumRow(sum));
+    for (const sum of bill.sums) row(...sumRow(sum));
 
     y += 10;
     ctx.textAlign = 'left';
@@ -149,18 +169,6 @@ export async function paintBill(bill: Bill): Promise<Blob> {
     ctx.font = '700 18px "Courier New", ui-monospace, Menlo, monospace';
     ctx.fillText(formatMoney(bill.total), right, y + 18);
     y += 34;
-
-    if (advance && bill.balanceDue != null) {
-      row(adminCopy.bill.advance, `−${formatMoney(advance.amount)}`);
-      y += 4;
-      ctx.textAlign = 'left';
-      ctx.font = '700 15px "Courier New", ui-monospace, Menlo, monospace';
-      ctx.fillStyle = billPalette.ink;
-      ctx.fillText(adminCopy.bill.balanceDue, pad, y + 16);
-      ctx.textAlign = 'right';
-      ctx.fillText(formatMoney(bill.balanceDue), right, y + 16);
-      y += 28;
-    }
 
     // Paid sits on its own, centred, in the receipt face. Not a footnote on the right.
     y += 8;
@@ -213,7 +221,6 @@ function sumRow(sum: BillSum): [string, string, string?] {
   }
   if (sum.kind === 'deliveryOther') return [copy.deliveryOther, `+${formatMoney(sum.amount)}`];
   if (sum.kind === 'adjusted') return [copy.adjusted, `−${formatMoney(sum.amount)}`];
-  if (sum.kind === 'extraDiscount') return [copy.extraDiscount, `−${formatMoney(sum.amount)}`, billPalette.saving];
   if (sum.kind === 'deliverySatara') return [copy.deliverySatara, copy.free];
   return ['', ''];
 }

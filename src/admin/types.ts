@@ -98,8 +98,6 @@ export interface Order {
   phone: string | null;
   note: string | null;
   amount: number | null;
-  extra_discount?: number | null;
-  advance?: number | null;
   coupon: { code: string; valid: boolean; known: boolean; description: string | null } | null;
   lines: OrderLine[];
   /** Packs, samples left out. */
@@ -170,8 +168,6 @@ export interface OrderChanges {
   paid_note?: string;
   phone?: string | null;
   amount?: number | null;
-  extra_discount?: number | null;
-  advance?: number | null;
   note?: string | null;
   name?: string;
   pincode?: string | null;
@@ -217,8 +213,6 @@ export interface OrderInput {
   pincode?: string | null;
   note?: string | null;
   amount?: number | null;
-  extra_discount?: number | null;
-  advance?: number | null;
   coupon?: string | null;
   lines: OrderLine[];
   status?: OrderStatus;

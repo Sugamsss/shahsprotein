@@ -500,6 +500,7 @@
   gap: 8px;
   width: 100%;
 }
+.adm-bill__actions, .adm-bill__main { width: 100%; }
 @media (min-width: 400px) {
   .adm-bill__bar {
     flex-direction: row;

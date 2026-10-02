@@ -87,14 +87,12 @@ export const OrderPage: React.FC<{
   const [paying, setPaying] = useState<Order | null>(null);
   const give = usePriorityGive(kitchenMoved);
   useOfferOnArrival(give.offer);
-  const { billState, onDelivered, onOpenBill, closeBill } = useDeliveredBill();
+  const { billState, onDelivered, onOpenBill, closeBill, syncBill } = useDeliveredBill();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
-    if (billState && order && billState.order.id === order.id && order.status !== 'delivered') {
-      closeBill();
-    }
-  }, [billState, order, closeBill]);
+    if (order) syncBill(order);
+  }, [order, syncBill]);
 
   if (!order) {
     if (detail.error) return <div className="adm-page"><LoadError onRetry={detail.reload} /></div>;
@@ -179,17 +177,15 @@ export const OrderPopup: React.FC<{
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on
   // to the next order, like every next step; from the money block or P it stays.
   const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
-  const { billState, onDelivered, onOpenBill, closeBill } = useDeliveredBill();
+  const { billState, onDelivered, onOpenBill, closeBill, syncBill } = useDeliveredBill();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
     if (billState) {
       const found = sequence.find((x) => x.id === billState.order.id) ?? (order?.id === billState.order.id ? order : null);
-      if (found && found.status !== 'delivered') {
-        closeBill();
-      }
+      if (found) syncBill(found);
     }
-  }, [billState, sequence, order, closeBill]);
+  }, [billState, sequence, order, syncBill]);
 
   const at = fromList ? sequence.indexOf(fromList) : -1;
   const go = (step: number) => {

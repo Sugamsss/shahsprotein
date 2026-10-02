@@ -4,8 +4,8 @@ import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { Code } from './OrderCard';
 import { formatMoney } from '../format';
-import { useToast } from '../toast';
-import type { Coupon, Order, Prices } from '../types';
+import { ToastSlot, useToast } from '../toast';
+import type { Order } from '../types';
 import { billFilename } from './billPaint';
 import { paintBillScene as paintBill } from './billScene';
 import { billShare, billShareText, buildBill } from './bill';
@@ -18,8 +18,6 @@ export interface BillSheetProps {
   /** 'delivered' when opened immediately after marking delivered; 'again' when opened from menu */
   moment?: 'delivered' | 'again';
   onAddTotal?: () => void;
-  prices?: Prices | null;
-  coupons?: Coupon[] | null;
 }
 
 export const BillSheet: React.FC<BillSheetProps> = ({
@@ -28,13 +26,9 @@ export const BillSheet: React.FC<BillSheetProps> = ({
   order,
   moment = 'again',
   onAddTotal,
-  prices: propPrices,
-  coupons: propCoupons,
 }) => {
   const toast = useToast();
-  const book = usePriceBook(isOpen && (!propPrices || !propCoupons));
-  const prices = propPrices ?? book.prices;
-  const coupons = propCoupons ?? book.coupons;
+  const { prices, coupons } = usePriceBook(isOpen);
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -208,8 +202,7 @@ export const BillSheet: React.FC<BillSheetProps> = ({
         bar={
           <button
             type="button"
-            className="adm-btn adm-btn--primary"
-            style={{ width: '100%' }}
+            className="adm-btn adm-btn--primary adm-bill__main"
             onClick={() => {
               onClose();
               onAddTotal?.();
@@ -249,7 +242,8 @@ export const BillSheet: React.FC<BillSheetProps> = ({
   const buttonsDisabled = painting || paintError || !blob;
 
   const barNode = (
-    <div style={{ width: '100%' }}>
+    <div className="adm-bill__actions">
+      <ToastSlot />
       {noteText && <p className="adm-bill__note">{noteText}</p>}
       <div className="adm-bill__bar">
         {/* Secondary download button (shown when main is not alone download) */}
@@ -307,7 +301,6 @@ export const BillSheet: React.FC<BillSheetProps> = ({
             ref={mainBtnRef}
             type="button"
             className="adm-btn adm-btn--primary adm-bill__main"
-            style={{ width: '100%' }}
             disabled={buttonsDisabled}
             onClick={doDownload}
           >
