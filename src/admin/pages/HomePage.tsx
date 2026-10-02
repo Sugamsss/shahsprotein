@@ -236,7 +236,7 @@ const HomePage: React.FC = () => {
   const cook = me.home_view === 'cook';
   const overview = useOverview();
   // The layout's overview may be a few minutes old; Home shows it fresh.
-  useEffect(() => { void overview.reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void overview.ensureFresh(15_000); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const totalsRpc = useRpc(getTotals, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   const stock = useRpc(getStock, []);
   const metricsRpc = useRpc(getMetrics, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });

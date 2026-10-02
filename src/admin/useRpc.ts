@@ -36,6 +36,11 @@ export function useRpc<T>(load: () => Promise<T>, deps: DependencyList, options:
     }
   }, []);
 
+  const ensureFresh = useCallback(async (maxAgeMs = 15_000) => {
+    if (Date.now() - lastLoadAt.current < maxAgeMs) return;
+    return reload();
+  }, [reload]);
+
   useEffect(() => {
     void reload();
     return () => { latest.current++; }; // ignore answers that land after this
@@ -59,7 +64,7 @@ export function useRpc<T>(load: () => Promise<T>, deps: DependencyList, options:
     };
   }, [refreshOnFocus, refreshEveryMs, reload]);
 
-  return { data, error, loading, reload, setData };
+  return { data, error, loading, reload, ensureFresh, setData };
 }
 
 /** The value once it has stopped changing for `ms` (typing into a search). */

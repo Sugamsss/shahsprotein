@@ -8,17 +8,17 @@ import { Redirect } from './router';
 import { Splash } from './Splash';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
-import OrdersPage from './orders/OrdersPage';
-import DonePage from './orders/DonePage';
-import FreeSamplesPage from './orders/FreeSamplesPage';
-import NewOrderPage from './pages/NewOrderPage';
-import ProductsPage from './pages/ProductsPage';
-import CustomersPage from './pages/CustomersPage';
-import CustomerPage from './pages/CustomerPage';
-import CouponsPage from './pages/CouponsPage';
-import EmailListPage from './pages/EmailListPage';
-import SettingsPage from './pages/SettingsPage';
-import MorePage from './pages/MorePage';
+const OrdersPage = React.lazy(() => import('./orders/OrdersPage'));
+const DonePage = React.lazy(() => import('./orders/DonePage'));
+const FreeSamplesPage = React.lazy(() => import('./orders/FreeSamplesPage'));
+const NewOrderPage = React.lazy(() => import('./pages/NewOrderPage'));
+const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
+const CustomersPage = React.lazy(() => import('./pages/CustomersPage'));
+const CustomerPage = React.lazy(() => import('./pages/CustomerPage'));
+const CouponsPage = React.lazy(() => import('./pages/CouponsPage'));
+const EmailListPage = React.lazy(() => import('./pages/EmailListPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const MorePage = React.lazy(() => import('./pages/MorePage'));
 import adminCss from './admin.css?inline';
 
 // The admin's lazy entry (App.tsx: /admin/*). Its own chunk, so the landing
@@ -60,6 +60,7 @@ const AdminApp: React.FC = () => {
   return (
     <AdminGate userId={session.user.id}>
       <AdminLayout>
+        <React.Suspense fallback={null}>
         <Routes>
           <Route index element={<HomePage />} />
           <Route path="orders" element={<OrdersPage />} />
@@ -78,6 +79,7 @@ const AdminApp: React.FC = () => {
           <Route path="more" element={<MorePage />} />
           <Route path="*" element={<Redirect to="/admin" />} />
         </Routes>
+        </React.Suspense>
       </AdminLayout>
     </AdminGate>
   );
