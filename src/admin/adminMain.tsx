@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import '../styles/global.css';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '../context/ThemeContext';
 import { listenForStaleChunks } from '../utils/staleChunk';
