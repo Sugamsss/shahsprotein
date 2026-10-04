@@ -15,7 +15,7 @@ import { Code, FromWebsite, Thumb, Via } from './OrderCard';
 import { MOVE_BACK_TO_COOKING, MOVE_TO_PACKING, canMoveBack, isHeld, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
 import { historyDetailText } from './giveText';
 import { PaymentsBlock } from './PaymentsBlock';
-import { usePriceBook } from './usePriceBook';
+import type { PriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
 
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
@@ -312,13 +312,13 @@ const replyLink = (o: Order, from: string | null) => {
 export const DetailsCard: React.FC<{
   order: Order & Partial<Pick<OrderDetail, 'phone_suggestion'>>;
   onSaved: (o: Order) => void;
+  /** Prices in their own quiet calls: on an old database there's just no "Use ₹X". Shared with the bill. */
+  book: PriceBook;
   onOpenBill?: (order: Order) => void;
-}> = ({ order: o, onSaved, onOpenBill }) => {
+}> = ({ order: o, onSaved, book, onOpenBill }) => {
   const me = useAdminMe();
   const suggestion = !o.phone && o.phone_suggestion;
   const [busy, setBusy] = useState(false);
-  // Prices in their own quiet calls: on an old database there's just no "Use ₹X".
-  const book = usePriceBook();
   const worked = book.workOut(sortLines(o.lines), o.coupon?.code ?? null);
   const useSuggestion = async () => {
     if (!suggestion) return;

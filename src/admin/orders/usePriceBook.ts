@@ -13,6 +13,8 @@ export interface PriceBook {
   coupons: Coupon[] | null;
   /** Both loaded: the coupon picker and the worked-out total can show. */
   ready: boolean;
+  /** Both calls have answered, loaded or failed: nothing more is coming. */
+  settled: boolean;
   /** The worked-out total, or null when prices aren't loaded. */
   workOut: (lines: OrderLine[], couponCode: string | null) => Quote | null;
   /** Puts a save's answer (setPrices returns the whole list) on screen. */
@@ -22,13 +24,14 @@ export interface PriceBook {
 /** Runs `load` each time `enabled` turns on. A failure leaves null: nothing to show, nothing to say. */
 const useQuiet = <T,>(load: () => Promise<T>, enabled: boolean) => {
   const [data, setData] = useState<T | null>(null);
+  const [done, setDone] = useState(false);
   useEffect(() => {
     if (!enabled) return;
     let live = true;
-    load().then((value) => { if (live) setData(value); }, () => {});
+    load().then((value) => { if (live) setData(value); }, () => {}).finally(() => { if (live) setDone(true); });
     return () => { live = false; };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
-  return [data, setData] as const;
+  return [data, setData, done] as const;
 };
 
 /**
@@ -37,13 +40,13 @@ const useQuiet = <T,>(load: () => Promise<T>, enabled: boolean) => {
  * (or on any failure) the price bits just don't show, with no toast or error.
  */
 export const usePriceBook = (enabled = true): PriceBook => {
-  const [prices, showPrices] = useQuiet<Prices>(getPrices, enabled);
-  const [coupons] = useQuiet<Coupon[]>(getCoupons, enabled);
+  const [prices, showPrices, pricesDone] = useQuiet<Prices>(getPrices, enabled);
+  const [coupons, , couponsDone] = useQuiet<Coupon[]>(getCoupons, enabled);
   const workOut = useCallback(
     (lines: OrderLine[], couponCode: string | null) =>
       // Without the coupon list, a total with a coupon can't be trusted; one without still can.
       prices && (coupons || !couponCode) ? quote(lines, couponCode, coupons ?? [], prices, new Date()) : null,
     [prices, coupons],
   );
-  return { prices, coupons, ready: !!prices && !!coupons, workOut, showPrices };
+  return { prices, coupons, ready: !!prices && !!coupons, settled: pricesDone && couponsDone, workOut, showPrices };
 };
