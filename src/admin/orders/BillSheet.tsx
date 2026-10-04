@@ -7,14 +7,16 @@ import { formatMoney } from '../format';
 import { ToastSlot, useToast } from '../toast';
 import type { Order } from '../types';
 import { billFilename } from './billPaint';
-import { paintBillScene as paintBill } from './billScene';
+import { billPng, paintBillScene } from './billScene';
 import { billShare, billShareText, buildBill } from './bill';
-import { usePriceBook } from './usePriceBook';
+import type { PriceBook } from './usePriceBook';
 
 export interface BillSheetProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
+  /** The order view's prices and coupons, already loaded by the time someone taps Bill. */
+  book: PriceBook;
   onAddTotal?: () => void;
 }
 
@@ -22,13 +24,16 @@ export const BillSheet: React.FC<BillSheetProps> = ({
   isOpen,
   onClose,
   order,
+  book,
   onAddTotal,
 }) => {
   const toast = useToast();
-  const { prices, coupons } = usePriceBook(isOpen);
+  const { prices, coupons, settled } = book;
 
   const [blob, setBlob] = useState<Blob | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  // The drawn bill, shown as soon as it's ready; the PNG (blob) follows for Send and Download.
+  const [scene, setScene] = useState<HTMLCanvasElement | null>(null);
+  const viewRef = useRef<HTMLCanvasElement>(null);
   const [painting, setPainting] = useState(false);
   const [paintError, setPaintError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -50,40 +55,32 @@ export const BillSheet: React.FC<BillSheetProps> = ({
     });
   }, [order, prices, coupons]);
 
-  // Clean up object URL
-  useEffect(() => {
-    return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    };
-  }, [imageUrl]);
-
-  // Paint the bill when bill data or retryKey changes
+  // Paint once the prices have answered (loaded or failed), so the bill is drawn
+  // once with its amounts, never first with dashes and then again.
   useEffect(() => {
     if (!isOpen || !bill) {
       setBlob(null);
-      setImageUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
+      setScene(null);
       setPainting(false);
       setPaintError(false);
+      return;
+    }
+    if (!settled) {
+      setPainting(true);
       return;
     }
 
     let active = true;
     setPainting(true);
     setPaintError(false);
+    setBlob(null);
 
-    paintBill(bill)
-      .then((newBlob) => {
+    paintBillScene(bill)
+      .then((canvas) => {
         if (!active) return;
-        setBlob(newBlob);
-        const url = URL.createObjectURL(newBlob);
-        setImageUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
+        setScene(canvas);
         setPainting(false);
+        return billPng(canvas).then((png) => { if (active) setBlob(png); });
       })
       .catch(() => {
         if (!active) return;
@@ -94,7 +91,16 @@ export const BillSheet: React.FC<BillSheetProps> = ({
     return () => {
       active = false;
     };
-  }, [isOpen, bill, retryKey]);
+  }, [isOpen, bill, settled, retryKey]);
+
+  // Copy the drawn bill onto the canvas on screen.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !scene) return;
+    view.width = scene.width;
+    view.height = scene.height;
+    view.getContext('2d')?.drawImage(scene, 0, 0);
+  }, [scene, paintError]);
 
   // Can share files feature check
   const [canShareFiles, setCanShareFiles] = useState(false);
@@ -330,7 +336,7 @@ export const BillSheet: React.FC<BillSheetProps> = ({
       bar={barNode}
     >
       <div className="adm-bill__preview">
-        {imageUrl && !paintError && (
+        {scene && !paintError && (
           <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm adm-bill__zoom"
             aria-pressed={zoomed} onClick={() => { setZoomed((value) => !value); previewRef.current?.scrollTo(0, 0); }}>
             {zoomed ? adminCopy.bill.fit : adminCopy.bill.zoom}
@@ -350,10 +356,11 @@ export const BillSheet: React.FC<BillSheetProps> = ({
                 {adminCopy.bill.retry}
               </button>
             </div>
-          ) : imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={altText}
+          ) : scene ? (
+            <canvas
+              ref={viewRef}
+              role="img"
+              aria-label={altText}
               className={`adm-bill__img${painting ? ' is-painting' : ''}`}
             />
           ) : (

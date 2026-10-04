@@ -17,6 +17,7 @@ import { useOrderChange } from './useOrderChange';
 import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 import { BillSheet } from './BillSheet';
 import { useDeliveredBill } from './useDeliveredBill';
+import { type PriceBook, usePriceBook } from './usePriceBook';
 
 const copy = adminCopy.order;
 
@@ -46,14 +47,15 @@ const OrderBody: React.FC<{
   payments: PaymentActions;
   onPayRest: (o: Order) => void;
   onPriorityOn: (o: Order) => void;
+  book: PriceBook;
   onOpenBill?: (o: Order) => void;
-}> = ({ order, change, show, payments, onPayRest, onPriorityOn, onOpenBill }) => (
+}> = ({ order, change, show, payments, onPayRest, onPriorityOn, book, onOpenBill }) => (
   <>
     <OrderNotes order={order} />
     <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
-      <DetailsCard order={order} onSaved={show} onOpenBill={onOpenBill} />
+      <DetailsCard order={order} onSaved={show} book={book} onOpenBill={onOpenBill} />
     </div>
     <History history={order.history} />
   </>
@@ -87,6 +89,8 @@ export const OrderPage: React.FC<{
   const give = usePriorityGive(kitchenMoved);
   useOfferOnArrival(give.offer);
   const { billState, onOpenBill, closeBill, syncBill } = useDeliveredBill();
+  // One price book for the order and its bill, so the bill opens without loading prices again.
+  const book = usePriceBook();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
@@ -114,7 +118,7 @@ export const OrderPage: React.FC<{
         <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted?.(order); navigate(board, { replace: true }); }} onOpenBill={onOpenBill} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} onOpenBill={onOpenBill} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -129,6 +133,7 @@ export const OrderPage: React.FC<{
         isOpen={!!billState}
         onClose={closeBill}
         order={billState?.order ?? null}
+        book={book}
         onAddTotal={() => {
           closeBill();
           requestAnimationFrame(() => {
@@ -170,6 +175,8 @@ export const OrderPopup: React.FC<{
   // to the next order, like every next step; from the money block or P it stays.
   const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
   const { billState, onOpenBill, closeBill, syncBill } = useDeliveredBill();
+  // One price book for the order and its bill, so the bill opens without loading prices again.
+  const book = usePriceBook();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
@@ -270,7 +277,7 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} onOpenBill={onOpenBill} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} />}
       {give.popup}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
@@ -278,6 +285,7 @@ export const OrderPopup: React.FC<{
         isOpen={!!billState}
         onClose={closeBill}
         order={billState?.order ?? null}
+        book={book}
         onAddTotal={() => {
           const o = billState?.order;
           closeBill();

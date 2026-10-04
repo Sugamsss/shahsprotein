@@ -3,16 +3,12 @@ import { paintBill } from './billPaint';
 
 /**
  * The bill as it is sent: the paper coming out of a small printer, on the
- * brand's sky. The paper itself is paintBill. Drawn at 2x so it stays sharp.
+ * brand's sky. The paper itself is paintBill, drawn straight in (no PNG in
+ * between). Drawn at 2x so it stays sharp. The sheet shows this canvas as
+ * soon as it's drawn; billPng makes the file for Send and Download.
  */
-export async function paintBillScene(bill: Bill): Promise<Blob> {
-  const url = URL.createObjectURL(await paintBill(bill));
-  let slip: HTMLImageElement;
-  try {
-    slip = await load(url);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+export async function paintBillScene(bill: Bill): Promise<HTMLCanvasElement> {
+  const slip = await paintBill(bill);
 
   const width = 560;
   const slipW = 460;
@@ -102,18 +98,14 @@ export async function paintBillScene(bill: Bill): Promise<Blob> {
   ctx.shadowOffsetY = 10;
   ctx.drawImage(slip, sx, sy, slipW, slipH);
   ctx.restore();
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('scene failed'))), 'image/png');
-  });
+  slip.width = 0; // let the browser free the paper's pixels now (iOS caps canvas memory)
+  return canvas;
 }
 
-function load(src: string): Promise<HTMLImageElement> {
+/** The scene as the PNG that's shared or downloaded. */
+export function billPng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(src));
-    img.src = src;
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('scene failed'))), 'image/png');
   });
 }
 

@@ -7,7 +7,16 @@ import { billPalette } from './billPalette';
 
 export const billFilename = (code: string) => `Shahs-Nutrition-Bill-${code}.png`;
 
-async function loadFonts(): Promise<void> {
+// Fonts and the logo load once per visit: the second bill starts drawing at once.
+// A failed load isn't kept, so the next bill (or Try again) asks again.
+let fontsLoad: Promise<void> | null = null;
+let logoLoad: Promise<HTMLImageElement> | null = null;
+
+const loadFonts = (): Promise<void> => (fontsLoad ??= fetchFonts());
+const loadLogo = (): Promise<HTMLImageElement> =>
+  (logoLoad ??= fetchLogo().catch((error: unknown) => { logoLoad = null; throw error; }));
+
+async function fetchFonts(): Promise<void> {
   if (typeof document === 'undefined' || !document.fonts) return;
   const fonts = [
     '700 22px Outfit', '500 13px Outfit',
@@ -20,7 +29,7 @@ async function loadFonts(): Promise<void> {
   await document.fonts.ready;
 }
 
-function loadLogo(): Promise<HTMLImageElement> {
+function fetchLogo(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -53,9 +62,8 @@ function leaders(ctx: CanvasRenderingContext2D, from: number, to: number, y: num
  * Paints the bill as one receipt. Measured in two passes so the height is the
  * drawing, not a guess. 400px logical, 2x, long side capped at 2400.
  */
-export async function paintBill(bill: Bill): Promise<Blob> {
-  await loadFonts();
-  const logo = await loadLogo();
+export async function paintBill(bill: Bill): Promise<HTMLCanvasElement> {
+  const [, logo] = await Promise.all([loadFonts(), loadLogo()]);
 
   const width = 400;
   const pad = 32;
@@ -205,10 +213,7 @@ export async function paintBill(bill: Bill): Promise<Blob> {
   ctx.fillStyle = billPalette.paper;
   ctx.fillRect(0, 0, width, height);
   draw(ctx);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Failed to generate PNG blob'))), 'image/png');
-  });
+  return canvas;
 }
 
 function sumRow(sum: BillSum): [string, string, string?] {
