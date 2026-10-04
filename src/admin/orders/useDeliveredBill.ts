@@ -1,20 +1,17 @@
 import { useCallback, useState } from 'react';
 import type { Order } from '../types';
 
+// The bill opens only when someone asks for it (the order's Bill button or ⋯ menu):
+// most customers never want one, so marking Delivered doesn't pop it up.
 export interface DeliveredBillState {
   order: Order;
-  moment: 'delivered' | 'again';
 }
 
 export const useDeliveredBill = () => {
   const [billState, setBillState] = useState<DeliveredBillState | null>(null);
 
-  const onDelivered = useCallback((order: Order) => {
-    setBillState({ order, moment: 'delivered' });
-  }, []);
-
   const onOpenBill = useCallback((order: Order) => {
-    setBillState({ order, moment: 'again' });
+    setBillState({ order });
   }, []);
 
   const closeBill = useCallback(() => {
@@ -35,7 +32,6 @@ export const useDeliveredBill = () => {
 
   return {
     billState,
-    onDelivered,
     onOpenBill,
     closeBill,
     syncBill,

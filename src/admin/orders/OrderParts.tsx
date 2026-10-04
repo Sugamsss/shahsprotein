@@ -74,8 +74,7 @@ export const StatusCard: React.FC<{
   /** Priority was just turned on (and saved): offer it packed food from other orders. */
   onPriorityOn?: (order: Order) => void;
   /** Opens the bill after marking delivered. */
-  onDelivered?: (order: Order) => void;
-}> = ({ order: o, change, payments, onPayRest, onPriorityOn, onDelivered }) => {
+}> = ({ order: o, change, payments, onPayRest, onPriorityOn }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
   const lastChange = o.status_changed_at;
@@ -87,11 +86,7 @@ export const StatusCard: React.FC<{
           <button key={s} type="button" disabled={cancelled}
             className={`adm-step${i < at ? ' is-done' : ''}${i === at ? ' is-now' : ''}`}
             aria-current={i === at ? 'step' : undefined}
-            onClick={async () => {
-              if (i === at) return;
-              const saved = await change(o, { status: s }) as Order | null;
-              if (saved && s === 'delivered' && o.status !== 'delivered') onDelivered?.(saved);
-            }}>
+            onClick={() => { if (i !== at) void change(o, { status: s }); }}>
             <span className="adm-step__dot">{i < at && <Check size={12} aria-hidden="true" />}</span>
             {copy.steps[s]}
           </button>

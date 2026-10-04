@@ -46,12 +46,11 @@ const OrderBody: React.FC<{
   payments: PaymentActions;
   onPayRest: (o: Order) => void;
   onPriorityOn: (o: Order) => void;
-  onDelivered?: (o: Order) => void;
   onOpenBill?: (o: Order) => void;
-}> = ({ order, change, show, payments, onPayRest, onPriorityOn, onDelivered, onOpenBill }) => (
+}> = ({ order, change, show, payments, onPayRest, onPriorityOn, onOpenBill }) => (
   <>
     <OrderNotes order={order} />
-    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} onDelivered={onDelivered} />
+    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
     <div className="adm-od-cols">
       <ItemsCard order={order} />
       <DetailsCard order={order} onSaved={show} onOpenBill={onOpenBill} />
@@ -87,7 +86,7 @@ export const OrderPage: React.FC<{
   const [paying, setPaying] = useState<Order | null>(null);
   const give = usePriorityGive(kitchenMoved);
   useOfferOnArrival(give.offer);
-  const { billState, onDelivered, onOpenBill, closeBill, syncBill } = useDeliveredBill();
+  const { billState, onOpenBill, closeBill, syncBill } = useDeliveredBill();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
@@ -102,16 +101,10 @@ export const OrderPage: React.FC<{
   if (!order) return <div className="adm-page">{back}<p className="adm-muted">{copy.notFound(code)}</p></div>;
   const next = nextOf(order);
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (!next) return;
-    if (next.lane === 'collect') {
-      setPaying(order);
-    } else if (next.lane === 'ready') {
-      const saved = await change(order, next.changes) as Order | null;
-      if (saved) onDelivered(saved);
-    } else {
-      void change(order, next.changes);
-    }
+    if (next.lane === 'collect') setPaying(order);
+    else void change(order, next.changes);
   };
 
   return (
@@ -121,7 +114,7 @@ export const OrderPage: React.FC<{
         <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted?.(order); navigate(board, { replace: true }); }} onOpenBill={onOpenBill} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} onDelivered={onDelivered} onOpenBill={onOpenBill} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} onOpenBill={onOpenBill} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -136,7 +129,6 @@ export const OrderPage: React.FC<{
         isOpen={!!billState}
         onClose={closeBill}
         order={billState?.order ?? null}
-        moment={billState?.moment}
         onAddTotal={() => {
           closeBill();
           requestAnimationFrame(() => {
@@ -177,7 +169,7 @@ export const OrderPopup: React.FC<{
   // Mark paid asks how first. From the pinned button (or Enter) it then moves on
   // to the next order, like every next step; from the money block or P it stays.
   const [paying, setPaying] = useState<{ order: Order; moveOn: boolean } | null>(null);
-  const { billState, onDelivered, onOpenBill, closeBill, syncBill } = useDeliveredBill();
+  const { billState, onOpenBill, closeBill, syncBill } = useDeliveredBill();
 
   // If status is no longer delivered (e.g. Undo), close the sheet
   useEffect(() => {
@@ -208,9 +200,7 @@ export const OrderPopup: React.FC<{
     if (how) {
       void payments.payTheRest(order, how);
     } else {
-      const isDelivering = next.lane === 'ready';
-      const saved = await change(order, next.changes) as Order | null;
-      if (saved && isDelivering) onDelivered(saved);
+      await change(order, next.changes);
     }
     if (then) navigate(`/admin/orders/${then.code}${search}`, { replace: true });
   };
@@ -280,7 +270,7 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} onDelivered={onDelivered} onOpenBill={onOpenBill} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} onOpenBill={onOpenBill} />}
       {give.popup}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />
@@ -288,7 +278,6 @@ export const OrderPopup: React.FC<{
         isOpen={!!billState}
         onClose={closeBill}
         order={billState?.order ?? null}
-        moment={billState?.moment}
         onAddTotal={() => {
           const o = billState?.order;
           closeBill();

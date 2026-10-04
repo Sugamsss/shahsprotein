@@ -15,8 +15,6 @@ export interface BillSheetProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
-  /** 'delivered' when opened immediately after marking delivered; 'again' when opened from menu */
-  moment?: 'delivered' | 'again';
   onAddTotal?: () => void;
 }
 
@@ -24,7 +22,6 @@ export const BillSheet: React.FC<BillSheetProps> = ({
   isOpen,
   onClose,
   order,
-  moment = 'again',
   onAddTotal,
 }) => {
   const toast = useToast();
@@ -181,10 +178,7 @@ export const BillSheet: React.FC<BillSheetProps> = ({
 
   if (!order) return null;
 
-  const titleText =
-    moment === 'delivered'
-      ? adminCopy.bill.titleDelivered
-      : adminCopy.bill.title;
+  const titleText = adminCopy.bill.title;
 
   const titleNode = (
     <div>
