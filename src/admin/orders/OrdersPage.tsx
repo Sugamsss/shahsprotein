@@ -273,7 +273,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
     navigate(`/admin/orders/${only}${location.search}`);
   }, [only, settledQ]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onAction = async (o: Order, action: CardAction) => {
+  const onAction = (o: Order, action: CardAction) => {
     const lane = laneOf(o);
     if (action === 'next' && lane === 'collect') setPaying(o); // Mark paid: how did they pay?
     else if (action === 'next' && (lane === 'packing' || lane === 'ready')) void change(o, NEXT[lane]);

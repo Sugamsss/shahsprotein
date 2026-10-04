@@ -73,7 +73,6 @@ export const StatusCard: React.FC<{
   onPayRest: (order: Order) => void;
   /** Priority was just turned on (and saved): offer it packed food from other orders. */
   onPriorityOn?: (order: Order) => void;
-  /** Opens the bill after marking delivered. */
 }> = ({ order: o, change, payments, onPayRest, onPriorityOn }) => {
   const cancelled = o.status === 'cancelled';
   const at = STEPS.indexOf(o.status as (typeof STEPS)[number]);
