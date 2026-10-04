@@ -22,6 +22,12 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-04-bill-on-request',
+    for: ['admin', 'cook'],
+    title: 'The bill waits until you ask',
+    body: "Marking an order Delivered no longer pops up its bill. When someone wants one, open the order and tap Bill.",
+  },
+  {
     id: '2026-10-02-faster-startup',
     for: ['admin', 'cook'],
     kind: 'fixed',
