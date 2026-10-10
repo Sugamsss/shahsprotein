@@ -1,7 +1,7 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
-  KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
 } from './types';
 import { holdUntilDone } from './unsavedWork';
@@ -148,6 +148,18 @@ export const givePriority = (orderId: string, preview = false) =>
 /** Products page: sample weight and shelf life. Returns the kitchen. */
 export const setKitchenProduct = (productId: string, settings: KitchenSettings) =>
   rpc<Kitchen>('set_admin_kitchen_product', { product_id: productId, settings });
+
+/**
+ * The cooking history, newest first: every batch logged, changed or deleted, and each write-off. Filter by
+ * batch or product. Page with `before` (the last entry's `at`). 'missing' until 20261010000000 is live.
+ */
+export const getKitchenHistory = (filter: { batchId?: string; productId?: string; before?: string; limit?: number } = {}) =>
+  rpc<KitchenHistoryPage>('get_admin_kitchen_history', {
+    batch_id: filter.batchId,
+    product_id: filter.productId,
+    before: filter.before,
+    limit: filter.limit,
+  });
 
 export const getOverview = () => rpc<Overview>('get_admin_overview');
 /** Both Homes' numbers: every product per stage, the stages overall with money, and this week against last. */

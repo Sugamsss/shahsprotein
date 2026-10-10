@@ -883,6 +883,29 @@ export const adminCopy = {
       [toOrders && `${toOrders} to ${orders === 1 ? '1 order' : `${orders} orders`}`, spare && `${spare} spare`, off && `${off} off the shelf`].filter(Boolean) as string[],
     fixName: (product: string, weight: string, day: string) => `Fix ${weight} ${product}, made ${day}`,
 
+    // Cooking history: every batch logged, changed or deleted, and each write-off. Kept for good.
+    history: {
+      title: 'Cooking history',
+      moreRow: ['Cooking history', 'Every batch logged, fixed or used up'],
+      seeAll: 'See all',
+      batchTitle: 'History',
+      all: 'All',
+      filterLabel: 'Show one product',
+      empty: 'Nothing logged yet.',
+      emptyProduct: (product: string) => `Nothing logged for ${product} yet.`,
+      showMore: 'Show more',
+      showMoreBusy: 'Loading…',
+      undo: 'Undo',
+      logged: (product: string, weight: string) => `${product} · ${weight} logged`,
+      deleted: (product: string, weight: string) => `${product} · ${weight} deleted`,
+      writtenOff: (product: string, weight: string, reason: string) => `${product} · ${weight} ${reason}`,
+      takenBack: (product: string, weight: string, reason: string) => `${product} · ${weight} ${reason} taken back`,
+      changedGrams: (from: string, to: string) => `changed ${from} → ${to}`,
+      changedDay: (from: string, to: string) => `made day ${from} → ${to}`,
+      reasons: { used_up: 'used up', thrown_out: 'thrown out' } as Record<'used_up' | 'thrown_out', string>,
+      madeOn: (day: string) => `made ${day}`,
+    },
+
     // Spare on the shelf: the foot of a product card, the warning line, the sheet.
     spareLine: (weight: string, keeps: string) => `${weight} spare${keeps ? ` · ${keeps}` : ''}`,
     daysLeft: (n: number) => `${n} days left`,

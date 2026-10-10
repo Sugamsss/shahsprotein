@@ -7,6 +7,7 @@ import { deleteBatch, toAdminError, updateBatch } from '../api';
 import { formatDayInSentence, formatWeight } from '../format';
 import { productName } from '../orders/model';
 import type { Kitchen, KitchenBatch, KitchenEffects } from '../types';
+import { BatchHistory } from './BatchHistory';
 import { MadeOn } from './MadeOn';
 import { nameOf, packedCount } from './model';
 import { Outcomes } from './Outcomes';
@@ -143,6 +144,7 @@ export const FixBatchSheet: React.FC<{
         {(changed || deleting) && (
           <Outcomes heading={deleting ? copy.ifYouDelete : copy.ifYouSave} before={kitchen} mode="fix" request={request} />
         )}
+        <BatchHistory batchId={batch.id} />
       </div>
     </AdminSheet>
   );

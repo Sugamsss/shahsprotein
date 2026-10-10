@@ -1,0 +1,52 @@
+/* The cooking history: its page (CookingHistoryPage), the rows (HistoryRow) shared with the
+   History block in Fix a batch (BatchHistory). Admin type scale and admin tokens only; set
+   type with longhands. Touch targets are 44px on phones. Imported by admin.css. */
+
+/* ---- The product filter: one row of chips, each a 44px tap ------------------------------ */
+.adm-hist__filter { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-hist__chip {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--radius-full);
+  background: var(--adm-well); color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; line-height: 1.3;
+  cursor: pointer;
+}
+.adm-hist__chip.is-on { background: var(--adm-accent-tint); color: var(--adm-accent-text); font-weight: 600; }
+.adm-hist__chip:active { background: var(--adm-well-press); }
+.adm-hist__chip.is-on:active { background: var(--adm-accent-tint-press); }
+@media (hover: hover) {
+  .adm-hist__chip:hover { background: var(--adm-well-press); }
+  .adm-hist__chip.is-on:hover { background: var(--adm-accent-tint-press); }
+}
+.adm-hist__chip:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+
+/* ---- A day: its heading, then one card of rows ------------------------------------------ */
+.adm-hist__day { display: grid; gap: 8px; }
+.adm-hist__heading { margin: 0; color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+
+/* A row is a list item, not a button: no tap, so no press state. The thumb sits left, the sentence right. */
+.adm-list > .adm-hist__row {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 14px;
+  min-height: 64px; padding: 12px 16px; color: var(--adm-ink-1);
+}
+
+/* A quiet label for a line an Undo put back. Ink-2 on the well, never ink-3 on a chip. */
+.adm-hist__undo {
+  display: inline-flex; align-items: center; margin-left: 8px; min-height: 22px; padding: 0 8px; border-radius: var(--radius-full);
+  background: var(--adm-well); color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35;
+  vertical-align: 1px; white-space: nowrap;
+}
+
+/* ---- Under the list ---------------------------------------------------------------------- */
+.adm-hist__more { justify-self: center; }
+
+/* The link in Logged this week's head: a quiet text link, 44px tall on phones. */
+.adm-kx-history-link {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--adm-accent-text);
+  font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; text-decoration: none; white-space: nowrap;
+}
+.adm-kx-history-link:active { opacity: 0.7; }
+@media (hover: hover) { .adm-kx-history-link:hover { text-decoration: underline; } }
+.adm-kx-history-link:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* ---- Fix a batch: the batch's own lines, under the outcomes ---------------------------- */
+.adm-kx-history { display: grid; gap: 0; margin-top: 20px; }
+.adm-kx-history > .adm-list { margin-top: 0; }

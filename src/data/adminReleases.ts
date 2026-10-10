@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-10-cooking-history',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'Cooking history',
+    body: 'Every batch you log, fix or delete, and each used up or thrown out, is kept with the day and who did it. Find it under Logged this week, or in More.',
+  },
+  {
     id: '2026-10-04-faster-bill',
     for: ['admin', 'cook'],
     kind: 'fixed',

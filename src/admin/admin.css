@@ -18,6 +18,7 @@
 @import './pages/home.css';
 @import './pages/metrics.css';
 @import './kitchen/kitchen.css';
+@import './kitchen/history.css';
 @import './orders/orders.css';
 @import './pages/customers.css';
 @import './update/whats-new.css';

@@ -5,7 +5,10 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { formatDayInSentence, formatWeight } from '../format';
 import { madeOnDay, productName } from '../orders/model';
+import { AdminLink } from '../router';
 import type { Kitchen, KitchenBatch } from '../types';
+import { useHistoryAvailable } from './useHistoryAvailable';
+import { HISTORY_PATH } from './history';
 import { loggedThisWeek, shiftDay } from './model';
 
 const copy = adminCopy.kitchen;
@@ -19,6 +22,7 @@ const madeText = (day: string, today: string) =>
  * opens Fix a batch. Nothing shows when nothing was logged.
  */
 export const LoggedList: React.FC<{ kitchen: Kitchen; onFix: (batch: KitchenBatch) => void }> = ({ kitchen, onFix }) => {
+  const historyOn = useHistoryAvailable();
   const batches = loggedThisWeek(kitchen);
   if (!batches.length) return null;
   return (
@@ -26,6 +30,7 @@ export const LoggedList: React.FC<{ kitchen: Kitchen; onFix: (batch: KitchenBatc
       <div className="adm-home__head">
         <h2 id="adm-home-logged">{copy.loggedTitle}</h2>
         <span className="adm-home__meta-wide">{copy.loggedMeta}</span>
+        {historyOn && <AdminLink className="adm-kx-history-link" to={HISTORY_PATH}>{copy.history.seeAll}</AdminLink>}
       </div>
       <div className="adm-list adm-kx-logged">
         {batches.map((b) => {
