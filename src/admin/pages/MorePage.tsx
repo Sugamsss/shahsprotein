@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronRight, Download, Mail, Settings, Ticket, type LucideIcon } from 'lucide-react';
+import { ChevronRight, Download, History, Mail, Settings, Ticket, type LucideIcon } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
 import { getCoupons, getEmailList } from '../api';
+import { HISTORY_PATH } from '../kitchen/history';
+import { useHistoryAvailable } from '../kitchen/useHistoryAvailable';
 import { ExportSheet } from '../orders/ExportSheet';
 import { AdminLink as Link } from '../router';
 import { useRpc } from '../useRpc';
@@ -22,6 +24,7 @@ const MorePage: React.FC = () => {
   const emails = useRpc(getEmailList, []);
   const couponsOn = coupons.data?.filter((c) => c.active && !(c.expires_at && Date.parse(c.expires_at) <= Date.now())).length;
   const people = emails.data?.members.length;
+  const historyOn = useHistoryAvailable();
 
   return (
     <div className="adm-page">
@@ -36,6 +39,11 @@ const MorePage: React.FC = () => {
         <button type="button" onClick={() => setExporting(true)}>
           <Row Icon={Download} title={copy.more.exportOrders[0]} sub={copy.more.exportOrders[1]} />
         </button>
+        {historyOn && (
+          <Link to={HISTORY_PATH}>
+            <Row Icon={History} title={copy.kitchen.history.moreRow[0]} sub={copy.kitchen.history.moreRow[1]} />
+          </Link>
+        )}
         <Link to="/admin/settings"><Row Icon={Settings} title={copy.more.settings[0]} sub={copy.more.settings[1]} /></Link>
       </section>
       <p className="adm-muted adm-center">{copy.more.footer}</p>

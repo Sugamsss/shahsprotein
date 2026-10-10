@@ -525,6 +525,33 @@ export type PriorityGiveEffects = KitchenEffects & { pouches: PriorityPouch[] };
 /** log_admin_batches' p_batches: 1 to 10. made_on left out is today. */
 export interface BatchInput { product_id: string; grams: number; made_on?: string }
 export type WriteOffReason = 'used_up' | 'thrown_out';
+
+/** One line of the cooking history (get_admin_kitchen_history). The log never shrinks. */
+export type KitchenHistoryEvent = 'logged' | 'changed' | 'deleted' | 'used_up' | 'thrown_out' | 'writeoff_removed';
+export interface KitchenHistoryEntry {
+  id: string;
+  /** When it was saved (ISO, UTC). */
+  at: string;
+  by: string | null;
+  /** The display name only (never an email); null when they have none. */
+  by_name: string | null;
+  batch_id: string;
+  product_id: string;
+  event: KitchenHistoryEvent;
+  /** The batch's grams after the event (what it had, for a deleted batch); the grams for a write-off. */
+  grams: number;
+  /** Only on a 'changed' line whose grams changed. */
+  old_grams: number | null;
+  /** The batch's made-on day (India date). */
+  made_on: string | null;
+  /** Only on a 'changed' line whose day changed. */
+  old_made_on: string | null;
+  /** Only on write-off lines. */
+  reason: WriteOffReason | null;
+  /** The kind of kitchen call that wrote it, or 'undo'. Null for lines from before the history. */
+  action_kind: string | null;
+}
+export interface KitchenHistoryPage { entries: KitchenHistoryEntry[]; more: boolean }
 /** set_admin_kitchen_product: only the keys present change. */
 export interface KitchenSettings { sample_grams?: number; shelf_life?: ShelfLife | null }
 
