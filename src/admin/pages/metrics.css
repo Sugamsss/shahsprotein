@@ -87,6 +87,8 @@
 :is(.adm-hm-split, .adm-hm-methods) .is-bank { background: var(--hm-bank); }
 :is(.adm-hm-split, .adm-hm-methods) .is-other { background: var(--hm-other); }
 :is(.adm-hm-split, .adm-hm-methods) .is-not_recorded { background: var(--hm-unrecorded); }
+/* Settled as Gift: told apart from the money, so no bar and no swatch. */
+.adm-hm-gifted { margin-top: 4px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; }
 
 /* ---- The chart ---------------------------------------------------------------------------- */
 .adm-hm-chart { --plot: 148px; --gap: 10px; display: grid; gap: 8px; min-width: 0; margin: 0; }

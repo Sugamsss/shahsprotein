@@ -13,12 +13,12 @@ const FIRST = '2026-09-23T10:00:00+05:30';
 const totals = (t: Partial<MetricsTotals> = {}): MetricsTotals => ({
   orders: 0, packs: 0, grams: 0, sales: 0, with_total: 0, without_total: 0, paid_of_sales: 0,
   samples: { orders: 0, packs: 0, free_orders: 0 },
-  came_in: { amount: 0, payments: 0, without_amount: 0, by_method: { upi: 0, cash: 0, bank: 0, other: 0, not_recorded: 0 } },
+  came_in: { amount: 0, payments: 0, without_amount: 0, by_method: { upi: 0, cash: 0, bank: 0, gift: 0, other: 0, not_recorded: 0 } },
   ...t,
 });
 const bucket = (date: string, b: Partial<MetricsBucket> = {}): MetricsBucket => ({
   date, orders: 0, with_total: 0, packs: 0, sales: 0, came_in: 0,
-  came_in_by_method: { upi: 0, cash: 0, bank: 0, other: 0, not_recorded: 0 }, products: [], ...b,
+  came_in_by_method: { upi: 0, cash: 0, bank: 0, gift: 0, other: 0, not_recorded: 0 }, products: [], ...b,
 });
 const period = (p: Partial<MetricsPeriod> & { chart: MetricsPeriod['chart'] }): MetricsPeriod => ({
   starts_at: null, ends_at: '', totals: totals(), previous: null, products: [], ...p,

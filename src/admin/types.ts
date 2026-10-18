@@ -7,7 +7,7 @@ export type OrderStatus = 'cooking' | 'packing' | 'ready' | 'delivered' | 'cance
 export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_person';
 export type OrderView = 'todo' | 'done' | 'all';
 /** How a paid order was paid. Old paid orders have none (null). */
-export type PaidMethod = 'upi' | 'cash' | 'bank' | 'other';
+export type PaidMethod = 'upi' | 'cash' | 'bank' | 'gift' | 'other';
 /** Paid means paid in full: the payments cover the total, or the order has no total. */
 export type PaymentState = 'not_paid' | 'part_paid' | 'paid';
 
@@ -324,7 +324,7 @@ export interface TotalsDay { date: string; orders: number; packs: number }
  * payments from orders marked paid before methods existed. Payments with no amount add
  * nothing, so the five add up to amount_in.
  */
-export type TotalsByMethod = Record<PaidMethod | 'not_recorded', number>;
+export type TotalsByMethod = Record<Exclude<PaidMethod, 'gift'> | 'not_recorded', number> & { gift?: number };
 export interface TotalsWeekProduct { product_id: string; packs: number; orders: number }
 
 /** get_admin_totals(): the numbers behind both Homes (temp/home-totals.md, v2). Zeros, never null. */

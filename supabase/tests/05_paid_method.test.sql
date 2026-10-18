@@ -135,7 +135,7 @@ select throws_ok(
 );
 select throws_ok(
   $$select public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"card"}')$$,
-  '22023', 'Choose UPI, Cash, Bank transfer or Other.', 'an unknown method is refused'
+  '22023', 'Choose UPI, Cash, Bank transfer, Gift or Other.', 'an unknown method is refused'
 );
 select throws_ok(
   $$select public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid_method":"upi"}')$$,

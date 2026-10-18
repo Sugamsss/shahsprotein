@@ -74,7 +74,8 @@ export const paymentsByText = (o: Pick<Order, 'payments'>): string | null => {
 
 /**
  * Home's ₹ came in, by how it was paid: UPI, Cash, Bank, Other, then Not recorded,
- * leaving out zeros. The sums come from get_admin_totals(); nothing is added up here.
+ * leaving out zeros. Gift isn't here: it settled orders but no money came in, so it
+ * gets its own line (`giftedOf`). The sums come from the server; nothing is added up here.
  */
 export const moneyByMethod = (by: TotalsByMethod | undefined): { key: keyof TotalsByMethod; label: string; amount: number }[] =>
   !by ? [] : (['upi', 'cash', 'bank', 'other', 'not_recorded'] as const)
@@ -84,6 +85,9 @@ export const moneyByMethod = (by: TotalsByMethod | undefined): { key: keyof Tota
       label: key === 'not_recorded' ? adminCopy.homePage.notRecorded : adminCopy.paidBy.methods[key],
       amount: by[key],
     }));
+
+/** ₹ given away as Gift in the same window; 0 when none, or from a database before Gift. */
+export const giftedOf = (by: TotalsByMethod | undefined): number => by?.gift ?? 0;
 
 /** What the toast says about a change. */
 export const changeText = (o: Order, changes: OrderChanges): string => {
