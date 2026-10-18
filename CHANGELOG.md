@@ -4,6 +4,9 @@ Small changes to make the order book easier to use, and to keep the kitchen and 
 
 ## October 2026
 
+### Gift as a way to settle an order
+When you give an order away, pick Gift when you mark it paid. The order is settled and leaves "to collect", but it doesn't count as money in, sales or profit. Under Came in, Home shows how much was given as gifts.
+
 ### Faster starts and a bill when you deliver
 The Orders app checks for updates as soon as it opens, so the latest version is ready sooner. Mark an order Delivered and its bill is ready to share on WhatsApp or download; open it again from the order whenever you need it.
 

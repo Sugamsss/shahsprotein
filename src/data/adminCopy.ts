@@ -296,10 +296,10 @@ export const adminCopy = {
 
   /** How an order was paid: picked when it's marked paid (detail, cards, Done, Add order). */
   paidBy: {
-    /** The pills. "Bank" keeps four pills on one line on a 320px phone. */
-    methods: { upi: 'UPI', cash: 'Cash', bank: 'Bank', other: 'Other' },
+    /** The pills. "Bank" keeps all five on one line on a 320px phone. Gift = we gave it free: settled, but no money came in. */
+    methods: { upi: 'UPI', cash: 'Cash', bank: 'Bank', gift: 'Gift', other: 'Other' },
     /** In the order, the toast and the CSV. Other reads as `other(note)`. */
-    names: { upi: 'UPI', cash: 'Cash', bank: 'Bank transfer' },
+    names: { upi: 'UPI', cash: 'Cash', bank: 'Bank transfer', gift: 'Gift' },
     /** "Other: bank transfer", in the detail, the toast and the CSV. */
     other: (note: string) => `Other: ${note}`,
     /** Between methods when an order was paid in parts: "UPI + Cash". */
@@ -1163,6 +1163,8 @@ export const adminCopy = {
       notCountingSamplePacks: (n: number) => `Not counting ${n} sample ${n === 1 ? 'pack' : 'packs'}`,
       noAmount: (n: number) => `${n} ${n === 1 ? 'payment' : 'payments'} had no amount`,
       byMethod: 'How it came in',
+      /** Under Came in: orders settled as Gift. Never part of the money. */
+      gifted: (amount: string) => `${amount} given as gifts, not counted`,
 
       // The chart.
       hours: ['12 am', '6 am', '12 pm', '6 pm'],

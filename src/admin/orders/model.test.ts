@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KitchenEffects, Order, OrderKitchen, OrderLine, Payment, UpdatedOrder } from '../types';
 import {
-  changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod,
+  changeText, applyLocal, cleanPastedPhone, contactNumbers, effectsText, isPartlyCooked, laneOf, lineState, linesFirst, moneyByMethod, giftedOf,
   namesOneOrder, nextOf, packsOf, packsText, productStates, paidByText, paymentsByText, phoneInText, pileOf, plainPhone, productFilter,
   canMoveBack, isHeld, reverseOf, searchFor, sortLines, undoPlanOf, movedOthers, byKitchenTurn, daysInStage, landingStage, stageFromHash,
 } from './model';
@@ -251,6 +251,7 @@ describe('paying with a method', () => {
   it('undoing Not paid puts the method and note back', () => {
     expect(reverseOf(paidOrder('upi'), { paid: false })).toEqual({ paid: true, paid_method: 'upi' });
     expect(reverseOf(paidOrder('bank'), { paid: false })).toEqual({ paid: true, paid_method: 'bank' });
+    expect(reverseOf(paidOrder('gift'), { paid: false })).toEqual({ paid: true, paid_method: 'gift' });
     expect(reverseOf(paidOrder('other', 'bank transfer'), { paid: false }))
       .toEqual({ paid: true, paid_method: 'other', paid_note: 'bank transfer' });
   });
@@ -274,6 +275,7 @@ describe('paying with a method', () => {
     expect(paidByText(paidOrder('upi'))).toBe('UPI');
     expect(paidByText(paidOrder('cash'))).toBe('Cash');
     expect(paidByText(paidOrder('bank'))).toBe('Bank transfer');
+    expect(paidByText(paidOrder('gift'))).toBe('Gift');
     expect(paidByText(paidOrder('other', 'bank transfer'))).toBe('Other: bank transfer');
     expect(paidByText(paidOrder(null))).toBeNull();
   });
@@ -293,10 +295,10 @@ describe('paid in parts, in the CSV', () => {
 // Home's ₹ came in, by how it was paid. The sums are the server's; this only orders, labels and hides zeros.
 
 describe('money by method', () => {
-  const none = { upi: 0, cash: 0, bank: 0, other: 0, not_recorded: 0 };
+  const none = { upi: 0, cash: 0, bank: 0, gift: 0, other: 0, not_recorded: 0 };
 
-  it('lists UPI, Cash, Bank, Other, then Not recorded, with the server amounts', () => {
-    expect(moneyByMethod({ upi: 800, cash: 200, bank: 1000, other: 150, not_recorded: 400 })).toEqual([
+  it('lists UPI, Cash, Bank, Other, then Not recorded, with the server amounts; never Gift', () => {
+    expect(moneyByMethod({ upi: 800, cash: 200, bank: 1000, gift: 75, other: 150, not_recorded: 400 })).toEqual([
       { key: 'upi', label: 'UPI', amount: 800 },
       { key: 'cash', label: 'Cash', amount: 200 },
       { key: 'bank', label: 'Bank', amount: 1000 },
@@ -308,6 +310,13 @@ describe('money by method', () => {
   it('leaves out zeros, so one method is one line and Not recorded only shows while it has money', () => {
     expect(moneyByMethod({ ...none, cash: 500 })).toEqual([{ key: 'cash', label: 'Cash', amount: 500 }]);
     expect(moneyByMethod({ ...none, upi: 300, not_recorded: 100 }).map((r) => r.key)).toEqual(['upi', 'not_recorded']);
+  });
+
+  it('reads what was given as Gift, and zero from a database before Gift', () => {
+    expect(giftedOf({ ...none, gift: 375 })).toBe(375);
+    const { gift: _gift, ...oldShape } = none;
+    expect(giftedOf(oldShape)).toBe(0);
+    expect(giftedOf(undefined)).toBe(0);
   });
 
   it('shows nothing when no money came in, or on a database without the split', () => {

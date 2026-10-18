@@ -87,7 +87,7 @@ select is(
       'totals', '{"orders":0,"packs":0,"grams":0,"sales":0,"with_total":0,"without_total":0,"paid_of_sales":0,
                   "samples":{"orders":0,"packs":0,"free_orders":0},
                   "came_in":{"amount":0,"payments":0,"without_amount":0,
-                             "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
+                             "by_method":{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}}}'::jsonb,
       'previous', null, 'products', '[]'::jsonb, 'chart_previous', null))
    from unnest(array['today', 'week', 'month', 'year', 'lifetime']) k),
   'empty: every period is zeros, with no comparison and no products'
@@ -103,7 +103,7 @@ select is(
     'lifetime_chart', jsonb_build_object('grain', 'week', 'now_index', 0, 'previous', null, 'current', jsonb_build_array(
       jsonb_build_object('date', date_trunc('week', now() at time zone 'Asia/Kolkata')::date,
         'orders', 0, 'with_total', 0, 'packs', 0, 'sales', 0, 'came_in', 0,
-        'came_in_by_method', '{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}'::jsonb, 'products', '[]'::jsonb)))),
+        'came_in_by_method', '{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}'::jsonb, 'products', '[]'::jsonb)))),
   'empty: no first order; lifetime is this week, one zero bucket'
 );
 
@@ -208,7 +208,7 @@ select is(
   '{"orders":2,"packs":3,"grams":1000,"sales":500,"with_total":1,"without_total":1,"paid_of_sales":500,
     "samples":{"orders":2,"packs":3,"free_orders":1},
     "came_in":{"amount":500,"payments":3,"without_amount":1,
-               "by_method":{"upi":300,"cash":200,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
+               "by_method":{"upi":300,"cash":200,"bank":0,"gift":0,"other":0,"not_recorded":0}}}'::jsonb,
   'today: real orders by India time; samples on their own (one free sample order, one paid order with a taster); cancelled and free sample orders out; part payments each count'
 );
 
@@ -219,7 +219,7 @@ select is(
     'totals', '{"orders":1,"packs":2,"grams":500,"sales":400,"with_total":1,"without_total":0,"paid_of_sales":0,
                 "samples":{"orders":0,"packs":0,"free_orders":0},
                 "came_in":{"amount":0,"payments":0,"without_amount":0,
-                           "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb),
+                           "by_method":{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}}}'::jsonb),
   'today: compared with yesterday up to 14:00, so the order and payment after it are left out (paid_of_sales too)'
 );
 
@@ -460,12 +460,12 @@ select is(
    from jsonb_array_elements(pg_temp.period('today') #> '{chart,current}') with ordinality as b(v, i)
    where b.i - 1 in (0, 9, 10, 13, 20)),
   '{"0":{"with_total":0,"products":[{"product_id":"bites","packs":2}],
-         "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}},
+         "by_method":{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}},
     "9":{"with_total":1,"products":[{"product_id":"raggi-jaggi","packs":1}],
-         "by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}},
-    "10":{"with_total":0,"products":[],"by_method":{"upi":300,"cash":0,"bank":0,"other":0,"not_recorded":0}},
-    "13":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":200,"bank":0,"other":0,"not_recorded":0}},
-    "20":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}}}'::jsonb,
+         "by_method":{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}},
+    "10":{"with_total":0,"products":[],"by_method":{"upi":300,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}},
+    "13":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":200,"bank":0,"gift":0,"other":0,"not_recorded":0}},
+    "20":{"with_total":0,"products":[],"by_method":{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}}}'::jsonb,
   'today''s buckets: with_total, packs per product (samples and free samples out, only products with packs) and came in by method'
 );
 
@@ -492,7 +492,7 @@ select is(
       select jsonb_build_object('with_total', sum((b ->> 'with_total')::int),
         'by_method', jsonb_build_object(
           'upi', sum((b #>> '{came_in_by_method,upi}')::int), 'cash', sum((b #>> '{came_in_by_method,cash}')::int),
-          'bank', sum((b #>> '{came_in_by_method,bank}')::int), 'other', sum((b #>> '{came_in_by_method,other}')::int),
+          'bank', sum((b #>> '{came_in_by_method,bank}')::int), 'gift', sum((b #>> '{came_in_by_method,gift}')::int), 'other', sum((b #>> '{came_in_by_method,other}')::int),
           'not_recorded', sum((b #>> '{came_in_by_method,not_recorded}')::int)),
         'products', (select jsonb_object_agg(x.product_id, x.packs) from (
           select pr ->> 'product_id' as product_id, sum((pr ->> 'packs')::int) as packs

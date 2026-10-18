@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
 import { formatMoney, formatWeight } from '../format';
-import { moneyByMethod } from '../orders/model';
+import { giftedOf, moneyByMethod } from '../orders/model';
 import { LoadError } from '../parts';
 import type { Metrics, MetricsPeriodKey } from '../types';
 import {
@@ -224,6 +224,7 @@ const Story: React.FC<{ periodKey: MetricsPeriodKey; metrics: Metrics | null; me
   const quiet = line ? null : noCompareLine(periodKey, metrics);
   const small = notes(metric, t, change);
   const methods = metric === 'came_in' ? moneyByMethod(t.came_in.by_method) : [];
+  const gifted = metric === 'came_in' ? giftedOf(t.came_in.by_method) : 0;
   const ChangeIcon = line?.icon === 'up' ? ArrowUp : line?.icon === 'down' ? ArrowDown : null;
   return (
     <>
@@ -249,6 +250,7 @@ const Story: React.FC<{ periodKey: MetricsPeriodKey; metrics: Metrics | null; me
           </ul>
         </>
       )}
+      {gifted > 0 && <p className="adm-hm-gifted">{copy.gifted(formatMoney(gifted))}</p>}
       {small.length > 0 && (
         <p className="adm-hm-notes">
           {/* Each note stays whole; the line breaks only at the space between notes. */}

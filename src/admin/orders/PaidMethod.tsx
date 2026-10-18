@@ -11,7 +11,7 @@ import type { HowPaid } from './usePayments';
 
 const copy = adminCopy.paidBy;
 /** UPI first: most people pay that way. Nothing is ever picked for them. */
-export const PAID_METHODS: readonly PaidMethod[] = ['upi', 'cash', 'bank', 'other'];
+export const PAID_METHODS: readonly PaidMethod[] = ['upi', 'cash', 'bank', 'gift', 'other'];
 
 /** The keys that mark an order paid this way. */
 export const paidWith = (method: PaidMethod, note?: string): OrderChanges =>

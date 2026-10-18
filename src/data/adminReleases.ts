@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-18-gift-payment',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Mark an order as a gift',
+    body: 'Gave an order away? Pick Gift when you mark it paid. It\'s settled, but it doesn\'t count as money in or sales. Home shows how much you gave.',
+  },
+  {
     id: '2026-10-10-cooking-history',
     for: ['admin', 'cook'],
     kind: 'new',

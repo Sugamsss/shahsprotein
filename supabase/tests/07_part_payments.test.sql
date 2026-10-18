@@ -448,7 +448,7 @@ select is(
     'last', (current_setting('test.totals')::jsonb #> '{weeks,last}')
       - array['starts_at', 'ends_at', 'days', 'orders', 'packs', 'grams_made', 'samples']),
   '{"this": {"amount_in":1050,"paid_orders":2,"paid_without_amount":0,"part_payments":2,
-             "amount_by_method":{"upi":300,"cash":250,"bank":500,"other":0,"not_recorded":0}},
+             "amount_by_method":{"upi":300,"cash":250,"bank":500,"gift":0,"other":0,"not_recorded":0}},
     "last": {"amount_in":750,"paid_orders":0,"paid_without_amount":0,"part_payments":1}}'::jsonb,
   'weeks: each payment counts in its own week and by its own method; the cancelled advance is out; split payments count as part payments'
 );

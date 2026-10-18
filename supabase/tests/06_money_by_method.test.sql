@@ -48,7 +48,7 @@ reset role;
 
 select is(
   current_setting('test.empty')::jsonb #> '{weeks,this,amount_by_method}',
-  '{"upi":0,"cash":0,"bank":0,"other":0,"not_recorded":0}'::jsonb,
+  '{"upi":0,"cash":0,"bank":0,"gift":0,"other":0,"not_recorded":0}'::jsonb,
   'empty: all five methods are there, as zeros'
 );
 
@@ -94,7 +94,7 @@ reset role;
 
 select is(
   current_setting('test.totals')::jsonb #> '{weeks,this,amount_by_method}',
-  '{"upi":800,"cash":200,"bank":1000,"other":150,"not_recorded":400}'::jsonb,
+  '{"upi":800,"cash":200,"bank":1000,"gift":0,"other":150,"not_recorded":400}'::jsonb,
   'this week by method: UPI adds up, an old paid order is not_recorded; no amount, cancelled, last week and unpaid are out'
 );
 
