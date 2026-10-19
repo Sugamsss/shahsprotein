@@ -1313,33 +1313,50 @@ a {
   text-transform: uppercase;
 }
 
-/* Five a row (three on phones), and a short last row sits centred. */
-.product-detail__ingredients {
+/* Ingredient chips: small round picture cropped from the sprite + the name */
+.product-detail__chips {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.65rem 0.4rem;
+  gap: 0.45rem 0.4rem;
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.product-detail__ingredients li {
-  flex: 0 0 calc((100% - 4 * 0.4rem) / 5);
-  display: flex;
-  flex-direction: column;
+.product-detail__chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.3rem;
-  color: var(--color-text-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.7rem 0.22rem 0.22rem;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  box-shadow: var(--shadow-ingredient-chip);
 }
 
-.product-detail__ingredient-art {
-  width: 72px;
-  height: 72px;
+.product-detail__chip-art {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
   background-repeat: no-repeat;
+  background-color: var(--color-bg-pill);
+  box-shadow: var(--shadow-ingredient-art);
+}
+
+.product-detail__chip-name {
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.product-detail__benefits {
+  margin-top: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .product-detail__facts {
@@ -4367,17 +4384,26 @@ img {
     flex-basis: 100%;
   }
 
-  .product-detail__ingredients {
-    gap: 0.75rem 0.25rem;
+  .product-detail__chips {
+    gap: 0.4rem 0.35rem;
   }
 
-  .product-detail__ingredients li {
-    flex-basis: calc((100% - 2 * 0.25rem) / 3);
+  .product-detail__chip {
+    padding: 0.18rem 0.6rem 0.18rem 0.18rem;
+    gap: 0.4rem;
   }
 
-  .product-detail__ingredient-art {
-    width: 64px;
-    height: 64px;
+  .product-detail__chip-art {
+    width: 26px;
+    height: 26px;
+  }
+
+  .product-detail__chip-name {
+    font-size: 0.78125rem;
+  }
+
+  .product-detail__benefits {
+    margin-top: 1rem;
   }
 
   .product-detail__nutrition {

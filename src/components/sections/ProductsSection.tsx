@@ -201,16 +201,16 @@ export const ProductsSection: React.FC = () => {
 
               <section className="product-detail__section" aria-label={text.ingredients}>
                 <h4>{text.ingredients}</h4>
-                <ul className="product-detail__ingredients">
+                <ul className="product-detail__chips" role="list">
                   {selectedProduct.ingredients.map((ingredient, index) => {
                     const { image, rows } = selectedProduct.ingredientSprite;
                     const column = index % 3;
                     const row = Math.floor(index / 3);
 
                     return (
-                      <li key={ingredient}>
+                      <li key={ingredient} className="product-detail__chip">
                         <span
-                          className="product-detail__ingredient-art"
+                          className="product-detail__chip-art"
                           aria-hidden="true"
                           style={{
                             backgroundImage: `url(${image})`,
@@ -218,11 +218,14 @@ export const ProductsSection: React.FC = () => {
                             backgroundPosition: `${column * 50}% ${(row / (rows - 1)) * 100}%`,
                           }}
                         />
-                        <span>{ingredient}</span>
+                        <span className="product-detail__chip-name">{ingredient}</span>
                       </li>
                     );
                   })}
                 </ul>
+                {selectedProduct.benefits && (
+                  <p className="product-detail__benefits">{selectedProduct.benefits}</p>
+                )}
               </section>
 
               <section className="product-detail__section" aria-label={text.goodToKnow}>
