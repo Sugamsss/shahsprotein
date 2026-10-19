@@ -50,7 +50,7 @@ export const productsData: Product[] = [
   {
     id: 'muesli',
     name: 'Muesli',
-    tagline: 'A bowl of complete nutrition.',
+    tagline: 'A bowl that’s never boring.',
     shortDescription: 'Crunchy roasted blend with flakes, nuts, seeds and fruit.',
     iconType: 'wheat',
     image: '/assets/product-cards/muesli-light-v4.webp',
