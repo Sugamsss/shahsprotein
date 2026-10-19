@@ -1282,13 +1282,7 @@ a {
   }
 }
 
-.product-detail__tagline {
-  color: var(--color-text-primary);
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.product-detail__description,
+.product-detail__founder-note,
 .product-detail__note {
   margin-top: 0.45rem;
   color: var(--color-text-secondary);
@@ -1350,13 +1344,6 @@ a {
   font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-.product-detail__benefits {
-  margin-top: 1.25rem;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.6;
 }
 
 .product-detail__facts {
@@ -4400,10 +4387,6 @@ img {
 
   .product-detail__chip-name {
     font-size: 0.78125rem;
-  }
-
-  .product-detail__benefits {
-    margin-top: 1rem;
   }
 
   .product-detail__nutrition {
