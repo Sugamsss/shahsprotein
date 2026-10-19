@@ -110,7 +110,7 @@ export const productsData: Product[] = [
     imageDark: '/assets/product-cards/bites-dark-v3.webp',
     features: ['Dates', 'Nuts', 'Seeds', 'Cranberry'],
     ingredients: ['Dates', 'Sunflower Seeds', 'Pumpkin Seeds', 'Almonds', 'Cashew', 'Cranberry', 'Haliv', 'Ghee'],
-    ingredientSprite: { image: '/assets/ingredients/date-bites-v2-648w.webp', rows: 3 },
+    ingredientSprite: { image: '/assets/ingredients/date-bites-v3-648w.webp', rows: 3 },
     benefits:
       "Dates give you natural sweetness and quick energy. The nuts and seeds add protein and good fats, so a couple of bites actually fill you up. Haliv has been used in Indian homes for generations as a source of iron, and a little ghee holds it all together. Try eating just one. I never can.",
     orderThumb: '/assets/order-thumbs/bites-light-192w-v1.webp',
