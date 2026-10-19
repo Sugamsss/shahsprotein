@@ -77,7 +77,7 @@ export const productsData: Product[] = [
     ],
     ingredientSprite: { image: '/assets/ingredients/muesli-v5-648w.webp', rows: 6 },
     benefits:
-      "Most muesli is mostly flakes with a few nuts thrown in. Ours starts with almonds, and we don't hold back on pumpkin seeds and flaxseeds either, so you get real protein and good fats in every bowl. Add five grains, two kinds of raisins, cranberries and a hint of cocoa and vanilla, and there's a little surprise in every spoon.",
+      "Most muesli is mostly flakes with a few nuts thrown in. Ours starts with almonds, and we don't hold back on pumpkin seeds and flaxseeds either, so you get real protein and good fats in every bowl. Add five grains, two kinds of raisins, cranberries and a hint of cocoa and vanilla, and every spoon tastes surprising.",
     orderThumb: '/assets/order-thumbs/muesli-light-192w-v1.webp',
     orderThumbDark: '/assets/order-thumbs/muesli-dark-192w-v1.webp',
     orderTile: orderTile('muesli-light'),
