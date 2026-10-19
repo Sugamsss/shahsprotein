@@ -13,7 +13,7 @@ const orderTile = (name: string): ImageSet => ({
 // so weightOptions lists pack sizes only.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 // Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
-// Sprites are exported at 216px per tile (3x the 72px tile) as WebP; see AGENTS.md.
+// Sprites are exported at 216px per tile as WebP; the chips crop each tile into a round picture.
 export const productsData: Product[] = [
   {
     id: 'raggi-jaggi',
@@ -53,7 +53,7 @@ export const productsData: Product[] = [
     name: 'Muesli',
     tagline: 'A bowl of complete nutrition.',
     shortDescription: 'Crunchy roasted blend with flakes, nuts, seeds and fruit.',
-    fullDescription: 'Made with oats, jowar flakes, ragi balls, roasted almonds, pumpkin, sunflower and flax seeds, brown and black raisins, cranberry, tutti frutti, sugar and ghee.',
+    fullDescription: 'A crunchy mix of almonds, flakes, seeds and fruit, with a little cocoa and vanilla.',
     iconType: 'wheat',
     image: '/assets/product-cards/muesli-light-v4.webp',
     imageDark: '/assets/product-cards/muesli-dark-v4.webp',
@@ -77,7 +77,7 @@ export const productsData: Product[] = [
       'Cocoa Powder',
       'Vanilla Powder',
     ],
-    ingredientSprite: { image: '/assets/ingredients/muesli-v3-648w.webp', rows: 5 },
+    ingredientSprite: { image: '/assets/ingredients/muesli-v5-648w.webp', rows: 6 },
     benefits:
       "Most muesli goes easy on the nuts and seeds. We don't. Almonds are the biggest thing in our bowl, with plenty of pumpkin seeds and flaxseeds too, so you get real protein and good fats in every spoon. Then come five kinds of grain, two kinds of raisins, cranberries, and a little cocoa and vanilla. Every spoon is a bit different, and that's the whole point.",
     orderThumb: '/assets/order-thumbs/muesli-light-192w-v1.webp',

@@ -96,7 +96,7 @@ Design/, Assets/         # reference designs and asset prompts, not shipped
   - The hero art has 828/1242/1672w files per theme and is preloaded (same `imagesrcset`) from the inline theme script in `index.html`. If you rename or resize it, change `src/utils/themeAssets.ts` too (Hero and the theme warm-up read it), or it downloads twice. The viewport `<meta>` must stay above that script, or the preload picks the 1672w file on phones.
   - Product cards each get their own crop at the card's 1.3 ratio, in `public/assets/product-cards/`.
   - The story image has an 800/1200/1672w `srcSet` and a fixed `aspectRatio`.
-  - Ingredient sprites use 216px per tile, so they're 648px wide.
+  - Ingredients wrap as chips: text names in a list, with decorative round sprite pictures. Sprites use 3 columns in ingredient order, 216px per tile (648px wide). Current files are `raggi-jaggi-648w.webp`, `muesli-v5-648w.webp` (6 rows) and `date-bites-v3-648w.webp`; keep their full-size masters.
   - Order popup: the order lines and empty-order rows use square 192w thumbnails (`order-thumbs/`). The "Add something else" tiles use 4:5 shots of the whole pouch (`order-tiles/`, 180/360/540w) with `srcSet`; `TILE_SIZES` in `OrderShelf.tsx` must follow the tile width in CSS. Masters and crop notes are in `Private/order-tiles/`.
 - **Below the fold:** `<img loading="lazy" decoding="async">` with `width` and `height`.
 - **Fonts are self-hosted:** latin variable woff2 in `public/assets/fonts/`, `@font-face` in `tokens.css`, and a preload in `index.html`. Don't add the Google Fonts link back.
