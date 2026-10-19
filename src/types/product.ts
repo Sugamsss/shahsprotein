@@ -25,6 +25,8 @@ export interface Product {
   features: string[];
   ingredients: string[];
   ingredientSprite: { image: string; rows: number };
+  /** Approved founder-voice paragraph explaining why these ingredients are chosen. */
+  benefits?: string;
   /** 192px square thumbnails for the "Your order" popup, per theme. */
   orderThumb: string;
   orderThumbDark: string;

@@ -223,6 +223,9 @@ export const ProductsSection: React.FC = () => {
                     );
                   })}
                 </ul>
+                {selectedProduct.benefits && (
+                  <p className="product-detail__benefits">{selectedProduct.benefits}</p>
+                )}
               </section>
 
               <section className="product-detail__section" aria-label={text.goodToKnow}>

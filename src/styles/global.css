@@ -1342,6 +1342,13 @@ a {
   background-repeat: no-repeat;
 }
 
+.product-detail__benefits {
+  margin-top: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .product-detail__facts {
   display: grid;
   gap: 0.6rem;
@@ -4378,6 +4385,10 @@ img {
   .product-detail__ingredient-art {
     width: 64px;
     height: 64px;
+  }
+
+  .product-detail__benefits {
+    margin-top: 1rem;
   }
 
   .product-detail__nutrition {
