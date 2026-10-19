@@ -196,8 +196,7 @@ export const ProductsSection: React.FC = () => {
             </React.Suspense>
           ) : (
             <div className="product-detail">
-              <p className="product-detail__tagline">{selectedProduct.tagline}</p>
-              <p className="product-detail__description">{selectedProduct.fullDescription}</p>
+              <p className="product-detail__founder-note">{selectedProduct.benefits}</p>
 
               <section className="product-detail__section" aria-label={text.ingredients}>
                 <h4>{text.ingredients}</h4>
@@ -223,9 +222,6 @@ export const ProductsSection: React.FC = () => {
                     );
                   })}
                 </ul>
-                {selectedProduct.benefits && (
-                  <p className="product-detail__benefits">{selectedProduct.benefits}</p>
-                )}
               </section>
 
               <section className="product-detail__section" aria-label={text.goodToKnow}>
