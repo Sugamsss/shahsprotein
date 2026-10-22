@@ -1236,24 +1236,48 @@ a {
   text-wrap: pretty;
 }
 
-.portfolio-card__mrp {
-  margin-top: -0.35rem;
-  margin-bottom: 0.85rem;
+/* Price tags: the MRP big, its pack size small under it, a hairline between
+   packs. Inter's lining figures, not the serif's old-style ones. */
+.pack-prices {
+  display: flex;
+  margin: 0;
+}
+
+/* On a card the tags sit just above the divider, level across the row. */
+.portfolio-card__body .pack-prices {
+  margin-top: auto;
+}
+
+.pack-prices + .portfolio-card__actions {
+  margin-top: 0.9rem;
+}
+
+.pack-prices__item {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.05rem;
+}
+
+.pack-prices__item + .pack-prices__item {
+  margin-left: 1.1rem;
+  padding-left: 1.1rem;
+  border-left: 1px solid var(--color-border-divider);
+}
+
+.pack-prices dd {
+  margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
-.portfolio-card__mrp-label {
+.pack-prices dt {
   color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.portfolio-card__mrp-pack {
-  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .portfolio-card__actions {
@@ -1421,6 +1445,18 @@ a {
 .product-detail__add {
   flex: 1;
   min-width: 0;
+}
+
+.product-detail__add-short {
+  display: none;
+}
+
+/* The picked pack's price, after a soft divider in the button's own colour. */
+.product-detail__add-price {
+  margin-left: 0.35rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Every size out: "Back soon · Ask us in the chat", centred, the height of
@@ -4564,6 +4600,15 @@ img {
     gap: 0.875rem;
   }
 
+  /* The switch shares the row, so "Add to order" becomes "Add" before the price. */
+  .product-detail__add-long {
+    display: none;
+  }
+
+  .product-detail__add-short {
+    display: inline;
+  }
+
   .order-fields .input,
   .order-coupon__row .input,
   .order-coupon__apply {
@@ -4596,7 +4641,16 @@ img {
     min-width: 1.5rem;
   }
 
-  /* The product popup's bar stacks: the switch full width, Add under it. */
+  /* The product popup's bar stacks: the switch full width, Add under it,
+     with room for the whole "Add to order" again. */
+  .product-detail__add-long {
+    display: inline;
+  }
+
+  .product-detail__add-short {
+    display: none;
+  }
+
   .product-detail__order {
     flex-direction: column;
     align-items: stretch;

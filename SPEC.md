@@ -11,7 +11,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
 - **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with the total…"). The WhatsApp message itself is the customer speaking.
-- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the founder's, in `src/data/products.ts`).
+- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the founder's, in `src/data/products.ts`): price tags on the cards, and the picked pack's price in the popup's Add button.
 
 ## 2. Themes and design tokens
 

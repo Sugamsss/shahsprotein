@@ -25,11 +25,25 @@ const joinWithAnd = (items: string[]): string =>
 const copy = siteConfig.order;
 const text = siteConfig.products;
 
-/** "₹165 for 250 g", one per pack size. */
-const mrpPacks = (product: Product): string[] =>
-  product.weightOptions
-    .filter((size) => product.mrp[size] != null)
-    .map((size) => text.mrpPack(formatRupees(product.mrp[size]), size));
+/** The pack sizes that have an MRP, in pack order. */
+const pricedSizes = (product: Product): string[] =>
+  product.weightOptions.filter((size) => product.mrp[size] != null);
+
+/** A price tag per pack: the MRP, with its pack size under it. */
+const PackPrices: React.FC<{ product: Product }> = ({ product }) => {
+  const sizes = pricedSizes(product);
+  if (sizes.length === 0) return null;
+  return (
+    <dl className="pack-prices" aria-label={text.mrpLabel(product.name)}>
+      {sizes.map((size) => (
+        <div key={size} className="pack-prices__item">
+          <dt>{size}</dt>
+          <dd>{formatRupees(product.mrp[size])}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+};
 
 const ProductCard: React.FC<{
   product: Product;
@@ -53,17 +67,7 @@ const ProductCard: React.FC<{
       <h3>{product.name}</h3>
       <p className="portfolio-card__tagline">{product.tagline}</p>
       <p className="portfolio-card__description">{product.shortDescription}</p>
-      {mrpPacks(product).length > 0 && (
-        <p className="portfolio-card__mrp">
-          <span className="portfolio-card__mrp-label">{text.mrp}</span>{' '}
-          {mrpPacks(product).map((pack, index) => (
-            <React.Fragment key={pack}>
-              {index > 0 && ' · '}
-              <span className="portfolio-card__mrp-pack">{pack}</span>
-            </React.Fragment>
-          ))}
-        </p>
-      )}
+      <PackPrices product={product} />
       <div className="portfolio-card__actions">
         <button
           type="button"
@@ -137,7 +141,13 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
         {...preloadOrderHandlers}
       >
         <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
-        <span>{copy.addToOrder}</span>
+        {/* "Add" on phones, where the switch shares the row (see CSS). */}
+        <span className="product-detail__add-long">{copy.addToOrder}</span>
+        <span className="product-detail__add-short">{copy.addToOrderShort}</span>
+        {/* The picked pack's MRP, so the price changes with the switch. */}
+        {product.mrp[size] != null && (
+          <span className="product-detail__add-price">{formatRupees(product.mrp[size])}</span>
+        )}
       </button>
       {outSizes.map((option) => (
         <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>
@@ -259,12 +269,7 @@ export const ProductsSection: React.FC = () => {
                       <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
                     </div>
                   )}
-                  {mrpPacks(selectedProduct).length > 0 && (
-                    <div>
-                      <dt>{text.mrp}</dt>
-                      <dd>{joinWithAnd(mrpPacks(selectedProduct))}</dd>
-                    </div>
-                  )}
+
                 </dl>
               </section>
 

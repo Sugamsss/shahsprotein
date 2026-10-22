@@ -35,9 +35,9 @@ export const siteConfig = {
       `${shelfLife}. No preservatives.${madeToOrder ? ' Made after you order.' : ''}`,
     contains: 'Contains',
     packSizes: (count: number) => (count > 1 ? 'Pack sizes' : 'Pack size'),
-    // MRPs per pack size (products.ts), on the cards and in "Good to know".
-    mrp: 'MRP',
-    mrpPack: (price: string, size: string) => `${price} for ${size}`,
+    // A card's price tags (MRP per pack size, from products.ts). The popup shows
+    // the picked pack's MRP in its "Add to order" button.
+    mrpLabel: (name: string) => `${name} MRP`,
     nutrition: 'Nutrition information',
     nutrient: 'Nutrient',
     per100g: 'Per 100 g',
@@ -152,6 +152,7 @@ export const siteConfig = {
     cardAdd: 'Add',
     cardAddLabel: (name: string) => `Add ${name} to your order`,
     addToOrder: 'Add to order',
+    addToOrderShort: 'Add', // on phones, before the pack's price
     sizeLegendProduct: 'Pack size',
     headerOrder: 'Order',
     headerEmptyLabel: 'Start your order',
