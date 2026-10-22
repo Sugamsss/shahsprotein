@@ -12,7 +12,8 @@ import { OrderLineRow, OrderUndoRow, type LineFlash } from './OrderLineRow';
 import { OrderSent } from './OrderSent';
 import { OrderShelf } from './OrderShelf';
 import { lineKey } from './orderLineKey';
-import { packPrice } from '../../utils/prices';
+import { orderTotal, packPrice } from '../../utils/prices';
+import { OrderTotalRow } from './OrderTotalRow';
 
 const copy = siteConfig.order;
 
@@ -89,6 +90,8 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
   } = useOrder();
   // An accepted coupon's own prices; every other pack shows its MRP.
   const couponPrices = coupon.status === 'valid' ? coupon.prices : null;
+  // Only what's sent (back-soon lines aren't), so it matches the message.
+  const total = orderTotal(sendLines, couponPrices);
   const stock = useStock();
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -333,6 +336,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           {notice}
           <h4 className="visually-hidden">{copy.itemsHeading}</h4>
           <ul className="order-lines">{rows}</ul>
+          {total && <OrderTotalRow total={total} />}
         </div>
         <OrderShelf onAdd={(id) => add(id, false)} />
         <OrderCheckout />

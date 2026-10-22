@@ -1734,6 +1734,47 @@ a {
   color: var(--color-success-text);
 }
 
+/* Under the lines: "Total" and the amount, then the delivery note. */
+.order-total {
+  padding: 0.875rem 0 0.25rem;
+}
+
+.order-total__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.order-total__label {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.order-total__amount {
+  color: var(--color-text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.order-total__amount s {
+  margin-right: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.order-total__note {
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
 .order-line__size {
   grid-area: size;
   min-width: 0;
@@ -2572,6 +2613,17 @@ a {
 .order-recap li span {
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+.order-recap li.order-recap__total {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border-divider);
+  font-weight: 700;
+}
+
+.order-recap li.order-recap__total span {
+  color: var(--color-text-primary);
 }
 
 .order-recap__meta {

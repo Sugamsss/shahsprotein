@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { productsData } from '../data/products';
-import { couponPriceKey, formatRupees, packPrice, parseCouponPrices } from './prices';
+import { couponPriceKey, formatRupees, orderTotal, packPrice, parseCouponPrices } from './prices';
 
 const product = (id: string) => productsData.find((p) => p.id === id)!;
 
@@ -46,5 +46,25 @@ describe('packPrice', () => {
 
   it('is null for a size with no MRP', () => {
     expect(packPrice(product('bites'), '500 g')).toBeNull();
+  });
+});
+
+describe('orderTotal', () => {
+  const lines = [
+    { productId: 'raggi-jaggi', size: '500 g', quantity: 2 },
+    { productId: 'muesli', size: '250 g', quantity: 1 },
+  ];
+
+  it('adds up packs at MRP', () => {
+    expect(orderTotal(lines)).toEqual({ total: 920, mrpTotal: 920 });
+  });
+
+  it("uses a coupon's own prices and keeps the MRP total beside it", () => {
+    expect(orderTotal(lines, { [couponPriceKey('muesli', '250 g')]: 250 })).toEqual({ total: 890, mrpTotal: 920 });
+  });
+
+  it('is null for nothing, or when a pack has no price', () => {
+    expect(orderTotal([])).toBeNull();
+    expect(orderTotal([...lines, { productId: 'bites', size: '500 g', quantity: 1 }])).toBeNull();
   });
 });
