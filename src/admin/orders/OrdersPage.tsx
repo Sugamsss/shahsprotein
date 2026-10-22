@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, CookingPot, Download, Gift, Plus, Search, X } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
-import { getOrders } from '../api';
+import { getOrders, getWebsiteRequests } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatMoney } from '../format';
 import { LoadError, Skeleton } from '../parts';
@@ -148,6 +148,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const navigate = useNavigate();
   const laptop = useLaptop();
   const cook = useAdminMe().home_view === 'cook';
+  const websiteRequests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), [], { refreshOnFocus: true });
   const { data: overview, reload: reloadOverview } = useOverview();
   const doneCounts = overview?.done;
   const doneTotal = doneCounts && doneCounts.delivered_paid + doneCounts.free_samples + doneCounts.cancelled;
@@ -381,6 +382,11 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
 
       {list.error && !board && <LoadError onRetry={list.reload} />}
       {list.loading && !board && !list.error && <Skeleton />}
+      {!cook && websiteRequests.data?.requests.length ? <AdminLink to="/admin/requests" className="adm-card adm-request-entry">
+        <span><b>{adminCopy.websiteRequests.title}</b><small>{adminCopy.websiteRequests.homeHint}</small></span>
+        <strong>{websiteRequests.data.requests.length}</strong>
+      </AdminLink> : null}
+      {!cook && websiteRequests.error && websiteRequests.error.kind !== 'missing' && <LoadError onRetry={() => void websiteRequests.reload()} />}
       {/* Filtered to a product, an empty board keeps its stages: "0 orders with …" says the rest. */}
       {empty && !q && !product && !done.loading && <Empty first={!done.data?.orders.length} />}
 

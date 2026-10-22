@@ -11,6 +11,7 @@ select plan(87);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
+delete from public.website_requests;
 delete from public.orders;
 -- The kitchen too: a seeded local database has batches and spare.
 delete from public.kitchen_writeoffs;
@@ -157,7 +158,7 @@ select ok(
 );
 
 select is(
-  current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at'],
+  current_setting('test.fresh')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'delivery_address'],
   '{"source":"whatsapp","status":"cooking","free_sample":false,"priority":false,"held":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
@@ -178,7 +179,7 @@ select lives_ok(
 );
 
 select is(
-  current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'customer', 'payments'],
+  current_setting('test.typed')::jsonb - array['id', 'paid_at', 'created_at', 'updated_at', 'status_changed_at', 'delivery_address', 'customer', 'payments'],
   '{"code":"SN-7KQ4M","message_code":"SN-7KQ4M","source":"instagram","status":"delivered","free_sample":false,"priority":false,"held":false,"paid":true,
     "paid_method":null,"paid_note":null,
     "payment_state":"paid","amount_paid":690,"amount_due":0,"amount_extra":0,
@@ -207,9 +208,15 @@ select is(
   'create: created_by is the admin'
 );
 
--- A site order to edit and update (saved the way the site saves it).
+-- A site order to edit and update: saved the way the site saves it, then
+-- confirmed by an admin (20261022000001), which makes the order.
 set local role anon;
 select public.submit_order('SN-9XWZT', '[{"product_id":"muesli","size":"500 g","quantity":1}]', 'Asha Example', '411001');
+reset role;
+select set_config('test.site_request', (select id::text from public.website_requests where code = 'SN-9XWZT'), true);
+set local role authenticated;
+select public.confirm_admin_website_request(current_setting('test.site_request')::uuid,
+  '{"phone":"9800000002","delivery_address":{"premises":"3 Example Lane","area":"Example Nagar","city":"Pune","state":"Maharashtra","pincode":"411001"}}');
 reset role;
 select set_config('test.site_id', (select id::text from public.orders where code = 'SN-9XWZT'), true);
 select set_config('test.fresh_id', current_setting('test.fresh')::jsonb ->> 'id', true);
@@ -223,7 +230,7 @@ select is(
   public.save_admin_order(current_setting('test.fresh_id')::uuid, '{
     "source":"call","code":"SN-22222","status":"cancelled","paid":true,"name":"Priya Example","phone":"9800000001",
     "lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":3}]
-  }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'customer'],
+  }')::jsonb - array['id', 'code', 'message_code', 'created_at', 'updated_at', 'status_changed_at', 'delivery_address', 'customer'],
   '{"source":"call","status":"cooking","free_sample":false,"priority":false,"held":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":"Priya Example","pincode":null,"phone":"919800000001","note":null,"amount":null,"coupon":null,
@@ -287,7 +294,7 @@ select is(
     - array['id', 'code', 'message_code', 'source', 'paid', 'paid_at', 'paid_method', 'paid_note', 'name', 'pincode', 'note',
             'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'free_sample', 'priority', 'held', 'customer',
             'created_at', 'updated_at', 'status_changed_at',
-            'payment_state', 'payments', 'amount_paid', 'amount_extra'],
+            'payment_state', 'payments', 'amount_paid', 'amount_extra', 'delivery_address'],
   '{"status":"packing","phone":"919800000002","amount":700,"amount_due":700}'::jsonb,
   'status, phone and amount change together'
 );

@@ -11,6 +11,15 @@ export type PaidMethod = 'upi' | 'cash' | 'bank' | 'gift' | 'other';
 /** Paid means paid in full: the payments cover the total, or the order has no total. */
 export type PaymentState = 'not_paid' | 'part_paid' | 'paid';
 
+export interface WebsiteRequest {
+  id: string; code: string; message_code: string; name: string | null; phone: string | null;
+  delivery_address: { premises: string; area: string; city: string; state: string; pincode: string; landmark?: string } | null;
+  lines: OrderLine[]; coupon_code: string | null; created_at: string;
+  state: 'pending' | 'confirmed' | 'dismissed'; is_legacy?: boolean; pincode?: string | null;
+  confirmed_order_id?: string | null; confirmed_at?: string | null; dismissed_at?: string | null;
+}
+export interface WebsiteRequestPage { requests: WebsiteRequest[]; next_before: string | null; next_before_id?: string | null }
+
 /** One payment on an order (20260928000000). Oldest first in `Order.payments`. */
 export interface Payment {
   id: string;
@@ -95,6 +104,7 @@ export interface Order {
   held?: boolean;
   name: string | null;
   pincode: string | null;
+  delivery_address?: { premises: string; area: string; city: string; state: string; pincode: string; landmark?: string } | null;
   phone: string | null;
   note: string | null;
   amount: number | null;
@@ -211,6 +221,7 @@ export interface OrderInput {
   name?: string | null;
   phone?: string | null;
   pincode?: string | null;
+  delivery_address?: { premises: string; area: string; city: string; state: string; pincode: string; landmark?: string } | null;
   note?: string | null;
   amount?: number | null;
   coupon?: string | null;

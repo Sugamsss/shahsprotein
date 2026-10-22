@@ -4,6 +4,7 @@ import type { Product } from '../types/product';
 import type { MessagePart, OrderMessageInput } from '../types/order';
 import { whatsappUrl } from './contact';
 import { sortLines } from './orderCart';
+import { cleanPhone, formatDeliveryAddress } from './deliveryAddress';
 import { formatRupees, orderTotal, packPrice } from './prices';
 
 // Builds the WhatsApp order message. Pure: the words live in siteConfig.order.message.
@@ -39,7 +40,7 @@ const SLOT = '\u0000';
 const fill = (
   template: (value: string) => string,
   value: string,
-  blank: 'name' | 'pincode',
+  blank: 'name' | 'pincode' | 'phone' | 'address',
   blankText: string,
 ): MessagePart[] => {
   if (value) return [{ text: template(value) }];
@@ -58,9 +59,12 @@ export const orderMessageParts = (
   products: readonly Product[] = productsData,
 ): MessagePart[] => {
   const words = siteConfig.order.message;
-  const { previewBlankName, previewBlankPincode } = siteConfig.order;
+  const copy = siteConfig.order;
+  const { previewBlankName } = copy;
   const name = cleanName(input.name);
-  const pincode = toOneLine(input.pincode);
+  const address = formatDeliveryAddress(input.address);
+  const phone = cleanPhone(input.phone);
+  const displayPhone = phone.startsWith('91') && phone.length === 12 ? `${phone.slice(2, 7)} ${phone.slice(7)}` : phone;
   const couponCode = toOneLine(input.coupon?.code ?? '').toUpperCase();
 
   const greeting: MessagePart[] = name || options.blanks
@@ -82,8 +86,11 @@ export const orderMessageParts = (
     const checked = input.coupon?.checked ?? false;
     details.push([{ text: checked ? words.coupon(couponCode) : words.couponUnchecked(couponCode) }]);
   }
-  if (pincode || options.blanks) {
-    details.push(fill(words.pincode, pincode, 'pincode', previewBlankPincode));
+  if (phone || options.blanks) {
+    details.push(fill(words.phone, displayPhone, 'phone', copy.previewBlankPhone));
+  }
+  if (address || options.blanks) {
+    details.push(fill(words.address, address, 'address', copy.previewBlankAddress));
   }
   const code = toOneLine(input.code);
   if (code) details.push([{ text: words.code(code) }]);

@@ -5000,3 +5000,17 @@ img {
     transform: none;
   }
 }
+
+/* Public delivery address form and inline Places combobox. */
+.delivery-fields { display: grid; gap: 1rem; border: 0; padding: 0; margin: 1.5rem 0 0; min-width: 0; }
+.delivery-fields legend { color: var(--color-text-primary); font-weight: 600; margin-bottom: 1rem; }
+.delivery-search__input { position: relative; }
+.delivery-search__input > svg { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); }
+.delivery-search__input input { padding-left: 2.5rem; }
+.delivery-suggestions { list-style: none; margin: .5rem 0 0; padding: .25rem; border: 1px solid var(--color-border-divider); border-radius: 12px; background: var(--color-bg-elevated); }
+.delivery-suggestions button { display: block; width: 100%; min-height: 48px; padding: .625rem .875rem; border: 0; border-radius: 8px; color: var(--color-text-primary); background: transparent; text-align: left; }
+.delivery-suggestions [aria-selected='true'] button { background: var(--color-bg-soft); }
+.delivery-attribution { padding: .4rem .75rem; color: var(--color-text-muted); text-align: right; font-size: .75rem; }
+.delivery-attribution img { display: inline-block; width: 120px; height: 14px; object-fit: contain; }
+.delivery-fields__row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+@media (max-width: 359px) { .delivery-fields__row { grid-template-columns: 1fr; } }

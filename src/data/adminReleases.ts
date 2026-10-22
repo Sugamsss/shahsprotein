@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-22-website-requests',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Website requests',
+    body: 'Website messages wait in their own list. Confirm an order only after its WhatsApp message arrives; then it joins the kitchen like any other order.',
+  },
+  {
     id: '2026-10-18-gift-payment',
     for: ['admin'],
     kind: 'new',

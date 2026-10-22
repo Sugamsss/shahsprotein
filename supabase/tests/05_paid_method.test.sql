@@ -76,7 +76,7 @@ select is(
     - array['id', 'code', 'message_code', 'source', 'status', 'paid', 'free_sample', 'priority', 'held', 'name', 'pincode', 'phone',
             'note', 'amount', 'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'customer',
             'created_at', 'updated_at', 'status_changed_at',
-            'payment_state', 'payments', 'amount_paid', 'amount_due', 'amount_extra'],
+            'payment_state', 'payments', 'amount_paid', 'amount_due', 'amount_extra', 'delivery_address'],
   jsonb_build_object('paid_at', current_setting('test.a')::jsonb -> 'paid_at', 'paid_method', 'cash', 'paid_note', null),
   'Cash on a paid order changes the method and keeps paid_at'
 );

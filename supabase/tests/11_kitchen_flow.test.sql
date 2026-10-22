@@ -1,5 +1,5 @@
 -- 20260929000001: the kitchen flow. Who can call what, the stage mapping,
--- site orders taking spare, the fill rule (oldest order first, oldest batch
+-- confirmed website orders taking spare, the fill rule (oldest order first, oldest batch
 -- first, never past its shelf life), preview, undo, cancel and delete,
 -- edits after cooking, batch fixes, moves by hand, used up / thrown out,
 -- free sample orders and sample weights. Test data is fake (9198000000xx,
@@ -12,8 +12,9 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(111);
+select plan(114);
 
+delete from public.website_requests;
 delete from public.orders;
 delete from public.order_rate_limits;
 delete from public.kitchen_writeoffs;
@@ -100,6 +101,9 @@ $$;
 
 create function pg_temp.spare(p_tag text) returns integer language sql as $$
   select r.spare from public.kitchen_batch_rows(null) r where r.batch_id = pg_temp.bid(p_tag);
+$$;
+create function pg_temp.free(p_product text,p_tag text) returns integer language sql as $$
+  select r.spare from public.kitchen_batch_rows(null) r where r.product_id=p_product and r.batch_id=pg_temp.bid(p_tag);
 $$;
 
 -- An effects object's orders as 'SN-X from>to product+grams waiting ...'.
@@ -247,9 +251,10 @@ select results_eq(
   'starting sample weights and shelf lives'
 );
 
--- ─── 3. Website orders take spare ───────────────────────
+-- ─── 3. Website requests do not take spare ──────────────
 
 select pg_temp.log('s1', 'bites', 600, 2);
+delete from public.website_requests;
 
 set local role anon;
 select public.submit_order('SN-KSA22', '[{"product_id":"bites","size":"250 g","quantity":2}]', 'Site Example', '415001');
@@ -258,17 +263,10 @@ select public.submit_order('SN-KSB22',
   'Site Example', '415002');
 reset role;
 
-select results_eq(
-  $$select e.event, e.auto from public.order_events e where e.order_id = pg_temp.id('SN-KSA22') order by e.id$$,
-  $$values ('created'::text, false), ('packing', true)$$,
-  'a site order covered by spare skips Cooking, and its history says it moved by itself'
-);
-
-select is(
-  pg_temp.st('SN-KSB22') || ' ' || pg_temp.cover('SN-KSB22'),
-  'cooking bites:s1=100',
-  'a site order not fully covered lands in Cooking with what spare there was'
-);
+select is((select count(*)::integer from public.orders where code like 'SN-KSA22%'),0,'a website send creates no active order');
+select is((select count(*)::integer from public.website_requests where message_code='SN-KSA22'),1,'website send is saved as a request');
+select is(pg_temp.free('bites','s1'),600,'website requests do not consume spare');
+select is((select count(*)::integer from public.kitchen_allocations),0,'website request creates no allocation');
 
 set local role anon;
 select throws_ok(
@@ -284,6 +282,7 @@ reset role;
 -- ─── 4. The fill: oldest order first, oldest batch first ─
 
 select pg_temp.clean();
+delete from public.website_requests;
 select pg_temp.ord('SN-KFA22', 72, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
 select pg_temp.ord('SN-KFB22', 48, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
 select pg_temp.ord('SN-KFC22', 24, '[{"product_id":"raggi-jaggi","size":"500 g","quantity":1}]');
@@ -356,6 +355,7 @@ select throws_ok(
 -- ─── 5. An order moves only when every product is covered ─
 
 select pg_temp.clean();
+delete from public.website_requests;
 select pg_temp.ord('SN-KMA22', 24,
   '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1},{"product_id":"muesli","size":"250 g","quantity":1}]');
 select pg_temp.log('m1', 'raggi-jaggi', 250);
@@ -650,7 +650,7 @@ select set_config('t.fs', public.save_admin_order(null, '{
 }')::text, true);
 
 select is(
-  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'note', 'coupon',
+  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'delivery_address', 'note', 'coupon',
     'customer', 'created_at', 'updated_at', 'status_changed_at', 'payments', 'paid_at', 'paid_method', 'paid_note', 'kitchen'],
   '{"status":"cooking","free_sample":true,"priority":false,"held":false,"paid":false,"payment_state":"not_paid","amount":null,"amount_paid":0,
     "amount_due":null,"amount_extra":null,"packs":0,"samples":2,
@@ -803,12 +803,13 @@ reset role;
 set local role anon;
 select lives_ok(
   $$select public.submit_order('SN-KXA22', '[{"product_id":"muesli","size":"250 g","quantity":1}]', 'Web Example', '415001')$$,
-  'a website order that takes spare'
+  'a website request does not take spare'
 );
-select lives_ok($$set constraints all immediate$$, 'its batch check passes at commit, as anon');
+select lives_ok($$set constraints all immediate$$, 'no kitchen constraints changed for the request');
 set constraints all deferred;
 reset role;
-select is(pg_temp.st('SN-KXA22'), 'packing', 'the website order took the spare and went to Packing');
+select is((select count(*)::integer from public.orders where code like 'SN-KXA22%'),0,'unconfirmed website request is not an order');
+select is((select sum(r.spare)::integer from public.kitchen_batch_rows(null) r where r.product_id = 'muesli'),300,'unconfirmed request leaves logged batch spare available');
 
 -- A write-off as the cook: its check must also hold at commit.
 select set_config('t.kxb', (select b.id::text from public.kitchen_batches b where b.product_id = 'muesli'), true);

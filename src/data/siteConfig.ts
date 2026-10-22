@@ -143,7 +143,7 @@ export const siteConfig = {
 
     // Popup
     title: 'Your order',
-    intro: "Pick what you'd like and send it to Sunit on WhatsApp. We'll reply with delivery and how to pay.",
+    intro: "Pick what you'd like and send it to Sunit on WhatsApp. We'll reply to confirm your order, with delivery and how to pay.",
     itemsHeading: 'In your order', // visually hidden
     addMoreHeading: 'Add something else',
     detailsHeading: 'Your details',
@@ -190,6 +190,27 @@ export const siteConfig = {
 
     // Details
     nameLabel: 'Your name',
+    phoneLabel: 'Phone number',
+    phoneHint: "We'll call this if we can't find you.",
+    phoneMissing: 'Please add your phone number, so we can reach you for the delivery.',
+    phoneInvalid: 'A phone number has 10 digits, like 98765 43210.',
+    addressLegend: 'Delivery address',
+    addressSearchLabel: 'Find your address',
+    addressSearchHint: 'Start with your area or building.',
+    addressSearchDown: "Address search isn't working right now. Just type it in below.",
+    addressNoMatch: 'No match for that. Try your area or fill it in below.',
+    addressSearching: 'Looking for your address',  // read out while suggestions load
+    addressAttribution: 'Powered by Google',
+    houseLabel: 'House, flat or building',
+    streetLabel: 'Street and area',
+    landmarkLabel: 'Landmark (optional)',
+    cityLabel: 'City',
+    stateLabel: 'State',
+    houseMissing: 'Please add your house, flat or building.',
+    streetMissing: 'Please add your street or area.',
+    cityMissing: 'Please add your city.',
+    stateMissing: 'Please add your state.',
+    addressFieldMissing: (label: string) => `Please add your ${label.toLowerCase()}.`,
     pincodeLabel: 'Pincode',
     pincodeHint: 'So we can check delivery to you.',
     nameMissing: "Please add your name, so we know who's ordering.",
@@ -215,15 +236,17 @@ export const siteConfig = {
     previewReply: 'Usually replies the same day',
     previewBlankName: 'your name',
     previewBlankPincode: 'your pincode',
+    previewBlankPhone: 'your phone',
+    previewBlankAddress: 'your address',
 
     // Send
-    send: 'Send order on WhatsApp',
-    sendNote: 'Opens WhatsApp with your message ready to send.',
+    send: 'Continue to WhatsApp',
+    sendNote: "Your request is written out there. It's sent when you press send in WhatsApp.",
     // In place of sendNote when every line is out and Send is off.
     allOutNote: 'Everything in your order is out of stock right now.',
     // The last thing in "Your details", above Send. What's saved with the order on
     // our server (not browser storage, not analytics). Revisit if reorder nudges happen.
-    privacyNote: 'We keep your name, pincode and what you ordered, so we can look after your order.',
+    privacyNote: 'We keep your name, phone, address and what you ordered, so we can look after your order.',
 
     // Out of stock. A plain label, never a button. No dates, no "notify me".
     // In place of "Add" / "Add to order" when every pack size is out.
@@ -243,7 +266,7 @@ export const siteConfig = {
 
     // Sent
     sentTitle: 'Now press send in WhatsApp',
-    sentBody: "Your order is written out and waiting there. Once you send it, we'll reply with delivery and how to pay. We usually reply the same day.",
+    sentBody: "Your order is written out and waiting there. Once you send it, we'll confirm it in the chat, with delivery and how to pay. We usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
     // A quiet fallback for when WhatsApp won't open at all (a laptop without it,
@@ -287,10 +310,11 @@ export const siteConfig = {
       total: (amount: string) => `Total: ${amount} (before delivery)`,
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
-      pincode: (pincode: string) => `Pincode: ${pincode}`,
+      phone: (phone: string) => `Phone: ${phone}`,
+      address: (address: string) => `Deliver to: ${address}`,
       // The code Sunit matches to the order book. Always there: it's made when the order starts.
       code: (code: string) => `Order code: ${code}`,
-      closing: 'Could you let me know the delivery charge and how to pay?',
+      closing: 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     },
   },
   social: {

@@ -1,15 +1,17 @@
--- Order book, public side: who can touch what, submit_order(),
--- get_product_stock() and the history trigger.
+-- Order book, public side: who can touch what, submit_order() (since
+-- 20261022000001 a pending website request, never an order), confirming a
+-- request into an order, get_product_stock() and the history trigger.
 -- Test data is fake: EXAMPLE10-style coupons, 9198000000xx phones,
 -- example.com emails. Everything rolls back at the end.
 
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(58);
 
 -- The shared local stack may hold other people's test data. Start from
 -- empty tables; the rollback at the end puts everything back.
+delete from public.website_requests;
 delete from public.orders;
 -- The kitchen too: a seeded local database has batches and spare.
 delete from public.kitchen_writeoffs;
@@ -173,7 +175,7 @@ select lives_ok(
   $$select public.submit_order(
     'sn-7kq4m',
     '[{"product_id":"muesli","size":"250 g","quantity":6},
-      {"product_id":"date-bites","size":"500 g","quantity":1},
+      {"product_id":"bites","size":"500 g","quantity":1},
       {"product_id":"muesli","size":"250 g","quantity":7}]',
     E'  Neha\u2028\t  Example ',
     ' 415001 ',
@@ -186,7 +188,7 @@ select lives_ok(
 select lives_ok(
   $$select public.submit_order(
     'SN-7KQ4M',
-    '[{"product_id":"date-bites","size":"500 g","quantity":1},
+    '[{"product_id":"bites","size":"500 g","quantity":1},
       {"product_id":"muesli","size":"250 g","quantity":10}]',
     'NEHA EXAMPLE', '415001', 'EXAMPLE10'
   )$$,
@@ -209,30 +211,94 @@ select lives_ok(
 
 reset role;
 
+select is((select count(*)::integer from public.orders), 0, 'a website save creates no order');
+
 select results_eq(
-  $$select code from public.orders where code like 'SN-7KQ4M%' order by created_at, code$$,
+  $$select code from public.website_requests where message_code = 'SN-7KQ4M' order by code$$,
   $$values ('SN-7KQ4M'), ('SN-7KQ4M-2'), ('SN-7KQ4M-3')$$,
-  'the repeat save did nothing; other orders with the same code got -2 then -3'
+  'the repeat save did nothing; other requests with the same code got -2 then -3'
 );
 
 select results_eq(
-  $$select name, pincode, source, status, paid_at is null, coupon_code, coupon_valid, coupon_id is not null
+  $$select name, pincode, phone, delivery_address, state, is_legacy, coupon_code
+    from public.website_requests where code = 'SN-7KQ4M'$$,
+  $$values ('Neha Example'::text, '415001'::text, null::text, null::jsonb, 'pending'::text, true, 'EXAMPLE10'::text)$$,
+  'the name is cleaned and the old payload waits as a pending request with no phone or address'
+);
+
+select results_eq(
+  $$select x ->> 'product_id', x ->> 'size', (x ->> 'quantity')::integer
+    from public.website_requests r, jsonb_array_elements(r.lines) x where r.code = 'SN-7KQ4M' order by 1, 2$$,
+  $$values ('bites'::text, '500 g'::text, 1), ('muesli', '250 g', 10)$$,
+  'duplicate lines are merged and capped at 10'
+);
+
+select results_eq(
+  $$select coupon_code from public.website_requests where code in ('SN-7KQ4M-2', 'SN-7KQ4M-3', 'SN-9XWZT') order by code$$,
+  $$values (null::text), ('EXAMPLEOFF'), ('NOSUCHCODE')$$,
+  'a malformed coupon is dropped, not an error; others are kept to check on confirm'
+);
+
+select is(
+  (select fingerprint from public.website_requests where code = 'SN-7KQ4M'),
+  md5('neha example|415001|bites:500 g:1,muesli:250 g:10|EXAMPLE10'),
+  'the fingerprint follows the contract'
+);
+
+-- Confirming (Sunit, once the WhatsApp message came) makes the order.
+select set_config('test.r1', (select id::text from public.website_requests where code = 'SN-7KQ4M'), true);
+select set_config('test.r3', (select id::text from public.website_requests where code = 'SN-7KQ4M-3'), true);
+select set_config('test.r9', (select id::text from public.website_requests where code = 'SN-9XWZT'), true);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select throws_ok(
+  $$select public.confirm_admin_website_request(current_setting('test.r1')::uuid)$$,
+  '22023', 'Enter a valid phone number.', 'an old request needs a phone before it is confirmed'
+);
+select throws_ok(
+  $$select public.confirm_admin_website_request(current_setting('test.r1')::uuid,
+    '{"phone":"9198000000 01","delivery_address":{"premises":"1 Example Lane","area":"Example Nagar","city":"Satara","state":"Maharashtra","pincode":"415002"},"pincode":"415001"}')$$,
+  '22023', 'Pincode must match delivery address.', 'the pincode and the address agree'
+);
+select lives_ok(
+  $$select public.confirm_admin_website_request(current_setting('test.r1')::uuid,
+    '{"phone":"919800000001","delivery_address":{"premises":"1 Example Lane","area":"Example Nagar","city":"Satara","state":"Maharashtra","pincode":"415001"}}')$$,
+  'a complete request is confirmed'
+);
+select is(
+  public.confirm_admin_website_request(current_setting('test.r1')::uuid) -> 'order' ->> 'code',
+  'SN-7KQ4M',
+  'confirming again returns the same order'
+);
+select lives_ok(
+  $$select public.confirm_admin_website_request(r.id,
+    ('{"phone":"919800000002","delivery_address":{"premises":"2 Example Lane","area":"Example Nagar","city":"Pune","state":"Maharashtra","pincode":"' || r.pincode || '"}}')::jsonb)
+    from (select current_setting('test.r3')::uuid id, '411002' pincode
+          union all select current_setting('test.r9')::uuid, '415002') r$$,
+  'two more requests are confirmed'
+);
+reset role;
+
+select is(
+  (select state from public.website_requests where code = 'SN-7KQ4M') || ' ' ||
+  (select count(*)::text from public.orders where code = 'SN-7KQ4M'),
+  'confirmed 1',
+  'the request is confirmed and points at exactly one order'
+);
+
+select results_eq(
+  $$select name, pincode, phone, source, status, paid_at is null, coupon_code, coupon_valid, coupon_id is not null
     from public.orders where code = 'SN-7KQ4M'$$,
-  $$values ('Neha Example'::text, '415001'::text, 'site'::text, 'cooking'::text, true, 'EXAMPLE10'::text, true, true)$$,
-  'the name is cleaned, the order starts in Cooking and not paid, the coupon is matched'
+  $$values ('Neha Example'::text, '415001'::text, '919800000001'::text, 'site'::text, 'cooking'::text, true, 'EXAMPLE10'::text, true, true)$$,
+  'the order starts in Cooking and not paid, the coupon is matched'
 );
 
 select results_eq(
   $$select l.product_id, l.size, l.quantity from public.order_lines l
     join public.orders o on o.id = l.order_id where o.code = 'SN-7KQ4M' order by 1, 2$$,
-  $$values ('date-bites'::text, '500 g'::text, 1), ('muesli', '250 g', 10)$$,
-  'duplicate lines are merged and capped at 10'
-);
-
-select results_eq(
-  $$select coupon_code, coupon_valid from public.orders where code = 'SN-7KQ4M-2'$$,
-  $$values (null::text, null::boolean)$$,
-  'a malformed coupon is dropped, not an error'
+  $$values ('bites'::text, '500 g'::text, 1), ('muesli', '250 g', 10)$$,
+  'the order has the request''s lines'
 );
 
 select results_eq(
@@ -251,15 +317,14 @@ select is(
   '{"code":"EXAMPLE10","valid":true,"known":true,"description":"10% off your order"}'::jsonb,
   'order JSON: a matched coupon carries its description'
 );
-
 select is(
-  (select fingerprint from public.orders where code = 'SN-7KQ4M'),
-  md5('neha example|415001|date-bites:500 g:1,muesli:250 g:10|EXAMPLE10'),
-  'the fingerprint follows the contract'
+  (select public.admin_order_json(o)::jsonb -> 'delivery_address' ->> 'city' from public.orders o where code = 'SN-7KQ4M'),
+  'Satara',
+  'order JSON carries the delivery address'
 );
 
 -- After a deleted -2, the next clash still gets a free suffix.
-delete from public.orders where code = 'SN-7KQ4M-2';
+delete from public.website_requests where code = 'SN-7KQ4M-2';
 set local role anon;
 select lives_ok(
   $$select public.submit_order('SN-7KQ4M', '[{"product_id":"muesli","size":"500 g","quantity":3}]', 'Kiran Example', '411003')$$,
@@ -267,7 +332,7 @@ select lives_ok(
 );
 reset role;
 select ok(
-  exists (select 1 from public.orders where code = 'SN-7KQ4M-4' and name = 'Kiran Example'),
+  exists (select 1 from public.website_requests where code = 'SN-7KQ4M-4' and name = 'Kiran Example'),
   'the next suffix is one past the highest, not the count'
 );
 
@@ -277,12 +342,12 @@ set local role anon;
 set local request.headers = '{"cf-connecting-ip":"203.0.113.9"}';
 
 select lives_ok(
-  $$select public.submit_order('SN-RATE2', '[{"product_id":"muesli","size":"250 g","quantity":1}]', 'Rate Example', '415001')
-    from generate_series(1, 10)$$,
+  $$select public.submit_order('SN-RATE2', jsonb_build_array(jsonb_build_object('product_id', 'muesli', 'size', '250 g', 'quantity', i)), 'Rate Example', '415001')
+    from generate_series(1, 10) i$$,
   'ten saves from one IP in an hour are fine'
 );
 select throws_ok(
-  $$select public.submit_order('SN-RATE2', '[{"product_id":"muesli","size":"250 g","quantity":1}]', 'Rate Example', '415001')$$,
+  $$select public.submit_order('SN-RATE2', '[{"product_id":"raggi-jaggi","size":"250 g","quantity":1}]', 'Rate Example', '415001')$$,
   'PT429', 'Too many orders. Try again later.', 'the eleventh save from that IP is refused'
 );
 
@@ -299,21 +364,21 @@ select ok(
   'rate-limit rows hold a hash, not the IP'
 );
 
--- Backstop: 300 site orders in the last hour stops everyone, even with no IP.
-insert into public.orders (code, source, name, pincode)
-select 'SN-' || translate(lpad(i::text, 5, '0'), '01', 'AB'), 'site', 'Flood Example', '415001'
-from generate_series(1, 300) i
+-- Backstop: 300 website requests in the last hour stops everyone, even with no IP.
+insert into public.website_requests (code, message_code, fingerprint, name, pincode, lines)
+select c, c, md5(c), 'Flood Example', '415001', '[]'::jsonb
+from (select 'SN-' || translate(lpad(i::text, 5, '0'), '01', 'AB') c from generate_series(1, 300) i) x
 on conflict (code) do nothing;
 
 set local role anon;
 set local request.headers = '';
 select throws_ok(
   $$select public.submit_order('SN-ZZZZZ', '[{"product_id":"muesli","size":"250 g","quantity":1}]', 'Late Example', '415001')$$,
-  'PT429', 'Too many orders. Try again later.', 'the overall backstop refuses the 301st site order in an hour'
+  'PT429', 'Too many orders. Try again later.', 'the overall backstop refuses the 301st website request in an hour'
 );
 reset role;
 
-delete from public.orders where name = 'Flood Example';
+delete from public.website_requests where name = 'Flood Example';
 
 -- ─── 5. Stock ───────────────────────────────────────────
 
@@ -364,11 +429,11 @@ select results_eq(
   $$select e.event, e.by, e.auto from public.order_events e join public.orders o on o.id = e.order_id
     where o.code = 'SN-9XWZT' order by e.id$$,
   $$values
-    ('created'::text, null::uuid, false),
+    ('created'::text, '00000000-0000-4000-8000-000000000001'::uuid, false),
     ('packing', '00000000-0000-4000-8000-000000000001'::uuid, false),
     ('paid', '00000000-0000-4000-8000-000000000001'::uuid, false),
     ('unpaid', '00000000-0000-4000-8000-000000000001'::uuid, false)$$,
-  'history: created by the site, then one event per real change, by the admin, none of them auto'
+  'history: created when the admin confirmed it, then one event per real change, by the admin, none of them auto'
 );
 
 select * from finish();

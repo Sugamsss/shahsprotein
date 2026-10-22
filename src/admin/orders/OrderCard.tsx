@@ -8,6 +8,8 @@ import { AdminLink } from '../router';
 import type { Order, OrderSource } from '../types';
 import { WAITING_FROM_DAYS, daysInStage, isHeld, isPartlyCooked, laneOf, lineState, linesFirst, nextOf, pileOf, productName, sizeText, thumbOf } from './model';
 import { paidShare } from './payments';
+import type { DeliveryAddress } from '../../types/delivery';
+import { formatDeliveryAddress } from '../../utils/deliveryAddress';
 
 const copy = adminCopy.orders;
 const chipCopy = adminCopy.payments.chip;
@@ -49,7 +51,7 @@ const VIA_ICON: Record<Exclude<OrderSource, 'site'>, React.ReactNode> = {
 export const Via: React.FC<{ source: OrderSource }> = ({ source }) =>
   source === 'site' ? null : <span className="adm-chip">{VIA_ICON[source]}{copy.via[source]}</span>;
 
-/** A website order may never have arrived on WhatsApp, so it's the one came-via marker cards keep. */
+/** Website source is provenance after confirmation; the request inbox represents unconfirmed handoffs. */
 export const FromWebsite: React.FC = () => <span className="adm-chip"><Globe size={13} aria-hidden="true" />{copy.fromWebsite}</span>;
 
 /** In place of the money chip on a free sample order: nothing to pay. */
@@ -200,7 +202,7 @@ export const OrderCard: React.FC<{
         (chipRow || button) && <div className="adm-ocard__foot">{chipRow}{button}</div>
       ) : (
         <div className="adm-ocard__foot">
-          <span className="adm-ocard__meta"><Code code={o.code} mark={mark} />{o.pincode && <span className="adm-ocard__place"> · {o.pincode}</span>}</span>
+          <span className="adm-ocard__meta"><Code code={o.code} mark={mark} />{lane === 'ready' && o.delivery_address ? <span className="adm-ocard__place"> · {formatDeliveryAddress(o.delivery_address as DeliveryAddress)}</span> : o.pincode && <span className="adm-ocard__place"> · {o.pincode}</span>}</span>
           {/* Cooking has no button: it moves on by itself (or "Move to Packing" in the order's ⋯). */}
           {button}
           {/* A customer's page: where each open order is, as Done cards say theirs. */}

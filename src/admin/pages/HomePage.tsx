@@ -5,7 +5,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LOG_COOKING_STATE, useLogCookingQuiet, useOverview } from '../AdminLayout';
-import { getMetrics, getStock, getTotals, setStock } from '../api';
+import { getMetrics, getStock, getTotals, getWebsiteRequests, setStock } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatAge, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
 import { FixBatchSheet } from '../kitchen/FixBatchSheet';
@@ -116,6 +116,7 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
 
 /** The overview gives the counts and dates; the totals add packs and names once they're in. */
 const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
+  const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), [], { refreshOnFocus: true });
   const collect = q.to_collect;
   const overall = totals?.overall;
   const collectHint = [
@@ -126,6 +127,11 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     collect.part_paid > 0 && payCopy.paidPart(overall?.to_collect.part_paid_names ?? [], collect.part_paid),
   ].filter(Boolean).join('. ');
   const rows = [
+    requests.data && !requests.error && requests.data.requests.length > 0 && <AdminLink key="req" to="/admin/requests" className="adm-home__row">
+      <span className="adm-home__circle is-accent">{requests.data.requests.length}</span>
+      <span className="adm-list__main"><span className="adm-list__title">{adminCopy.websiteRequests.homeTitle(requests.data.requests.length)}</span><span className="adm-list__sub">{adminCopy.websiteRequests.homeHint}</span></span>
+      <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
+    </AdminLink>,
     q.packing.count > 0 && <Row key="p" lane="packing" circle={q.packing.count} tone="accent" title={copy.toPack}
       hint={packingHint(q.packing, overall?.packing.packs)} />,
     q.ready.count > 0 && <Row key="r" lane="ready" circle={q.ready.count} title={copy.toDropOff}

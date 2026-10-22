@@ -1,0 +1,21 @@
+.adm-requests__filters { display: flex; gap: .5rem; margin: 1rem 0; }
+.adm-requests__filters button { min-height: 44px; border: 1px solid var(--adm-hairline); border-radius: 999px; padding: .5rem 1rem; color: var(--adm-ink-2); background: var(--adm-surface); }
+.adm-requests__filters button.is-active { color: var(--adm-accent-text); background: var(--adm-accent-tint); }
+.adm-requests__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: .75rem; }
+.adm-request-card { display: grid; width: 100%; gap: .45rem; text-align: left; color: var(--adm-ink-1); cursor: pointer; }
+.adm-request-card__head { display: flex; justify-content: space-between; gap: .5rem; }
+.adm-request-card__head time, .adm-request-card small { color: var(--adm-ink-2); }
+.adm-request-card code { color: var(--adm-ink-2); font-family: var(--font-family-mono); }
+.adm-request-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-request-card__state { display: flex; align-items: center; justify-content: space-between; color: var(--adm-accent-text); font-weight: 600; }
+.adm-request-actions { display: flex; gap: .75rem; justify-content: space-between; }
+.adm-request-warning { padding: .75rem; border-radius: .75rem; background: var(--adm-warn-tint); color: var(--adm-warn-text); }
+.adm-request-confirm { display: grid; gap: .75rem; padding: 1rem; border: 1px solid var(--adm-warn-edge); border-radius: 1rem; }
+.adm-request-confirm label { display: flex; gap: .6rem; align-items: center; min-height: 44px; }
+.adm-request-entry { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .75rem 0; color: var(--adm-ink-1); }
+.adm-request-entry span { display: grid; gap: .25rem; }
+.adm-request-entry small { color: var(--adm-ink-2); }
+.adm-request-field { display: grid; gap: .35rem; color: var(--adm-ink-2); }
+.adm-request-field small { color: var(--adm-ink-3); }
+.adm-request-address { display: grid; gap: .75rem; border: 0; padding: 0; margin: 0; }
+.adm-request-address legend { margin-bottom: .6rem; color: var(--adm-ink-1); font-weight: 600; }
