@@ -33,8 +33,10 @@ export interface Product {
   orderTile: ImageSet;
   orderTileDark: ImageSet;
   nutritionFacts: NutritionFact[];
-  /** Pack sizes, e.g. "250 g". Prices are not published yet. */
+  /** Pack sizes, e.g. "250 g". */
   weightOptions: string[];
+  /** MRP in whole rupees for each pack size in weightOptions, e.g. { '250 g': 165 }. */
+  mrp: Record<string, number>;
   /** How long it stays fresh. Kept short on purpose: no preservatives. */
   /** How long it keeps, as shown to customers, e.g. "6 months". */
   shelfLife: string;

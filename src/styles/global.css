@@ -1236,6 +1236,26 @@ a {
   text-wrap: pretty;
 }
 
+.portfolio-card__mrp {
+  margin-top: -0.35rem;
+  margin-bottom: 0.85rem;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-card__mrp-label {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.portfolio-card__mrp-pack {
+  white-space: nowrap;
+}
+
 .portfolio-card__actions {
   display: flex;
   align-items: center;
@@ -1571,7 +1591,7 @@ a {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) auto;
   grid-template-areas:
-    'thumb name name'
+    'thumb name price'
     'thumb size qty'
     '.     note note';
   align-items: center;
@@ -1655,6 +1675,27 @@ a {
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.2;
+}
+
+.order-line__price {
+  grid-area: price;
+  align-self: end;
+  justify-self: end;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.order-line__price s {
+  margin-right: 0.15rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.order-line__price-now {
+  color: var(--color-success-text);
 }
 
 .order-line__size {

@@ -14,6 +14,7 @@ import { useOrder } from '../../context/OrderContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
+import { formatRupees } from '../../utils/prices';
 import type { Product } from '../../types/product';
 import type { Theme } from '../../types/theme';
 
@@ -23,6 +24,12 @@ const joinWithAnd = (items: string[]): string =>
 
 const copy = siteConfig.order;
 const text = siteConfig.products;
+
+/** "₹165 for 250 g", one per pack size. */
+const mrpPacks = (product: Product): string[] =>
+  product.weightOptions
+    .filter((size) => product.mrp[size] != null)
+    .map((size) => text.mrpPack(formatRupees(product.mrp[size]), size));
 
 const ProductCard: React.FC<{
   product: Product;
@@ -46,6 +53,17 @@ const ProductCard: React.FC<{
       <h3>{product.name}</h3>
       <p className="portfolio-card__tagline">{product.tagline}</p>
       <p className="portfolio-card__description">{product.shortDescription}</p>
+      {mrpPacks(product).length > 0 && (
+        <p className="portfolio-card__mrp">
+          <span className="portfolio-card__mrp-label">{text.mrp}</span>{' '}
+          {mrpPacks(product).map((pack, index) => (
+            <React.Fragment key={pack}>
+              {index > 0 && ' · '}
+              <span className="portfolio-card__mrp-pack">{pack}</span>
+            </React.Fragment>
+          ))}
+        </p>
+      )}
       <div className="portfolio-card__actions">
         <button
           type="button"
@@ -239,6 +257,12 @@ export const ProductsSection: React.FC = () => {
                     <div>
                       <dt>{text.packSizes(selectedProduct.weightOptions.length)}</dt>
                       <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
+                    </div>
+                  )}
+                  {mrpPacks(selectedProduct).length > 0 && (
+                    <div>
+                      <dt>{text.mrp}</dt>
+                      <dd>{joinWithAnd(mrpPacks(selectedProduct))}</dd>
                     </div>
                   )}
                 </dl>

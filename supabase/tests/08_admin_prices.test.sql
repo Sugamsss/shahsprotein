@@ -1,7 +1,7 @@
 -- 20260928000001: admin prices. Who can call what, set / get / delete by null
 -- for base and coupon prices, a few real validation cases, all or nothing,
--- a deleted coupon taking its prices with it, and check_coupon() still
--- saying nothing about prices. Prices and codes are made up (EXAMPLE10) and
+-- a deleted coupon taking its prices with it, and check_coupon() returning
+-- only the checked coupon's own prices (20261022000000). Prices and codes are made up (EXAMPLE10) and
 -- everything rolls back at the end.
 
 begin;
@@ -180,15 +180,15 @@ select is(
   'deleting a coupon deletes its prices'
 );
 
--- ─── 5. check_coupon() still knows nothing about prices ──
+-- ─── 5. check_coupon() returns only this coupon's prices ──
 
 insert into public.coupon_prices (coupon_id, product_id, size, price)
 values ('00000000-0000-4000-c000-000000000001', 'muesli', '250 g', 180);
 
 select is(
   jsonb_build_array(public.check_coupon('example10')::jsonb, public.check_coupon('NOPE-NOPE')::jsonb),
-  '[{"valid":true,"description":"10% off your order"},{"valid":false}]'::jsonb,
-  'check_coupon: still exactly {valid, description} / {valid}'
+  '[{"valid":true,"description":"10% off your order","prices":[{"product_id":"muesli","size":"250 g","price":180}]},{"valid":false}]'::jsonb,
+  'check_coupon: {valid, description, prices} with its own prices only / {valid}'
 );
 
 select * from finish();

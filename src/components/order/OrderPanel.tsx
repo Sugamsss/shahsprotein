@@ -12,6 +12,7 @@ import { OrderLineRow, OrderUndoRow, type LineFlash } from './OrderLineRow';
 import { OrderSent } from './OrderSent';
 import { OrderShelf } from './OrderShelf';
 import { lineKey } from './orderLineKey';
+import { packPrice } from '../../utils/prices';
 
 const copy = siteConfig.order;
 
@@ -84,8 +85,10 @@ interface UndoState {
 export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false }) => {
   const {
     lines, itemCount, maxQuantity, addItem, setQuantity, changeSize, removeItem,
-    lastAdd, droppedOnLoad, sent, startNewOrder, sendLines,
+    lastAdd, droppedOnLoad, sent, startNewOrder, sendLines, coupon,
   } = useOrder();
+  // An accepted coupon's own prices; every other pack shows its MRP.
+  const couponPrices = coupon.status === 'valid' ? coupon.prices : null;
   const stock = useStock();
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -290,6 +293,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           maxQuantity={maxQuantity}
           flash={flash?.key === key ? flash : undefined}
           notes={notes}
+          price={packPrice(product, line.size, couponPrices)}
           leaving={leavingKey === key}
           isSizeOut={(size) => stock.isOut(line.productId, size)}
           backSoonNote={backSoonNote}
