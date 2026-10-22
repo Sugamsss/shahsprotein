@@ -174,6 +174,7 @@ const tabPage = (pathname: string): string => {
   const [section = '', sub = '', action = ''] = pathname.split('/').filter(Boolean).slice(1);
   const p = copy.tabPages;
   if (section === 'orders') return sub === 'done' ? p.done : sub === 'new' ? p.newOrder : action === 'edit' ? p.editOrder : p.orders;
+  if (section === 'requests') return copy.websiteRequests.title;
   if (section === 'kitchen' && sub === 'history') return copy.kitchen.history.title;
   const names: Record<string, string> = {
     products: p.products, customers: p.customers, coupons: p.coupons, 'email-list': p.emailList, settings: p.settings, more: p.more,

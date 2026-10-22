@@ -44,11 +44,14 @@ export interface OrderMessageInput {
   lines: OrderLine[];
   name: string;
   pincode: string;
+  phone: string;
+  address: DeliveryAddress;
   coupon?: MessageCoupon | null;
 }
 
 /** One piece of the message. `blank` pieces only appear in the preview, where a value is still missing. */
 export interface MessagePart {
   text: string;
-  blank?: 'name' | 'pincode';
+  blank?: 'name' | 'pincode' | 'phone' | 'address';
 }
+import type { DeliveryAddress } from './delivery';

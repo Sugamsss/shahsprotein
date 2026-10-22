@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { siteConfig } from '../data/siteConfig';
 import { productsData } from '../data/products';
 import type { AddResult, CouponCheck, MessageCoupon, OrderLine, OrderMessageInput } from '../types/order';
+import type { DeliveryAddress } from '../types/delivery';
+import { cleanDeliveryAddress, cleanPhone } from '../utils/deliveryAddress';
 import type { OrderPopupOpener } from '../utils/contact';
 import {
   addLine,
@@ -77,6 +79,11 @@ export interface OrderContextType {
   pincode: string;
   /** Keeps digits only, at most 6. */
   setPincode: (value: string) => void;
+  phone: string;
+  setPhone: (value: string) => void;
+  address: DeliveryAddress;
+  setAddress: (value: DeliveryAddress) => void;
+  editAddressPart: (key: keyof DeliveryAddress, value: string) => void;
 
   // Coupon (memory only)
   couponOpen: boolean;
@@ -160,6 +167,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [lastAdd, setLastAdd] = useState<LastAdd | null>(null);
   const [name, setName] = useState('');
   const [pincode, setPincodeState] = useState('');
+  const [phone, setPhoneState] = useState('');
+  const [address, setAddressState] = useState<DeliveryAddress>({ premises: '', area: '', city: '', state: '', pincode: '', landmark: '' });
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInputState] = useState('');
   const [coupon, setCoupon] = useState<CouponState>({ status: 'idle' });
@@ -176,6 +185,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const couponRef = useRef(coupon);
   const couponCheckVersion = useRef(0);
   const sentRef = useRef(sent);
+  const addressRef = useRef(address);
+  const phoneRef = useRef(phone);
+  addressRef.current = address;
+  phoneRef.current = phone;
   const stockRef = useRef(stock);
   stockRef.current = stock;
 
@@ -246,7 +259,28 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (linesRef.current.length > 0) commit([]);
   }, [commit]);
 
-  const setPincode = useCallback((value: string) => setPincodeState(value.replace(/\D/g, '').slice(0, 6)), []);
+  const setPincode = useCallback((value: string) => {
+    const pincode = value.replace(/\D/g, '').slice(0, 6);
+    setPincodeState(pincode);
+    addressRef.current = { ...addressRef.current, pincode };
+    setAddressState(addressRef.current);
+  }, []);
+  const setPhone = useCallback((value: string) => { phoneRef.current = value; setPhoneState(value); }, []);
+  const setAddress = useCallback((value: DeliveryAddress) => {
+    // Keep editable text verbatim; cleaning on every keystroke deletes a trailing
+    // space and makes normal multi-word entry impossible. Snapshot cleaners trim.
+    const next = { ...value, pincode: value.pincode.replace(/\D/g, '').slice(0, 6) };
+    setAddressState(next);
+    setPincodeState(next.pincode);
+    addressRef.current = next;
+  }, []);
+
+  const editAddressPart = useCallback((key: keyof DeliveryAddress, value: string) => {
+    const next = { ...addressRef.current, [key]: key === 'pincode' ? value.replace(/\D/g, '').slice(0, 6) : value };
+    addressRef.current = next;
+    setAddressState(next);
+    setPincodeState(next.pincode);
+  }, []);
 
   const setCouponInput = useCallback((value: string) => {
     const next = value.replace(/\s/g, '').toUpperCase().slice(0, 24);
@@ -316,9 +350,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     code,
     lines: inStockLines(linesRef.current, stockRef.current.isOut),
     name: cleanName(name),
-    pincode,
+    pincode: addressRef.current.pincode,
+    phone: cleanPhone(phoneRef.current),
+    address: cleanDeliveryAddress(addressRef.current),
     coupon: messageCoupon,
-  }), [code, name, pincode, messageCoupon]);
+  }), [code, name, phone, address, messageCoupon]);
 
   const currentUrl = useCallback(() => orderMessageUrl(currentOrder()), [currentOrder]);
 
@@ -346,6 +382,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setName,
     pincode,
     setPincode,
+    phone,
+    setPhone,
+    address,
+    setAddress,
+    editAddressPart,
     couponOpen,
     setCouponOpen,
     couponInput,
@@ -367,7 +408,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     startNewOrder,
   }), [
     lines, sendLines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
-    name, pincode, setPincode, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
+    name, pincode, setPincode, phone, setPhone, address, setAddress, editAddressPart, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
     removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, code, sendLines,
     currentOrder, currentUrl, markSent, sent, startNewOrder,
   ]);

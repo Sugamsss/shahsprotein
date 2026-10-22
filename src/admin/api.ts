@@ -3,6 +3,7 @@ import type {
   AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
   KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
+  WebsiteRequest, WebsiteRequestPage,
 } from './types';
 import { holdUntilDone } from './unsavedWork';
 
@@ -190,6 +191,14 @@ export const setCouponActive = (id: string, active: boolean) =>
 export const getCouponUses = (phone: string) => rpc<CouponUse[]>('get_admin_coupon_uses', { phone });
 
 export const getEmailList = () => rpc<EmailList>('get_admin_email_list');
+
+export const getWebsiteRequests = (filter: { state?: string; search?: string; before?: string; before_id?: string; limit?: number } = {}) =>
+  rpc<WebsiteRequestPage>('get_admin_website_requests', filter);
+export const getWebsiteRequest = (id: string) => rpc<WebsiteRequest | null>('get_admin_website_request', { id });
+export const confirmWebsiteRequest = (id: string, details: object = {}) =>
+  rpc<{ state: 'confirmed' | 'dismissed'; order: Order | null }>('confirm_admin_website_request', { id, details });
+export const dismissWebsiteRequest = (id: string) =>
+  rpc<{ state: 'dismissed' | 'confirmed' }>('dismiss_admin_website_request', { id });
 
 /** Changes the signed-in admin's password (Settings). */
 export const changePassword = async (password: string): Promise<void> => {

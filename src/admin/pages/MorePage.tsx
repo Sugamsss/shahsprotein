@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronRight, Download, History, Mail, Settings, Ticket, type LucideIcon } from 'lucide-react';
+import { ChevronRight, ClipboardList, Download, History, Mail, Settings, Ticket, type LucideIcon } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
-import { getCoupons, getEmailList } from '../api';
+import { getCoupons, getEmailList, getWebsiteRequests } from '../api';
+import { useAdminMe } from '../auth';
 import { HISTORY_PATH } from '../kitchen/history';
 import { useHistoryAvailable } from '../kitchen/useHistoryAvailable';
 import { ExportSheet } from '../orders/ExportSheet';
@@ -25,11 +26,14 @@ const MorePage: React.FC = () => {
   const couponsOn = coupons.data?.filter((c) => c.active && !(c.expires_at && Date.parse(c.expires_at) <= Date.now())).length;
   const people = emails.data?.members.length;
   const historyOn = useHistoryAvailable();
+  const admin = useAdminMe().home_view !== 'cook';
+  const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), []);
 
   return (
     <div className="adm-page">
       <h1 className="adm-title">{copy.more.title}</h1>
       <section className="adm-card adm-list">
+        {admin && requests.data && !requests.error && <Link to="/admin/requests"><Row Icon={ClipboardList} title={copy.more.requests[0]} sub={`${requests.data.requests.length} to confirm`} /></Link>}
         <Link to="/admin/coupons">
           <Row Icon={Ticket} title={copy.more.coupons[0]} sub={couponsOn === undefined ? copy.more.coupons[1] : copy.moreCounts.couponsOn(couponsOn)} />
         </Link>

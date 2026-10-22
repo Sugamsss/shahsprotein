@@ -5,15 +5,16 @@ The website for Shah's Nutrition, a small food brand from Satara making Raggi Ja
 The site does two jobs:
 
 - **The landing page** tells the brand's story and lets people build an order. They send it to us on WhatsApp. There are no prices, checkout or payment on the site: we reply in the chat with the total, delivery and how to pay.
-- **The order book at `/admin`** is where Pranjali and Sunit keep track of every order, from the first message to "delivered and paid". It replaces the notebook.
+- **The order book at `/admin`** is where Pranjali and Sunit manage website requests and active orders through "delivered and paid". Requests are separate from kitchen work until Sunit confirms after receiving the WhatsApp message.
 
 ## How an order works
 
-1. The customer builds an order in the "Your order" popup and taps **Send order on WhatsApp**.
-2. WhatsApp opens with their message, which includes an order code like `SN-7KQ4M`.
-3. On the same tap, the order is saved: items, name, pincode, coupon and code. The tap never waits for the save, so WhatsApp always opens even if the save fails.
-4. In the admin, Sunit finds the order by its code, adds the phone number and the total he quoted, and moves it along: **Cooking → Packing → Ready → Delivered**. Marking it Delivered opens a bill, which can be shared or downloaded as a PNG and reopened from the order. The preview shows the whole bill; **Zoom in** makes its details easier to read, and **Fit bill** returns to the full view. It lists items, quantities, rates and amounts, using the order's saved total and recorded payments. It is a receipt, not a tax invoice; the public site has no prices. Payments are recorded separately, including part payments, because some people pay on delivery.
-5. Orders that come in by WhatsApp, a call, Instagram or in person are added by hand.
+1. The customer enters their phone and delivery address and taps **Continue to WhatsApp**. Address suggestions are optional; manual entry works without Google configuration.
+2. WhatsApp opens with a draft containing their details and an order code. The customer must press Send there; the website cannot tell whether the message arrived.
+3. The tap saves a pending request (never a kitchen order). It does not wait for the save, so WhatsApp opens even if saving fails.
+4. After the message arrives, Sunit finds the request in `/admin/requests` and explicitly confirms it. Confirmation creates an active order; kitchen rules may allocate food or move it straight to Packing. Dismissed requests remain available in the inbox filter. Confirmation has no instant Undo because it can reserve food; correct an accidental confirmation with normal order cancellation.
+5. Sunit moves active orders along: **Cooking → Packing → Ready → Delivered**. Marking one Delivered opens a bill, which can be shared or downloaded as a PNG and reopened from the order. It is a receipt, not a tax invoice; the public site has no prices. Payments are recorded separately, including part payments, because some people pay on delivery.
+6. Orders that come in by WhatsApp, a call, Instagram or in person are added by hand.
 
 The admin's Home is different for each person. Pranjali (`home_view = cook`) sees what to make per product, in kilos and packs. Sunit and anyone else (`admin`) sees every order and rupee per product and stage. Each product card opens that product's orders. The admin also has a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.
 
@@ -35,6 +36,8 @@ npm test         # Vitest: order message, cart, order code, formats, CSV, Undo
 
 The landing page runs without any settings. The admin, coupons, stock and order saves need `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` (`vercel env pull` fills them in). They point at production: local dev never saves orders or clicks, but the admin run locally works on the real order book.
 
+The optional address search uses Google Places only when `VITE_GOOGLE_MAPS_API_KEY` is configured with approved API and referrer restrictions. Without it, customers can still enter every delivery field manually. Do not activate paid Google Maps APIs or billing without separate approval; this repository intentionally contains no key.
+
 Database tests use pgTAP and need a local Supabase: `supabase test db`. Backend setup is in [supabase/README.md](supabase/README.md).
 
 ## Stack
@@ -45,7 +48,8 @@ React 18, TypeScript, Vite, plain CSS and Lucide icons. Supabase handles the dat
 
 - **A push to `main` deploys to production.** There's no staging.
 - Vercel previews talk to the production database, so they **don't save orders or record clicks**. Never set `VITE_TRACK_EVENTS` on a preview: it would write test orders into the real order book. It's for a local Supabase only (see `.env.example`).
-- Database changes go out with `supabase db push`. Always dry-run first.
+- Website request rollout uses a separate admin-first order: deploy the UI with missing-RPC gating, apply and verify the additive request migration, then release the public request form. The migration is the safety cutover for old clients too: legacy `submit_order` calls must create pending, incomplete requests, never active orders. Do not restore the pre-cutover function body on rollback. Confirm only after WhatsApp receipt; no real production change is part of local implementation verification.
+- Database changes go out with `supabase db push`. Always dry-run first and follow the request-specific rollout in [supabase/README.md](supabase/README.md).
 
 ## Where to look next
 

@@ -11,6 +11,8 @@ const order = {
   ],
   name: '  Anjali  ',
   pincode: '415001',
+  phone: '919876543210',
+  address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' },
   coupon: { code: 'EXAMPLE10', checked: false },
 };
 
@@ -35,12 +37,12 @@ const sentBody = () => {
 };
 
 describe('saveOrder', () => {
-  it('posts the order with keepalive, in the shape submit_order takes', () => {
+  it('posts a website request with keepalive and the delivery snapshot', () => {
     saveOrder(order);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('https://example.supabase.co/rest/v1/rpc/submit_order');
+    expect(url).toBe('https://example.supabase.co/rest/v1/rpc/submit_website_request');
     expect(init).toMatchObject({ method: 'POST', keepalive: true });
     expect(sentBody()).toEqual({
       p_code: 'SN-7KQ4M',
@@ -49,7 +51,8 @@ describe('saveOrder', () => {
         { product_id: 'bites', size: '250 g', quantity: 1 },
       ],
       p_name: 'Anjali',
-      p_pincode: '415001',
+      p_phone: '919876543210',
+      p_address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001', landmark:'' },
       p_coupon: 'EXAMPLE10',
     });
   });

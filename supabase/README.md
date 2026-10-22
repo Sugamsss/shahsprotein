@@ -8,6 +8,21 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
+## Website requests rollout
+
+Website sends must be stored as pending `website_requests`, not active orders. This keeps unconfirmed messages out of kitchen allocations, stock, sales and order metrics. Apply migration `20261022000000_website_requests.sql` only after reviewing its current diff and running the full SQL test suite on an isolated local Supabase stack. **Do not push the migration to production as part of implementation or browser testing.**
+
+The UI rollout should be staged: deploy admin code first (it hides its entry while request RPCs are missing), apply and verify the migration, then release the public request form. The migration is also the compatibility safety cutover: its exact legacy `submit_order(text,jsonb,text,text,text)` adapter must leave old website tabs creating incomplete pending requests, never active orders. Do not roll back to the old function body. Roll back client UI if needed while retaining the safe adapter and preserving all pending requests and confirmation links.
+
+After migration, public `submit_website_request` creates a pending request; the old `submit_order` signature remains as the incomplete legacy adapter. Admin RPCs, all authenticated/admin-only, are:
+
+- `get_admin_website_requests(p_state,p_search,p_before,p_limit,p_before_id)` returns a page of requests and a `(created_at,id)` next cursor.
+- `get_admin_website_request(p_id)` returns the full request, including legacy marker and original pincode.
+- `confirm_admin_website_request(p_id,p_details)` validates corrected name, phone and complete delivery address, creates one active website-sourced order and invokes the normal kitchen fill. Sunit should use it only after receiving the customer's WhatsApp message. Confirmation may allocate food; there is no instant Undo. Correct mistakes through normal order cancellation.
+- `dismiss_admin_website_request(p_id)` closes the request without creating an order or affecting the kitchen. Dismissed requests remain queryable.
+
+Legacy requests may have no phone/address; complete those fields from WhatsApp before confirmation. Never fabricate missing address details. Existing active website orders remain unchanged. The request inbox is independent of the Packing badge and cook Home. The optional public address suggestion integration reads `VITE_GOOGLE_MAPS_API_KEY`; absent key means manual entry only. Do not enable paid Google Maps APIs, billing or a live key without separate approval. An API key is browser-visible, so restrict it by required APIs and approved HTTP referrers; never commit it. Budget alerts are not a spend cap.
+
 ## Admin sign-in (usernames)
 
 The admin at `/admin` signs in with a **username and password**, set by the site owner and handed to each person. There's no sign-up and no email of any kind: no invites, no password-reset emails.
@@ -54,7 +69,7 @@ The admin is at `/admin` once `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` a
 - Enable email/password Auth. No SMTP is needed for the admin (it never sends email).
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only.
 - **Turn public sign-ups off** in the dashboard (**Authentication → Sign In / Providers → Email → Allow new users to sign up**). They're on today; nobody can see data through them, but there's no reason to allow them.
-- The public RPCs are `submit_waitlist_member`, `track_site_event`, `check_coupon`, `submit_order` and `get_product_stock`. Each write is rate-limited in SQL; add a CAPTCHA (e.g. Turnstile on `submit_order`) if junk shows up.
+- The public RPCs are `submit_waitlist_member`, `track_site_event`, `check_coupon`, `submit_website_request`, the legacy-compatible `submit_order` adapter and `get_product_stock`. Website sends are pending requests, not active orders; only an admin's explicit confirmation creates an order and runs kitchen allocation. Both submission RPCs share per-IP limits and the global request quota. Add a CAPTCHA if junk shows up.
 - Configure Loops for waitlist double opt-in. Supabase remains the source of truth for members and admin data.
 
 ## Email functions
@@ -86,6 +101,7 @@ Migrations `20260926000000` to `000004` add the order book and remove the old wa
 | Table | What |
 |---|---|
 | `orders` | One row per order. `code` (`SN-7KQ4M`, `-2` on a clash), `source` (`site`, `whatsapp`, `call`, `instagram`, `in_person`), `status` (`cooking`, `packing`, `ready`, `delivered`, `cancelled`; default `cooking`), `free_sample` (every line is a sample: no total, no coupon, no payments), `priority` (skips the line in the kitchen; see **The kitchen**), `kitchen_hold` (true only in Cooking, set by a person moving a Packing order back; since `20260930000000`, see **Held in Cooking**; a trigger clears it on any status change, and a check refuses it outside Cooking), `paid_at` (null = not paid in full), `paid_method` (`upi`, `cash`, `bank`, `gift`, `other`; `gift` since `20261018000000`, see **Gift**), `paid_note` (only with `other`). Since `20260928000000` these three are worked out from `order_payments` by triggers, on every write: `paid_at` is when the payments first covered the total, and the method and note are that payment's. Never write them directly. Name, pincode, phone, note, amount (whole rupees, private), coupon. Never auto-deleted. |
+| `website_requests` | Separate public-submission inbox (`20261022000000`). Pending and dismissed requests are not orders and have no order lines/allocations; confirmation transactionally creates one ordinary site order and then runs kitchen fill. The compatibility `submit_order` signature now creates an incomplete legacy request. Admin-only access is through `get_admin_website_requests`, `get_admin_website_request`, `confirm_admin_website_request` and `dismiss_admin_website_request`. No auto-delete; retention needs a separate policy decision. |
 | `order_payments` | One row per payment (`20260928000000`): `amount` (whole rupees; null only while the order has no total, and typing the total fills it in), `method` and `note` (as on orders; null method only on payments copied from orders paid before methods), `paid_at` (when the money came in), `created_at`, `created_by`. Paid = at least one payment and they cover the total (or there's no total). A total can't be cleared while payments with amounts exist. Every order paid before this migration became one payment. |
 | `order_lines` | Product id, size (`250 g`, `1 kg`, or `sample`: admin only) and quantity per order, plus `grams_each`, filled on insert from the size or, for a sample, the product's sample weight at that moment. An edit keeps the weight of the samples it keeps. Checked for shape only; names come from `src/data/products.ts`. |
 | `order_events` | History, written only by a trigger: created, each status, paid/unpaid, with who did it. `auto` is true when the kitchen rules moved it (a batch or spare covered it, a batch fix took food back), not a person. Old events (`new`, `confirmed`, `sent`, `kept`, `unkept`) stay as history. |

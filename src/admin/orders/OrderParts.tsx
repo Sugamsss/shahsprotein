@@ -11,6 +11,8 @@ import { Switch } from '../Switch';
 import { useToast } from '../toast';
 import { useUnsavedWork } from '../unsavedWork';
 import type { Order, OrderChanges, OrderDetail, OrderStatus } from '../types';
+import { formatDeliveryAddress } from '../../utils/deliveryAddress';
+import type { DeliveryAddress } from '../../types/delivery';
 import { Code, FromWebsite, Thumb, Via } from './OrderCard';
 import { MOVE_BACK_TO_COOKING, MOVE_TO_PACKING, canMoveBack, isHeld, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
 import { historyDetailText } from './giveText';
@@ -337,7 +339,8 @@ export const DetailsCard: React.FC<{
       {/* A free sample order has no total, as in Add and Edit. */}
       {!o.free_sample && <AutoField key={`a${o.id}`} order={o} field="amount" onSaved={onSaved} worked={worked && 'total' in worked ? worked.total : null} />}
       <AutoField key={`n${o.id}`} order={o} field="note" onSaved={onSaved} />
-      <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.pincode ?? copy.deliverToSatara}</p>
+      <p className="adm-od-fact"><span>{copy.deliverTo}</span>{o.delivery_address ? formatDeliveryAddress(o.delivery_address as DeliveryAddress) : o.pincode ?? copy.deliverToSatara}</p>
+      {o.delivery_address && o.phone && <a className="adm-btn adm-btn--quiet adm-btn--sm" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatDeliveryAddress(o.delivery_address as DeliveryAddress))}`}>{adminCopy.websiteRequests.openMaps}</a>}
       {(o.phone || o.status === 'delivered') && (
         <div className="adm-od-reach">
           {o.phone && (

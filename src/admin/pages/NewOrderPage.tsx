@@ -26,6 +26,8 @@ import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
 import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
+import type { DeliveryAddress } from '../../types/delivery';
+import { cleanDeliveryAddress, formatDeliveryAddress, isValidDeliveryAddress } from '../../utils/deliveryAddress';
 
 const copy = adminCopy.orderForm;
 const orderCopy = adminCopy.order;
@@ -77,6 +79,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const [phone, setPhone] = useState(order?.phone ? plainPhone(order.phone) ?? order.phone : '');
   const [name, setName] = useState(order?.name ?? '');
   const [pincode, setPincode] = useState(order?.pincode ?? '');
+  const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress | null>(order?.delivery_address ?? null);
   const [via, setVia] = useState<OrderSource | null>(order?.source ?? null);
   const [status, setStatus] = useState<Step>('cooking');
   const [paid, setPaid] = useState(false);
@@ -187,6 +190,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   if (name.trim().length < 2) problems.name = copy.errors.name;
   if (!via) problems.via = copy.errors.via;
   if (pincode.trim() && !PINCODE.test(pincode.trim())) problems.pincode = copy.errors.pincode;
+  if (deliveryAddress && (!isValidDeliveryAddress(deliveryAddress) || deliveryAddress.pincode !== pincode.trim())) problems.pincode = copy.errors.pincode;
   if (phone.trim() && !digits) problems.phone = orderCopy.phoneError;
   if (!samplesOnly && total.trim() && typedTotal == null) problems.amount = orderCopy.totalError;
   if (!order && !samplesOnly && paid && !paidMethod) problems.paidMethod = adminCopy.paidBy.pickOne;
@@ -202,6 +206,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       name: name.trim(),
       phone: digits,
       pincode: pincode.trim() || null,
+      ...(deliveryAddress && { delivery_address: cleanDeliveryAddress(deliveryAddress) }),
       note: note.trim() || null,
       lines,
       priority,
@@ -339,9 +344,18 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           <Field label={copy.pincode} error={errors.pincode}>
             <input className="adm-input" inputMode="numeric" maxLength={6} value={pincode}
               placeholder={order?.source === 'site' ? copy.pincodePlaceholder : copy.pincodeSatara}
-              onChange={(e) => edit(setPincode)(e.target.value.replace(/\D/g, ''))} />
+              onChange={(e) => { const value = e.target.value.replace(/\D/g, ''); edit(setPincode)(value); if (order?.source === 'site' && deliveryAddress) { dirty.current = true; setDeliveryAddress((a) => a ? { ...a, pincode: value } : a); } }} />
           </Field>
         </div>
+        {order && order.source === 'site' && !deliveryAddress && <button type="button" className="adm-btn adm-btn--quiet adm-btn--sm" onClick={() => { dirty.current = true; setDeliveryAddress({ premises: '', area: '', city: '', state: '', pincode: pincode, landmark: '' }); }}>{adminCopy.websiteRequests.addAddress}</button>}
+        {order?.source === 'site' && deliveryAddress && <fieldset className="adm-request-address">
+          <legend>{adminCopy.websiteRequests.address}</legend>
+          <p className="adm-muted">{formatDeliveryAddress(deliveryAddress)}</p>
+          {errors.pincode && <p className="adm-field__error" data-error>{errors.pincode}</p>}
+          {(['premises', 'area', 'city', 'state', 'pincode', 'landmark'] as const).map((key) => <Field key={key} label={adminCopy.websiteRequests.addressFields[key]} optional={key === 'landmark' ? adminCopy.websiteRequests.optional : undefined}>
+            <input className="adm-input" value={deliveryAddress[key] ?? ''} onChange={(e) => { const value = e.target.value; dirty.current = true; setDeliveryAddress((a) => a ? { ...a, [key]: value } : a); if (key === 'pincode') edit(setPincode)(value.replace(/\D/g, '')); }} maxLength={key === 'pincode' ? 6 : 160} />
+          </Field>)}
+        </fieldset>}
       </div>
     </section>
   );
