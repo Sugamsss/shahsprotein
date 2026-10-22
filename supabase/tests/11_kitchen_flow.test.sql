@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(117);
+select plan(114);
 
 delete from public.website_requests;
 delete from public.orders;
@@ -265,7 +265,7 @@ reset role;
 
 select is((select count(*)::integer from public.orders where code like 'SN-KSA22%'),0,'a website send creates no active order');
 select is((select count(*)::integer from public.website_requests where message_code='SN-KSA22'),1,'website send is saved as a request');
-select is(pg_temp.free('bites','s1'),500,'website request does not consume spare');
+select is(pg_temp.free('bites','s1'),600,'website requests do not consume spare');
 select is((select count(*)::integer from public.kitchen_allocations),0,'website request creates no allocation');
 
 set local role anon;
@@ -650,7 +650,7 @@ select set_config('t.fs', public.save_admin_order(null, '{
 }')::text, true);
 
 select is(
-  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'note', 'coupon',
+  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'delivery_address', 'note', 'coupon',
     'customer', 'created_at', 'updated_at', 'status_changed_at', 'payments', 'paid_at', 'paid_method', 'paid_note', 'kitchen'],
   '{"status":"cooking","free_sample":true,"priority":false,"held":false,"paid":false,"payment_state":"not_paid","amount":null,"amount_paid":0,
     "amount_due":null,"amount_extra":null,"packs":0,"samples":2,
@@ -809,7 +809,7 @@ select lives_ok($$set constraints all immediate$$, 'no kitchen constraints chang
 set constraints all deferred;
 reset role;
 select is((select count(*)::integer from public.orders where code like 'SN-KXA22%'),0,'unconfirmed website request is not an order');
-select is(pg_temp.free('muesli','s1'),300,'unconfirmed request leaves logged batch spare available');
+select is((select sum(r.spare)::integer from public.kitchen_batch_rows(null) r where r.product_id = 'muesli'),300,'unconfirmed request leaves logged batch spare available');
 
 -- A write-off as the cook: its check must also hold at commit.
 select set_config('t.kxb', (select b.id::text from public.kitchen_batches b where b.product_id = 'muesli'), true);

@@ -14,7 +14,8 @@ create table public.website_requests (
   state text not null default 'pending' check (state in ('pending','confirmed','dismissed')),
   is_legacy boolean not null default false,
   created_at timestamptz not null default timezone('utc',now()),
-  confirmed_order_id uuid unique references public.orders(id) on delete restrict,
+  -- Deleting the order (delete_admin_order) takes its request with it.
+  confirmed_order_id uuid unique references public.orders(id) on delete cascade,
   confirmed_at timestamptz,
   confirmed_by uuid references auth.users(id) on delete set null,
   dismissed_at timestamptz,
@@ -34,6 +35,9 @@ revoke all on public.website_requests from public, anon, authenticated;
 alter table public.orders add column delivery_address jsonb;
 alter table public.orders add constraint orders_delivery_address_object check
   (delivery_address is null or jsonb_typeof(delivery_address) = 'object');
+-- One pincode per order: the address's is the order's.
+alter table public.orders add constraint orders_delivery_address_pincode check
+  (delivery_address is null or delivery_address ->> 'pincode' is not distinct from pincode);
 
 -- Reserve code bases across both tables. The same advisory namespace is used
 -- by request submission and the pre-existing order-code allocation paths.
@@ -216,8 +220,8 @@ begin
   if r.state='pending' then update public.website_requests set state='dismissed',dismissed_at=timezone('utc',now()),dismissed_by=auth.uid() where id=p_id; return json_build_object('state','dismissed'); end if;
   return json_build_object('state',r.state);
 end $$;
-revoke all on function public.get_admin_website_requests(text,text,timestamptz,integer),public.get_admin_website_request(uuid),public.confirm_admin_website_request(uuid,jsonb),public.dismiss_admin_website_request(uuid) from public,anon;
-grant execute on function public.get_admin_website_requests(text,text,timestamptz,integer),public.get_admin_website_request(uuid),public.confirm_admin_website_request(uuid,jsonb),public.dismiss_admin_website_request(uuid) to authenticated;
+revoke all on function public.get_admin_website_requests(text,text,timestamptz,integer,uuid),public.get_admin_website_request(uuid),public.confirm_admin_website_request(uuid,jsonb),public.dismiss_admin_website_request(uuid) from public,anon;
+grant execute on function public.get_admin_website_requests(text,text,timestamptz,integer,uuid),public.get_admin_website_request(uuid),public.confirm_admin_website_request(uuid,jsonb),public.dismiss_admin_website_request(uuid) to authenticated;
 
 -- Keep delivery details in the shared order response and preserve them when
 -- owners edit an order. These are the common admin RPC paths.
@@ -429,8 +433,13 @@ begin
 
   if p_changes ? 'delivery_address' then v_order.delivery_address := public.website_clean_address(p_changes -> 'delivery_address', true); end if;
 
+
   if v_order.source = 'site' and (v_order.name is null or v_order.pincode is null) then
     raise exception using message = 'An order from the site keeps its name and pincode.', errcode = '22023';
+  end if;
+
+  if v_order.delivery_address is not null and v_order.pincode is distinct from v_order.delivery_address ->> 'pincode' then
+    raise exception using message = 'Pincode must match delivery address.', errcode = '22023';
   end if;
 
   if v_order.name is null and v_order.phone is null then
@@ -504,6 +513,245 @@ end;
 $$;
 
 revoke all on function public.admin_order_json(public.orders) from public, anon, authenticated;
-grant execute on function public.admin_order_json(public.orders) to authenticated;
 revoke all on function public.update_admin_order(uuid,jsonb) from public, anon;
 grant execute on function public.update_admin_order(uuid,jsonb) to authenticated;
+
+-- Edit order keeps a website order's delivery address (20260929000001's
+-- function, plus delivery_address, which must agree with the pincode).
+create or replace function public.save_admin_order(p_id uuid default null, p_order jsonb default null)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_input jsonb := coalesce(p_order, '{}'::jsonb);
+  v_key text;
+  v_lines jsonb;
+  v_free_sample boolean;
+  v_old_grams jsonb;
+  v_name text;
+  v_phone text;
+  v_pincode text;
+  v_address jsonb;
+  v_note text;
+  v_amount integer;
+  v_coupon text;
+  v_coupon_id uuid;
+  v_coupon_valid boolean;
+  v_source text;
+  v_status text := 'cooking';
+  v_priority boolean;
+  v_paid boolean := false;
+  v_paid_method text;
+  v_paid_note text;
+  v_created_at timestamptz := timezone('utc', now());
+  v_code text;
+  v_order public.orders;
+begin
+  if not public.is_admin() then
+    raise exception using message = 'Unauthorized';
+  end if;
+
+  if jsonb_typeof(v_input) <> 'object' then
+    raise exception using message = 'Add at least one item.', errcode = '22023';
+  end if;
+
+  for v_key in select jsonb_object_keys(v_input) loop
+    if v_key not in (
+      'source', 'code', 'name', 'phone', 'pincode', 'delivery_address', 'note', 'amount',
+      'coupon', 'lines', 'status', 'paid', 'paid_method', 'paid_note', 'created_at', 'priority'
+    ) then
+      raise exception using message = format('Unknown field: %s.', v_key), errcode = '22023';
+    end if;
+  end loop;
+
+  v_lines := public.order_clean_lines(v_input -> 'lines', 99, true);
+  -- Only products we make (every one has a kitchen_products row, set up by
+  -- the migration that adds it).
+  if exists (
+    select 1 from jsonb_array_elements(v_lines) line
+    where not exists (select 1 from public.kitchen_products k where k.product_id = line ->> 'product_id')
+  ) then
+    raise exception using message = 'We don''t know one of those products.', errcode = '22023';
+  end if;
+  v_free_sample := not exists (
+    select 1 from jsonb_array_elements(v_lines) line where line ->> 'size' <> 'sample'
+  );
+  v_name := public.order_check_name(v_input -> 'name');
+  v_phone := public.order_check_phone(v_input -> 'phone');
+  v_pincode := public.order_check_pincode(v_input -> 'pincode');
+  if coalesce(jsonb_typeof(v_input -> 'delivery_address'), 'null') <> 'null' then
+    v_address := public.website_clean_address(v_input -> 'delivery_address', true);
+    if v_pincode is distinct from v_address ->> 'pincode' then
+      raise exception using message = 'Pincode must match delivery address.', errcode = '22023';
+    end if;
+  end if;
+  v_note := public.order_check_note(v_input -> 'note');
+  v_amount := public.order_check_amount(v_input -> 'amount');
+  v_coupon := public.order_check_coupon(v_input -> 'coupon');
+  if coalesce(jsonb_typeof(v_input -> 'priority'), 'null') <> 'null' then
+    v_priority := public.order_check_boolean(v_input -> 'priority', 'priority');
+  end if;
+
+  if p_id is not null then
+    perform public.kitchen_lock();
+    select * into v_order from public.orders where id = p_id for update;
+    if v_order.id is null then
+      raise exception using message = 'That order is gone.', errcode = '22023';
+    end if;
+  end if;
+
+  if p_id is not null and v_order.source = 'site' then
+    v_source := 'site';
+  elsif p_id is not null and coalesce(jsonb_typeof(v_input -> 'source'), 'null') = 'null' then
+    v_source := v_order.source;
+  else
+    v_source := v_input ->> 'source';
+    if v_source is null or v_source not in ('whatsapp', 'call', 'instagram', 'in_person') then
+      raise exception using message = 'Choose where the order came from.', errcode = '22023';
+    end if;
+  end if;
+
+  if v_source = 'site' and (v_name is null or v_pincode is null) then
+    raise exception using message = 'An order from the site keeps its name and pincode.', errcode = '22023';
+  end if;
+
+  if v_name is null and v_phone is null then
+    raise exception using message = 'Add a name or a phone number.', errcode = '22023';
+  end if;
+
+  if v_coupon is not null and (p_id is null or v_coupon is distinct from v_order.coupon_code) then
+    select c.id, (c.active and (c.expires_at is null or c.expires_at > now()))
+    into v_coupon_id, v_coupon_valid
+    from public.coupons c
+    where upper(c.code) = v_coupon;
+
+    v_coupon_valid := coalesce(v_coupon_valid, false);
+  elsif v_coupon is not null then
+    v_coupon_id := v_order.coupon_id;
+    v_coupon_valid := v_order.coupon_valid;
+  end if;
+
+  if p_id is not null then
+    -- Edit. Code, status, payments and created_at are left alone.
+    select coalesce(jsonb_object_agg(l.product_id || '|' || l.size, l.grams_each), '{}'::jsonb)
+    into v_old_grams
+    from public.order_lines l
+    where l.order_id = p_id;
+
+    update public.orders
+    set
+      source = v_source,
+      name = v_name,
+      phone = v_phone,
+      pincode = v_pincode,
+      -- Left out keeps the saved address; an explicit null clears it.
+      delivery_address = case when v_input ? 'delivery_address' then v_address else delivery_address end,
+      note = v_note,
+      amount = v_amount,
+      coupon_code = v_coupon,
+      coupon_id = v_coupon_id,
+      coupon_valid = v_coupon_valid,
+      free_sample = v_free_sample,
+      priority = coalesce(v_priority, priority)
+    where id = p_id
+    returning * into v_order;
+
+    delete from public.order_lines where order_id = p_id;
+
+    -- A sample the order already had keeps the weight it was saved with.
+    insert into public.order_lines (order_id, product_id, size, quantity, grams_each)
+    select v_order.id, line ->> 'product_id', line ->> 'size', (line ->> 'quantity')::integer,
+      case when line ->> 'size' = 'sample'
+        then (v_old_grams ->> ((line ->> 'product_id') || '|sample'))::integer
+      end
+    from jsonb_array_elements(v_lines) line;
+
+    perform public.kitchen_order_rebalance(v_order.id);
+    -- A priority change only reorders food not yet given.
+    perform public.kitchen_fill_all(public.kitchen_order_products(v_order.id));
+  else
+    if coalesce(jsonb_typeof(v_input -> 'status'), 'null') <> 'null' then
+      v_status := public.order_check_status(v_input -> 'status');
+    end if;
+
+    if coalesce(jsonb_typeof(v_input -> 'paid'), 'null') <> 'null' then
+      v_paid := public.order_check_boolean(v_input -> 'paid', 'paid');
+    end if;
+
+    v_paid_method := public.order_check_paid_method(v_input -> 'paid_method');
+    v_paid_note := public.order_check_paid_note(v_input -> 'paid_note');
+    if not v_paid and (v_paid_method is not null or v_paid_note is not null) then
+      raise exception using message = 'Mark it paid to say how they paid.', errcode = '22023';
+    end if;
+    perform public.order_check_paid_pair(v_paid_method, v_paid_note);
+
+    if coalesce(jsonb_typeof(v_input -> 'created_at'), 'null') <> 'null' then
+      begin
+        v_created_at := (v_input ->> 'created_at')::timestamptz;
+      exception
+        when others then
+          raise exception using message = 'That date doesn''t look right.', errcode = '22023';
+      end;
+
+      if v_created_at > now() + interval '5 minutes' then
+        raise exception using message = 'An order can''t be dated in the future.', errcode = '22023';
+      end if;
+      v_created_at := least(v_created_at, timezone('utc', now()));
+    end if;
+
+    v_code := upper(btrim(regexp_replace(btrim(coalesce(v_input ->> 'code', '')), '^#+', '')));
+    if v_code = '' then
+      v_code := public.order_new_code();
+    else
+      if v_code not like 'SN-%' then
+        v_code := 'SN-' || v_code;
+      end if;
+
+      if v_code !~ '^SN-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}$' then
+        raise exception using message = 'That order code doesn''t look right.', errcode = '22023';
+      end if;
+
+      perform pg_advisory_xact_lock(hashtext('order_code:' || v_code));
+      if public.order_code_taken(v_code) then
+        raise exception using
+          message = format('%s is already an order. Open that one, or leave the code empty and we''ll make one.', v_code),
+          errcode = '22023';
+      end if;
+    end if;
+
+    -- After the code lock, as in submit_order().
+    perform public.kitchen_lock();
+
+    insert into public.orders (
+      code, source, status, name, pincode, delivery_address, phone, note, amount,
+      coupon_code, coupon_id, coupon_valid, free_sample, priority, created_at, created_by
+    ) values (
+      v_code, v_source, v_status,
+      v_name, v_pincode, v_address, v_phone, v_note, v_amount,
+      v_coupon, v_coupon_id, v_coupon_valid, v_free_sample, coalesce(v_priority, false), v_created_at, auth.uid()
+    ) returning * into v_order;
+
+    insert into public.order_lines (order_id, product_id, size, quantity)
+    select v_order.id, line ->> 'product_id', line ->> 'size', (line ->> 'quantity')::integer
+    from jsonb_array_elements(v_lines) line;
+
+    if v_paid then
+      perform public.order_pay_rest(v_order.id, v_paid_method, v_paid_note, null);
+    end if;
+
+    if v_status = 'cooking' then
+      perform public.kitchen_fill_all(public.kitchen_order_products(v_order.id));
+    elsif v_status <> 'cancelled' then
+      perform public.kitchen_cover_by_hand(v_order.id);
+    end if;
+  end if;
+
+  select * into v_order from public.orders where id = v_order.id;
+  return public.admin_order_json(v_order);
+end;
+$$;
+
+revoke all on function public.save_admin_order(uuid, jsonb) from public, anon;
+grant execute on function public.save_admin_order(uuid, jsonb) to authenticated;
