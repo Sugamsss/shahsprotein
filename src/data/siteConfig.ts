@@ -35,6 +35,9 @@ export const siteConfig = {
       `${shelfLife}. No preservatives.${madeToOrder ? ' Made after you order.' : ''}`,
     contains: 'Contains',
     packSizes: (count: number) => (count > 1 ? 'Pack sizes' : 'Pack size'),
+    // A card's price tags (MRP per pack size, from products.ts). The popup shows
+    // the picked pack's MRP in its "Add to order" button.
+    mrpLabel: (name: string) => `${name} MRP`,
     nutrition: 'Nutrition information',
     nutrient: 'Nutrient',
     per100g: 'Per 100 g',
@@ -129,8 +132,9 @@ export const siteConfig = {
     general: "Hi! I'd like to place an order.",
   },
   // The "Your order" popup. It says "we", and names Sunit as the one who gets the
-  // message: orders go to him on the order number above. No prices, totals or
-  // delivery costs anywhere: we reply with them on WhatsApp. Items read
+  // message: orders go to him on the order number above. Each line shows its
+  // price (MRP, or an accepted coupon's own price), but no total, delivery or
+  // payment, and the message has no prices: we reply with them on WhatsApp. Items read
   // "Muesli, 250 g" in the popup and "Muesli 250 g" in the message.
   order: {
     // Most packs of one product in one size per order. Bigger orders are a chat.
@@ -148,6 +152,7 @@ export const siteConfig = {
     cardAdd: 'Add',
     cardAddLabel: (name: string) => `Add ${name} to your order`,
     addToOrder: 'Add to order',
+    addToOrderShort: 'Add', // on phones, before the pack's price
     sizeLegendProduct: 'Pack size',
     headerOrder: 'Order',
     headerEmptyLabel: 'Start your order',
@@ -165,6 +170,9 @@ export const siteConfig = {
 
     // Lines
     itemName: (name: string, size: string) => `${name}, ${size}`,
+    // A line's price: packs × the pack price. With a coupon price, the MRP amount shows struck through.
+    linePriceWas: 'MRP ', // visually hidden
+    linePriceNow: 'with your coupon ', // visually hidden
     sizeLegend: (name: string) => `Pack size for ${name}`,
     singleSize: (size: string) => `${size} pack`,
     qtyGroup: (item: string) => `How many ${item}`,

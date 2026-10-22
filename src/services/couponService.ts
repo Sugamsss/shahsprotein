@@ -1,4 +1,5 @@
 import type { CouponCheck } from '../types/order';
+import { parseCouponPrices } from '../utils/prices';
 
 // Same format the database enforces (coupons.code and check_coupon()).
 const COUPON_CODE_PATTERN = /^[A-Z0-9-]{3,24}$/i;
@@ -46,14 +47,15 @@ export async function checkCoupon(raw: string): Promise<CouponCheck> {
       return { status: 'unavailable', code };
     }
 
-    const result = data as { valid?: unknown; description?: unknown } | null;
+    const result = data as { valid?: unknown; description?: unknown; prices?: unknown } | null;
     if (!result || typeof result !== 'object' || typeof result.valid !== 'boolean') {
       console.error('[Coupon] Unexpected response shape');
       return { status: 'unavailable', code };
     }
 
     if (result.valid && typeof result.description === 'string' && result.description.trim()) {
-      return { status: 'valid', code, description: result.description.trim() };
+      // `prices` is the coupon's own price per pack (none from an older database).
+      return { status: 'valid', code, description: result.description.trim(), prices: parseCouponPrices(result.prices) };
     }
 
     return { status: 'invalid', code };

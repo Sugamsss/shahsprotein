@@ -6,6 +6,7 @@ import type { Product } from '../../types/product';
 import { SizeChoice } from './SizeChoice';
 import { OrderThumb } from './OrderThumb';
 import { lineKey } from './orderLineKey';
+import { formatRupees, type PackPrice } from '../../utils/prices';
 
 const copy = siteConfig.order;
 
@@ -23,6 +24,8 @@ interface OrderLineRowProps {
   flash?: LineFlash;
   /** Short notes under the row, e.g. the merge note and the limit hint. */
   notes: string[];
+  /** One pack's price (MRP or the coupon's); null when the size has none. */
+  price: PackPrice | null;
   leaving: boolean;
   /** Pack sizes that are out of stock, disabled in the size switch. */
   isSizeOut: (size: string) => boolean;
@@ -39,7 +42,7 @@ interface OrderLineRowProps {
 
 /** One compact row: thumbnail, name, pack size, and a stepper whose minus becomes a bin at 1. */
 export const OrderLineRow: React.FC<OrderLineRowProps> = ({
-  line, product, maxQuantity, flash, notes, leaving, isSizeOut, backSoonNote, onSize, onLess, onMore, onRemove,
+  line, product, maxQuantity, flash, notes, price, leaving, isSizeOut, backSoonNote, onSize, onLess, onMore, onRemove,
 }) => {
   const item = copy.itemName(product.name, line.size);
   const atOne = line.quantity <= 1;
@@ -57,6 +60,24 @@ export const OrderLineRow: React.FC<OrderLineRowProps> = ({
       {flash && <span key={flash.at} className="order-line__flash" aria-hidden="true" />}
       <OrderThumb product={product} className="order-line__thumb" />
       <p className="order-line__name">{product.name}</p>
+      {price && !backSoonNote && (
+        <p className="order-line__price">
+          {price.price < price.mrp ? (
+            <>
+              <s>
+                <span className="visually-hidden">{copy.linePriceWas}</span>
+                {formatRupees(price.mrp * line.quantity)}
+              </s>{' '}
+              <span className="order-line__price-now">
+                <span className="visually-hidden">{copy.linePriceNow}</span>
+                {formatRupees(price.price * line.quantity)}
+              </span>
+            </>
+          ) : (
+            formatRupees(price.price * line.quantity)
+          )}
+        </p>
+      )}
       <div className="order-line__size">
         <SizeChoice
           sizes={product.weightOptions}

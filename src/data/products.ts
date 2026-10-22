@@ -9,8 +9,8 @@ const orderTile = (name: string): ImageSet => ({
 });
 
 // The English product portfolio is the source for this launch range. Nutrition
-// is populated only where a product label has been supplied. Prices come later,
-// so weightOptions lists pack sizes only.
+// is populated only where a product label has been supplied. MRPs are the
+// founder's (2026-10-22), one per pack size in weightOptions.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 // Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
 // Sprites are exported at 216px per tile as WebP; the chips crop each tile into a round picture.
@@ -44,6 +44,7 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '4 mg', perServing: '1.2 mg' },
     ],
     weightOptions: ['250 g', '500 g'],
+    mrp: { '250 g': 165, '500 g': 320 },
     shelfLife: '6 months',
     contains: 'Tree nuts (cashew), dairy (ghee)',
   },
@@ -94,6 +95,7 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '92.5 mg', perServing: '27.7 mg' },
     ],
     weightOptions: ['250 g', '500 g'],
+    mrp: { '250 g': 280, '500 g': 550 },
     shelfLife: '6 months',
     contains: 'Tree nuts (almonds; may contain traces of cashews), dairy (ghee), gluten (oats)',
   },
@@ -116,6 +118,7 @@ export const productsData: Product[] = [
     orderTileDark: orderTile('bites-dark'),
     nutritionFacts: [],
     weightOptions: ['250 g'],
+    mrp: { '250 g': 220 },
     shelfLife: '15 days',
     madeToOrder: true,
     contains: 'Tree nuts (almonds, cashew), dairy (ghee)',
