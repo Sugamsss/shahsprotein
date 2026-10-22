@@ -19,8 +19,12 @@ export type AddResult = 'added' | 'capped' | 'invalid';
  * so the UI can ignore an answer for something the person has since changed.
  * `unavailable` covers no network, a timeout, the rate limit and a missing Supabase.
  */
+/** A coupon's prices in whole rupees, keyed by `couponPriceKey(productId, size)`. */
+export type CouponPrices = Record<string, number>;
+
 export type CouponCheck =
-  | { status: 'valid'; code: string; description: string }
+  /** `prices`: the coupon's own price per pack (`couponPriceKey`); a pack not in it costs its MRP. */
+  | { status: 'valid'; code: string; description: string; prices: CouponPrices }
   | { status: 'invalid'; code: string }
   | { status: 'unavailable'; code: string };
 
@@ -32,6 +36,8 @@ export type CouponCheck =
 export interface MessageCoupon {
   code: string;
   checked: boolean;
+  /** A checked coupon's own prices (check_coupon), used for the line amounts and the total. */
+  prices?: CouponPrices;
 }
 
 /**

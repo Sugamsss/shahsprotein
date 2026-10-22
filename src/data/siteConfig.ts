@@ -35,6 +35,9 @@ export const siteConfig = {
       `${shelfLife}. No preservatives.${madeToOrder ? ' Made after you order.' : ''}`,
     contains: 'Contains',
     packSizes: (count: number) => (count > 1 ? 'Pack sizes' : 'Pack size'),
+    // A card's price tags (MRP per pack size, from products.ts). The popup shows
+    // the picked pack's MRP in its "Add to order" button.
+    mrpLabel: (name: string) => `${name} MRP`,
     nutrition: 'Nutrition information',
     nutrient: 'Nutrient',
     per100g: 'Per 100 g',
@@ -129,8 +132,10 @@ export const siteConfig = {
     general: "Hi! I'd like to place an order.",
   },
   // The "Your order" popup. It says "we", and names Sunit as the one who gets the
-  // message: orders go to him on the order number above. No prices, totals or
-  // delivery costs anywhere: we reply with them on WhatsApp. Items read
+  // message: orders go to him on the order number above. Each line shows its
+  // price (MRP, or an accepted coupon's own price) and the order shows a total
+  // before delivery, in the popup and the message. Delivery and how to pay come
+  // in our WhatsApp reply. Items read
   // "Muesli, 250 g" in the popup and "Muesli 250 g" in the message.
   order: {
     // Most packs of one product in one size per order. Bigger orders are a chat.
@@ -138,7 +143,7 @@ export const siteConfig = {
 
     // Popup
     title: 'Your order',
-    intro: "Pick what you'd like and send a request to Sunit on WhatsApp. We'll reply there to confirm your order and share the next steps.",
+    intro: "Pick what you'd like and send it to Sunit on WhatsApp. We'll reply to confirm your order, with delivery and how to pay.",
     itemsHeading: 'In your order', // visually hidden
     addMoreHeading: 'Add something else',
     detailsHeading: 'Your details',
@@ -148,6 +153,7 @@ export const siteConfig = {
     cardAdd: 'Add',
     cardAddLabel: (name: string) => `Add ${name} to your order`,
     addToOrder: 'Add to order',
+    addToOrderShort: 'Add', // on phones, before the pack's price
     sizeLegendProduct: 'Pack size',
     headerOrder: 'Order',
     headerEmptyLabel: 'Start your order',
@@ -165,6 +171,12 @@ export const siteConfig = {
 
     // Lines
     itemName: (name: string, size: string) => `${name}, ${size}`,
+    // A line's price: packs × the pack price. With a coupon price, the MRP amount shows struck through.
+    linePriceWas: 'MRP ', // visually hidden
+    linePriceNow: 'with your coupon ', // visually hidden
+    // Under the lines: packs added up at the prices shown. Delivery isn't in it.
+    totalLabel: 'Total',
+    totalNote: 'Delivery isn’t included. We’ll confirm it on WhatsApp.',
     sizeLegend: (name: string) => `Pack size for ${name}`,
     singleSize: (size: string) => `${size} pack`,
     qtyGroup: (item: string) => `How many ${item}`,
@@ -252,7 +264,7 @@ export const siteConfig = {
 
     // Sent
     sentTitle: 'Now press send in WhatsApp',
-    sentBody: "Your request is written out and waiting there. Once you send it, we'll confirm your order in the chat and share the next steps. We usually reply the same day.",
+    sentBody: "Your order is written out and waiting there. Once you send it, we'll confirm it in the chat, with delivery and how to pay. We usually reply the same day.",
     retryLead: "WhatsApp didn't open?",
     retry: 'Try again',
     // A quiet fallback for when WhatsApp won't open at all (a laptop without it,
@@ -263,6 +275,7 @@ export const siteConfig = {
     copyFailed: (number: string) => `Couldn't copy it here. You can message us on WhatsApp at ${number}.`,
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
+    recapTotal: 'Total before delivery',
     recapCoupon: (code: string) => `Coupon ${code}`,
     // Its own row in the recap, so it can be grabbed when WhatsApp didn't open.
     sentCode: 'Your order code',
@@ -289,14 +302,17 @@ export const siteConfig = {
       greeting: (name: string) => `Hi! I'm ${name}, and I'd like to place an order:`,
       // Never sent in practice, because a name is required. Kept for safety.
       greetingNoName: "Hi! I'd like to place an order:",
-      line: (productName: string, size: string, quantity: number) => `• ${productName} ${size} × ${quantity}`,
+      // The amount is packs × pack price, left off only if a pack has no price.
+      line: (productName: string, size: string, quantity: number, amount?: string) =>
+        `• ${productName} ${size} × ${quantity}${amount ? ` · ${amount}` : ''}`,
+      total: (amount: string) => `Total: ${amount} (before delivery)`,
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       phone: (phone: string) => `Phone: ${phone}`,
       address: (address: string) => `Deliver to: ${address}`,
       // The code Sunit matches to the order book. Always there: it's made when the order starts.
       code: (code: string) => `Order code: ${code}`,
-      closing: 'Could you confirm my order and send me the total?',
+      closing: 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     },
   },
   social: {

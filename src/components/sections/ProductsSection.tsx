@@ -14,6 +14,7 @@ import { useOrder } from '../../context/OrderContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
+import { formatRupees } from '../../utils/prices';
 import type { Product } from '../../types/product';
 import type { Theme } from '../../types/theme';
 
@@ -23,6 +24,26 @@ const joinWithAnd = (items: string[]): string =>
 
 const copy = siteConfig.order;
 const text = siteConfig.products;
+
+/** The pack sizes that have an MRP, in pack order. */
+const pricedSizes = (product: Product): string[] =>
+  product.weightOptions.filter((size) => product.mrp[size] != null);
+
+/** A price tag per pack: the MRP, with its pack size under it. */
+const PackPrices: React.FC<{ product: Product }> = ({ product }) => {
+  const sizes = pricedSizes(product);
+  if (sizes.length === 0) return null;
+  return (
+    <dl className="pack-prices" aria-label={text.mrpLabel(product.name)}>
+      {sizes.map((size) => (
+        <div key={size} className="pack-prices__item">
+          <dt>{size}</dt>
+          <dd>{formatRupees(product.mrp[size])}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+};
 
 const ProductCard: React.FC<{
   product: Product;
@@ -46,6 +67,7 @@ const ProductCard: React.FC<{
       <h3>{product.name}</h3>
       <p className="portfolio-card__tagline">{product.tagline}</p>
       <p className="portfolio-card__description">{product.shortDescription}</p>
+      <PackPrices product={product} />
       <div className="portfolio-card__actions">
         <button
           type="button"
@@ -119,7 +141,13 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
         {...preloadOrderHandlers}
       >
         <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
-        <span>{copy.addToOrder}</span>
+        {/* "Add" on phones, where the switch shares the row (see CSS). */}
+        <span className="product-detail__add-long">{copy.addToOrder}</span>
+        <span className="product-detail__add-short">{copy.addToOrderShort}</span>
+        {/* The picked pack's MRP, so the price changes with the switch. */}
+        {product.mrp[size] != null && (
+          <span className="product-detail__add-price">{formatRupees(product.mrp[size])}</span>
+        )}
       </button>
       {outSizes.map((option) => (
         <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>
@@ -196,21 +224,20 @@ export const ProductsSection: React.FC = () => {
             </React.Suspense>
           ) : (
             <div className="product-detail">
-              <p className="product-detail__tagline">{selectedProduct.tagline}</p>
-              <p className="product-detail__description">{selectedProduct.fullDescription}</p>
+              <p className="product-detail__founder-note">{selectedProduct.benefits}</p>
 
               <section className="product-detail__section" aria-label={text.ingredients}>
                 <h4>{text.ingredients}</h4>
-                <ul className="product-detail__ingredients">
+                <ul className="product-detail__chips" role="list">
                   {selectedProduct.ingredients.map((ingredient, index) => {
                     const { image, rows } = selectedProduct.ingredientSprite;
                     const column = index % 3;
                     const row = Math.floor(index / 3);
 
                     return (
-                      <li key={ingredient}>
+                      <li key={ingredient} className="product-detail__chip">
                         <span
-                          className="product-detail__ingredient-art"
+                          className="product-detail__chip-art"
                           aria-hidden="true"
                           style={{
                             backgroundImage: `url(${image})`,
@@ -218,7 +245,7 @@ export const ProductsSection: React.FC = () => {
                             backgroundPosition: `${column * 50}% ${(row / (rows - 1)) * 100}%`,
                           }}
                         />
-                        <span>{ingredient}</span>
+                        <span className="product-detail__chip-name">{ingredient}</span>
                       </li>
                     );
                   })}
@@ -242,6 +269,7 @@ export const ProductsSection: React.FC = () => {
                       <dd>{joinWithAnd(selectedProduct.weightOptions)}</dd>
                     </div>
                   )}
+
                 </dl>
               </section>
 

@@ -19,17 +19,56 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'example10', checked: true } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Raggi Jaggi 250 g × 1\n'
-      + '• Muesli 250 g × 2\n'
-      + '• Muesli 500 g × 1\n'
-      + '• Date Bites 250 g × 1\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹165\n'
+      + '• Muesli 250 g × 2 · ₹560\n'
+      + '• Muesli 500 g × 1 · ₹550\n'
+      + '• Date Bites 250 g × 1 · ₹220\n'
+      + '\n'
+      + 'Total: ₹1,495 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Phone: 98765 43210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
-      + 'Could you confirm my order and send me the total?',
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
+    );
+  });
+
+  it("prices packs at a checked coupon's own prices, and the rest at MRP", () => {
+    const coupon = { code: 'EXAMPLE10', checked: true, prices: { 'muesli|250 g': 250 } };
+    expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon })).toBe(
+      "Hi! I'm Anjali, and I'd like to place an order:\n"
+      + '\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹165\n'
+      + '• Muesli 250 g × 2 · ₹500\n'
+      + '• Muesli 500 g × 1 · ₹550\n'
+      + '• Date Bites 250 g × 1 · ₹220\n'
+      + '\n'
+      + 'Total: ₹1,435 (before delivery)\n'
+      + '\n'
+      + 'Coupon: EXAMPLE10\n'
+      + 'Phone: 98765 43210\n'
+      + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
+      + 'Order code: SN-7KQ4M\n'
+      + '\n'
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
+    );
+  });
+
+  it('leaves out the amount and the total when a pack has no price', () => {
+    const odd = [{ productId: 'bites', size: '500 g', quantity: 1 }, { productId: 'muesli', size: '250 g', quantity: 1 }];
+    expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: odd, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' } })).toBe(
+      "Hi! I'm Anjali, and I'd like to place an order:\n"
+      + '\n'
+      + '• Muesli 250 g × 1 · ₹280\n'
+      + '• Date Bites 500 g × 1\n'
+      + '\n'
+      + 'Phone: 98765 43210\n'
+      + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
+      + 'Order code: SN-7KQ4M\n'
+      + '\n'
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     );
   });
 
@@ -38,25 +77,29 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'EXAMPLE10', checked: false } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2\n'
+      + '• Muesli 250 g × 2 · ₹560\n'
+      + '\n'
+      + 'Total: ₹560 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10 (not checked yet)\n'
       + 'Phone: 98765 43210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
-      + 'Could you confirm my order and send me the total?',
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     );
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone:'919876543210', address:{premises:'Flat 4B',area:'Shivaji Nagar',city:'Satara',state:'Maharashtra',pincode:'415001'}, coupon: null })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2\n'
+      + '• Muesli 250 g × 2 · ₹560\n'
+      + '\n'
+      + 'Total: ₹560 (before delivery)\n'
       + '\n'
       + 'Phone: 98765 43210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
-      + 'Could you confirm my order and send me the total?',
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     );
   });
 
@@ -71,13 +114,15 @@ describe('buildOrderMessage', () => {
     expect(message).toBe(
       "Hi! I'm Priya Shah, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2\n'
+      + '• Muesli 250 g × 2 · ₹560\n'
+      + '\n'
+      + 'Total: ₹560 (before delivery)\n'
       + '\n'
       + 'Phone: 98765 43210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
-      + 'Could you confirm my order and send me the total?',
+      + 'Could you confirm my order, and let me know the delivery charge and how to pay?',
     );
   });
 });

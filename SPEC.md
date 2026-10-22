@@ -10,8 +10,8 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
-- **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with the total…"). The WhatsApp message itself is the customer speaking.
-- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". No prices are shown yet.
+- **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with delivery and how to pay"). The WhatsApp message itself is the customer speaking.
+- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the founder's, in `src/data/products.ts`): price tags on the cards, and the picked pack's price in the popup's Add button.
 
 ## 2. Themes and design tokens
 
@@ -47,7 +47,7 @@ Rules:
 
 ### The "Your order" popup
 
-People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **There are no prices, totals, delivery costs or payment on the site** (the founder's call): we reply on WhatsApp with the total, delivery and how to pay. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
+People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **The site shows MRPs, each line's price and the order's total before delivery** (an accepted coupon's own prices from the admin where it has them), in the popup and in the WhatsApp message (the founder's call, 2026-10-22). **No delivery costs or payment on the site:** we reply on WhatsApp with delivery and how to pay. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
 
 - **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
 - **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, "See your message", which shows the exact text, and a short privacy note ("We keep your name, pincode and what you ordered, so we can look after your order."). **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
@@ -58,15 +58,19 @@ People build their order on the site and send Sunit one tidy WhatsApp message on
   ```
   Hi! I'm Anjali, and I'd like to place an order:
 
-  • Raggi Jaggi 250 g × 1
-  • Muesli 250 g × 2
+  • Raggi Jaggi 250 g × 1 · ₹165
+  • Muesli 250 g × 2 · ₹560
+
+  Total: ₹725 (before delivery)
 
   Coupon: EXAMPLE10
   Pincode: 415001
   Order code: SN-7KQ4M
 
-  Could you send me the total?
+  Could you let me know the delivery charge and how to pay?
   ```
+
+  Amounts and the total use the popup's prices: MRP, or a checked coupon's own price for that pack. A pack with no price drops its amount and the whole total (never a wrong total). Back-soon lines aren't sent, so they aren't counted. The popup shows the same total under the lines (`orderTotal` in `src/utils/prices.ts`, with the MRP total struck through when a coupon saves), and the sent panel repeats it.
 
   A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out. The order code is always there: it's made when the order starts. The sent panel also shows it ("Your order code is SN-7KQ4M.").
 - **State** lives in `OrderContext` (`src/context/OrderContext.tsx`). All popup copy is in `siteConfig.order`. The popup body is lazy-loaded.
@@ -84,7 +88,7 @@ Pranjali turns a pack size off in the admin (Products). The site reads which siz
 
 ### Coupons
 
-Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") or not valid, and nothing else. Descriptions can't mention an amount (₹, Rs or INR are rejected), because the site shows no prices; we work out the discount in the chat. The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes in the admin under Coupons (see §7).
+Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") and that coupon's own prices per pack, or not valid. Lines with a coupon price show the MRP struck through and the coupon price; other packs stay at MRP. Descriptions can't mention an amount (₹, Rs or INR are rejected). The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes in the admin under Coupons (see §7).
 
 ### Direct WhatsApp links
 
@@ -103,7 +107,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 1. **Header** (`layout/Header.tsx`): floating glass pill. Logo, centred links (Products, Our Principles, Our Story), theme toggle, an email icon, and an **Order** button (WhatsApp glyph, 32px) that opens "Your order". When the order has packs in it, the glyph becomes a count chip ("9+" above 9). On phones the Order button stays visible next to the menu button, and the menu button's ☰ and ✕ crossfade. The open phone menu has a light see-through layer over the page: a tap on it only closes the menu. Under the links, one full-width "Email us" pill. There's no Instagram link anywhere on the site. At ≤400px the menu's Light/Dark switch has two equal halves and a sliding thumb.
 2. **Hero** (`sections/HeroSection.tsx`): badge "NOW TAKING ORDERS" (swap back to "GOOD FOOD. BRIGHTER DAYS." after the first month or so), heading from `siteConfig.heroHeading` ("Healthy food that **tastes unhealthy.**", the second half in the accent colour; balanced so it breaks between the two halves), motto, **Order on WhatsApp** (48px, full width on phones, opens "Your order"), a quiet "See the range" link to `#products`, and the line "Made fresh in small batches. Delivered across India." No email form or avatars.
-3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **+ Add** button (adds one 250 g pack and opens "Your order"). The popup opens on the same lines as its card (the name in the serif, in the product colour, then the tagline in ink) and shows the description, ingredients (sprite art), **Good to know** (shelf life, contains, pack sizes), nutrition, and a pinned bar with the pack size and **Add to order**, which switches the popup to "Your order". Date Bites comes in one size, so it shows "250 g pack" as plain text instead of a switch. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
+3. **Products** (`sections/ProductsSection.tsx`, `#products`): three cards (Raggi Jaggi, Muesli, Date Bites), each with "View details" (opens the popup; the whole card is clickable) and a small **+ Add** button (adds one 250 g pack and opens "Your order"). The popup opens with the name, then the founder's note, then ingredient chips, **Good to know** (shelf life, contains, pack sizes), and nutrition. A pinned bar holds the pack size and **Add to order**, which switches the popup to "Your order". Date Bites comes in one size, so it shows "250 g pack" as plain text instead of a switch. When a nutrition panel isn't ready, the popup says so and offers "Ask us on WhatsApp".
 4. **Values** (`sections/ValuesSection.tsx`, `#values`): "What we believe", three cards from `src/data/values.ts`.
 5. **Our Story** (`sections/StorySection.tsx`, `#our-story`): founder story from `siteConfig.story`, key phrases highlighted with `.story-highlight`.
 6. **FAQ** (`sections/FAQSection.tsx`, `#faq`): eight questions from `src/data/faqs.ts` (first one open). The question row toggles; taps inside an open answer don't close it. Under the list: "Have another question? Ask us on WhatsApp." (order chat) and "Need help with an order you've placed? Customer care: 9881191999" with Call and WhatsApp.
@@ -120,14 +124,14 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
 - Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
-- `weightOptions` holds pack sizes. The site shows no prices. The owners' prices live only in Supabase and only the admin reads them (see §7).
-- **Ingredient sprites** (`public/assets/ingredients/`) are a 3-column grid, row-major, in the same order as `ingredients`; `ingredientSprite.rows` must match. `/assets/*` is served with a one-year `immutable` cache (`vercel.json`), so **a changed sprite must get a new filename** (hence `muesli-v2.webp`, then `muesli-v3.webp`, and `date-bites-v2.webp`). The site loads a copy exported at 216px per tile (3x the 72px tile), named `-648w.webp` (e.g. `muesli-v3-648w.webp`). Keep the full-size sprite as the master.
+- `weightOptions` holds pack sizes and `mrp` their MRPs. The owners' base prices live only in Supabase and only the admin reads them; coupon prices reach the site only through `check_coupon` for that code (see §7).
+- **Ingredient sprites** (`public/assets/ingredients/`) supply the small round pictures in the wrapping ingredient chips. Names are text in a list; pictures are decorative. Each sprite has 3 columns, read across then down in `ingredients` order; `ingredientSprite.rows` must match (Muesli has 6). The site loads `raggi-jaggi-648w.webp`, `muesli-v5-648w.webp` and `date-bites-v3-648w.webp`, exported at 216px per tile, 648px wide. Keep the full-size masters (`raggi-jaggi.webp`, `muesli-v5.webp`, `date-bites-v3.webp`). `/assets/*` has a one-year `immutable` cache, so a changed sprite needs a new filename.
 - **Card images** (`image`) are per-product crops in `public/assets/product-cards/`, cut at the card's 1.3 ratio from `english-product-portfolio.png`. Image rules for the whole site are in `AGENTS.md` under "Images, fonts and bundle size".
 
 ```ts
 interface Product {
   id: string; name: string; tagline: string;
-  shortDescription: string; fullDescription: string;
+  shortDescription: string; benefits: string;
   iconType: 'leaf' | 'wheat' | 'dumbbell' | 'currency';
   image: string; features: string[]; ingredients: string[];
   ingredientSprite: { image: string; rows: number };

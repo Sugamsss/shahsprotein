@@ -318,7 +318,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!code) return null;
     switch (coupon.status) {
       case 'valid':
-        return { code: coupon.code, checked: true };
+        return { code: coupon.code, checked: true, prices: coupon.prices };
       case 'invalid':
         return null;
       case 'checking':

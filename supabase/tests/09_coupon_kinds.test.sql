@@ -175,8 +175,8 @@ reset role;
 
 select is(
   jsonb_build_array(public.check_coupon('example10')::jsonb, public.check_coupon('NOPE-NOPE')::jsonb),
-  '[{"valid":true,"description":"Ten percent off"},{"valid":false}]'::jsonb,
-  'check_coupon: still exactly {valid, description} / {valid}, no kind'
+  '[{"valid":true,"description":"Ten percent off","prices":[]},{"valid":false}]'::jsonb,
+  'check_coupon: {valid, description, prices} / {valid}, no kind'
 );
 
 select ok(

@@ -25,7 +25,7 @@ describe('coupon acceptance lifecycle', () => {
 
   function Capture() { order = useOrder(); return <CouponField />; }
   const change = (fn: (value: OrderContextType) => void) => act(() => fn(order));
-  const accept = { status: 'valid', code: 'EXAMPLE10', description: 'Example offer' } as const;
+  const accept = { status: 'valid', code: 'EXAMPLE10', description: 'Example offer', prices: {} } as const;
   const pendingCheck = () => {
     let resolve!: (result: CouponCheck) => void;
     checkCoupon.mockReturnValueOnce(new Promise<CouponCheck>((done) => { resolve = done; }));

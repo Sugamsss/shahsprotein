@@ -1236,6 +1236,50 @@ a {
   text-wrap: pretty;
 }
 
+/* Price tags: the MRP big, its pack size small under it, a hairline between
+   packs. Inter's lining figures, not the serif's old-style ones. */
+.pack-prices {
+  display: flex;
+  margin: 0;
+}
+
+/* On a card the tags sit just above the divider, level across the row. */
+.portfolio-card__body .pack-prices {
+  margin-top: auto;
+}
+
+.pack-prices + .portfolio-card__actions {
+  margin-top: 0.9rem;
+}
+
+.pack-prices__item {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.05rem;
+}
+
+.pack-prices__item + .pack-prices__item {
+  margin-left: 1.1rem;
+  padding-left: 1.1rem;
+  border-left: 1px solid var(--color-border-divider);
+}
+
+.pack-prices dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pack-prices dt {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 .portfolio-card__actions {
   display: flex;
   align-items: center;
@@ -1282,13 +1326,7 @@ a {
   }
 }
 
-.product-detail__tagline {
-  color: var(--color-text-primary);
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.product-detail__description,
+.product-detail__founder-note,
 .product-detail__note {
   margin-top: 0.45rem;
   color: var(--color-text-secondary);
@@ -1313,33 +1351,43 @@ a {
   text-transform: uppercase;
 }
 
-/* Five a row (three on phones), and a short last row sits centred. */
-.product-detail__ingredients {
+/* Ingredient chips: small round picture cropped from the sprite + the name */
+.product-detail__chips {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.65rem 0.4rem;
+  gap: 0.45rem 0.4rem;
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.product-detail__ingredients li {
-  flex: 0 0 calc((100% - 4 * 0.4rem) / 5);
-  display: flex;
-  flex-direction: column;
+.product-detail__chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.3rem;
-  color: var(--color-text-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.7rem 0.22rem 0.22rem;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  box-shadow: var(--shadow-ingredient-chip);
 }
 
-.product-detail__ingredient-art {
-  width: 72px;
-  height: 72px;
+.product-detail__chip-art {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
   background-repeat: no-repeat;
+  background-color: var(--color-bg-pill);
+  box-shadow: var(--shadow-ingredient-art);
+}
+
+.product-detail__chip-name {
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .product-detail__facts {
@@ -1397,6 +1445,18 @@ a {
 .product-detail__add {
   flex: 1;
   min-width: 0;
+}
+
+.product-detail__add-short {
+  display: none;
+}
+
+/* The picked pack's price, after a soft divider in the button's own colour. */
+.product-detail__add-price {
+  margin-left: 0.35rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Every size out: "Back soon · Ask us in the chat", centred, the height of
@@ -1567,7 +1627,7 @@ a {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) auto;
   grid-template-areas:
-    'thumb name name'
+    'thumb name price'
     'thumb size qty'
     '.     note note';
   align-items: center;
@@ -1651,6 +1711,68 @@ a {
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.2;
+}
+
+.order-line__price {
+  grid-area: price;
+  align-self: end;
+  justify-self: end;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.order-line__price s {
+  margin-right: 0.15rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.order-line__price-now {
+  color: var(--color-success-text);
+}
+
+/* Under the lines: "Total" and the amount, then the delivery note. */
+.order-total {
+  padding: 0.875rem 0 0.25rem;
+}
+
+.order-total__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.order-total__label {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.order-total__amount {
+  color: var(--color-text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.order-total__amount s {
+  margin-right: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.order-total__note {
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
 .order-line__size {
@@ -2491,6 +2613,17 @@ a {
 .order-recap li span {
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+.order-recap li.order-recap__total {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border-divider);
+  font-weight: 700;
+}
+
+.order-recap li.order-recap__total span {
+  color: var(--color-text-primary);
 }
 
 .order-recap__meta {
@@ -4367,17 +4500,22 @@ img {
     flex-basis: 100%;
   }
 
-  .product-detail__ingredients {
-    gap: 0.75rem 0.25rem;
+  .product-detail__chips {
+    gap: 0.4rem 0.35rem;
   }
 
-  .product-detail__ingredients li {
-    flex-basis: calc((100% - 2 * 0.25rem) / 3);
+  .product-detail__chip {
+    padding: 0.18rem 0.6rem 0.18rem 0.18rem;
+    gap: 0.4rem;
   }
 
-  .product-detail__ingredient-art {
-    width: 64px;
-    height: 64px;
+  .product-detail__chip-art {
+    width: 26px;
+    height: 26px;
+  }
+
+  .product-detail__chip-name {
+    font-size: 0.78125rem;
   }
 
   .product-detail__nutrition {
@@ -4514,6 +4652,15 @@ img {
     gap: 0.875rem;
   }
 
+  /* The switch shares the row, so "Add to order" becomes "Add" before the price. */
+  .product-detail__add-long {
+    display: none;
+  }
+
+  .product-detail__add-short {
+    display: inline;
+  }
+
   .order-fields .input,
   .order-coupon__row .input,
   .order-coupon__apply {
@@ -4546,7 +4693,16 @@ img {
     min-width: 1.5rem;
   }
 
-  /* The product popup's bar stacks: the switch full width, Add under it. */
+  /* The product popup's bar stacks: the switch full width, Add under it,
+     with room for the whole "Add to order" again. */
+  .product-detail__add-long {
+    display: inline;
+  }
+
+  .product-detail__add-short {
+    display: none;
+  }
+
   .product-detail__order {
     flex-direction: column;
     align-items: stretch;
