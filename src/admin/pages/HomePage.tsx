@@ -116,7 +116,7 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
 
 /** The overview gives the counts and dates; the totals add packs and names once they're in. */
 const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
-  const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), []);
+  const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), [], { refreshOnFocus: true });
   const collect = q.to_collect;
   const overall = totals?.overall;
   const collectHint = [
@@ -127,7 +127,7 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     collect.part_paid > 0 && payCopy.paidPart(overall?.to_collect.part_paid_names ?? [], collect.part_paid),
   ].filter(Boolean).join('. ');
   const rows = [
-      requests.data && !requests.error && requests.data.requests.length > 0 && <AdminLink key="req" to="/admin/requests" className="adm-home__row">
+    requests.data && !requests.error && requests.data.requests.length > 0 && <AdminLink key="req" to="/admin/requests" className="adm-home__row">
       <span className="adm-home__circle is-accent">{requests.data.requests.length}</span>
       <span className="adm-list__main"><span className="adm-list__title">{adminCopy.websiteRequests.homeTitle(requests.data.requests.length)}</span><span className="adm-list__sub">{adminCopy.websiteRequests.homeHint}</span></span>
       <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
@@ -139,7 +139,7 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
     collect.count > 0 && <Row key="m" lane="collect" circle={<IndianRupee size={18} aria-hidden="true" />} tone="money"
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
-    ].filter(Boolean);
+  ].filter(Boolean);
   return (
     <section className="adm-card adm-home__card adm-home__card--flush" aria-labelledby="adm-home-waiting">
       <div className="adm-home__head">

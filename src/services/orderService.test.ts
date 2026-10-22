@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { saveOrder } from './orderService';
 
-// The request Send makes to the order book (contract.md, `submit_order`).
+// The request Send makes to the order book (`submit_website_request`, or
+// `submit_order` while the database doesn't have it yet).
 
 const order = {
   code: 'SN-7KQ4M',
@@ -55,6 +56,34 @@ describe('saveOrder', () => {
       p_address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001', landmark:'' },
       p_coupon: 'EXAMPLE10',
     });
+  });
+
+  it('falls back to submit_order while the database has no submit_website_request', async () => {
+    fetchMock.mockImplementationOnce(() => Promise.resolve(new Response(null, { status: 404 })));
+    saveOrder(order);
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [url, init] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(url).toBe('https://example.supabase.co/rest/v1/rpc/submit_order');
+    expect(init).toMatchObject({ method: 'POST', keepalive: true });
+    expect(JSON.parse(init.body as string)).toEqual({
+      p_code: 'SN-7KQ4M',
+      p_lines: [
+        { product_id: 'muesli', size: '250 g', quantity: 2 },
+        { product_id: 'bites', size: '250 g', quantity: 1 },
+      ],
+      p_name: 'Anjali',
+      p_pincode: '415001',
+      p_coupon: 'EXAMPLE10',
+    });
+  });
+
+  it('does not fall back when the request is saved or refused', async () => {
+    fetchMock.mockImplementationOnce(() => Promise.resolve(new Response(null, { status: 400 })));
+    saveOrder(order);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('sends no coupon when the message has none', () => {

@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, CookingPot, Download, Gift, Plus, Search, X } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
-import { getOrders } from '../api';
-import { getWebsiteRequests } from '../api';
+import { getOrders, getWebsiteRequests } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatMoney } from '../format';
 import { LoadError, Skeleton } from '../parts';
@@ -149,7 +148,7 @@ const OrdersPage: React.FC<{ behind?: boolean }> = ({ behind = false }) => {
   const navigate = useNavigate();
   const laptop = useLaptop();
   const cook = useAdminMe().home_view === 'cook';
-  const websiteRequests = useRpc(getWebsiteRequests, [], { refreshOnFocus: true });
+  const websiteRequests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), [], { refreshOnFocus: true });
   const { data: overview, reload: reloadOverview } = useOverview();
   const doneCounts = overview?.done;
   const doneTotal = doneCounts && doneCounts.delivered_paid + doneCounts.free_samples + doneCounts.cancelled;

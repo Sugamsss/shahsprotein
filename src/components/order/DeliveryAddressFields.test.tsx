@@ -15,11 +15,12 @@ describe('delivery address suggestion lifecycle', () => {
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); loadPlaces.mockReset(); searchPlaces.mockReset(); selectedAddress.mockReset();
     vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key');
     host = document.createElement('div'); document.body.append(host); root = createRoot(host);
     loadPlaces.mockResolvedValue({ AutocompleteSessionToken: class {} }); searchPlaces.mockResolvedValue([]);
     act(() => root.render(<OrderProvider><Capture /></OrderProvider>));
   });
-  afterEach(() => { act(() => root.unmount()); host.remove(); vi.restoreAllMocks(); });
+  afterEach(() => { act(() => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllEnvs(); });
   const type = (input: HTMLInputElement, value: string) => act(() => { const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!; setter.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); });
 
   it('does not overwrite newer manual edits when selection details resolve', async () => {
@@ -36,14 +37,38 @@ describe('delivery address suggestion lifecycle', () => {
     expect(order.address.state).toBe('');
   });
 
-  it('Escape dismisses suggestions and prevents the modal close handler', () => {
+  it('Escape dismisses open suggestions and prevents the modal close handler', async () => {
+    searchPlaces.mockResolvedValue([{ label: 'Satara', place: {} }]);
     const searchBox = host.querySelector<HTMLInputElement>('#delivery-search')!;
+    type(searchBox, 'Satara town'); await act(async () => { await new Promise((r) => setTimeout(r, 270)); });
     let modalClosed = false;
     // Dialog-level handler intentionally only closes on an unhandled Escape.
     host.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !event.defaultPrevented) modalClosed = true; });
     const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
     act(() => searchBox.dispatchEvent(event));
     expect(event.defaultPrevented).toBe(true); expect(modalClosed).toBe(false);
+    expect(host.querySelector('[role="option"]')).toBeNull();
+  });
+
+  it('Escape with no suggestions open is left for the popup to close', () => {
+    const searchBox = host.querySelector<HTMLInputElement>('#delivery-search')!;
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    act(() => searchBox.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('a search with no match says so and keeps the search box', async () => {
+    const searchBox = host.querySelector<HTMLInputElement>('#delivery-search')!;
+    type(searchBox, 'Nowhere at all'); await act(async () => { await new Promise((r) => setTimeout(r, 270)); });
+    expect(host.textContent).toContain('No match for that');
+    expect(host.querySelector('#delivery-search')).toBeTruthy();
+  });
+
+  it('shows no search without a Places key; the address is typed in', () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');
+    act(() => root.render(<OrderProvider><Capture /></OrderProvider>));
+    expect(host.querySelector('#delivery-search')).toBeNull();
+    expect(host.querySelector('#delivery-premises')).toBeTruthy();
   });
 
   it('manual fields remain usable when Places cannot load', async () => {

@@ -30,7 +30,7 @@ export const OrderCheckout: React.FC = () => {
   // An error shows once someone has typed in a field and left it, or pressed Send.
   // It goes as soon as the field is valid. An untouched field stays quiet until Send.
   const typed = useRef<Record<Field, boolean>>({ name: false, phone: false });
-  const [left, setLeft] = useState<Record<Field, boolean>>({ name: false, phone:false });
+  const [left, setLeft] = useState<Record<Field, boolean>>({ name: false, phone: false });
   const [submitted, setSubmitted] = useState(false);
 
   // Every line is out of stock: there's nothing to send.
@@ -117,9 +117,14 @@ export const OrderCheckout: React.FC = () => {
           <div className="order-field">
             <label htmlFor={`${id}-phone`} className="order-field__label">{copy.phoneLabel}</label>
             <input ref={phoneRef} id={`${id}-phone`} className="input" type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={phone}
-              aria-invalid={!phoneOk && (submitted || left.phone) || undefined}
-              onChange={(event) => { typed.current.phone = true; setPhone(event.target.value); }} onBlur={(event) => { const cleaned = cleanPhone(event.currentTarget.value); setPhone(cleaned); leave('phone'); }} />
-            {!phoneOk && (submitted || left.phone) ? <p className="order-field__error">{phone ? copy.phoneInvalid : copy.phoneMissing}</p> : <p className="order-field__hint">{copy.phoneHint}</p>}
+              aria-invalid={!phoneOk && (submitted || left.phone) || undefined} aria-describedby={`${id}-phone-note`}
+              onChange={(event) => { typed.current.phone = true; setPhone(event.target.value); }} onBlur={() => leave('phone')} />
+            {!phoneOk && (submitted || left.phone) ? (
+              <p id={`${id}-phone-note`} className="order-field__error">
+                <AlertCircle size={15} aria-hidden="true" />
+                <span>{phone ? copy.phoneInvalid : copy.phoneMissing}</span>
+              </p>
+            ) : <p id={`${id}-phone-note`} className="order-field__hint">{copy.phoneHint}</p>}
           </div>
         </div>
         <DeliveryAddressFields submitted={submitted} />

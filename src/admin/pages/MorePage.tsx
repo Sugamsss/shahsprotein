@@ -33,7 +33,7 @@ const MorePage: React.FC = () => {
     <div className="adm-page">
       <h1 className="adm-title">{copy.more.title}</h1>
       <section className="adm-card adm-list">
-        {admin && requests.data && !requests.error && <Link to="/admin/requests"><Row Icon={ClipboardList} title={copy.more.requests[0]} sub={`${requests.data.requests.length} to confirm`} /></Link>}
+        {admin && requests.data && !requests.error && <Link to="/admin/requests"><Row Icon={ClipboardList} title={copy.more.requests[0]} sub={copy.websiteRequests.homeTitle(requests.data.requests.length)} /></Link>}
         <Link to="/admin/coupons">
           <Row Icon={Ticket} title={copy.more.coupons[0]} sub={couponsOn === undefined ? copy.more.coupons[1] : copy.moreCounts.couponsOn(couponsOn)} />
         </Link>

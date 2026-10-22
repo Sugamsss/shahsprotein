@@ -5002,8 +5002,8 @@ img {
 }
 
 /* Public delivery address form and inline Places combobox. */
-.delivery-fields { border: 0; padding: 0; margin: 1.5rem 0 0; min-width: 0; }
-.delivery-fields legend { color: var(--color-text-primary); font-weight: 600; margin-bottom: .75rem; }
+.delivery-fields { display: grid; gap: 1rem; border: 0; padding: 0; margin: 1.5rem 0 0; min-width: 0; }
+.delivery-fields legend { color: var(--color-text-primary); font-weight: 600; margin-bottom: 1rem; }
 .delivery-search__input { position: relative; }
 .delivery-search__input > svg { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); }
 .delivery-search__input input { padding-left: 2.5rem; }

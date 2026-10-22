@@ -199,6 +199,8 @@ export const siteConfig = {
     addressSearchHint: 'Start with your area or building.',
     addressSearchDown: "Address search isn't working right now. Just type it in below.",
     addressNoMatch: 'No match for that. Try your area or fill it in below.',
+    addressSearching: 'Looking for your address',  // read out while suggestions load
+    addressAttribution: 'Powered by Google',
     houseLabel: 'House, flat or building',
     streetLabel: 'Street and area',
     landmarkLabel: 'Landmark (optional)',

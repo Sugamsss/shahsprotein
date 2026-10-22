@@ -22,9 +22,11 @@ const endpoint = (name: string): { url: string; key: string } | null => {
 /**
  * POSTs to an RPC and moves on: fire and forget, never throws, the answer is ignored.
  * `keepalive` lets the request finish while the page closes or WhatsApp opens.
- * It doesn't check `isLiveSite()`; callers that write data do.
+ * It doesn't check `isLiveSite()`; callers that write data do. `onMissing` runs if
+ * the database doesn't have the function yet (PostgREST answers 404), for a
+ * change that ships before its migration.
  */
-export const postPublicRpc = (name: string, body: Record<string, unknown>): void => {
+export const postPublicRpc = (name: string, body: Record<string, unknown>, onMissing?: () => void): void => {
   const target = endpoint(name);
   if (!target) return;
   try {
@@ -33,6 +35,8 @@ export const postPublicRpc = (name: string, body: Record<string, unknown>): void
       keepalive: true,
       headers: { apikey: target.key, Authorization: `Bearer ${target.key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+    }).then((response) => {
+      if (response.status === 404) onMissing?.();
     }).catch(() => undefined);
   } catch {
     // Never break the click that started it.
