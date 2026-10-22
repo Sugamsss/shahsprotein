@@ -10,7 +10,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
-- **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with the total…"). The WhatsApp message itself is the customer speaking.
+- **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with delivery and how to pay"). The WhatsApp message itself is the customer speaking.
 - **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the founder's, in `src/data/products.ts`): price tags on the cards, and the picked pack's price in the popup's Add button.
 
 ## 2. Themes and design tokens
@@ -47,7 +47,7 @@ Rules:
 
 ### The "Your order" popup
 
-People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **The site shows MRPs and each line's price in the popup (an accepted coupon's own prices from the admin where it has them), but no totals, delivery costs or payment** (the founder's call): we reply on WhatsApp with the total, delivery and how to pay. The WhatsApp message has no prices. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
+People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **The site shows MRPs, each line's price and the order's total before delivery** (an accepted coupon's own prices from the admin where it has them), in the popup and in the WhatsApp message (the founder's call, 2026-10-22). **No delivery costs or payment on the site:** we reply on WhatsApp with delivery and how to pay. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
 
 - **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
 - **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, "See your message", which shows the exact text, and a short privacy note ("We keep your name, pincode and what you ordered, so we can look after your order."). **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
@@ -58,15 +58,19 @@ People build their order on the site and send Sunit one tidy WhatsApp message on
   ```
   Hi! I'm Anjali, and I'd like to place an order:
 
-  • Raggi Jaggi 250 g × 1
-  • Muesli 250 g × 2
+  • Raggi Jaggi 250 g × 1 · ₹165
+  • Muesli 250 g × 2 · ₹560
+
+  Total: ₹725 (before delivery)
 
   Coupon: EXAMPLE10
   Pincode: 415001
   Order code: SN-7KQ4M
 
-  Could you send me the total?
+  Could you let me know the delivery charge and how to pay?
   ```
+
+  Amounts and the total use the popup's prices: MRP, or a checked coupon's own price for that pack. A pack with no price drops its amount and the whole total (never a wrong total). Back-soon lines aren't sent, so they aren't counted. The popup shows the same total under the lines (`orderTotal` in `src/utils/prices.ts`, with the MRP total struck through when a coupon saves), and the sent panel repeats it.
 
   A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out. The order code is always there: it's made when the order starts. The sent panel also shows it ("Your order code is SN-7KQ4M.").
 - **State** lives in `OrderContext` (`src/context/OrderContext.tsx`). All popup copy is in `siteConfig.order`. The popup body is lazy-loaded.

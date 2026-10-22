@@ -4,9 +4,11 @@ import type { Product } from '../types/product';
 import type { MessagePart, OrderMessageInput } from '../types/order';
 import { whatsappUrl } from './contact';
 import { sortLines } from './orderCart';
+import { formatRupees, orderTotal, packPrice } from './prices';
 
 // Builds the WhatsApp order message. Pure: the words live in siteConfig.order.message.
-// No prices, totals or delivery here, by the founder's choice.
+// Each line carries its amount and the order its total before delivery, at the
+// prices the popup shows (MRP, or a checked coupon's own prices). No delivery here.
 
 const NAME_MAX_LENGTH = 60;
 
@@ -65,10 +67,15 @@ export const orderMessageParts = (
     ? fill(words.greeting, name, 'name', previewBlankName)
     : [{ text: words.greetingNoName }];
 
+  const couponPrices = input.coupon?.prices;
   const items = sortLines(input.lines, products).flatMap((line) => {
     const product = products.find((p) => p.id === line.productId);
-    return product ? [words.line(product.name, line.size, line.quantity)] : [];
+    if (!product) return [];
+    const price = packPrice(product, line.size, couponPrices);
+    const amount = price ? formatRupees(price.price * line.quantity) : undefined;
+    return [words.line(product.name, line.size, line.quantity, amount)];
   });
+  const total = orderTotal(input.lines, couponPrices, products);
 
   const details: MessagePart[][] = [];
   if (couponCode) {
@@ -85,6 +92,7 @@ export const orderMessageParts = (
   const blocks: MessagePart[][] = [
     greeting,
     items.length ? [{ text: items.join('\n') }] : [],
+    total ? [{ text: words.total(formatRupees(total.total)) }] : [],
     details.flatMap((line, i) => (i === 0 ? line : [{ text: '\n' }, ...line])),
     [{ text: words.closing }],
   ].filter((block) => block.length > 0);

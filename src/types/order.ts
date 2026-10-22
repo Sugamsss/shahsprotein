@@ -36,6 +36,8 @@ export type CouponCheck =
 export interface MessageCoupon {
   code: string;
   checked: boolean;
+  /** A checked coupon's own prices (check_coupon), used for the line amounts and the total. */
+  prices?: CouponPrices;
 }
 
 /**

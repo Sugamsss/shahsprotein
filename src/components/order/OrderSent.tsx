@@ -5,6 +5,7 @@ import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
 import { saveOrder } from '../../services/orderService';
 import { buildOrderMessage } from '../../utils/orderMessage';
+import { formatRupees, orderTotal } from '../../utils/prices';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
@@ -74,6 +75,8 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
   const onCopy = () => {
     void copyText(buildOrderMessage(sent)).then((ok) => setCopied(ok ? 'ok' : 'failed'));
   };
+  // The same total the message carried.
+  const total = orderTotal(sent.lines, sent.coupon?.prices);
   const meta = [sent.name, sent.pincode, sent.coupon && copy.recapCoupon(sent.coupon.code)].filter(Boolean).join(' · ');
 
   return (
@@ -95,6 +98,11 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
                 </li>
               );
             })}
+            {total && (
+              <li className="order-recap__total">
+                {copy.recapTotal} <span>{formatRupees(total.total)}</span>
+              </li>
+            )}
           </ul>
           <div className="order-recap__code">
             <p>

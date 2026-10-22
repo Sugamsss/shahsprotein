@@ -1,4 +1,5 @@
-import type { CouponPrices } from '../types/order';
+import { productsData } from '../data/products';
+import type { CouponPrices, OrderLine } from '../types/order';
 import type { Product } from '../types/product';
 
 // MRPs live in products.ts; a coupon's own prices come from check_coupon() and
@@ -40,4 +41,34 @@ export const packPrice = (product: Product, size: string, couponPrices?: CouponP
   if (mrp == null) return null;
   const offer = couponPrices?.[couponPriceKey(product.id, size)];
   return { price: offer ?? mrp, mrp };
+};
+
+export interface OrderTotal {
+  /** What the packs cost: coupon prices where the coupon has them, else MRP. Delivery isn't in it. */
+  total: number;
+  /** The same packs at MRP, so a coupon saving can show struck through. */
+  mrpTotal: number;
+}
+
+/**
+ * The order's total before delivery, or null when there's nothing to add up or a
+ * pack has no MRP (no total rather than a wrong one). Pass only the lines that are
+ * sent (in stock), so it matches the message.
+ */
+export const orderTotal = (
+  lines: readonly OrderLine[],
+  couponPrices?: CouponPrices | null,
+  products: readonly Product[] = productsData,
+): OrderTotal | null => {
+  if (lines.length === 0) return null;
+  let total = 0;
+  let mrpTotal = 0;
+  for (const line of lines) {
+    const product = products.find((p) => p.id === line.productId);
+    const price = product && packPrice(product, line.size, couponPrices);
+    if (!price) return null;
+    total += price.price * line.quantity;
+    mrpTotal += price.mrp * line.quantity;
+  }
+  return { total, mrpTotal };
 };
