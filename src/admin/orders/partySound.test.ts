@@ -1,45 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { STYLES, buzzPattern, dholHits, dholLength } from './partySound';
-
-const onSixteenth = (at: number) => {
-  const n = (at - 0.6) / 0.125;
-  return Math.abs(n - Math.round(n)) < 1e-6;
-};
+import { DHOL_HITS, PLAY_FOR, buzzPattern } from './partySound';
 
 describe('the party dhol', () => {
-  it.each(STYLES)('%s: a tasha roll with the poppers, then strokes on the 120 bpm sixteenths, in time order', (style) => {
-    const hits = dholHits('party', style);
-    const intro = hits.filter((h) => h.at < 0.6);
-    expect(intro.length).toBeGreaterThan(4);
-    expect(intro.every((h) => h.drum === 'tasha')).toBe(true);
-    expect(hits.map((h) => h.at)).toEqual([...hits.map((h) => h.at)].sort((a, b) => a - b));
-    expect(hits.every((h) => h.level > 0 && h.level <= 1)).toBe(true);
-    // Every stroke after the roll lands on the dancers' grid, except a build's rolls.
-    const beat = hits.filter((h) => h.at >= 0.6 && !(style === 'build' && h.drum === 'tasha'));
-    expect(beat.every((h) => onSixteenth(h.at))).toBe(true);
-    expect(dholLength(hits)).toBeLessThan(10);
+  it('plays the whole clip at the party and a short bit when a big order is saved', () => {
+    expect(PLAY_FOR.party).toBe(10);
+    expect(PLAY_FOR.saved).toBeLessThan(PLAY_FOR.party);
   });
 
-  it('the pathak ends on everything at once, four bars after the roll', () => {
-    const last = dholHits('party').filter((h) => h.at === 8.6);
-    expect(last.map((h) => h.drum).sort()).toEqual(['dhol', 'jhanj', 'tasha', 'tipru']);
-  });
-
-  it('is one bar when a big order is saved', () => {
-    const hits = dholHits('saved');
-    expect(Math.max(...hits.map((h) => h.at))).toBe(2.6);
+  it("knows the clip's first drum hits, in order", () => {
+    expect([...DHOL_HITS].sort((a, b) => a - b)).toEqual(DHOL_HITS);
+    expect(DHOL_HITS.every((at) => at > 0 && at < PLAY_FOR.party)).toBe(true);
   });
 });
 
 describe('the buzz', () => {
-  it('bursts with the poppers, then taps on each loud dhol stroke until it rests', () => {
-    const pattern = buzzPattern(dholHits('party'), 2.6);
+  it('bursts with the poppers, then taps on each drum hit until it rests', () => {
+    const pattern = buzzPattern(DHOL_HITS, 2.6);
     expect(pattern.slice(0, 3)).toEqual([40, 30, 90]);
+    // On/off alternate: odd places are pauses, even places 30 ms taps.
     expect(pattern.slice(3).filter((_, i) => i % 2 === 1).every((ms) => ms === 30)).toBe(true);
-    expect(pattern.length).toBeGreaterThan(5);
+    // A tap for each of the eight hits before 2.6 s.
+    expect(pattern.length).toBe(3 + 2 * 8);
+    // The first pause runs from the end of the popper burst (0.16 s) to the first hit (0.31 s).
+    expect(pattern[3]).toBe(150);
   });
 
-  it.each(STYLES)('%s never asks for a negative pause', (style) => {
-    expect(buzzPattern(dholHits('party', style), 2.6).every((ms) => ms >= 0)).toBe(true);
+  it('rests after `until`, and never asks for a negative pause', () => {
+    const short = buzzPattern(DHOL_HITS, 1.2);
+    expect(short.length).toBe(3 + 2 * 3);
+    expect(short.every((ms) => ms >= 0)).toBe(true);
+    expect(buzzPattern([0.1, 0.12, 0.5], 2).every((ms) => ms >= 0)).toBe(true);
   });
 });

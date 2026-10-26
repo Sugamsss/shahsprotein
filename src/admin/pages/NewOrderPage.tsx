@@ -25,7 +25,7 @@ import { bookPrice, couponState, hasKinds, rateKey, repeatCoupon, usedBefore, ty
 import { BIG_ORDER_PACKS, MAX_QUANTITY, isCustomSize, packGrams } from '../orders/bigOrder';
 import { BigOrderHero, BigOrderLines, BigOrderParty, BigOrderSaved, Toran, type BigLine } from '../orders/BigOrder';
 import { AdvancedEditSheet } from '../orders/AdvancedEditSheet';
-import { unlockPartySound } from '../orders/partySound';
+import { prefetchPartySound, unlockPartySound } from '../orders/partySound';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
@@ -125,6 +125,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const dirty = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // The party's dhol (80 KB) comes down ahead, so it plays the moment Big order? is tapped.
+  useEffect(prefetchPartySound, []);
 
   // Typed but not saved: no reload for an update until it's saved or left.
   useUnsavedWork(() => dirty.current || saving);

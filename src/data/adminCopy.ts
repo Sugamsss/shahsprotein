@@ -709,6 +709,16 @@ export const adminCopy = {
     mismatch: "The two don't match.",
     changing: 'Changing…',
     changed: 'Password changed.',
+    /** Under the cards: the party's dhol is someone's recording, and its licence asks for this line. */
+    credits: {
+      before: "The big order party's dhol is ",
+      title: '“Maharashtrian Dhol Perform 001”',
+      titleUrl: 'https://commons.wikimedia.org/wiki/File:Maharashtrian_Dhol_Perform_001.ogg',
+      by: ' by Satyam Vishwakarma, trimmed, under ',
+      licence: 'CC BY-SA 4.0',
+      licenceUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      after: '.',
+    },
   },
 
   // ---- Lane B: Customers (spec 2.10) ----
