@@ -104,6 +104,13 @@ const SettingsPage: React.FC = () => {
           {adminCopy.signOut}
         </button>
       </section>
+      <p className="adm-settings__credits">
+        {copy.credits.before}
+        <a href={copy.credits.titleUrl} target="_blank" rel="noreferrer">{copy.credits.title}</a>
+        {copy.credits.by}
+        <a href={copy.credits.licenceUrl} target="_blank" rel="noreferrer">{copy.credits.licence}</a>
+        {copy.credits.after}
+      </p>
       {sheet && (
         <PasswordSheet
           onClose={() => setSheet(false)}

@@ -49,6 +49,13 @@ export const adminReleases: AdminRelease[] = [
     body: 'On your phone, Journal took the Customers tab: Customers is the first row in More. On a laptop, Coupons and Email list are in More.',
   },
   {
+    id: '2026-10-26-party-dhol',
+    for: ['admin'],
+    kind: 'new',
+    title: 'The big order party has a dhol',
+    body: 'Big order? now plays a real Maharashtrian dhol, and Android phones buzz along. Phone on silent? No sound. Tap the speaker in the corner to turn it off.',
+  },
+  {
     id: '2026-10-26-big-orders',
     for: ['admin'],
     kind: 'new',

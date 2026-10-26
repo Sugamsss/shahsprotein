@@ -361,6 +361,14 @@
 }
 .adm-party__go:active { transform: scale(0.97); }
 .adm-party__go:focus-visible, .adm-party__link:focus-visible { outline: 2px solid var(--adm-party-text); outline-offset: 3px; }
+.adm-party__sound {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 1;
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-full);
+  background: var(--adm-party-well); color: var(--adm-party-text); touch-action: manipulation;
+}
+.adm-party__sound[aria-pressed='false'] { color: var(--adm-party-soft); }
+.adm-party__sound:active { transform: scale(0.94); }
+.adm-party__sound:focus-visible { outline: 2px solid var(--adm-party-text); outline-offset: 2px; }
 .adm-party__link { min-height: 44px; margin-top: 6px; padding: 0 16px; border-radius: var(--radius-full); color: var(--adm-party-gold); font-weight: 600; }
 
 /* The dancers: pouches with faces, on a 120 bpm beat. --n is their place in the line. */
