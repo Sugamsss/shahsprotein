@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-26-party-dhol',
+    for: ['admin'],
+    kind: 'new',
+    title: 'The big order party has a dhol',
+    body: 'Big order? now plays a real Maharashtrian dhol, and Android phones buzz along. Phone on silent? No sound. Tap the speaker in the corner to turn it off.',
+  },
+  {
     id: '2026-10-26-big-orders',
     for: ['admin'],
     kind: 'new',

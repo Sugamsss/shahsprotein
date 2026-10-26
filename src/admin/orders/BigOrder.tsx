@@ -1,6 +1,6 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, PartyPopper, Sparkles } from 'lucide-react';
+import { BadgeCheck, PartyPopper, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { useDialog } from '../../components/ui/useDialog';
 import { adminCopy } from '../../data/adminCopy';
@@ -11,6 +11,7 @@ import { dimStatusBar } from '../homeScreenApp';
 import type { Order } from '../types';
 import { MAX_QUANTITY, hypeLevel, typedNumber } from './bigOrder';
 import { itemsText } from './model';
+import { partySoundOn, playParty, setPartySoundOn, unlockPartySound, type PartyKind } from './partySound';
 
 const copy = adminCopy.orderForm.big;
 
@@ -141,15 +142,44 @@ const Dancer: React.FC<{ product: Product; small?: boolean; order: number }> = (
   );
 };
 
-/** Full screen, dark in both themes: focus trap, Esc and the exit from useDialog. */
-const PartyLayer: React.FC<{ isOpen: boolean; onClose: () => void; className: string; children: (titleId: string, close: () => void) => React.ReactNode }> = ({
-  isOpen, onClose, className, children,
+/** Sound on or off for the party, remembered on this device. Turning it on plays the dhol from the top. */
+const SoundToggle: React.FC<{ kind: PartyKind; stopRef: React.MutableRefObject<(() => void) | null> }> = ({ kind, stopRef }) => {
+  const [on, setOn] = useState(partySoundOn);
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    setPartySoundOn(next);
+    stopRef.current?.();
+    stopRef.current = null;
+    if (next) {
+      unlockPartySound();
+      stopRef.current = playParty(kind, { withBuzz: false });
+    }
+  };
+  return (
+    <button type="button" className="adm-party__sound" aria-pressed={on} aria-label={copy.party.sound} onClick={toggle}>
+      {on ? <Volume2 size={20} strokeWidth={2} aria-hidden="true" /> : <VolumeX size={20} strokeWidth={2} aria-hidden="true" />}
+    </button>
+  );
+};
+
+/** Full screen, dark in both themes: focus trap, Esc and the exit from useDialog. The dhol plays while it's open. */
+const PartyLayer: React.FC<{ isOpen: boolean; onClose: () => void; className: string; sound: PartyKind; children: (titleId: string, close: () => void) => React.ReactNode }> = ({
+  isOpen, onClose, className, sound, children,
 }) => {
   const { dialogRef, isClosing, requestClose } = useDialog({ isOpen, onClose });
   const layerRef = useRef<HTMLDivElement>(null);
+  const stopSound = useRef<(() => void) | null>(null);
   const titleId = useId();
   // The status bar takes the party's night colour while it's up.
   useEffect(() => (isOpen && layerRef.current ? dimStatusBar(layerRef.current) : undefined), [isOpen]);
+  // The dhol and the buzz start with the party and fade out as it closes.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    stopSound.current = playParty(sound);
+    return () => { stopSound.current?.(); stopSound.current = null; };
+  }, [isOpen, sound]);
+  useEffect(() => { if (isClosing) { stopSound.current?.(); stopSound.current = null; } }, [isClosing]);
   if (!isOpen) return null;
   return createPortal(
     <div ref={layerRef} className={`adm-party-layer${isClosing ? ' is-closing' : ''}`}>
@@ -158,6 +188,8 @@ const PartyLayer: React.FC<{ isOpen: boolean; onClose: () => void; className: st
         <div className="adm-party__stage">
           {children(titleId, requestClose)}
         </div>
+        {/* Last in the focus order: the party's own button keeps the first focus. */}
+        <SoundToggle kind={sound} stopRef={stopSound} />
       </div>
     </div>,
     document.body,
@@ -168,7 +200,7 @@ const PartyLayer: React.FC<{ isOpen: boolean; onClose: () => void; className: st
 
 /** "Big order?" tapped: lights down, poppers, fireworks, balloons and three pouches dancing. */
 export const BigOrderParty: React.FC<{ isOpen: boolean; onClose: () => void; name: string }> = ({ isOpen, onClose, name }) => (
-  <PartyLayer isOpen={isOpen} onClose={onClose} className="adm-party--start">
+  <PartyLayer isOpen={isOpen} onClose={onClose} className="adm-party--start" sound="party">
     {(titleId, close) => (
       <>
         <div className="adm-party__fx" aria-hidden="true">
@@ -212,7 +244,7 @@ export const BigOrderSaved: React.FC<{ order: Order | null; grams: number; onDon
   const first = productsData[0];
   const last = productsData[productsData.length - 1];
   return (
-    <PartyLayer isOpen={!!order} onClose={onDone} className="adm-party--saved">
+    <PartyLayer isOpen={!!order} onClose={onDone} className="adm-party--saved" sound="saved">
       {(titleId, close) => order && (
         <>
           <div className="adm-party__fx" aria-hidden="true">

@@ -12,3 +12,7 @@
 .adm-settings__row .adm-list__title { display: inline-flex; align-items: center; gap: 8px; }
 .adm-settings__email { overflow-wrap: anywhere; }
 .adm-settings__hint { color: var(--adm-ink-2); }
+
+/* The sound credit under the cards: small print, its links in the tap colour. */
+.adm-settings__credits { padding: 0 4px; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.45; }
+.adm-settings__credits a { color: var(--adm-accent-text); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
