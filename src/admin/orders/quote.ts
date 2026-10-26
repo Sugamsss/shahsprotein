@@ -22,30 +22,45 @@ export type Quote =
   /** The first line with no price, so the form can say which one. */
   | { missing: { product_id: string; size: string } };
 
+/** Prices typed on the order itself (Big order, Advanced edit), by `product_id|size`. Whole rupees. */
+export type Rates = Record<string, number>;
+
+export const rateKey = (productId: string, size: string) => `${productId}|${size}`;
+
+/** One pack's price from the book: the live coupon's, else the base price. Undefined when neither has one. */
+export const bookPrice = (
+  productId: string, size: string, code: string | null, coupons: Coupon[], prices: Prices, now: Date,
+): number | undefined => {
+  const coupon = code ? coupons.find((c) => c.code.toUpperCase() === code.trim().toUpperCase()) : undefined;
+  const couponId = coupon && couponState(coupon.code, coupons, now) === 'live' ? coupon.id : null;
+  const same = (r: { product_id: string; size: string }) => r.product_id === productId && r.size === size;
+  const couponPrice = couponId ? prices.coupons.find((r) => r.coupon_id === couponId && same(r))?.price : undefined;
+  return couponPrice ?? prices.base.find(same)?.price;
+};
+
 /**
- * Packs × (the live coupon's price for that pack, else the base price).
- * Delivery isn't in it. A coupon that's off, expired or unknown counts as none.
- * A line with no price at all gives no total rather than a wrong one. Samples
- * are free: never priced, never part of the coupon math. Null when there's
- * nothing to pay for (nothing ordered, or only samples: a free sample order has no total).
+ * Packs × (a price typed on the order, else the live coupon's price for that pack, else the
+ * base price). Delivery isn't in it. A coupon that's off, expired or unknown counts as none.
+ * A line with no price at all gives no total rather than a wrong one. Samples are free:
+ * never priced, never part of the coupon math. Null when there's nothing to pay for
+ * (nothing ordered, or only samples: a free sample order has no total).
  */
 export const quote = (
-  lines: OrderLine[], code: string | null, coupons: Coupon[], prices: Prices, now: Date,
+  lines: OrderLine[], code: string | null, coupons: Coupon[], prices: Prices, now: Date, rates: Rates = {},
 ): Quote | null => {
   const ordered = lines.filter((l) => l.quantity > 0 && l.size !== SAMPLE);
   if (!ordered.length) return null;
-  const coupon = code ? coupons.find((c) => c.code.toUpperCase() === code.trim().toUpperCase()) : undefined;
-  const couponId = coupon && couponState(coupon.code, coupons, now) === 'live' ? coupon.id : null;
   let total = 0;
   for (const { product_id, size, quantity } of ordered) {
-    const same = (r: { product_id: string; size: string }) => r.product_id === product_id && r.size === size;
-    const couponPrice = couponId ? prices.coupons.find((r) => r.coupon_id === couponId && same(r))?.price : undefined;
-    const price = couponPrice ?? prices.base.find(same)?.price;
+    const price = rates[rateKey(product_id, size)] ?? bookPrice(product_id, size, code, coupons, prices, now);
     if (price == null) return { missing: { product_id, size } };
     total += quantity * price;
   }
   return { total };
 };
+
+/** A price book with nothing in it: typed prices alone can still give a total. */
+export const NO_PRICES: Prices = { base: [], coupons: [] };
 
 // Coupon kinds (20260928000002): Repeat is a standing offer, One-time is once per phone number.
 

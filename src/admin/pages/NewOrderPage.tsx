@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Not Undo2: the site's order popup uses it, and sharing it would move it out of the popup's chunk.
-import { ChevronsUp, Gift, History, IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, Trash2, User, X } from 'lucide-react';
+import { ChevronRight, ChevronsUp, Gift, History, IndianRupee, Instagram, Minus, Phone, Plus, RotateCcw, SlidersHorizontal, Sparkles, Trash2, User, X } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { WhatsAppIcon } from '../../components/ui/WhatsAppIcon';
 import { adminCopy } from '../../data/adminCopy';
@@ -9,7 +9,8 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
 import { getCouponUses, getKitchen, getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
-import { formatDay, formatMoney, formatWeight, istDateValue } from '../format';
+import { useAdminMe } from '../auth';
+import { firstName, formatDay, formatMoney, formatWeight, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
 import { usePathPart } from '../router';
 import { initials } from './CustomersPage';
@@ -18,9 +19,12 @@ import { useToast } from '../toast';
 import type { CouponUse, Order, OrderInput, OrderSource, PaidMethod } from '../types';
 import { useRpc } from '../useRpc';
 import { useUnsavedWork } from '../unsavedWork';
-import { SAMPLE, cleanPastedPhone, normalisePhone, packsText, plainPhone, productName } from '../orders/model';
+import { SAMPLE, cleanPastedPhone, normalisePhone, packsText, plainPhone, productName, sortLines } from '../orders/model';
 import { isSamplesOnly, moneyInput } from '../orders/samples';
-import { couponState, hasKinds, repeatCoupon, usedBefore } from '../orders/quote';
+import { bookPrice, couponState, hasKinds, rateKey, repeatCoupon, usedBefore, type Rates } from '../orders/quote';
+import { BIG_ORDER_PACKS, MAX_QUANTITY, isCustomSize, packGrams } from '../orders/bigOrder';
+import { BigOrderHero, BigOrderLines, BigOrderParty, BigOrderSaved, Toran, type BigLine } from '../orders/BigOrder';
+import { AdvancedEditSheet } from '../orders/AdvancedEditSheet';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
@@ -32,6 +36,8 @@ import { cleanDeliveryAddress, formatDeliveryAddress, isValidDeliveryAddress } f
 const copy = adminCopy.orderForm;
 const orderCopy = adminCopy.order;
 const kx = adminCopy.kitchenForms;
+const big = copy.big;
+const adv = copy.advanced;
 
 // Add an order by hand, or edit one (spec 2.8). Phone: a full page. Laptop: a
 // 920px popup over the Orders board. /admin/orders/new(?code=…) and /admin/orders/:code/edit.
@@ -47,8 +53,6 @@ const STEPS = ['cooking', 'packing', 'ready', 'delivered'] as const;
 type Step = (typeof STEPS)[number];
 const STATUSES = STEPS.map((value) => ({ value, label: orderCopy.steps[value] }));
 const PACKS = productsData.flatMap((p) => p.weightOptions.map((size) => ({ product: p, size, key: `${p.id}|${size}` })));
-/** Every size the form counts: the packs, then a sample of each product (always free). */
-const LINES = [...PACKS, ...productsData.map((p) => ({ product: p, size: SAMPLE, key: `${p.id}|${SAMPLE}` }))];
 const PINCODE = /^[1-9][0-9]{5}$/;
 const PAID_OPTIONS = PAID_METHODS.map((value) => ({ value, label: adminCopy.paidBy.methods[value] }));
 
@@ -74,8 +78,19 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   // total is typed, as before. Edit still sends the order's coupon back unchanged.
   const book = usePriceBook();
 
+  // By `product|size`: the site's sizes, samples, and any weight set with Advanced edit ('1 kg').
   const [qty, setQty] = useState<Record<string, number>>(() =>
-    Object.fromEntries((order?.lines ?? []).map((l) => [`${l.product_id}|${l.size}`, l.quantity])));
+    Object.fromEntries((order?.lines ?? []).map((l) => [rateKey(l.product_id, l.size), l.quantity])));
+  // Prices typed on this order (Big order, Advanced edit), by the same key. Never saved as such:
+  // they work out the total, which is what's saved.
+  const [rates, setRates] = useState<Rates>({});
+  const [bigMode, setBigMode] = useState(false);
+  const [party, setParty] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  // A big new order just saved: the party again, then on to the orders.
+  const [celebrate, setCelebrate] = useState<Order | null>(null);
+  const me = useAdminMe();
+  const myName = firstName(me.display_name);
   const [phone, setPhone] = useState(order?.phone ? plainPhone(order.phone) ?? order.phone : '');
   const [name, setName] = useState(order?.name ?? '');
   const [pincode, setPincode] = useState(order?.pincode ?? '');
@@ -114,7 +129,13 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   useUnsavedWork(() => dirty.current || saving);
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => { dirty.current = true; set(value); };
-  const lines = LINES.filter(({ key }) => qty[key]).map(({ product, size, key }) => ({ product_id: product.id, size, quantity: qty[key] }));
+  const lines = sortLines(Object.entries(qty).filter(([, n]) => n > 0).map(([key, quantity]) => {
+    const [product_id, size] = key.split('|');
+    return { product_id, size, quantity };
+  }));
+  // A price he typed for a pack on the order: its total then follows his prices.
+  const rateOf = (productId: string, size: string) => rates[rateKey(productId, size)];
+  const typedPrices = lines.some((l) => l.size !== SAMPLE && rateOf(l.product_id, l.size) != null);
   const packs = lines.reduce((sum, l) => sum + (l.size === SAMPLE ? 0 : l.quantity), 0);
   const samples = lines.reduce((sum, l) => sum + (l.size === SAMPLE ? l.quantity : 0), 0);
   // Only samples: a free sample order, with no total, coupon or payment (the server refuses them).
@@ -126,14 +147,14 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const phoneUses = uses && uses.phone === digits ? uses.list : null;
   const filled = couponPick === null && book.ready && phoneUses ? repeatCoupon(phoneUses, book.coupons ?? [], new Date()) : null;
   const coupon = couponPick ?? filled ?? '';
-  const worked = book.workOut(lines, coupon || null);
+  const worked = book.workOut(lines, coupon || null, rates);
   const workedTotal = worked && 'total' in worked ? worked.total : null;
   const missing = worked && 'missing' in worked ? worked.missing : null;
   const total = totalMode === 'auto' ? (workedTotal != null ? String(workedTotal) : '') : amount;
   const typedTotal = /^\d+$/.test(total.replace(/[₹,\s]/g, '')) ? Number(total.replace(/\D/g, '')) : null;
   const couponNow = coupon && book.coupons ? couponState(coupon, book.coupons, new Date()) : null;
-  const linesChanged = order !== null && LINES.some(({ key }) =>
-    (qty[key] ?? 0) !== (order.lines.find((l) => `${l.product_id}|${l.size}` === key)?.quantity ?? 0));
+  const linesChanged = order !== null && (lines.length !== order.lines.length
+    || lines.some((l) => order.lines.find((o) => o.product_id === l.product_id && o.size === l.size)?.quantity !== l.quantity));
 
   // A past customer or a contact: their name and number, and their last pincode if none is typed.
   const fill = ({ name: pickedName, phone: pickedPhone, pincode: pickedPincode }: Picked) => {
@@ -197,6 +218,15 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   if (!order && !samplesOnly && paid && paidMethod === 'other' && !paidNote.trim()) problems.paidNote = adminCopy.paidBy.noteMissing;
   const errors: Errors = attempt ? { ...problems, form: formError || undefined } : {};
 
+  const finish = (saved: Order, view = false) => {
+    toast.show({
+      text: copy.saved(saved.code),
+      action: order || view ? undefined : { label: copy.view, onAction: () => navigate(`/admin/orders/${saved.code}`) },
+    });
+    // A priority order just saved may take packed food: the page it lands on asks (useOfferOnArrival).
+    navigate(order || view ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id, ...giveState(saved, order) } });
+  };
+
   const save = async () => {
     setFormError('');
     if (Object.keys(problems).length) return setAttempt((n) => n + 1);
@@ -221,12 +251,11 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     try {
       const saved = await saveOrder(input, order?.id);
       void reloadCounts();
-      toast.show({
-        text: copy.saved(saved.code),
-        action: order ? undefined : { label: copy.view, onAction: () => navigate(`/admin/orders/${saved.code}`) },
-      });
-      // A priority order just saved may take packed food: the page it lands on asks (useOfferOnArrival).
-      navigate(order ? `/admin/orders/${saved.code}` : '/admin/orders', { state: { flash: saved.id, ...giveState(saved, order) } });
+      // Saved: nothing is left to lose, so the celebration closes without asking.
+      dirty.current = false;
+      // A big new one gets its party first; Done or View order goes on from there.
+      if (!order && (bigMode || packs >= BIG_ORDER_PACKS)) return setCelebrate(saved);
+      finish(saved);
     } catch (err) {
       const error = toAdminError(err);
       setFormError(error.kind === 'message' ? error.message : adminCopy.toast.failed);
@@ -235,7 +264,15 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     }
   };
 
-  const setPack = (key: string, n: number) => edit(setQty)({ ...qty, [key]: Math.max(0, Math.min(99, n)) });
+  const setPack = (key: string, n: number) => edit(setQty)({ ...qty, [key]: Math.max(0, Math.min(MAX_QUANTITY, n)) });
+  // A typed price works the total out again, even over one typed by hand: it's his newest word on it.
+  const setRate = (key: string, rate: number | null) => {
+    dirty.current = true;
+    setRates(({ [key]: _, ...rest }) => (rate ? { ...rest, [key]: Math.min(rate, 99999) } : rest));
+    if (rate) setTotalMode('auto');
+  };
+  const listPrice = (productId: string, size: string) =>
+    (book.prices ? bookPrice(productId, size, coupon || null, book.coupons ?? [], book.prices, new Date()) : undefined);
   const out = (productId: string, size: string) => stock.data?.some((r) => r.product_id === productId && r.size === size);
 
   // One pack size, or a product's sample: + Add (a round + for a sample), then the stepper.
@@ -258,7 +295,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           {n === 1 ? <Trash2 size={16} aria-hidden="true" /> : <Minus size={16} aria-hidden="true" />}
         </button>
         <span className="qty-stepper__value">{n}</span>
-        <button type="button" className="qty-stepper__btn qty-stepper__btn--more" aria-label={copy.more(item)} aria-disabled={n >= 99 || undefined} onClick={() => setPack(key, n + 1)}>
+        <button type="button" className="qty-stepper__btn qty-stepper__btn--more" aria-label={copy.more(item)} aria-disabled={n >= MAX_QUANTITY || undefined} onClick={() => setPack(key, n + 1)}>
           <Plus size={16} aria-hidden="true" />
         </button>
       </span>
@@ -269,43 +306,101 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     order?.lines.find((l) => l.product_id === productId && l.size === SAMPLE)?.grams_each
     ?? kitchen.data?.products.find((p) => p.product_id === productId)?.sample_grams;
 
+  // Under a pack's size: a price he typed for it ("250 g · ₹150 each"), or "Back soon on the site".
+  const sizeLine = (productId: string, size: string, custom: boolean) => {
+    const rate = rateOf(productId, size);
+    return (
+      <small>
+        {size}
+        {custom && <> · <span className="adm-of__custom">{copy.custom}</span></>}
+        {rate != null && ` · ${copy.each(formatMoney(rate))}`}
+        {out(productId, size) && <> · <em>{copy.backSoon}</em></>}
+      </small>
+    );
+  };
+  // Weights set with Advanced edit, lightest first, under the product's own sizes.
+  const customSizes = (productId: string) => lines
+    .filter((l) => l.product_id === productId && isCustomSize(productId, l.size))
+    .map((l) => l.size);
+  const ownChoices = lines.filter((l) => l.size !== SAMPLE && (isCustomSize(l.product_id, l.size) || rateOf(l.product_id, l.size) != null)).length;
+
+  // Big order: every pack size with typed packs and price, plus any weight set with Advanced edit.
+  const bigLines: BigLine[] = [
+    ...PACKS.map(({ product, size, key }) => ({ key, product, size })),
+    ...productsData.flatMap((product) => customSizes(product.id).map((size) => ({ key: rateKey(product.id, size), product, size }))),
+  ].map(({ key, product, size }) => ({
+    key, product, size,
+    packs: qty[key] ?? 0,
+    rate: rateOf(product.id, size),
+    listPrice: listPrice(product.id, size),
+    out: !!out(product.id, size),
+  }));
+  const grams = packGrams(lines);
+
   const ordered = (
-    <section className="adm-of__section adm-of--ordered" aria-labelledby={`${id}-ordered`}>
-      <div className="adm-of__h">
-        <h2 id={`${id}-ordered`}>{copy.ordered}</h2>
-        <span>{lines.length ? count : copy.tapToAdd}</span>
+    <section className={`adm-of__section adm-of--ordered${bigMode ? ' is-big' : ''}`} aria-labelledby={`${id}-ordered`}>
+      {bigMode && <Toran />}
+      <div className="adm-of__h adm-of__h--ordered">
+        <div>
+          <h2 id={`${id}-ordered`}>{copy.ordered}</h2>
+          <span>{lines.length ? count : copy.tapToAdd}</span>
+        </div>
+        {bigMode ? (
+          <button type="button" className="adm-text-btn" onClick={() => setBigMode(false)}>{big.back}</button>
+        ) : (
+          <button type="button" className="adm-big-pill" aria-label={big.pillLabel} onClick={() => { setBigMode(true); setParty(true); }}>
+            <Sparkles size={16} strokeWidth={2} aria-hidden="true" />{big.pill}
+          </button>
+        )}
       </div>
       {linesChanged && order?.source === 'site' && <p className="adm-of__note">{copy.siteNote}</p>}
       {errors.lines && <p className="adm-field__error" data-error>{errors.lines}</p>}
-      <ul className="adm-card adm-of__packs">
-        {productsData.map((product) => {
-          const sampleKey = `${product.id}|${SAMPLE}`;
-          const grams = sampleGrams(product.id);
-          return (
-            <React.Fragment key={product.id}>
-              {product.weightOptions.map((size) => (
-                <li key={size}>
-                  <OrderThumb product={product} className="adm-of__thumb" />
+      {bigMode ? (
+        <>
+          <BigOrderHero name={myName} packs={packs} grams={grams} total={typedTotal ?? workedTotal} onParty={() => setParty(true)} />
+          <BigOrderLines lines={bigLines} setPacks={setPack} setRate={setRate} />
+        </>
+      ) : (
+        <ul className="adm-card adm-of__packs">
+          {productsData.map((product) => {
+            const sampleKey = `${product.id}|${SAMPLE}`;
+            const sampleWeight = sampleGrams(product.id);
+            return (
+              <React.Fragment key={product.id}>
+                {[...product.weightOptions, ...customSizes(product.id)].map((size) => (
+                  <li key={size}>
+                    <OrderThumb product={product} className="adm-of__thumb" />
+                    <span className="adm-list__main">
+                      <b className="adm-pname">{product.name}</b>
+                      {sizeLine(product.id, size, !product.weightOptions.includes(size))}
+                    </span>
+                    {stepper(rateKey(product.id, size), `${product.name} ${size}`, false)}
+                  </li>
+                ))}
+                {/* Tucked under its product: a gift where the photo would be, and never a price. */}
+                <li className="adm-of__sample">
+                  <span className="adm-of__gift" aria-hidden="true"><Gift size={16} strokeWidth={1.75} /></span>
                   <span className="adm-list__main">
-                    <b className="adm-pname">{product.name}</b>
-                    <small>{size}{out(product.id, size) && <> · <em>{copy.backSoon}</em></>}</small>
+                    <b><span className="visually-hidden">{product.name} </span>{kx.sample}</b>
+                    <small>{[sampleWeight && formatWeight(sampleWeight), kx.free].filter(Boolean).map((t) => ` · ${t}`).join('')}</small>
                   </span>
-                  {stepper(`${product.id}|${size}`, `${product.name} ${size}`, false)}
+                  {stepper(sampleKey, kx.sampleItem(product.name), true)}
                 </li>
-              ))}
-              {/* Tucked under its product: a gift where the photo would be, and never a price. */}
-              <li className="adm-of__sample">
-                <span className="adm-of__gift" aria-hidden="true"><Gift size={16} strokeWidth={1.75} /></span>
-                <span className="adm-list__main">
-                  <b><span className="visually-hidden">{product.name} </span>{kx.sample}</b>
-                  <small>{[grams && formatWeight(grams), kx.free].filter(Boolean).map((t) => ` · ${t}`).join('')}</small>
-                </span>
-                {stepper(sampleKey, kx.sampleItem(product.name), true)}
-              </li>
-            </React.Fragment>
-          );
-        })}
-      </ul>
+              </React.Fragment>
+            );
+          })}
+          <li className="adm-of__adv">
+            <button type="button" onClick={() => setAdvanced(true)}>
+              <span className="adm-of__adv-icon" aria-hidden="true"><SlidersHorizontal size={20} strokeWidth={1.75} /></span>
+              <span className="adm-list__main">
+                <b>{adv.row}</b>
+                <small>{ownChoices ? adv.rowSet(ownChoices) : adv.rowHint}</small>
+              </span>
+              <ChevronRight size={18} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          </li>
+        </ul>
+      )}
     </section>
   );
 
@@ -463,9 +558,11 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   let workedLine: React.ReactNode = null;
   if (totalMode === 'auto' && workedTotal != null) {
     // Samples ride along free, so the line says so rather than leaving it to guess.
+    // Prices he typed make them his prices, so the line doesn't credit the coupon.
+    const from = couponNow === 'live' && !typedPrices ? coupon : null;
     workedLine = samples ? (
-      <span className="adm-worked"><Gift size={14} strokeWidth={1.75} aria-hidden="true" />{kx.fromPrices(couponNow === 'live' ? coupon : null, samples)}</span>
-    ) : <WorkedFrom code={couponNow === 'live' ? coupon : null} />;
+      <span className="adm-worked"><Gift size={14} strokeWidth={1.75} aria-hidden="true" />{kx.fromPrices(from, samples)}</span>
+    ) : <WorkedFrom code={from} />;
   } else if (totalMode === 'manual' && workedTotal != null && workedTotal !== typedTotal) {
     const money = formatMoney(workedTotal);
     const [before] = orderCopy.workedIs(money, !!order).split(money);
@@ -551,11 +648,36 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const title = order ? copy.editTitle(order.code) : copy.newTitle;
   const bar = (
     <div className="adm-of__bar">
-      <span>{count}</span>
-      <button type="submit" form={`${id}-form`} className="adm-btn adm-btn--primary" disabled={saving}>
-        {saving ? copy.saving : order ? copy.saveEdit : copy.save}
-      </button>
+      <span>{bigMode && grams ? `${count} · ${formatWeight(grams)}` : count}</span>
+      {bigMode ? (
+        <button type="submit" form={`${id}-form`} className="adm-btn adm-big-save" disabled={saving}>
+          <span className="adm-big-save__sheen" aria-hidden="true" />
+          <Sparkles size={18} strokeWidth={2.2} aria-hidden="true" />
+          <span>{saving ? copy.saving : order ? copy.saveEdit : big.save}</span>
+        </button>
+      ) : (
+        <button type="submit" form={`${id}-form`} className="adm-btn adm-btn--primary" disabled={saving}>
+          {saving ? copy.saving : order ? copy.saveEdit : copy.save}
+        </button>
+      )}
     </div>
+  );
+  const overlays = (
+    <>
+      <BigOrderParty isOpen={party} onClose={() => setParty(false)} name={myName} />
+      <BigOrderSaved order={celebrate} grams={packGrams(celebrate?.lines ?? [])}
+        onDone={() => celebrate && finish(celebrate)} onView={() => celebrate && finish(celebrate, true)} />
+      <AdvancedEditSheet isOpen={advanced} onClose={() => setAdvanced(false)} qty={qty} rates={rates} listPrice={listPrice}
+        onDone={(packQty, packRates) => {
+          dirty.current = true;
+          // Samples aren't in the sheet, so they stay as they were.
+          setQty({ ...Object.fromEntries(Object.entries(qty).filter(([key]) => key.endsWith(`|${SAMPLE}`))), ...packQty });
+          if (JSON.stringify(packRates) !== JSON.stringify(rates)) {
+            setRates(packRates);
+            if (Object.keys(packRates).length) setTotalMode('auto');
+          }
+        }} />
+    </>
   );
   const body = (
     <form id={`${id}-form`} ref={formRef} className="adm-of" noValidate onSubmit={(e) => { e.preventDefault(); void save(); }}>
@@ -583,6 +705,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
           {body}
         </AdminSheet>
         {leaveDialog}
+        {overlays}
       </>
     );
   }
@@ -597,6 +720,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       {body}
       <div className="adm-of-page__bar">{bar}</div>
       {leaveDialog}
+      {overlays}
     </div>
   );
 };

@@ -96,6 +96,8 @@ The published Loops double opt-in email is branded as follows: `Pranjali from Sh
 
 Migrations `20260926000000` to `000004` add the order book and remove the old waitlist-era admin (its CRM, campaign and unsubscribe functions, and the empty `email_campaigns`, `email_log` and `waitlist_email_tokens` tables). `analytics_sessions` and its rows are kept, but nothing writes to it any more. `20260929000001` moves the order book to the kitchen's stages and adds batches, spare stock and samples (see **The kitchen** below). Its status rename has no down migration: back up `orders`, `order_lines`, `order_events` and `order_payments` (`supabase db dump --data-only`) before pushing it.
 
+**Big orders (`20261026000000`).** A line typed by hand in the admin takes up to 9,999 packs (it was 99): the `order_lines.quantity` check, `order_clean_lines` (up to five digits, so 10,000 meets the caller's limit and its message) and `save_admin_order` change together. The site still sends at most 10 a line. `save_admin_order` also refuses a pack set by hand (Advanced edit, any size that isn't a sample) outside 1 g to 10 kg. Prices typed on an order in the admin aren't stored: they work out its total, and `orders.amount` is what's saved, as before. The code ships before the migration: until it's applied, a line over 99 packs fails to save with "Each item's quantity is 1 to 99." and nothing else changes. Test: `17_big_orders.test.sql`.
+
 **Tables** (RLS on, no policies, all grants revoked; the only ways in are the functions below):
 
 | Table | What |

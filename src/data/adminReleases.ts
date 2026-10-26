@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-26-big-orders',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Big orders and Advanced edit',
+    body: 'Got a big one? Tap Big order? in Add order, type the packs and your price, and save it with a party. Advanced edit sets any line\'s weight, quantity and price.',
+  },
+  {
     id: '2026-10-22-website-requests',
     for: ['admin'],
     kind: 'new',

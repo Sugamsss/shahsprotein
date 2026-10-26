@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Coupon, CouponKind, CouponUse, OrderLine, Prices } from '../types';
-import { couponState, hasKinds, quote, repeatCoupon, usedBefore } from './quote';
+import { NO_PRICES, bookPrice, couponState, hasKinds, quote, repeatCoupon, usedBefore } from './quote';
 
 // Made-up prices and codes only: the repo is public.
 
@@ -74,6 +74,31 @@ describe('quote', () => {
   it('works nothing out when nothing is ordered', () => {
     expect(quote([], 'EXAMPLE10', COUPONS, PRICES, NOW)).toBeNull();
     expect(quote([line('muesli', '250 g', 0)], null, COUPONS, PRICES, NOW)).toBeNull();
+  });
+
+  it('a price typed on the order beats the coupon and base price for that pack only', () => {
+    const rates = { 'muesli|250 g': 150 };
+    expect(quote(MUESLI_ORDER, 'EXAMPLE10', COUPONS, PRICES, NOW, rates)).toEqual({ total: 2 * 150 + 380 });
+  });
+
+  it('a typed price covers a custom weight that has no price in the book', () => {
+    const lines = [line('raggi-jaggi', '1 kg', 3), line('raggi-jaggi', '250 g', 700)];
+    expect(quote(lines, null, COUPONS, PRICES, NOW)).toEqual({ missing: { product_id: 'raggi-jaggi', size: '1 kg' } });
+    expect(quote(lines, null, COUPONS, PRICES, NOW, { 'raggi-jaggi|1 kg': 600 })).toEqual({ total: 3 * 600 + 700 * 150 });
+  });
+
+  it('typed prices alone give a total with an empty book, and none while a pack is unpriced', () => {
+    const lines = [line('bites', '250 g', 2), line('muesli', '500 g', 1)];
+    expect(quote(lines, null, [], NO_PRICES, NOW, { 'bites|250 g': 200, 'muesli|500 g': 500 })).toEqual({ total: 900 });
+    expect(quote(lines, null, [], NO_PRICES, NOW, { 'bites|250 g': 200 })).toEqual({ missing: { product_id: 'muesli', size: '500 g' } });
+  });
+});
+
+describe('bookPrice', () => {
+  it("is the live coupon's price, else the base price, else nothing", () => {
+    expect(bookPrice('muesli', '250 g', 'EXAMPLE10', COUPONS, PRICES, NOW)).toBe(170);
+    expect(bookPrice('muesli', '250 g', 'OFFCODE', COUPONS, PRICES, NOW)).toBe(200);
+    expect(bookPrice('raggi-jaggi', '500 g', null, COUPONS, PRICES, NOW)).toBeUndefined();
   });
 });
 
