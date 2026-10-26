@@ -648,7 +648,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const title = order ? copy.editTitle(order.code) : copy.newTitle;
   const bar = (
     <div className="adm-of__bar">
-      <span>{bigMode && grams ? `${count} · ${formatWeight(grams)}` : count}</span>
+      <span>{count}{bigMode && grams > 0 && <span className="adm-of__bar-kg">{` · ${formatWeight(grams)}`}</span>}</span>
       {bigMode ? (
         <button type="submit" form={`${id}-form`} className="adm-btn adm-big-save" disabled={saving}>
           <span className="adm-big-save__sheen" aria-hidden="true" />

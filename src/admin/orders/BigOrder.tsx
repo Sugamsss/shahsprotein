@@ -289,7 +289,7 @@ export const BigOrderHero: React.FC<{ name: string; packs: number; grams: number
         <b>{copy.hello(name)}</b>
         <span>{copy.helloSub}</span>
       </div>
-      <div className="adm-big-stats" aria-live="polite">
+      <div className="adm-big-stats">
         <span><b>{packs.toLocaleString('en-IN')}</b>{copy.packs}</span>
         <span><b>{formatWeight(grams)}</b>{copy.food}</span>
         <span><b>{total != null ? formatMoneyShort(total) : '–'}</b>{copy.total}</span>
