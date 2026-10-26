@@ -662,3 +662,212 @@ export interface AdminUser {
   created_at: string;
   is_me: boolean;
 }
+
+// ---- The journal, to-dos and ingredients (20261026000000) --------------------------------------
+
+/** An admin as the journal names them: display name, else the start of their email. */
+export interface Person { id: string; name: string | null }
+export interface PersonWithView extends Person { home_view: 'cook' | 'admin' }
+
+/** 1 Rough, 2 Low, 3 Okay, 4 Good, 5 Great. */
+export type Mood = 1 | 2 | 3 | 4 | 5;
+
+/** A "What you bought" line. quantity is in the ingredient's unit (grams or pieces), only with an ingredient. */
+export interface JournalPurchase {
+  id: string;
+  item: string;
+  amount: number;
+  ingredient_id: string | null;
+  quantity: number | null;
+}
+
+/** A file in the private 'journal' bucket, at <entry id>/<photo id>.<ext>. */
+export interface JournalPhoto { id: string; path: string; width: number; height: number }
+
+export interface JournalReply { id: string; author: Person; mine: boolean; body: string; created_at: string }
+
+/** One person's entry for one India day. Only-me entries come back to their author alone. */
+export interface JournalEntry {
+  id: string;
+  author: Person;
+  mine: boolean;
+  day: string;
+  mood: Mood | null;
+  body: string;
+  hours: number | null;
+  private: boolean;
+  tags: string[];
+  purchases: JournalPurchase[];
+  photos: JournalPhoto[];
+  replies: JournalReply[];
+  /** Kept by the caller ("Keep this one"). */
+  kept: boolean;
+  /** To-dos made from it. */
+  todos: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A day's figures from the rest of the admin; spent and hours count only-me entries too. */
+export interface DayFacts {
+  cooked_grams: number;
+  packed: number;
+  delivered: number;
+  came_in: number;
+  spent: number;
+  hours: number;
+}
+
+/** 'hand': marked by someone (title). The rest come from the orders: value is the months or packs. */
+export interface JournalMilestone {
+  id: string | null;
+  day?: string;
+  kind: 'hand' | 'launch' | 'months' | 'packs' | 'returning';
+  value: number;
+  title: string | null;
+}
+
+export interface JournalDay {
+  day: string;
+  facts: DayFacts;
+  entries: JournalEntry[];
+  /** To-dos ticked that day. */
+  done: { id: string; text: string; done_by: Person | null }[];
+  milestones: JournalMilestone[];
+}
+
+export interface JournalFeed {
+  me: string;
+  people: PersonWithView[];
+  launch_on: string | null;
+  has_more: boolean;
+  days: JournalDay[];
+}
+
+export interface JournalMonthSummary {
+  month: string;
+  entries: number;
+  photos: number;
+  great_days: number;
+  hours: number;
+  spent: number;
+  /** Each person's most loved entry that month, the caller's first. */
+  lines: JournalEntry[];
+}
+
+export interface JournalLookback {
+  today: string;
+  /** This day of the month, in earlier months, newest first. */
+  on_this_day: JournalEntry[];
+  kept: JournalEntry[];
+  milestones: JournalMilestone[];
+  months: JournalMonthSummary[];
+}
+
+export interface JournalMonth {
+  month: string;
+  entries: JournalEntry[];
+  milestones: JournalMilestone[];
+  facts: DayFacts;
+}
+
+export interface JournalSearch {
+  query: string | null;
+  count: number;
+  people: number;
+  /** ₹ on bought lines that match the words (or on every matched entry when there are none). */
+  spent: number;
+  problems: number;
+  entries: JournalEntry[];
+  /** Every tag in use, most used first. */
+  tags: string[];
+}
+
+export interface JournalSearchFilter {
+  query?: string;
+  author?: string;
+  tag?: string;
+  kept?: boolean;
+  photos?: boolean;
+}
+
+export interface EntryInput {
+  mood: Mood | null;
+  body: string;
+  hours: number | null;
+  private: boolean;
+  tags: string[];
+  purchases: { id?: string; item: string; amount: number; ingredient_id?: string | null; quantity?: number | null }[];
+}
+
+export interface WorkDay { day: string; hours: number; spent: number }
+
+export interface Todo {
+  id: string;
+  text: string;
+  /** null: either of you. */
+  assignee: Person | null;
+  due_on: string | null;
+  done_at: string | null;
+  done_by: Person | null;
+  created_by: Person | null;
+  created_at: string;
+  /** The entry it came from; null too when that's someone else's only-me entry. */
+  entry: { id: string; day: string; author: Person } | null;
+  ingredient: { id: string; name: string } | null;
+  deleted: boolean;
+}
+
+export interface TodoList { me: string; today: string; people: PersonWithView[]; todos: Todo[] }
+
+export interface TodoInput {
+  text: string;
+  assignee: string | null;
+  due_on: string | null;
+  entry_id?: string | null;
+  ingredient_id?: string | null;
+}
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  kind: 'food' | 'packaging';
+  /** food in grams, packaging in pieces. */
+  unit: 'g' | 'pieces';
+  low_at: number | null;
+  /** null: never counted and never bought, so nothing to go on. Can go below 0 when the amounts drift. */
+  stock: number | null;
+  counted_at: string | null;
+  last_bought_on: string | null;
+  low: boolean;
+  /** Grams (or pieces) in 1 kg of each product. */
+  uses: { product_id: string; per_kg: number }[];
+  /** An open to-do to buy it. */
+  buying: Todo | null;
+}
+
+export interface IngredientBook {
+  ingredients: Ingredient[];
+  /** A usual batch per product: the average of its last five, in grams. */
+  batches: { product_id: string; grams: number }[];
+  products: string[];
+  /** count_admin_ingredient only: the count just made, for Undo. */
+  count_id?: string;
+}
+
+export interface IngredientInput {
+  name: string;
+  kind: 'food' | 'packaging';
+  low_at: number | null;
+  uses: { product_id: string; per_kg: number }[];
+}
+
+export interface HomeExtras {
+  today: string;
+  /** The caller's (or either's) open to-dos due within a week or late, soonest first. */
+  todos: Todo[];
+  /** Their other open to-dos. */
+  later: number;
+  low: { id: string; name: string; unit: 'g' | 'pieces'; stock: number; buying: boolean }[];
+  wrote_today: boolean;
+}

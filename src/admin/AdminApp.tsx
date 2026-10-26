@@ -22,6 +22,11 @@ const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const MorePage = React.lazy(() => import('./pages/MorePage'));
 const CookingHistoryPage = React.lazy(() => import('./kitchen/CookingHistoryPage'));
 const RequestsPage = React.lazy(() => import('./requests/RequestsPage'));
+const JournalPage = React.lazy(() => import('./journal/JournalPage'));
+const JournalSearchPage = React.lazy(() => import('./journal/JournalSearchPage'));
+const JournalMonthPage = React.lazy(() => import('./journal/JournalMonthPage'));
+const TodosPage = React.lazy(() => import('./todos/TodosPage'));
+const IngredientsPage = React.lazy(() => import('./ingredients/IngredientsPage'));
 import adminCss from './admin.css?inline';
 
 // The admin's lazy entry (App.tsx: /admin/*). Its own chunk, so the landing
@@ -76,6 +81,11 @@ const AdminApp: React.FC = () => {
           <Route path="orders/:code" element={<OrdersPage />} />
           <Route path="orders/:code/edit" element={<NewOrderPage />} />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="products/ingredients" element={<IngredientsPage />} />
+          <Route path="journal" element={<JournalPage />} />
+          <Route path="journal/search" element={<JournalSearchPage />} />
+          <Route path="journal/month/:month" element={<JournalMonthPage />} />
+          <Route path="todos" element={<TodosPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="customers/:phone" element={<CustomerPage />} />
           <Route path="coupons" element={<CouponsPage />} />

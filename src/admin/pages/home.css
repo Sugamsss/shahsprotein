@@ -138,6 +138,21 @@ button.adm-home__warn:active { opacity: 0.7; }
 }
 .adm-home__circle.is-accent { background: var(--color-accent-gradient); color: var(--color-btn-text); }
 .adm-home__circle.is-money { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success-text); }
+.adm-home__circle.is-warn { background: var(--adm-warn-tint); color: var(--adm-warn-text); }
+.adm-home__circle.is-tint { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+/* To-dos inside Waiting on you: a small heading, the rows with their ticks, and how many more. */
+.adm-home__todos { display: grid; padding-bottom: 6px; }
+.adm-list.adm-home__rows + .adm-home__todos, .adm-home__todos + .adm-list.adm-home__rows { border-top: 1px solid var(--adm-hairline); }
+.adm-home__subhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 20px 2px; }
+.adm-home__subhead h3 { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; }
+.adm-home__subhead .adm-text-btn { margin-block: -6px; }
+.adm-home__todos .adm-todo { padding-inline: 10px 20px; }
+.adm-home__todos .adm-todo + .adm-todo { border-top: 0; }
+.adm-home__later {
+  display: flex; align-items: center; min-height: 40px; padding: 0 20px 0 62px; color: var(--adm-ink-2);
+  font-size: var(--adm-text-small); font-weight: 500;
+}
+.adm-home__later:active { opacity: 0.7; }
 
 /* A product thumb in the Stock card's rows. */
 .adm-home__thumb { width: 52px; height: 52px; border-radius: 12px; }

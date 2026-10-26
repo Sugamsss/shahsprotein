@@ -3,7 +3,8 @@ import type {
   AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
   KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
-  WebsiteRequest, WebsiteRequestPage,
+  WebsiteRequest, WebsiteRequestPage, EntryInput, HomeExtras, IngredientBook, IngredientInput, JournalEntry, JournalFeed,
+  JournalLookback, JournalMilestone, JournalMonth, JournalSearch, JournalSearchFilter, Todo, TodoInput, TodoList, WorkDay,
 } from './types';
 import { holdUntilDone } from './unsavedWork';
 
@@ -199,6 +200,106 @@ export const confirmWebsiteRequest = (id: string, details: object = {}) =>
   rpc<{ state: 'confirmed' | 'dismissed'; order: Order | null }>('confirm_admin_website_request', { id, details });
 export const dismissWebsiteRequest = (id: string) =>
   rpc<{ state: 'dismissed' | 'confirmed' }>('dismiss_admin_website_request', { id });
+
+// The journal, to-dos and ingredients (20261026000000). Every one answers 'missing' until
+// that migration is live; useJournalAvailable hides their links until then.
+
+/** The feed, newest day first: `limit` days before `before` (default: up to today). */
+export const getJournal = (before?: string, limit?: number) => rpc<JournalFeed>('get_admin_journal', { before, limit });
+export const getJournalLookback = () => rpc<JournalLookback>('get_admin_journal_lookback');
+/** One month, oldest first: the keepsake page. `month` is any day in it. */
+export const getJournalMonth = (month: string) => rpc<JournalMonth>('get_admin_journal_month', { month });
+export const searchJournal = (filter: JournalSearchFilter) =>
+  rpc<JournalSearch>('search_admin_journal', {
+    query: filter.query || undefined, author: filter.author, tag: filter.tag,
+    kept: filter.kept || undefined, photos: filter.photos || undefined,
+  });
+/** Hours and ₹ spent per day, for Home's "How it's going". */
+export const getWorkDays = () => rpc<WorkDay[]>('get_admin_work_days');
+/** The caller's entry for `day` (default today): made if it isn't there, else replaced. */
+export const saveJournalEntry = (day: string | null, entry: EntryInput) =>
+  rpc<JournalEntry>('save_admin_journal_entry', { day, entry });
+/** Their own entry only. Answers with its photo paths, whose files are then removed. */
+export const deleteJournalEntry = async (id: string): Promise<void> => {
+  const { photos } = await rpc<{ photos: string[] }>('delete_admin_journal_entry', { id });
+  if (photos.length) await removePhotoFiles(photos);
+};
+export const addJournalReply = (entryId: string, body: string) => rpc<JournalEntry>('add_admin_journal_reply', { entry_id: entryId, body });
+export const deleteJournalReply = (id: string) => rpc<JournalEntry>('delete_admin_journal_reply', { id });
+export const setJournalKept = (entryId: string, kept: boolean) => rpc<JournalEntry>('set_admin_journal_kept', { entry_id: entryId, kept });
+export const saveMilestone = (day: string, title: string) => rpc<JournalMilestone>('save_admin_milestone', { day, title });
+export const deleteMilestone = (id: string) => rpc<void>('delete_admin_milestone', { id });
+
+const PHOTO_BUCKET = 'journal';
+
+const storage = async () => {
+  const supabase = await client;
+  if (!supabase) throw new AdminError('unknown', copy.gate.notSetUp);
+  return supabase.storage.from(PHOTO_BUCKET);
+};
+
+/** Uploads a photo (already made small, journal/photos.ts) to the caller's own entry, then records it. */
+export const addJournalPhoto = (entryId: string, photo: { blob: Blob; ext: 'webp' | 'jpg'; width: number; height: number }) =>
+  holdUntilDone((async () => {
+    const path = `${entryId}/${crypto.randomUUID()}.${photo.ext}`;
+    try {
+      const bucket = await storage();
+      const { error } = await bucket.upload(path, photo.blob, { contentType: photo.blob.type, upsert: false });
+      if (error) throw toAdminError(error, Number((error as { statusCode?: string }).statusCode ?? 0));
+    } catch (error) {
+      throw toAdminError(error);
+    }
+    return rpc<JournalEntry>('add_admin_journal_photo', { entry_id: entryId, path, width: photo.width, height: photo.height });
+  })());
+
+export const removeJournalPhoto = async (id: string): Promise<JournalEntry> => {
+  const { path, entry } = await rpc<{ path: string; entry: JournalEntry }>('remove_admin_journal_photo', { id });
+  await removePhotoFiles([path]);
+  return entry;
+};
+
+/** Best effort: a file left behind is harmless (nothing points at it). */
+const removePhotoFiles = async (paths: string[]): Promise<void> => {
+  try {
+    await (await storage()).remove(paths);
+  } catch {
+    // Leave it.
+  }
+};
+
+/** Short-lived links to show photos (the bucket is private). Missing ones are left out. */
+export const signPhotos = async (paths: string[], seconds: number): Promise<Record<string, string>> => {
+  try {
+    const { data, error } = await (await storage()).createSignedUrls(paths, seconds);
+    if (error) throw error;
+    const signed: Record<string, string> = {};
+    for (const d of data ?? []) if (d.path && d.signedUrl) signed[d.path] = d.signedUrl;
+    return signed;
+  } catch (error) {
+    throw toAdminError(error);
+  }
+};
+
+/** Open to-dos and those done in the last week. */
+export const getTodos = () => rpc<TodoList>('get_admin_todos');
+/** Makes a to-do when `id` is left out; otherwise changes it. */
+export const saveTodo = (todo: TodoInput, id?: string) => rpc<Todo>('save_admin_todo', { id: id ?? null, todo });
+export const setTodoDone = (id: string, done: boolean) => rpc<Todo>('set_admin_todo_done', { id, done });
+/** Hides it; deleteTodo(id, false) is the Undo. */
+export const deleteTodo = (id: string, deleted = true) => rpc<Todo>('delete_admin_todo', { id, deleted });
+
+export const getIngredients = () => rpc<IngredientBook>('get_admin_ingredients');
+export const saveIngredient = (ingredient: IngredientInput, id?: string) =>
+  rpc<IngredientBook>('save_admin_ingredient', { id: id ?? null, ingredient });
+/** Several names at once, skipping any already on the list. */
+export const addIngredients = (names: string[]) => rpc<IngredientBook>('add_admin_ingredients', { names });
+export const deleteIngredient = (id: string) => rpc<IngredientBook>('delete_admin_ingredient', { id });
+/** A count by hand; the answer's count_id is for Undo (uncountIngredient). */
+export const countIngredient = (id: string, amount: number) => rpc<IngredientBook>('count_admin_ingredient', { id, amount });
+export const uncountIngredient = (countId: string) => rpc<IngredientBook>('uncount_admin_ingredient', { count_id: countId });
+
+/** Home: the caller's to-dos due soon, ingredients running low, and whether they've written today. */
+export const getHomeExtras = () => rpc<HomeExtras>('get_admin_home_extras');
 
 /** Changes the signed-in admin's password (Settings). */
 export const changePassword = async (password: string): Promise<void> => {

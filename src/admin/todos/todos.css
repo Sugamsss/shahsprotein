@@ -1,0 +1,33 @@
+/* To-dos (todos/): a list of rows with a round tick. The same row sits in Home's
+   Waiting on you. @imported by admin.css. */
+
+.adm-card.adm-todos { display: grid; padding: 0; overflow: hidden; }
+.adm-todos__quiet { padding: 18px 20px; color: var(--adm-ink-2); }
+.adm-todos__head { flex-wrap: wrap; padding: 8px 4px 0; }
+.adm-todos__head h2 { white-space: nowrap; }
+.adm-todo { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 8px; padding: 10px 16px 10px 10px; }
+.adm-todo + .adm-todo { border-top: 1px solid var(--adm-hairline); }
+.adm-todo__tick { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; touch-action: manipulation; }
+.adm-todo__tick > span {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--adm-ink-3); color: var(--color-btn-text); transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.adm-todo__tick:active > span { transform: scale(0.92); }
+.adm-todo.is-done .adm-todo__tick > span { background: var(--color-success); box-shadow: none; }
+@media (hover: hover) { .adm-todo:not(.is-done) .adm-todo__tick:hover > span { box-shadow: inset 0 0 0 2px var(--adm-ink-1); } }
+.adm-todo__main {
+  display: grid; gap: 2px; min-width: 0; min-height: 44px; padding: 10px 0 2px; border-radius: 10px;
+  color: var(--adm-ink-1); text-align: start; align-content: start;
+}
+button.adm-todo__main:active { opacity: 0.7; }
+.adm-todo__text { font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.adm-todo.is-done .adm-todo__text { color: var(--adm-ink-3); text-decoration: line-through; }
+.adm-todo__meta {
+  display: flex; flex-wrap: wrap; gap: 0 10px; color: var(--adm-ink-2);
+  font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; font-variant-numeric: proportional-nums;
+}
+.adm-todo__meta .is-late { color: var(--adm-warn-text); font-weight: 600; }
+
+/* More's group headings (pages/MorePage.tsx). */
+.adm-more__group { margin: 8px 4px -8px; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; }
+@media (min-width: 960px) { .adm-more { max-width: 720px; margin-inline: auto; } }

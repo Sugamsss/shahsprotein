@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { ChevronRight, Pencil, Wheat } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { productsData } from '../../data/products';
 import { adminCopy } from '../../data/adminCopy';
-import { getKitchen, getStock, setStock } from '../api';
+import { getIngredients, getKitchen, getStock, setStock } from '../api';
+import { AdminLink } from '../router';
 import { formatMoney, formatWeight } from '../format';
 import { couponState } from '../orders/quote';
 import { usePriceBook } from '../orders/usePriceBook';
@@ -32,6 +33,9 @@ const ProductsPage: React.FC = () => {
   const book = usePriceBook();
   const prices = book.ready ? book.prices : null;
   const kitchen = useRpc(getKitchen, []);
+  // Ingredients, a page of its own: the link says how many are low. Hidden until it answers.
+  const ingredients = useRpc(getIngredients, []);
+  const low = ingredients.data?.ingredients.filter((i) => i.low).length ?? 0;
   const keepOf = (productId: string) => kitchen.data?.products.find((p) => p.product_id === productId) ?? null;
   const [editing, setEditing] = useState<string | null>(null);
   // The latest list, so a flip that lands after another starts from it.
@@ -130,6 +134,18 @@ const ProductsPage: React.FC = () => {
     <div className="adm-page adm-page--products">
       <h1 className="adm-title">{copy.title}</h1>
       <p className="adm-intro">{prices || kitchen.data ? kx.productsIntro : copy.intro}</p>
+      {ingredients.data && (
+        <nav className="adm-card adm-list" aria-label={adminCopy.ingredients.title}>
+          <AdminLink to="/admin/products/ingredients">
+            <span className="adm-list__icon" aria-hidden="true"><Wheat size={20} strokeWidth={1.75} /></span>
+            <span className="adm-list__main">
+              <span className="adm-list__title">{adminCopy.ingredients.link}</span>
+              <span className={`adm-list__sub${low ? ' adm-ing__lowsub' : ''}`}>{low ? adminCopy.ingredients.linkLow(low) : adminCopy.ingredients.linkNone}</span>
+            </span>
+            <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
+          </AdminLink>
+        </nav>
+      )}
       {body}
       {editingProduct && (
         <ProductSheet product={editingProduct} prices={prices} coupons={book.coupons} keep={keepOf(editingProduct.id)}
