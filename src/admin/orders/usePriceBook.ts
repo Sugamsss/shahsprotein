@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getCoupons, getPrices } from '../api';
 import type { Coupon, OrderLine, Prices } from '../types';
-import { quote, type Quote } from './quote';
+import { NO_PRICES, quote, type Quote, type Rates } from './quote';
 
 export interface PriceBook {
   /**
@@ -15,8 +15,11 @@ export interface PriceBook {
   ready: boolean;
   /** Both calls have answered, loaded or failed: nothing more is coming. */
   settled: boolean;
-  /** The worked-out total, or null when prices aren't loaded. */
-  workOut: (lines: OrderLine[], couponCode: string | null) => Quote | null;
+  /**
+   * The worked-out total, or null when prices aren't loaded. Prices typed on the order (`rates`)
+   * come first; when they cover every pack, they give a total even without the book.
+   */
+  workOut: (lines: OrderLine[], couponCode: string | null, rates?: Rates) => Quote | null;
   /** Puts a save's answer (setPrices returns the whole list) on screen. */
   showPrices: (prices: Prices) => void;
 }
@@ -43,9 +46,12 @@ export const usePriceBook = (enabled = true): PriceBook => {
   const [prices, showPrices, pricesDone] = useQuiet<Prices>(getPrices, enabled);
   const [coupons, , couponsDone] = useQuiet<Coupon[]>(getCoupons, enabled);
   const workOut = useCallback(
-    (lines: OrderLine[], couponCode: string | null) =>
+    (lines: OrderLine[], couponCode: string | null, rates: Rates = {}) => {
       // Without the coupon list, a total with a coupon can't be trusted; one without still can.
-      prices && (coupons || !couponCode) ? quote(lines, couponCode, coupons ?? [], prices, new Date()) : null,
+      if (prices && (coupons || !couponCode)) return quote(lines, couponCode, coupons ?? [], prices, new Date(), rates);
+      const typed = quote(lines, null, [], NO_PRICES, new Date(), rates);
+      return typed && 'total' in typed ? typed : null;
+    },
     [prices, coupons],
   );
   return { prices, coupons, ready: !!prices && !!coupons, settled: pricesDone && couponsDone, workOut, showPrices };

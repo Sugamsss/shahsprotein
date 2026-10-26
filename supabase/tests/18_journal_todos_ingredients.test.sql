@@ -1,4 +1,4 @@
--- 20261026000000: the journal, to-dos and ingredients. Who can call what, only-me
+-- 20261026000001: the journal, to-dos and ingredients. Who can call what, only-me
 -- entries, a day's figures, bought lines, search totals, to-dos (assign, tick, delete,
 -- Undo), Home's extras, ingredient stock and photos. Ids, names and emails are made
 -- up and everything rolls back at the end.

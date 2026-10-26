@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getHomeExtras, toAdminError } from '../api';
 
-// The journal, to-dos and ingredients ship before their migration (20261026000000).
+// The journal, to-dos and ingredients ship before their migration (20261026000001).
 // Until it's live, their RPCs answer 'missing': the tab bar and header keep the old
 // Customers tab, and every link to them stays hidden. The last answer is kept on the
 // device so the tab bar doesn't change under the finger on each load; a device that has

@@ -248,14 +248,19 @@ export const thumbOf = (id: string, dark: boolean) => {
   return (dark ? p?.orderThumbDark : p?.orderThumb) ?? '';
 };
 
-/** Lines in the site's order: product, then pack size, a sample last. */
+/** Lines in the site's order: product, then pack size, a weight set by hand (lightest first), a sample last. */
 export const sortLines = (lines: OrderLine[]): OrderLine[] => {
   const rank = (l: OrderLine) => {
     const i = productsData.findIndex((p) => p.id === l.product_id);
-    const sizes = productsData[i]?.weightOptions ?? [];
-    return (i < 0 ? 99 : i) * 100 + (l.size === SAMPLE ? 99 : Math.max(0, sizes.indexOf(l.size)));
+    const at = (productsData[i]?.weightOptions ?? []).indexOf(l.size);
+    return (i < 0 ? 99 : i) * 100 + (l.size === SAMPLE ? 99 : at >= 0 ? at : 50);
   };
-  return [...lines].sort((a, b) => rank(a) - rank(b));
+  // '1 kg' before '1500 g'; anything unreadable keeps its place.
+  const grams = (l: OrderLine) => {
+    const m = /^([0-9]+) ?(g|kg)$/.exec(l.size);
+    return m ? Number(m[1]) * (m[2] === 'kg' ? 1000 : 1) : 0;
+  };
+  return [...lines].sort((a, b) => rank(a) - rank(b) || grams(a) - grams(b));
 };
 
 /** A line's size as it reads after the product name: "250 g", or "sample" ("Date Bites sample"). */

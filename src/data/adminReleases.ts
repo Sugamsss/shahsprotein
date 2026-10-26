@@ -49,6 +49,13 @@ export const adminReleases: AdminRelease[] = [
     body: 'On your phone, Journal took the Customers tab: Customers is the first row in More. On a laptop, Coupons and Email list are in More.',
   },
   {
+    id: '2026-10-26-big-orders',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Big orders and Advanced edit',
+    body: 'Got a big one? Tap Big order? in Add order, type the packs and your price, and save it with a party. Advanced edit sets any line\'s weight, quantity and price.',
+  },
+  {
     id: '2026-10-22-website-requests',
     for: ['admin'],
     kind: 'new',

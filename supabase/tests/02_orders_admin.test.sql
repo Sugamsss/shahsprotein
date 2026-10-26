@@ -134,8 +134,8 @@ select throws_ok(
   '22023', 'Choose where the order came from.', 'create: the admin cannot add a site order'
 );
 select throws_ok(
-  $$select public.save_admin_order(null, '{"source":"call","name":"Neha","lines":[{"product_id":"muesli","size":"250 g","quantity":100}]}')$$,
-  '22023', 'Each item''s quantity is 1 to 99.', 'create: quantity up to 99 by hand'
+  $$select public.save_admin_order(null, '{"source":"call","name":"Neha","lines":[{"product_id":"muesli","size":"250 g","quantity":10000}]}')$$,
+  '22023', 'Each item''s quantity is 1 to 9999.', 'create: quantity up to 9,999 by hand'
 );
 select throws_ok(
   $$select public.save_admin_order(null, '{"source":"call","name":"Neha","colour":"red","lines":[]}')$$,
@@ -146,7 +146,7 @@ select throws_ok(
 select lives_ok(
   $$select set_config('test.fresh', public.save_admin_order(null, '{
       "source":"whatsapp","phone":"98000 00001","note":"  Leave at the gate  ",
-      "lines":[{"product_id":"muesli","size":"250 g","quantity":40},{"product_id":"muesli","size":"250 g","quantity":70}]
+      "lines":[{"product_id":"muesli","size":"250 g","quantity":4000},{"product_id":"muesli","size":"250 g","quantity":7000}]
     }')::text, true)$$,
   'create by hand with only a phone'
 );
@@ -162,10 +162,10 @@ select is(
   '{"source":"whatsapp","status":"cooking","free_sample":false,"priority":false,"held":false,"paid":false,"paid_at":null,"paid_method":null,"paid_note":null,
     "payment_state":"not_paid","payments":[],"amount_paid":0,"amount_due":null,"amount_extra":null,
     "name":null,"pincode":null,"phone":"919800000001","note":"Leave at the gate","amount":null,"coupon":null,
-    "lines":[{"product_id":"muesli","size":"250 g","quantity":99,"grams_each":250}],"packs":99,"samples":0,
-    "kitchen":[{"product_id":"muesli","need":24750,"covered":0,"by_hand":0,"waiting":true,"batches":[]}],
+    "lines":[{"product_id":"muesli","size":"250 g","quantity":9999,"grams_each":250}],"packs":9999,"samples":0,
+    "kitchen":[{"product_id":"muesli","need":2499750,"covered":0,"by_hand":0,"waiting":true,"batches":[]}],
     "customer":{"order_number":1,"orders":1}}'::jsonb,
-  'create: Cooking and waiting, not paid, phone normalised, note trimmed, lines merged and capped at 99'
+  'create: Cooking and waiting, not paid, phone normalised, note trimmed, lines merged and capped at 9,999'
 );
 
 -- A code typed from a WhatsApp message, then the same code again.

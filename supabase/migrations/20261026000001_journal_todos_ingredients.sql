@@ -1,4 +1,4 @@
--- Migration: 20261026000000_journal_todos_ingredients.sql
+-- Migration: 20261026000001_journal_todos_ingredients.sql
 -- The journal, to-dos and ingredients (admin only).
 --
 -- Stored once:

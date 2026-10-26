@@ -201,7 +201,7 @@ export const confirmWebsiteRequest = (id: string, details: object = {}) =>
 export const dismissWebsiteRequest = (id: string) =>
   rpc<{ state: 'dismissed' | 'confirmed' }>('dismiss_admin_website_request', { id });
 
-// The journal, to-dos and ingredients (20261026000000). Every one answers 'missing' until
+// The journal, to-dos and ingredients (20261026000001). Every one answers 'missing' until
 // that migration is live; useJournalAvailable hides their links until then.
 
 /** The feed, newest day first: `limit` days before `before` (default: up to today). */

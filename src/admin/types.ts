@@ -663,7 +663,7 @@ export interface AdminUser {
   is_me: boolean;
 }
 
-// ---- The journal, to-dos and ingredients (20261026000000) --------------------------------------
+// ---- The journal, to-dos and ingredients (20261026000001) --------------------------------------
 
 /** An admin as the journal names them: display name, else the start of their email. */
 export interface Person { id: string; name: string | null }
