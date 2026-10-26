@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardList, CookingPot, Home, LogOut, MoreHorizontal, Package, Plus, Search, Settings, Users } from 'lucide-react';
+import { BookOpen, ClipboardList, CookingPot, Home, LogOut, MoreHorizontal, Package, Plus, Search, Settings, Users } from 'lucide-react';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getOverview } from './api';
 import { signOut, useAdminMe } from './auth';
@@ -11,6 +11,7 @@ import { Logo } from './Splash';
 import { ToastProvider } from './toast';
 import { useRpc } from './useRpc';
 import { WhatsNewDialog } from './update/WhatsNewDialog';
+import { useJournalAvailable } from './journal/available';
 
 type OverviewState = ReturnType<typeof useRpc<Awaited<ReturnType<typeof getOverview>>>>;
 const OverviewContext = createContext<OverviewState | null>(null);
@@ -129,17 +130,25 @@ const Header: React.FC<{ badge: number; logQuiet: boolean }> = ({ badge, logQuie
     setQuery('');
   };
 
-  const links: [string, string][] = [
-    ['/admin', copy.nav.home], ['/admin/orders', copy.nav.orders], ['/admin/products', copy.nav.products],
-    ['/admin/customers', copy.nav.customers], ['/admin/coupons', copy.nav.coupons], ['/admin/email-list', copy.nav.emailList],
-  ];
+  // With the journal on: Home, Orders, Journal, Products, Customers and More (where Coupons,
+  // Email list and To-dos live). Without it, the header it always had.
+  const journal = useJournalAvailable();
+  const links: [string, string][] = journal
+    ? [
+      ['/admin', copy.nav.home], ['/admin/orders', copy.nav.orders], ['/admin/journal', copy.nav.journal],
+      ['/admin/products', copy.nav.products], ['/admin/customers', copy.nav.customers], ['/admin/more', copy.nav.more],
+    ]
+    : [
+      ['/admin', copy.nav.home], ['/admin/orders', copy.nav.orders], ['/admin/products', copy.nav.products],
+      ['/admin/customers', copy.nav.customers], ['/admin/coupons', copy.nav.coupons], ['/admin/email-list', copy.nav.emailList],
+    ];
 
   return (
     <header className="adm-header">
       <AdminLink to="/admin" className="adm-header__logo"><Logo /></AdminLink>
       <nav className="adm-header__nav" aria-label={copy.nav.label}>
         {links.map(([to, label]) => (
-          <NavItem key={to} to={to}>
+          <NavItem key={to} to={to} current={to === '/admin/more' ? MORE_PATHS_LAPTOP.test(pathname) : undefined}>
             {label}
             {to === '/admin/orders' && <OrdersBadge count={badge} />}
           </NavItem>
@@ -176,22 +185,40 @@ const tabPage = (pathname: string): string => {
   if (section === 'orders') return sub === 'done' ? p.done : sub === 'new' ? p.newOrder : action === 'edit' ? p.editOrder : p.orders;
   if (section === 'requests') return copy.websiteRequests.title;
   if (section === 'kitchen' && sub === 'history') return copy.kitchen.history.title;
+  if (section === 'journal') return sub === 'search' ? p.journalSearch : sub === 'month' ? p.journalMonth : p.journal;
+  if (section === 'products' && sub === 'ingredients') return p.ingredients;
   const names: Record<string, string> = {
     products: p.products, customers: p.customers, coupons: p.coupons, 'email-list': p.emailList, settings: p.settings, more: p.more,
+    todos: p.todos,
   };
   return names[section] ?? p.home;
 };
 
-const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history)(\/|$)/;
+const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests)(\/|$)/;
+// With the journal on, Customers and To-dos are in More on a phone too.
+const MORE_PATHS_JOURNAL = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|customers|todos)(\/|$)/;
+// The laptop header names Customers itself; More covers the rest.
+const MORE_PATHS_LAPTOP = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|todos)(\/|$)/;
 
 const TabBar: React.FC<{ badge: number }> = ({ badge }) => {
   const { pathname } = useLocation();
-  const tabs = [
-    { to: '/admin', label: copy.nav.home, Icon: Home },
-    { to: '/admin/orders', label: copy.nav.orders, Icon: ClipboardList },
-    { to: '/admin/products', label: copy.nav.products, Icon: Package },
-    { to: '/admin/customers', label: copy.nav.customers, Icon: Users },
-  ];
+  // Each tab answers one question: Home (what needs me now), Orders, Journal (what happened),
+  // Products (what we have) and More. Before the journal's migration, Customers keeps its tab.
+  const journal = useJournalAvailable();
+  const tabs = journal
+    ? [
+      { to: '/admin', label: copy.nav.home, Icon: Home },
+      { to: '/admin/orders', label: copy.nav.orders, Icon: ClipboardList },
+      { to: '/admin/journal', label: copy.nav.journal, Icon: BookOpen },
+      { to: '/admin/products', label: copy.nav.products, Icon: Package },
+    ]
+    : [
+      { to: '/admin', label: copy.nav.home, Icon: Home },
+      { to: '/admin/orders', label: copy.nav.orders, Icon: ClipboardList },
+      { to: '/admin/products', label: copy.nav.products, Icon: Package },
+      { to: '/admin/customers', label: copy.nav.customers, Icon: Users },
+    ];
+  const morePaths = journal ? MORE_PATHS_JOURNAL : MORE_PATHS;
   return (
     <nav className="adm-tabbar" aria-label={copy.nav.label}>
       {tabs.map(({ to, label, Icon }) => (
@@ -202,7 +229,7 @@ const TabBar: React.FC<{ badge: number }> = ({ badge }) => {
         </NavItem>
       ))}
       {/* More stays lit on the pages it leads to. */}
-      <NavItem to="/admin/more" current={MORE_PATHS.test(pathname)}>
+      <NavItem to="/admin/more" current={morePaths.test(pathname)}>
         <MoreHorizontal size={22} aria-hidden="true" />
         <span>{copy.nav.more}</span>
       </NavItem>

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronRight, CookingPot, Hourglass, IndianRupee, Plus } from 'lucide-react';
+import { ChevronRight, CookingPot, Hourglass, IndianRupee, Pencil, Plus, Wheat } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LOG_COOKING_STATE, useLogCookingQuiet, useOverview } from '../AdminLayout';
-import { getMetrics, getStock, getTotals, getWebsiteRequests, setStock } from '../api';
+import { getHomeExtras, getMetrics, getStock, getTotals, getWebsiteRequests, getWorkDays, setStock } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatAge, formatDayInSentence, formatLongDate, formatMoney, formatWeight, istHour } from '../format';
 import { FixBatchSheet } from '../kitchen/FixBatchSheet';
@@ -18,7 +18,10 @@ import { productName } from '../orders/model';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import { Logo } from '../Splash';
-import type { Kitchen, KitchenBatch, OutOfStock, Overview, Totals } from '../types';
+import { formatAmount } from '../ingredients/model';
+import { noteJournalAnswer, noteJournalError } from '../journal/available';
+import { TodoRow, useTick } from '../todos/TodoRow';
+import type { HomeExtras, Kitchen, KitchenBatch, OutOfStock, Overview, Todo, Totals } from '../types';
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 import { ProductCards } from './HomeProducts';
@@ -115,7 +118,14 @@ const Row: React.FC<{ lane: string; circle: React.ReactNode; tone?: 'accent' | '
 );
 
 /** The overview gives the counts and dates; the totals add packs and names once they're in. */
-const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | undefined }> = ({ queue: q, totals }) => {
+const Waiting: React.FC<{
+  queue: Overview['queue'];
+  totals: Totals | null | undefined;
+  extras: HomeExtras | null;
+  me: string;
+  hour: number;
+  onTick: (todo: Todo, done: boolean) => void;
+}> = ({ queue: q, totals, extras, me, hour, onTick }) => {
   const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), [], { refreshOnFocus: true });
   const collect = q.to_collect;
   const overall = totals?.overall;
@@ -140,13 +150,73 @@ const Waiting: React.FC<{ queue: Overview['queue']; totals: Totals | null | unde
       title={collect.amount_due > 0 ? copy.toCollect(formatMoney(collect.amount_due)) : copy.ordersToCollect(collect.count)}
       hint={collectHint} />,
   ].filter(Boolean);
+  const more = extras ? extraRows(extras, hour) : [];
   return (
     <section className="adm-card adm-home__card adm-home__card--flush" aria-labelledby="adm-home-waiting">
       <div className="adm-home__head">
         <h2 id="adm-home-waiting">{copy.waiting}</h2>
         <AdminLink to="/admin/orders" className="adm-text-btn">{copy.allOrders}</AdminLink>
       </div>
-      {rows.length ? <div className="adm-list adm-home__rows">{rows}</div> : <p className="adm-home__quiet">{copy.nothing}</p>}
+      {rows.length > 0 && <div className="adm-list adm-home__rows">{rows}</div>}
+      {extras && <TodoBlock extras={extras} me={me} onTick={onTick} />}
+      {more.length > 0 && <div className="adm-list adm-home__rows">{more}</div>}
+      {!rows.length && !more.length && !extras?.todos.length && !extras?.later && <p className="adm-home__quiet">{copy.nothing}</p>}
+    </section>
+  );
+};
+
+// ---- Both: what else is waiting on you ------------------------------------------------------
+
+const extrasCopy = copy.extras;
+
+/** Ingredients running low and, after 5 pm, tonight's entry: rows like the orders' ones. */
+const extraRows = (extras: HomeExtras, hour: number): React.ReactNode[] => [
+  ...extras.low.map((item) => (
+    <AdminLink key={`low-${item.id}`} to="/admin/products/ingredients" className="adm-home__row">
+      <span className="adm-home__circle is-warn"><Wheat size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+      <span className="adm-list__main">
+        <span className="adm-list__title">{extrasCopy.low(item.name)}</span>
+        <span className="adm-list__sub">{extrasCopy.lowHint(formatAmount(item.stock, item.unit), item.buying)}</span>
+      </span>
+      <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
+    </AdminLink>
+  )),
+  hour >= 17 && !extras.wrote_today && (
+    <AdminLink key="tonight" to="/admin/journal?write=1" className="adm-home__row">
+      <span className="adm-home__circle is-tint"><Pencil size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+      <span className="adm-list__main">
+        <span className="adm-list__title">{extrasCopy.tonight}</span>
+        <span className="adm-list__sub">{extrasCopy.tonightHint}</span>
+      </span>
+      <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
+    </AdminLink>
+  ),
+].filter(Boolean);
+
+/** Your to-dos due within a week (or late), each with its tick, and how many more wait on the list. */
+const TodoBlock: React.FC<{ extras: HomeExtras; me: string; onTick: (todo: Todo, done: boolean) => void }> = ({ extras, me, onTick }) => {
+  if (!extras.todos.length && !extras.later) return null;
+  return (
+    <div className="adm-home__todos">
+      <div className="adm-home__subhead">
+        <h3>{extrasCopy.todos}</h3>
+        <AdminLink to="/admin/todos" className="adm-text-btn">{extrasCopy.allTodos}</AdminLink>
+      </div>
+      {extras.todos.map((t) => <TodoRow key={t.id} todo={t} me={me} today={extras.today} onTick={onTick} short />)}
+      {extras.later > 0 && <AdminLink to="/admin/todos" className="adm-home__later">{extrasCopy.later(extras.later)}</AdminLink>}
+    </div>
+  );
+};
+
+/** The cook's own Waiting on you: only what the journal, to-dos and ingredients bring, when there's any. */
+const CookWaiting: React.FC<{ extras: HomeExtras; me: string; hour: number; onTick: (todo: Todo, done: boolean) => void }> = ({ extras, me, hour, onTick }) => {
+  const rows = extraRows(extras, hour);
+  if (!rows.length && !extras.todos.length && !extras.later) return null;
+  return (
+    <section className="adm-card adm-home__card adm-home__card--flush" aria-labelledby="adm-home-waiting">
+      <div className="adm-home__head"><h2 id="adm-home-waiting">{copy.waiting}</h2></div>
+      <TodoBlock extras={extras} me={me} onTick={onTick} />
+      {rows.length > 0 && <div className="adm-list adm-home__rows">{rows}</div>}
     </section>
   );
 };
@@ -246,9 +316,20 @@ const HomePage: React.FC = () => {
   const totalsRpc = useRpc(getTotals, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
   const stock = useRpc(getStock, []);
   const metricsRpc = useRpc(getMetrics, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
+  // The journal, to-dos and ingredients: quiet calls. 'missing' (before their migration) hides them everywhere.
+  const extrasRpc = useRpc(getHomeExtras, [], { refreshOnFocus: true, refreshEveryMs: 60_000 });
+  const workRpc = useRpc(getWorkDays, [], { refreshOnFocus: true });
+  useEffect(() => {
+    if (extrasRpc.data) noteJournalAnswer(true);
+    else if (extrasRpc.error) noteJournalError(extrasRpc.error);
+  }, [extrasRpc.data, extrasRpc.error]);
+  const extras = extrasRpc.error ? null : extrasRpc.data;
+  const { setData: setExtras } = extrasRpc;
+  const tick = useTick(useCallback((todo: Todo) => setExtras((e) => e && { ...e, todos: e.todos.map((t) => (t.id === todo.id ? todo : t)) }), [setExtras]));
   const metricsBlock = (
     <div className="adm-home__aside">
-      <HomeMetrics metrics={metricsRpc.data} failed={Boolean(metricsRpc.error)} onRetry={() => void metricsRpc.reload()} />
+      <HomeMetrics metrics={metricsRpc.data} failed={Boolean(metricsRpc.error)} onRetry={() => void metricsRpc.reload()}
+        work={workRpc.error ? null : workRpc.data} />
     </div>
   );
   // undefined while it loads (labels stay, numbers pulse), null if it couldn't.
@@ -280,6 +361,7 @@ const HomePage: React.FC = () => {
   if (cook) {
     below = (
       <div className="adm-home__grid adm-home__grid--split">
+        {extras && <CookWaiting extras={extras} me={me.id} hour={hour} onTick={tick} />}
         {kitchen && <LoggedList kitchen={kitchen} onFix={(batch) => setSheet({ kind: 'fix', batch })} />}
         {metricsBlock}
         <Stock stock={stock} />
@@ -290,7 +372,7 @@ const HomePage: React.FC = () => {
   } else {
     below = (
       <div className="adm-home__grid adm-home__grid--split">
-        <Waiting queue={overview.data.queue} totals={totals} />
+        <Waiting queue={overview.data.queue} totals={totals} extras={extras} me={me.id} hour={hour} onTick={tick} />
         {metricsBlock}
         <Stock stock={stock} />
         <Coupons coupons={overview.data.coupons} />

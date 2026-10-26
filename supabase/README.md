@@ -186,6 +186,28 @@ Migration `20260929000001`. Orders go **Cooking → Packing → Ready → Delive
 - **Existing orders** at the migration: New and Confirmed became Cooking, Sent became Ready, and a site order that was stale (it never came through) became Cancelled, with an auto event. Ready and Delivered orders are covered by hand for everything they hold; spare starts at zero, so everything in Cooking starts as to cook.
 - **Deploy order.** The admin and this migration ship together: back up the order tables, `supabase db push` while the owners aren't mid-work, then push the admin to `main` right after, and ask them to reload (the old admin shows the wrong lanes against it). The website keeps working throughout: `submit_order()` is the same on the outside.
 
+## The journal, to-dos and ingredients
+
+Migration `20261026000001_journal_todos_ingredients.sql`. Admin only: every table has RLS on, no policies and nothing granted; everything goes through `security definer` RPCs that check `is_admin()` (a non-admin gets `P0001 Unauthorized`). Validation errors are `22023` with a plain message.
+
+**Stored once:** `journal_entries` (one per person per India day: mood 1–5, words, hours in half hours, tags, `private` for only-me), `journal_purchases` ("What you bought": item, whole ₹, optionally an ingredient and a quantity in its unit), `journal_photos` (files in the private Storage bucket `journal` at `<entry id>/<photo id>.<ext>`), `journal_replies`, `journal_keeps` (per person), `journal_milestones` (marked by hand), `todos` (for one admin or `null` for either, an optional due day, done by whom, the entry or ingredient it came from; delete only sets `deleted_at` so Undo can bring it back), `ingredients` (food in grams or packaging in pieces, a low mark), `ingredient_uses` (amount in 1 kg of a product) and `ingredient_counts` (counts by hand).
+
+**Worked out, never stored:** a day's figures (`journal_day_facts`: grams logged with that made-on day, orders moved to Ready and to Delivered that day, payments that came in that day except Gift, and the journal's spend and hours), milestones from the orders (`journal_auto_milestones`: launch day = the first order not cancelled, 1, 2, 3, 6 and 9 months on and then each year, the day packs passed 100/250/500/1000/2500/5000/10000, the first repeat customer), and each ingredient's stock (`ingredient_stock`: the newest count, plus quantities bought since, less `grams ÷ 1000 × per_kg` for batches logged since; `null` when never counted or bought). A bought line keeps its id when an entry is saved again, so a count after it isn't added twice.
+
+**Privacy.** An only-me entry comes back to its author alone: the feed, search, Look back, the month page, its photos (Storage policies call `journal_photo_readable`/`journal_photo_writable`), replies and to-do links (`entry` is `null` for anyone else). Its hours and spend still count in day figures, `get_admin_work_days` and the month's totals.
+
+RPCs (all `authenticated`, admin only):
+
+- `get_admin_journal(p_before, p_limit)` the feed: `{ me, people, launch_on, has_more, days: [{ day, facts, entries, done, milestones }] }`. A day shows with an entry you can see, a to-do done, a milestone, or when it's today.
+- `get_admin_journal_lookback()` `{ today, on_this_day, kept, milestones, months: [{ month, entries, photos, great_days, hours, spent, lines }] }`; `get_admin_journal_month(p_month)` one month, oldest first (the printed keepsake).
+- `search_admin_journal(p_query, p_author, p_tag, p_kept, p_photos, p_limit)` words in the entry, its tags or bought lines; `{ count, people, spent (on lines that match), problems (tagged Problem), entries, tags }`.
+- `save_admin_journal_entry(p_day, p_entry)` writes the caller's entry for a day (default today, never a future day), replacing every field; `delete_admin_journal_entry(p_id)` own only, returns photo paths for the files. `add_admin_journal_photo` (after uploading the file; 6 an entry), `remove_admin_journal_photo`, `add_admin_journal_reply`, `delete_admin_journal_reply` (own), `set_admin_journal_kept`, `save_admin_milestone`, `delete_admin_milestone`, `get_admin_work_days(p_from)`.
+- `get_admin_todos(p_done_days)`, `save_admin_todo(p_id, p_todo)`, `set_admin_todo_done(p_id, p_done)`, `delete_admin_todo(p_id, p_deleted)`.
+- `get_admin_ingredients()` `{ ingredients: [{ …, stock, low, uses, buying }], batches (a usual batch per product), products }`, `save_admin_ingredient(p_id, p_ingredient)`, `add_admin_ingredients(p_names)` (the products' own lists, skipping names already there), `delete_admin_ingredient`, `count_admin_ingredient(p_id, p_amount)` (answers `count_id` for Undo) and `uncount_admin_ingredient(p_count_id)`.
+- `get_admin_home_extras()` Home's part: the caller's (or either's) open to-dos late or due within 6 days, how many others are open, ingredients at or under their low mark, and whether they've written today.
+
+**Rollout.** The code ships before the migration and works on both sides of it: while these RPCs answer `missing`, the admin keeps the old tab bar (Customers) and header and hides every journal, to-do and ingredient link. Deploy the code, then run `supabase test db` on a local stack and `supabase db push`. The migration creates the private `journal` bucket (5 MB, WebP/JPEG/PNG) and its three Storage policies when Storage is installed, and skips them with a notice where it isn't. Nothing is seeded: ingredients and how much goes into a kilo are Pranjali's to enter (Products → Ingredients has "Add our products' ingredients" for the names).
+
 ## WhatsApp order click tracking
 
 Migration `20260924000000` adds `site_events` (anonymous, no PII) and the public

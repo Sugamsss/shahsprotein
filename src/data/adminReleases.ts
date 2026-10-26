@@ -22,6 +22,33 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-10-26-journal',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'A journal for the two of you',
+    body: 'Journal is a new tab. Write how the day went, with photos, hours and what you bought. Each day already shows what the app knows, and old days come back in Look back.',
+  },
+  {
+    id: '2026-10-26-todos',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'To-dos for each other',
+    body: 'Give each other the things that aren’t an order. Yours wait on Home, under Waiting on you, and you tick them there. All of them are in More, To-dos.',
+  },
+  {
+    id: '2026-10-26-ingredients',
+    for: ['cook', 'admin'],
+    kind: 'new',
+    title: 'What’s in the kitchen',
+    body: 'Products has Ingredients now. Set how much goes into each kilo and count what’s there. Home says when something is running low.',
+  },
+  {
+    id: '2026-10-26-customers-in-more',
+    for: ['admin'],
+    title: 'Customers moved to More',
+    body: 'On your phone, Journal took the Customers tab: Customers is the first row in More. On a laptop, Coupons and Email list are in More.',
+  },
+  {
     id: '2026-10-26-party-dhol',
     for: ['admin'],
     kind: 'new',

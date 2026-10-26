@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { OrderThumb } from '../../components/order/OrderThumb';
 import { adminCopy } from '../../data/adminCopy';
-import { formatMoney, formatWeight } from '../format';
+import { formatMoney, formatWeight, istDateValue } from '../format';
+import { workTotals } from '../journal/model';
 import { giftedOf, moneyByMethod } from '../orders/model';
 import { LoadError } from '../parts';
-import type { Metrics, MetricsPeriodKey } from '../types';
+import type { Metrics, MetricsPeriodKey, WorkDay } from '../types';
 import {
   METRIC_KEYS, PERIOD_KEYS, avgOrder, barChart, barReadout, changeLine, changeOf, chipChange, chipValue, hourReadout,
   lineChart, loadingTicks, loadingWords, noCompareLine, notes, productRows, profit, profitLabel, rangeLine, sentence, showValue,
@@ -265,7 +266,13 @@ const Story: React.FC<{ periodKey: MetricsPeriodKey; metrics: Metrics | null; me
 
 // ---- The block --------------------------------------------------------------------------------
 
-export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; onRetry: () => void }> = ({ metrics, failed, onRetry }) => {
+export const HomeMetrics: React.FC<{
+  metrics: Metrics | null;
+  failed: boolean;
+  onRetry: () => void;
+  /** Hours and ₹ spent per day from the journal; null before the journal's migration. */
+  work?: WorkDay[] | null;
+}> = ({ metrics, failed, onRetry, work }) => {
   const [periodKey, setPeriodKey] = useState<MetricsPeriodKey>('today');
   const [metric, setMetric] = useState<MetricKey>('sales');
   const [picked, setPicked] = useState<number | null>(null);
@@ -287,6 +294,10 @@ export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; o
   const t = period?.totals;
   const prev = periodKey !== 'lifetime' ? period?.previous?.totals ?? null : null;
   const avg = t ? avgOrder(t) : null;
+  // The journal's hours and spend over the same days as the period (India dates, both ends in).
+  const worked = work && work.length > 0 && period
+    ? workTotals(work, period.starts_at ? istDateValue(period.starts_at) : null, istDateValue(period.ends_at))
+    : null;
   // While it loads, chips keep the height they'll have: Today and Week nearly always compare.
   const chipsCompare = loading ? periodKey === 'today' || periodKey === 'week' : Boolean(prev);
 
@@ -338,6 +349,8 @@ export const HomeMetrics: React.FC<{ metrics: Metrics | null; failed: boolean; o
         <dl className="adm-hm-quiet">
           <div><dt>{profitLabel()}</dt><dd>{t ? formatMoney(profit(t.sales)) : <Pulse />}</dd></div>
           {(loading || avg !== null) && <div><dt>{copy.avgOrder}</dt><dd>{avg !== null ? formatMoney(avg) : <Pulse />}</dd></div>}
+          {worked && <div><dt>{copy.workHours}</dt><dd>{adminCopy.journal.hours(worked.hours)}</dd></div>}
+          {worked && <div><dt>{copy.workSpent}</dt><dd>{formatMoney(worked.spent)}</dd></div>}
         </dl>
 
         <section className="adm-hm-prod" aria-labelledby="adm-hm-prod-h">
