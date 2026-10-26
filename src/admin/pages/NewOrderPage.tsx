@@ -25,6 +25,7 @@ import { bookPrice, couponState, hasKinds, rateKey, repeatCoupon, usedBefore, ty
 import { BIG_ORDER_PACKS, MAX_QUANTITY, isCustomSize, packGrams } from '../orders/bigOrder';
 import { BigOrderHero, BigOrderLines, BigOrderParty, BigOrderSaved, Toran, type BigLine } from '../orders/BigOrder';
 import { AdvancedEditSheet } from '../orders/AdvancedEditSheet';
+import { unlockPartySound } from '../orders/partySound';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
@@ -348,7 +349,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
         {bigMode ? (
           <button type="button" className="adm-text-btn" onClick={() => setBigMode(false)}>{big.back}</button>
         ) : (
-          <button type="button" className="adm-big-pill" aria-label={big.pillLabel} onClick={() => { setBigMode(true); setParty(true); }}>
+          <button type="button" className="adm-big-pill" aria-label={big.pillLabel} onClick={() => { unlockPartySound(); setBigMode(true); setParty(true); }}>
             <Sparkles size={16} strokeWidth={2} aria-hidden="true" />{big.pill}
           </button>
         )}
@@ -357,7 +358,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       {errors.lines && <p className="adm-field__error" data-error>{errors.lines}</p>}
       {bigMode ? (
         <>
-          <BigOrderHero name={myName} packs={packs} grams={grams} total={typedTotal ?? workedTotal} onParty={() => setParty(true)} />
+          <BigOrderHero name={myName} packs={packs} grams={grams} total={typedTotal ?? workedTotal} onParty={() => { unlockPartySound(); setParty(true); }} />
           <BigOrderLines lines={bigLines} setPacks={setPack} setRate={setRate} />
         </>
       ) : (
@@ -680,7 +681,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     </>
   );
   const body = (
-    <form id={`${id}-form`} ref={formRef} className="adm-of" noValidate onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form id={`${id}-form`} ref={formRef} className="adm-of" noValidate onSubmit={(e) => {
+      e.preventDefault();
+      // A big new order may get its party once it's saved, and sound can only start from this tap.
+      if (!order && (bigMode || packs >= BIG_ORDER_PACKS)) unlockPartySound();
+      void save();
+    }}>
       {!order && <p className="adm-intro adm-of__intro">{copy.intro}</p>}
       {errors.form && <p className="adm-form__error" role="alert" data-error>{errors.form}</p>}
       {/* The spec's phone order, which is also the keyboard order; the laptop places them in two columns. */}

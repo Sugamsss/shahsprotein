@@ -842,6 +842,8 @@ export const adminCopy = {
         body: "Everyone's dancing for this one. Type the packs and price, and the total adds itself up.",
         go: "Let's write it up",
         dancer: (product: string) => `${product} pouch dancing`,
+        /** The speaker button in the party's corner; on or off reads from its pressed state. */
+        sound: 'Dhol sound',
       },
       saved: {
         title: 'Big order saved!',
