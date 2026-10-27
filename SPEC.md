@@ -58,10 +58,10 @@ People build their order on the site and send Sunit one tidy WhatsApp message on
   ```
   Hi! I'm Anjali, and I'd like to place an order:
 
-  • Raggi Jaggi 250 g × 1 · ₹165
-  • Muesli 250 g × 2 · ₹560
+  • Raggi Jaggi 250 g × 1 · ₹175
+  • Muesli 250 g × 2 · ₹580
 
-  Total: ₹725 (before delivery)
+  Total: ₹755 (before delivery)
 
   Coupon: EXAMPLE10
   Pincode: 415001
