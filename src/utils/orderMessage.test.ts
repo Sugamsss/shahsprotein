@@ -27,7 +27,7 @@ describe('buildOrderMessage', () => {
       + 'Total: ₹1,530 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -48,7 +48,7 @@ describe('buildOrderMessage', () => {
       + 'Total: ₹1,450 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -64,7 +64,7 @@ describe('buildOrderMessage', () => {
       + '• Muesli 250 g × 1 · ₹290\n'
       + '• Date Bites 500 g × 1\n'
       + '\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -82,7 +82,7 @@ describe('buildOrderMessage', () => {
       + 'Total: ₹580 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10 (not checked yet)\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -95,7 +95,7 @@ describe('buildOrderMessage', () => {
       + '\n'
       + 'Total: ₹580 (before delivery)\n'
       + '\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -118,7 +118,7 @@ describe('buildOrderMessage', () => {
       + '\n'
       + 'Total: ₹580 (before delivery)\n'
       + '\n'
-      + 'Phone: 98765 43210\n'
+      + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
       + 'Order code: SN-7KQ4M\n'
       + '\n'
@@ -136,7 +136,7 @@ describe('orderMessageParts with blanks (the preview)', () => {
       ['name', 'your name'],
       ['phone', 'your phone'], ['address', 'your address'],
     ]);
-    const filled = parts.map((part) => (part.blank === 'name' ? 'Anjali' : part.blank === 'phone' ? '98765 43210' : part.blank === 'address' ? 'Flat, Area, City, State, 415001' : part.text)).join('');
+    const filled = parts.map((part) => (part.blank === 'name' ? 'Anjali' : part.blank === 'phone' ? '9876543210' : part.blank === 'address' ? 'Flat, Area, City, State, 415001' : part.text)).join('');
     expect(filled).toBe(buildOrderMessage({ ...input, name: 'Anjali', phone:'919876543210', address:{premises:'Flat',area:'Area',city:'City',state:'State',pincode:'415001'} }));
   });
 });
