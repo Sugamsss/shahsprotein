@@ -11,7 +11,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
 - **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with delivery and how to pay"). The WhatsApp message itself is the customer speaking.
-- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the founder's, in `src/data/products.ts`): price tags on the cards, and the picked pack's price in the popup's Add button.
+- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the base prices the owners set in the admin, with `src/data/products.ts` as the fallback): price tags on the cards, and the picked pack's price in the popup's Add button.
 
 ## 2. Themes and design tokens
 
@@ -124,7 +124,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
 - Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
-- `weightOptions` holds pack sizes and `mrp` their MRPs. The owners' base prices live only in Supabase and only the admin reads them; coupon prices reach the site only through `check_coupon` for that code (see §7).
+- `weightOptions` holds pack sizes and `mrp` their fallback MRPs. The real MRPs are the owners' base prices in the admin: the site reads them with one GET to `get_product_prices` (`src/services/priceService.ts`, cached in localStorage `shahs-prices-v1`) and uses `mrp` only until that answers, or if it fails or is empty. Once it answers, a size the admin has no price for shows no price. Coupon prices reach the site only through `check_coupon` for that code (see §7).
 - **Ingredient sprites** (`public/assets/ingredients/`) supply the small round pictures in the wrapping ingredient chips. Names are text in a list; pictures are decorative. Each sprite has 3 columns, read across then down in `ingredients` order; `ingredientSprite.rows` must match (Muesli has 6). The site loads `raggi-jaggi-648w.webp`, `muesli-v5-648w.webp` and `date-bites-v3-648w.webp`, exported at 216px per tile, 648px wide. Keep the full-size masters (`raggi-jaggi.webp`, `muesli-v5.webp`, `date-bites-v3.webp`). `/assets/*` has a one-year `immutable` cache, so a changed sprite needs a new filename.
 - **Card images** (`image`) are per-product crops in `public/assets/product-cards/`, cut at the card's 1.3 ratio from `english-product-portfolio.png`. Image rules for the whole site are in `AGENTS.md` under "Images, fonts and bundle size".
 

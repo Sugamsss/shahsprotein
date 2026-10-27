@@ -1,6 +1,6 @@
 // The landing page's own way to call public Supabase RPCs: plain fetch, so
 // supabase-js stays out of the landing and order popup bundles. Used by click
-// events, order saves and the stock check. Neither call ever throws.
+// events, order saves, the stock check and the prices. Neither call ever throws.
 
 const PRODUCTION_HOSTS = ['shahsnutrition.food', 'www.shahsnutrition.food'];
 

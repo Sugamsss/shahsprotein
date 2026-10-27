@@ -12,9 +12,10 @@ import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import { useOrder } from '../../context/OrderContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { usePrices } from '../../services/priceService';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
-import { formatRupees } from '../../utils/prices';
+import { formatRupees, mrpOf } from '../../utils/prices';
 import type { Product } from '../../types/product';
 import type { Theme } from '../../types/theme';
 
@@ -25,20 +26,24 @@ const joinWithAnd = (items: string[]): string =>
 const copy = siteConfig.order;
 const text = siteConfig.products;
 
-/** The pack sizes that have an MRP, in pack order. */
-const pricedSizes = (product: Product): string[] =>
-  product.weightOptions.filter((size) => product.mrp[size] != null);
+/** The pack sizes that have an MRP, with it, in pack order. */
+const pricedSizes = (product: Product): Array<[size: string, mrp: number]> =>
+  product.weightOptions.flatMap((size) => {
+    const mrp = mrpOf(product, size);
+    return mrp == null ? [] : [[size, mrp] as [string, number]];
+  });
 
 /** A price tag per pack: the MRP, with its pack size under it. */
 const PackPrices: React.FC<{ product: Product }> = ({ product }) => {
+  usePrices();
   const sizes = pricedSizes(product);
   if (sizes.length === 0) return null;
   return (
     <dl className="pack-prices" aria-label={text.mrpLabel(product.name)}>
-      {sizes.map((size) => (
+      {sizes.map(([size, mrp]) => (
         <div key={size} className="pack-prices__item">
           <dt>{size}</dt>
-          <dd>{formatRupees(product.mrp[size])}</dd>
+          <dd>{formatRupees(mrp)}</dd>
         </div>
       ))}
     </dl>
@@ -102,6 +107,7 @@ const ProductCard: React.FC<{
 /** The product popup's pinned bar: pick a pack size, then add it to the order. */
 const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => void }> = ({ product, onAdd }) => {
   const stock = useStock();
+  usePrices();
   const [picked, setSize] = useState<string | undefined>(undefined);
   // The picked size, unless it's out (stock can arrive while the popup is open):
   // then the first size in stock. Undefined when every size is out.
@@ -121,6 +127,7 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
     );
   }
 
+  const mrp = mrpOf(product, size);
   const outSizes = product.weightOptions.filter((option) => stock.isOut(product.id, option));
 
   return (
@@ -145,9 +152,7 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
         <span className="product-detail__add-long">{copy.addToOrder}</span>
         <span className="product-detail__add-short">{copy.addToOrderShort}</span>
         {/* The picked pack's MRP, so the price changes with the switch. */}
-        {product.mrp[size] != null && (
-          <span className="product-detail__add-price">{formatRupees(product.mrp[size])}</span>
-        )}
+        {mrp != null && <span className="product-detail__add-price">{formatRupees(mrp)}</span>}
       </button>
       {outSizes.map((option) => (
         <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>

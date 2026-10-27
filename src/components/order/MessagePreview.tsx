@@ -2,6 +2,7 @@ import React, { useId, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { siteConfig } from '../../data/siteConfig';
+import { usePrices } from '../../services/priceService';
 import { orderMessageParts } from '../../utils/orderMessage';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 
@@ -15,10 +16,12 @@ export const MessagePreview: React.FC = () => {
   const { code, sendLines, name, pincode, phone, address, messageCoupon } = useOrder();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const mrps = usePrices();
 
   const parts = useMemo(
     () => orderMessageParts({ code, lines: sendLines, name, pincode, phone, address, coupon: messageCoupon }, { blanks: true }),
-    [code, sendLines, name, pincode, phone, address, messageCoupon],
+    // mrps: the admin's prices can arrive while it's open.
+    [code, sendLines, name, pincode, phone, address, messageCoupon, mrps],
   );
 
   return (
