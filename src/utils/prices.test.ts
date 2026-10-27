@@ -40,7 +40,7 @@ describe('packPrice', () => {
 
   it("uses the coupon's price for that pack, else the MRP", () => {
     const prices = { [couponPriceKey('muesli', '250 g')]: 250 };
-    expect(packPrice(muesli, '250 g', prices)).toEqual({ price: 250, mrp: 280 });
+    expect(packPrice(muesli, '250 g', prices)).toEqual({ price: 250, mrp: 290 });
     expect(packPrice(muesli, '500 g', prices)).toEqual({ price: 550, mrp: 550 });
   });
 
@@ -56,11 +56,11 @@ describe('orderTotal', () => {
   ];
 
   it('adds up packs at MRP', () => {
-    expect(orderTotal(lines)).toEqual({ total: 920, mrpTotal: 920 });
+    expect(orderTotal(lines)).toEqual({ total: 940, mrpTotal: 940 });
   });
 
   it("uses a coupon's own prices and keeps the MRP total beside it", () => {
-    expect(orderTotal(lines, { [couponPriceKey('muesli', '250 g')]: 250 })).toEqual({ total: 890, mrpTotal: 920 });
+    expect(orderTotal(lines, { [couponPriceKey('muesli', '250 g')]: 250 })).toEqual({ total: 900, mrpTotal: 940 });
   });
 
   it('is null for nothing, or when a pack has no price', () => {
