@@ -35,6 +35,15 @@ describe('checkout lifecycle', () => {
     expect(host.querySelectorAll('input[name="postal-code"]')).toHaveLength(1);
   });
 
+  it('puts name, phone and address in one form with autofill tokens, so phones offer saved details', () => {
+    const form = host.querySelector('form')!;
+    const tokens = [...form.querySelectorAll('input')].map((input) => input.getAttribute('autocomplete'));
+    expect(tokens).toEqual(['name', 'tel', 'address-line1', 'address-line2', 'off', 'address-level2', 'address-level1', 'postal-code']);
+    const event = new Event('submit', { bubbles: true, cancelable: true });
+    form.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('shows per-field errors and focuses the first invalid required address field on Continue', () => {
     const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Continue'))!;
     act(() => button.click());

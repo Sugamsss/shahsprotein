@@ -79,55 +79,59 @@ export const OrderCheckout: React.FC = () => {
     <>
       <section className="popup-section" aria-label={copy.detailsHeading}>
         <h4>{copy.detailsHeading}</h4>
-        <div className="order-fields">
-          <div className="order-field">
-            <label htmlFor={`${id}-name`} className="order-field__label">{copy.nameLabel}</label>
-            <input
-              ref={nameRef}
-              id={`${id}-name`}
-              name="name"
-              className="input"
-              type="text"
-              value={name}
-              autoComplete="name"
-              maxLength={60}
-              enterKeyHint="next"
-              aria-invalid={nameError ? true : undefined}
-              aria-describedby={nameError ? nameErrorId : undefined}
-              onChange={(event) => {
-                typed.current.name = true;
-                setName(event.target.value);
-              }}
-              onBlur={() => leave('name')}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  phoneRef.current?.focus();
-                }
-              }}
-            />
-            {nameError && (
-              <p id={nameErrorId} className="order-field__error">
-                <AlertCircle size={15} aria-hidden="true" />
-                <span>{nameError}</span>
-              </p>
-            )}
-          </div>
+        {/* A real form, so phones offer their saved name, number and address
+            (Safari's AutoFill needs one). It never submits: Send is the link below. */}
+        <form className="order-details-form" autoComplete="on" noValidate onSubmit={(event) => event.preventDefault()}>
+          <div className="order-fields">
+            <div className="order-field">
+              <label htmlFor={`${id}-name`} className="order-field__label">{copy.nameLabel}</label>
+              <input
+                ref={nameRef}
+                id={`${id}-name`}
+                name="name"
+                className="input"
+                type="text"
+                value={name}
+                autoComplete="name"
+                maxLength={60}
+                enterKeyHint="next"
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={nameError ? nameErrorId : undefined}
+                onChange={(event) => {
+                  typed.current.name = true;
+                  setName(event.target.value);
+                }}
+                onBlur={() => leave('name')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    phoneRef.current?.focus();
+                  }
+                }}
+              />
+              {nameError && (
+                <p id={nameErrorId} className="order-field__error">
+                  <AlertCircle size={15} aria-hidden="true" />
+                  <span>{nameError}</span>
+                </p>
+              )}
+            </div>
 
-          <div className="order-field">
-            <label htmlFor={`${id}-phone`} className="order-field__label">{copy.phoneLabel}</label>
-            <input ref={phoneRef} id={`${id}-phone`} className="input" type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={phone}
-              aria-invalid={!phoneOk && (submitted || left.phone) || undefined} aria-describedby={`${id}-phone-note`}
-              onChange={(event) => { typed.current.phone = true; setPhone(event.target.value); }} onBlur={() => leave('phone')} />
-            {!phoneOk && (submitted || left.phone) ? (
-              <p id={`${id}-phone-note`} className="order-field__error">
-                <AlertCircle size={15} aria-hidden="true" />
-                <span>{phone ? copy.phoneInvalid : copy.phoneMissing}</span>
-              </p>
-            ) : <p id={`${id}-phone-note`} className="order-field__hint">{copy.phoneHint}</p>}
+            <div className="order-field">
+              <label htmlFor={`${id}-phone`} className="order-field__label">{copy.phoneLabel}</label>
+              <input ref={phoneRef} id={`${id}-phone`} name="tel" className="input" type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={phone}
+                aria-invalid={!phoneOk && (submitted || left.phone) || undefined} aria-describedby={`${id}-phone-note`}
+                onChange={(event) => { typed.current.phone = true; setPhone(event.target.value); }} onBlur={() => leave('phone')} />
+              {!phoneOk && (submitted || left.phone) ? (
+                <p id={`${id}-phone-note`} className="order-field__error">
+                  <AlertCircle size={15} aria-hidden="true" />
+                  <span>{phone ? copy.phoneInvalid : copy.phoneMissing}</span>
+                </p>
+              ) : <p id={`${id}-phone-note`} className="order-field__hint">{copy.phoneHint}</p>}
+            </div>
           </div>
-        </div>
-        <DeliveryAddressFields submitted={submitted} />
+          <DeliveryAddressFields submitted={submitted} />
+        </form>
 
         <CouponField />
         <MessagePreview />

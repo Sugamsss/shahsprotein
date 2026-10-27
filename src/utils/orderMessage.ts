@@ -64,7 +64,8 @@ export const orderMessageParts = (
   const name = cleanName(input.name);
   const address = formatDeliveryAddress(input.address);
   const phone = cleanPhone(input.phone);
-  const displayPhone = phone.startsWith('91') && phone.length === 12 ? `${phone.slice(2, 7)} ${phone.slice(7)}` : phone;
+  // One unbroken number, so WhatsApp links all of it and it copies whole.
+  const displayPhone = phone.startsWith('91') && phone.length === 12 ? phone.slice(2) : phone;
   const couponCode = toOneLine(input.coupon?.code ?? '').toUpperCase();
 
   const greeting: MessagePart[] = name || options.blanks

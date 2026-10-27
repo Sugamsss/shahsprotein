@@ -65,7 +65,7 @@ export const DeliveryAddressFields: React.FC<{ submitted?: boolean }> = ({ submi
     return (
     <div className="order-field" key={key}>
       <label className="order-field__label" htmlFor={`delivery-${key}`}>{label}</label>
-      <input id={`delivery-${key}`} name={key === 'pincode' ? 'postal-code' : key} className="input" value={address[key] ?? ''} maxLength={maxLength}
+      <input id={`delivery-${key}`} name={autocomplete === 'off' ? key : autocomplete} className="input" value={address[key] ?? ''} maxLength={maxLength}
         autoComplete={autocomplete} required={required} aria-invalid={invalid || undefined} aria-describedby={error ? `delivery-${key}-error` : undefined}
         onBlur={() => setTouched((old) => ({ ...old, [key]: true }))} onChange={(event) => { invalidate(); addressRef.current = { ...addressRef.current, [key]: event.target.value }; editAddressPart(key, event.target.value); }} />
       {error && <p id={`delivery-${key}-error`} className="order-field__error">{error}</p>}
@@ -77,7 +77,7 @@ export const DeliveryAddressFields: React.FC<{ submitted?: boolean }> = ({ submi
     {!placesConfigured() ? null : failed ? <p className="order-field__hint">{copy.addressSearchDown}</p> : <div className="order-field delivery-search">
       <label className="order-field__label" htmlFor="delivery-search">{copy.addressSearchLabel}</label>
       <div className="delivery-search__input"><Search size={18} aria-hidden="true" />
-        <input id="delivery-search" className="input" role="combobox" aria-autocomplete="list" aria-expanded={items.length > 0}
+        <input id="delivery-search" className="input" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={items.length > 0}
           aria-controls="delivery-suggestions" aria-activedescendant={active >= 0 && active < items.length ? `delivery-option-${active}` : undefined}
           value={query} placeholder={copy.addressSearchHint} onChange={(event) => search(event.target.value)}
           onKeyDown={(event) => {
