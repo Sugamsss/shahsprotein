@@ -35,7 +35,7 @@ export interface Product {
   nutritionFacts: NutritionFact[];
   /** Pack sizes, e.g. "250 g". */
   weightOptions: string[];
-  /** MRP in whole rupees for each pack size in weightOptions, e.g. { '250 g': 165 }. */
+  /** Fallback MRP in whole rupees per pack size; the site reads them with `mrpOf`, which prefers the admin's. */
   mrp: Record<string, number>;
   /** How long it stays fresh. Kept short on purpose: no preservatives. */
   /** How long it keeps, as shown to customers, e.g. "6 months". */

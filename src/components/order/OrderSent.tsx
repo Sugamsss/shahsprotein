@@ -4,6 +4,7 @@ import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
 import { saveOrder } from '../../services/orderService';
+import { usePrices } from '../../services/priceService';
 import { buildOrderMessage } from '../../utils/orderMessage';
 import { formatRupees, orderTotal } from '../../utils/prices';
 import { useModalClose } from '../ui/Modal';
@@ -76,6 +77,7 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
     void copyText(buildOrderMessage(sent)).then((ok) => setCopied(ok ? 'ok' : 'failed'));
   };
   // The same total the message carried.
+  usePrices();
   const total = orderTotal(sent.lines, sent.coupon?.prices);
   const meta = [sent.name, sent.pincode, sent.coupon && copy.recapCoupon(sent.coupon.code)].filter(Boolean).join(' · ');
 

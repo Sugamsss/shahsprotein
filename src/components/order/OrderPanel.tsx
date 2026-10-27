@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
+import { usePrices } from '../../services/priceService';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { orderUrl, trackOrderChat } from '../../utils/contact';
 import type { OrderLine } from '../../types/order';
@@ -91,6 +92,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
   // An accepted coupon's own prices; every other pack shows its MRP.
   const couponPrices = coupon.status === 'valid' ? coupon.prices : null;
   // Only what's sent (back-soon lines aren't), so it matches the message.
+  usePrices();
   const total = orderTotal(sendLines, couponPrices);
   const stock = useStock();
 

@@ -9,8 +9,9 @@ const orderTile = (name: string): ImageSet => ({
 });
 
 // The English product portfolio is the source for this launch range. Nutrition
-// is populated only where a product label has been supplied. MRPs are the
-// founder's (2026-10-22), one per pack size in weightOptions.
+// is populated only where a product label has been supplied. `mrp` is the
+// fallback, one per pack size in weightOptions: the site shows the admin's
+// base prices (priceService) once it has them.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 // Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
 // Sprites are exported at 216px per tile as WebP; the chips crop each tile into a round picture.
