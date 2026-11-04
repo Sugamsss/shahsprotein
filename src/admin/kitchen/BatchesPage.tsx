@@ -12,7 +12,6 @@ import type { BatchRecord } from '../types';
 import { useRpc } from '../useRpc';
 import { productName, sizeText } from '../orders/model';
 import { batchDates, shelfOf } from './batches';
-import { DatesLine } from './DatesLine';
 
 const copy = adminCopy.batches;
 const PAGE = 60;
@@ -50,10 +49,11 @@ const BatchCard: React.FC<{ b: BatchRecord; startOpen: boolean }> = ({ b, startO
         <span className="adm-bcard__main">
           <span className="adm-bcard__code">
             {b.code}
-            <span className={`adm-bcard__shelf is-${shelf}`}>{copy.shelf[shelf]}</span>
+            <span className={`adm-bcard__shelf is-${shelf}`}>{copy.shelf(shelf, formatWeight(Math.max(b.spare, 0)))}</span>
           </span>
           <span className="adm-bcard__sub">{copy.rowSub(productName(b.product_id), formatWeight(b.grams), b.orders.length)}</span>
-          <DatesLine className="adm-bcard__dates" mfg={mfg} exp={exp} />
+          {/* Mfg is in the number (and in the open card): the line keeps to what needs a look. */}
+          <span className="adm-bcard__dates">{exp ? copy.expShort(exp) : copy.noExp}</span>
         </span>
         <ChevronRight className="adm-bcard__chev" size={20} aria-hidden="true" />
       </button>

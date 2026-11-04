@@ -3,11 +3,13 @@
    Admin type scale and tokens only; type with longhands. Numbers are monospace, like codes.
    Taps are 44px on phones (small pills grow their hit area with ::after). Imported by admin.css. */
 
-/* ---- Under a product in the order view ------------------------------------------------ */
-.adm-obatches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 6px; }
-.adm-obatch { display: contents; }
+/* ---- Under a product in the order view ------------------------------------------------
+   Its own full-width line in the item's grid (under the thumb, name and ×), so opening it
+   never moves the row above or pushes it wider than a 320px screen. */
+.adm-items .adm-obatches { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.adm-obatch { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .adm-obatch__chip {
-  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px 0 9px;
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 8px 0 10px;
   border-radius: var(--radius-full); background: var(--adm-well); color: var(--adm-ink-1);
   font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; touch-action: manipulation;
   transition: background-color 160ms ease;
@@ -15,27 +17,28 @@
 .adm-obatch__chip::after { content: ''; position: absolute; inset: -6px -2px; }
 .adm-obatch__chip > svg { flex: none; color: var(--adm-ink-2); }
 .adm-obatch__chev { transition: transform 200ms ease; }
-.adm-obatch.is-open .adm-obatch__chev { transform: rotate(90deg); }
-.adm-obatch.is-open .adm-obatch__chip { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
-.adm-obatch.is-open .adm-obatch__chip > svg { color: var(--adm-accent-text); }
+.adm-obatch__chip.is-open { background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+.adm-obatch__chip.is-open > svg { color: var(--adm-accent-text); }
+.adm-obatch__chip.is-open .adm-obatch__chev { transform: rotate(90deg); }
 .adm-obatch__chip:active { background: var(--adm-well-press); }
 @media (hover: hover) { .adm-obatch__chip:hover { background: var(--adm-well-press); } }
 .adm-obatch__chip:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-obatch__code { font-family: var(--font-family-mono); letter-spacing: 0.04em; }
+.adm-items .adm-obatch__exp { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-items .adm-obatches__none { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; }
 
 .adm-obatch__panel {
-  flex: 1 0 100%; display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px;
-  background: color-mix(in srgb, var(--adm-well) 70%, transparent);
+  flex: 1 0 100%; display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--adm-well);
 }
 .adm-obatch__panel[hidden] { display: none; }
-.adm-obatch__facts { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; }
+.adm-obatch__facts { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; }
 .adm-obatch__facts > div { display: flex; gap: 6px; align-items: baseline; }
 .adm-obatch__facts dt { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; }
 .adm-obatch__facts dd { margin: 0; color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; font-variant-numeric: tabular-nums; }
-.adm-obatch__note { margin: 0; color: var(--adm-ink-2); font-size: var(--adm-text-small); }
-.adm-obatch__panel .adm-kx-history-link { justify-self: start; min-height: 36px; padding: 0; }
-.adm-obatches__hand { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; }
-.adm-items .adm-obatches__change { min-height: 32px; font-size: var(--adm-text-small); }
+.adm-obatch__note { margin: 0; color: var(--adm-ink-2); font-size: var(--adm-text-small); line-height: 1.35; }
+.adm-obatch__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.adm-obatch__actions:empty { display: none; }
+.adm-obatch__actions .adm-kx-history-link { padding: 0; }
 
 /* ---- Fix a batch: the number, Mfg and Exp on top -------------------------------------- */
 .adm-kx-batchno {
@@ -43,8 +46,9 @@
   padding: 12px 14px; border-radius: 16px; background: var(--adm-well);
 }
 .adm-kx-batchno .adm-kx-history-link { min-height: 36px; padding: 0; }
-.adm-kx-batchno .adm-obatch__facts { display: grid; flex: 1 1 100%; grid-template-columns: auto auto auto; justify-content: start; gap: 4px 24px; }
+.adm-kx-batchno .adm-obatch__facts { flex: 1 1 100%; gap: 8px 24px; }
 .adm-kx-batchno .adm-obatch__facts > div { display: grid; gap: 2px; }
+.adm-kx-batchno .adm-obatch__facts dd { white-space: nowrap; }
 
 /* ---- Change batch: one button per batch, acts on the tap ------------------------------ */
 .adm-bchoice__hint { margin: 0; }

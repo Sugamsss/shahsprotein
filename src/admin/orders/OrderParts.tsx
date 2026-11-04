@@ -149,15 +149,11 @@ export const ItemsCard: React.FC<{ order: Order; onChangeBatch?: (productId: str
           <span>
             <b className="adm-pname">{productName(l.product_id)}</b><small>{sizeText(l.size)}</small>
             {/* Once per product, under its last line. */}
-            {lines[i + 1]?.product_id !== l.product_id && (
-              <>
-                <LineState order={o} productId={l.product_id} />
-                {/* Its batch number (Mfg and Exp on a tap), and Change batch. */}
-                <ProductBatches order={o} productId={l.product_id} onChange={onChangeBatch} />
-              </>
-            )}
+            {lines[i + 1]?.product_id !== l.product_id && <LineState order={o} productId={l.product_id} />}
           </span>
           <span className="adm-items__q">× {l.quantity}</span>
+          {/* Once per product, its own full-width line: the batch number and Exp; a tap for more. */}
+          {lines[i + 1]?.product_id !== l.product_id && <ProductBatches order={o} productId={l.product_id} onChange={onChangeBatch} />}
         </li>
       ))}
     </ul>

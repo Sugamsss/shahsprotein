@@ -1064,7 +1064,7 @@ export const adminCopy = {
   batches: {
     title: 'Batches',
     moreRow: ['Batches', 'Batch numbers, Mfg, Exp and who got each one'],
-    intro: 'Each batch gets its number when cooking is logged: the product’s letter (R, M, none for Date Bites) and the day it was made.',
+    intro: 'R Raggi Jaggi, M Muesli, no letter Date Bites, then the day it was made.',
     /** "Batch R041126" */
     label: (code: string) => `Batch ${code}`,
     batchNo: 'Batch no.',
@@ -1078,15 +1078,17 @@ export const adminCopy = {
     showDetails: (code: string) => `Batch ${code}, show Mfg and Exp`,
     fromIt: (weight: string) => `${weight} from this batch`,
     byHand: (weight: string) => `${weight} not from a logged batch`,
-    noBatch: 'No batch picked',
+    noBatch: 'No batch yet',
+    /** Beside the number, readable without a tap. */
+    expShort: (day: string) => `Exp ${day}`,
     change: 'Change batch',
     pick: 'Pick batch',
     changeName: (product: string) => `Change the batch for ${product}`,
-    whoElse: 'Everyone who got this batch',
+    whoElse: 'Who else got it',
 
     // Change batch: the sheet.
     sheetTitle: (product: string) => `${product}: which batch?`,
-    sheetHint: 'The kitchen gives the oldest batch first. Pick another one if that’s what went in the pack.',
+    sheetHint: 'Oldest goes first. Pick another if that’s what you packed.',
     oldest: 'Oldest',
     inOrder: 'In this order',
     spare: (weight: string) => `${weight} spare`,
@@ -1112,7 +1114,9 @@ export const adminCopy = {
     /** The line under a batch's number: "Raggi Jaggi · 2 kg · 4 orders". */
     rowSub: (product: string, weight: string, orders: number) =>
       [product, weight, orders ? `${orders} ${orders === 1 ? 'order' : 'orders'}` : ''].filter(Boolean).join(' · '),
-    shelf: { none: 'All gone', fresh: 'On the shelf', near: 'Near Exp', past: 'Past Exp' } as Record<'none' | 'fresh' | 'near' | 'past', string>,
+    /** The chip by a batch's number: what's left of it, at a glance. */
+    shelf: (kind: 'none' | 'fresh' | 'near' | 'past', left: string) =>
+      (kind === 'none' ? 'All gone' : kind === 'past' ? 'Past Exp' : kind === 'near' ? `${left} left, near Exp` : `${left} left`),
     wentTo: 'Went to',
     nobodyYet: 'Not in any order yet.',
     /** "500 g · 250 g × 2" */

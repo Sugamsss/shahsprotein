@@ -9,7 +9,7 @@ import { batchLink, useBatchesAvailable } from '../kitchen/useBatchesAvailable';
 import { DatesLine } from '../kitchen/DatesLine';
 import { LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
-import type { Order, OrderBatch, OrderBatchEffects } from '../types';
+import type { Order, OrderBatchEffects } from '../types';
 import { useRpc } from '../useRpc';
 import { useUndoable } from '../useUndoable';
 import { movedOthers, productName } from './model';
@@ -21,54 +21,77 @@ import { movedOthers, productName } from './model';
 
 const copy = adminCopy.batches;
 
-/** One batch: the number as a button; open, its Mfg, Exp, grams and a link to everyone who got it. */
-const BatchChip: React.FC<{ batch: OrderBatch & { code: string }; split: boolean; linkOn: boolean }> = ({ batch, split, linkOn }) => {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const { mfg, exp } = batchDates(batch);
-  return (
-    <div className={`adm-obatch${open ? ' is-open' : ''}`}>
-      <button type="button" className="adm-obatch__chip" aria-expanded={open} aria-controls={id}
-        aria-label={copy.showDetails(batch.code)} onClick={() => setOpen((v) => !v)}>
-        <Tag size={14} aria-hidden="true" />
-        <span className="adm-obatch__code">{batch.code}</span>
-        <ChevronRight className="adm-obatch__chev" size={14} aria-hidden="true" />
-      </button>
-      <div id={id} className="adm-obatch__panel" hidden={!open}>
-        <dl className="adm-obatch__facts">
-          <div><dt>{copy.mfg}</dt><dd>{mfg}</dd></div>
-          <div><dt>{copy.exp}</dt><dd>{exp ?? copy.noExp}</dd></div>
-        </dl>
-        {split && <p className="adm-obatch__note">{copy.fromIt(formatWeight(batch.grams))}</p>}
-        {linkOn && <AdminLink className="adm-kx-history-link" to={batchLink(batch.code)}>{copy.whoElse}</AdminLink>}
-      </div>
-    </div>
-  );
-};
-
 /**
- * The batches under one product of an order: each number, what was covered by hand, and
- * Change batch (or Pick batch when none was logged for it). Nothing shows while the
- * product is still waiting in Cooking, or before the database has batch numbers.
+ * The batches under one product of an order, on their own full-width line: each number with its
+ * Exp, readable at a glance. A tap opens a small panel: Mfg and Exp, then Change batch (only when
+ * another batch could take it) and everyone who got it. An order still going out with no logged
+ * batch gets Pick batch. Nothing shows while the product is still waiting in Cooking, before the
+ * database has batch numbers, or on a delivered order covered by hand.
  */
 export const ProductBatches: React.FC<{ order: Order; productId: string; onChange?: (productId: string) => void }> = ({ order, productId, onChange }) => {
   const on = useBatchesAvailable();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const panelId = useId();
   const batches = orderBatches(order, productId);
   const k = order.kitchen?.find((x) => x.product_id === productId);
+  const changeable = on && !!onChange && !!k && canChangeBatch(order, productId);
+  // Only ask the kitchen once a panel is open: is there another batch this could come from?
+  const kitchen = useRpc(() => (openId && changeable ? getKitchen() : Promise.resolve(null)), [openId, changeable, order.updated_at]);
   if (!k || k.waiting) return null;
-  if (!batches.length && !on) return null;
-  const changeable = on && !!onChange && canChangeBatch(order, productId);
-  if (!batches.length && !changeable) return null;
+
+  if (!batches.length) {
+    if (!changeable || order.status === 'delivered') return null;
+    return (
+      <div className="adm-obatches">
+        <span className="adm-obatches__none">{copy.noBatch}</span>
+        <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" aria-label={copy.changeName(productName(productId))}
+          onClick={() => onChange?.(productId)}>{copy.pick}</button>
+      </div>
+    );
+  }
+
+  const open = batches.find((b) => b.batch_id === openId);
+  const others = kitchen.data ? batchChoices(kitchen.data, order, productId).some((c) => !c.current && c.enough && !c.past) : false;
+  const split = batches.length > 1 || k.by_hand > 0;
   return (
     <div className="adm-obatches">
-      {batches.map((b) => <BatchChip key={b.batch_id} batch={b} split={batches.length > 1 || k.by_hand > 0} linkOn={on} />)}
-      {k.by_hand > 0 && <small className="adm-obatches__hand">{batches.length ? copy.byHand(formatWeight(k.by_hand)) : copy.noBatch}</small>}
-      {changeable && (
-        <button type="button" className="adm-text-btn adm-obatches__change" aria-label={copy.changeName(productName(productId))}
-          onClick={() => onChange?.(productId)}>
-          {batches.length ? copy.change : copy.pick}
-        </button>
-      )}
+      {batches.map((b) => {
+        const isOpen = b.batch_id === openId;
+        const { exp } = batchDates(b);
+        return (
+          <span key={b.batch_id} className="adm-obatch">
+            <button type="button" className={`adm-obatch__chip${isOpen ? ' is-open' : ''}`} aria-expanded={isOpen}
+              aria-controls={panelId} aria-label={copy.showDetails(b.code)} onClick={() => setOpenId(isOpen ? null : b.batch_id)}>
+              <Tag size={14} aria-hidden="true" />
+              <span className="adm-obatch__code">{b.code}</span>
+              <ChevronRight className="adm-obatch__chev" size={14} aria-hidden="true" />
+            </button>
+            <span className="adm-obatch__exp">{exp ? copy.expShort(exp) : copy.noExp}</span>
+          </span>
+        );
+      })}
+      <div id={panelId} className="adm-obatch__panel" hidden={!open}>
+        {open && (
+          <>
+            <dl className="adm-obatch__facts">
+              <div><dt>{copy.mfg}</dt><dd>{batchDates(open).mfg}</dd></div>
+              <div><dt>{copy.exp}</dt><dd>{batchDates(open).exp ?? copy.noExp}</dd></div>
+            </dl>
+            {split && (
+              <p className="adm-obatch__note">
+                {[copy.fromIt(formatWeight(open.grams)), k.by_hand > 0 && copy.byHand(formatWeight(k.by_hand))].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            <div className="adm-obatch__actions">
+              {changeable && others && (
+                <button type="button" className="adm-btn adm-btn--tonal adm-btn--xs" aria-label={copy.changeName(productName(productId))}
+                  onClick={() => onChange?.(productId)}>{copy.change}</button>
+              )}
+              {on && <AdminLink className="adm-kx-history-link" to={batchLink(open.code)}>{copy.whoElse}</AdminLink>}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

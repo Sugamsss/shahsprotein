@@ -80,11 +80,12 @@ const lineOf = (o: Outcome): Line => {
         title: say.spareLess(formatWeight(o.before), o.after ? formatWeight(o.after) : null, productName(o.product_id)),
       };
     case 'batchNumber': {
-      const { mfg, exp } = batchDates(o);
+      // Mfg is the made-on day picked above, so the line keeps to Exp.
+      const { exp } = batchDates(o);
       return {
         icon: <Tag size={18} aria-hidden="true" />, tone: 'ok',
         title: o.changed ? say.newNumber(productName(o.product_id), o.code) : say.number(productName(o.product_id), o.code),
-        detail: adminCopy.batches.mfgExp(mfg, exp),
+        detail: exp ? adminCopy.batches.expShort(exp) : adminCopy.batches.noExp,
       };
     }
     case 'noSpare':
