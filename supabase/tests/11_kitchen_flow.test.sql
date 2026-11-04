@@ -259,8 +259,8 @@ select results_eq(
 
 select results_eq(
   $$select product_id, sample_grams, shelf_life_amount, shelf_life_unit from public.kitchen_products order by product_id$$,
-  $$values ('bites'::text, 15, 15, 'days'::text), ('muesli', 20, 6, 'months'), ('raggi-jaggi', 20, 6, 'months')$$,
-  'starting sample weights and shelf lives'
+  $$values ('bites'::text, 15, 21, 'days'::text), ('muesli', 20, 6, 'months'), ('raggi-jaggi', 20, 6, 'months')$$,
+  'sample weights and shelf lives (Date Bites 21 days since 20261104000001)'
 );
 
 -- ─── 3. Website requests do not take spare ──────────────
@@ -335,9 +335,9 @@ select is(
 );
 
 -- Spare past its shelf life stays on the shelf but never fills an order,
--- even though it's the oldest. Date Bites keep 15 days.
-select pg_temp.log('past', 'bites', 500, 20);
-select pg_temp.log('near', 'bites', 400, 12);
+-- even though it's the oldest. Date Bites keep 21 days.
+select pg_temp.log('past', 'bites', 500, 26);
+select pg_temp.log('near', 'bites', 400, 18);
 select pg_temp.ord('SN-KFD22', 0, '[{"product_id":"bites","size":"250 g","quantity":1}]');
 
 select is(

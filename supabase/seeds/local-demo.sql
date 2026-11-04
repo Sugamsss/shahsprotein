@@ -94,12 +94,12 @@ $$;
 
 -- ─── The kitchen, before the orders ─────────────────────
 
--- Pranjali's batches: Date Bites 12 days ago (15-day shelf life, so 3 days
+-- Pranjali's batches: Date Bites 18 days ago (21-day shelf life, so 3 days
 -- left), and Raggi Jaggi and Muesli 5 days ago, enough for Tanvi's order and
 -- Anil's samples.
 select pg_temp.act_as('cook');
 select public.log_admin_batches(jsonb_build_array(
-  jsonb_build_object('product_id', 'bites', 'grams', 1565, 'made_on', pg_temp.day(12)),
+  jsonb_build_object('product_id', 'bites', 'grams', 1565, 'made_on', pg_temp.day(18)),
   jsonb_build_object('product_id', 'raggi-jaggi', 'grams', 520, 'made_on', pg_temp.day(5)),
   jsonb_build_object('product_id', 'muesli', 'grams', 520, 'made_on', pg_temp.day(5))
 ));

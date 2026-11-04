@@ -162,8 +162,8 @@ select is(
 );
 select is(
   (select expires_on from public.kitchen_batches where id = pg_temp.bid('b1')),
-  pg_temp.day(0) + 15,
-  'Exp: Date Bites 15 days'
+  pg_temp.day(0) + 21,
+  'Exp: Date Bites 21 days'
 );
 
 select is(
@@ -331,12 +331,12 @@ select throws_ok(
 
 -- Past food: never for an order that's going out; a delivered one can be put right,
 -- and the grams it frees fill a short order.
-select pg_temp.log('bp', 'bites', 500, 20);
+select pg_temp.log('bp', 'bites', 500, 26);
 select pg_temp.ord('SN-BTC22', 2, '[{"product_id":"bites","size":"500 g","quantity":1}]');
 select is(pg_temp.cover('SN-BTC22'), 'bites:b1=500', 'past spare never fills');
 select throws_ok(
   $$select pg_temp.set_batch('SN-BTC22', 'bites', 'bp')$$,
-  '22023', 'Batch ' || pg_temp.num('', 20) || ' is past its Exp date.',
+  '22023', 'Batch ' || pg_temp.num('', 26) || ' is past its Exp date.',
   'refused: past batch for an order in Packing'
 );
 select pg_temp.move('SN-BTC22', 'ready');
@@ -365,7 +365,7 @@ select is(
 );
 select is(
   (select string_agg(b ->> 'code', ' ') from json_array_elements(public.get_admin_batches('sn-btc') -> 'batches') b),
-  pg_temp.num('', 20),
+  pg_temp.num('', 26),
   'batches: search by an order code that got food from it'
 );
 -- A batch number's digits never match a phone.
