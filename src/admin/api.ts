@@ -1,7 +1,7 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
-  AdminMe, AdminUser, BatchInput, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
-  KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  AdminMe, AdminUser, BatchInput, BatchList, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
+  KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderBatchEffects, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
   WebsiteRequest, WebsiteRequestPage, EntryInput, HomeExtras, IngredientBook, IngredientInput, JournalEntry, JournalFeed,
   JournalLookback, JournalMilestone, JournalMonth, JournalSearch, JournalSearchFilter, Todo, TodoInput, TodoList, WorkDay,
@@ -147,6 +147,16 @@ export const undoKitchen = (actionId: string) =>
  */
 export const givePriority = (orderId: string, preview = false) =>
   rpc<PriorityGiveEffects>('give_admin_priority', { order_id: orderId, preview });
+/**
+ * "Change batch" on an order: all of one product now comes from `batchId` (it needs the spare, and
+ * mustn't be past its Exp unless the order is delivered). Undo with undoKitchen(action_id).
+ * 'missing' until 20261104000000 is live.
+ */
+export const setOrderBatch = (orderId: string, productId: string, batchId: string) =>
+  rpc<OrderBatchEffects>('set_admin_order_batch', { order_id: orderId, product_id: productId, batch_id: batchId });
+/** Batches, newest made first, each with who it went to. Search by batch number or an order's code, name or phone. */
+export const getBatches = (filter: { search?: string; productId?: string; limit?: number } = {}) =>
+  rpc<BatchList>('get_admin_batches', { search: filter.search || undefined, product_id: filter.productId, limit: filter.limit });
 /** Products page: sample weight and shelf life. Returns the kitchen. */
 export const setKitchenProduct = (productId: string, settings: KitchenSettings) =>
   rpc<Kitchen>('set_admin_kitchen_product', { product_id: productId, settings });

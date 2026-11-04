@@ -99,6 +99,18 @@ create function pg_temp.cover(p_code text) returns text language sql as $$
   where a.order_id = pg_temp.id(p_code);
 $$;
 
+-- The order answer's kitchen with each batch as made-on day and grams only
+-- (numbers and Exp, 20261104000000, are checked in 20_batch_numbers).
+create function pg_temp.order_kitchen(p_order public.orders) returns jsonb language sql as $$
+  select coalesce(jsonb_agg(
+    k - 'batches' || jsonb_build_object('batches', coalesce((
+      select jsonb_agg(jsonb_build_object('made_on', b -> 'made_on', 'grams', b -> 'grams'))
+      from jsonb_array_elements(k -> 'batches') b
+    ), '[]'::jsonb))
+  ), '[]'::jsonb)
+  from jsonb_array_elements(public.admin_order_json(p_order)::jsonb -> 'kitchen') k;
+$$;
+
 create function pg_temp.spare(p_tag text) returns integer language sql as $$
   select r.spare from public.kitchen_batch_rows(null) r where r.batch_id = pg_temp.bid(p_tag);
 $$;
@@ -361,7 +373,7 @@ select pg_temp.ord('SN-KMA22', 24,
 select pg_temp.log('m1', 'raggi-jaggi', 250);
 
 select is(
-  (select jsonb_build_object('status', o.status, 'kitchen', public.admin_order_json(o)::jsonb -> 'kitchen')
+  (select jsonb_build_object('status', o.status, 'kitchen', pg_temp.order_kitchen(o))
    from public.orders o where o.code = 'SN-KMA22'),
   format('{"status":"cooking","kitchen":[
      {"product_id":"muesli","need":250,"covered":0,"by_hand":0,"waiting":true,"batches":[]},
@@ -514,7 +526,7 @@ select public.save_admin_order(pg_temp.id('SN-KEA22'),
   '{"name":"Kitchen Example","lines":[{"product_id":"raggi-jaggi","size":"500 g","quantity":2}]}');
 
 select is(
-  (select jsonb_build_object('status', o.status, 'cover', pg_temp.cover(o.code), 'kitchen', public.admin_order_json(o)::jsonb -> 'kitchen')
+  (select jsonb_build_object('status', o.status, 'cover', pg_temp.cover(o.code), 'kitchen', pg_temp.order_kitchen(o))
    from public.orders o where o.code = 'SN-KEA22'),
   format('{"status":"cooking","cover":"raggi-jaggi:e=500",
     "kitchen":[{"product_id":"raggi-jaggi","need":1000,"covered":500,"by_hand":0,"waiting":true,

@@ -53,7 +53,7 @@ export const LoggedList: React.FC<{ kitchen: Kitchen; onFix: (batch: KitchenBatc
               {product ? <OrderThumb product={product} className="adm-kx-thumb" /> : <span />}
               <span className="adm-list__main">
                 <span className="adm-list__title">{copy.batchTitle(name, weight)}</span>
-                <span className="adm-list__sub">{[madeText(b.made_on, kitchen.today), ...parts].join(' · ')}</span>
+                <span className="adm-list__sub">{[b.code, madeText(b.made_on, kitchen.today), ...parts].filter(Boolean).join(' · ')}</span>
               </span>
               <ChevronRight className="adm-list__end" size={20} aria-hidden="true" />
             </button>

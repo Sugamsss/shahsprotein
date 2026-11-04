@@ -103,7 +103,7 @@ export const WriteOffSheet: React.FC<{
     <>
       {product && <OrderThumb product={product} className="adm-kx-thumb" />}
       <span className="adm-kx-batch__text">
-        <b>{copy.made(madeOnDay(b.made_on))}</b>
+        <b>{copy.made(madeOnDay(b.made_on), b.code)}</b>
         <SpareKeeps batch={b} long />
       </span>
     </>

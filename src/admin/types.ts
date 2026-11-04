@@ -70,8 +70,22 @@ export interface OrderKitchen {
   by_hand: number;
   /** In Cooking and still short of it. */
   waiting: boolean;
-  /** Where its food came from: each batch's made-on day and grams, oldest first. */
-  batches: { made_on: string; grams: number }[];
+  /**
+   * Where its food came from, oldest first: each batch's made-on day (Mfg) and grams. Since
+   * 20261104000000 also its id, number (`R041126`) and Exp; absent on an older database.
+   */
+  batches: OrderBatch[];
+}
+
+/** One batch an order's product came from. */
+export interface OrderBatch {
+  made_on: string;
+  grams: number;
+  batch_id?: string;
+  /** R041126: the product's letter and the made-on day. -2 for a second batch that day. */
+  code?: string;
+  /** Exp, fixed when the batch was logged. Null: the product never expires. */
+  expires_on?: string | null;
 }
 
 export interface Order {
@@ -475,12 +489,16 @@ export interface KitchenProduct {
   }[];
   /** Usable spare grams (fresh and near). */
   spare: number;
-  /** Every batch with food on the shelf, oldest first, past ones too. grams is what's left of it. expires_on is the first day it's past; "use by" is the day before. */
-  spare_batches: { batch_id: string; made_on: string; grams: number; expires_on: string | null; days_left: number | null; state: SpareState }[];
+  /** Every batch with food on the shelf, oldest first, past ones too. grams is what's left of it. expires_on is the first day it's past; "use by" is the day before. code since 20261104000000. */
+  spare_batches: { batch_id: string; code?: string; made_on: string; grams: number; expires_on: string | null; days_left: number | null; state: SpareState }[];
 }
 
 export interface KitchenBatch {
   id: string;
+  /** Batch number and Exp (since 20261104000000; absent before). */
+  code?: string;
+  expires_on?: string | null;
+  state?: SpareState;
   product_id: string;
   grams: number;
   made_on: string;
@@ -514,7 +532,7 @@ export interface KitchenEffects {
   preview: boolean;
   /** Undo with undoKitchen(action_id). Null on a preview. */
   action_id: string | null;
-  batches: { id: string; product_id: string; grams: number; made_on: string; to_orders: number; spare: number; written_off: number; deleted: boolean }[];
+  batches: { id: string; code?: string; expires_on?: string | null; product_id: string; grams: number; made_on: string; to_orders: number; spare: number; written_off: number; deleted: boolean }[];
   /** Orders whose stage or batch grams changed, oldest first. change is net batch grams per product; waiting is what a Cooking order still waits for. */
   orders: {
     id: string; code: string; name: string | null; from: OrderStatus; to: OrderStatus;
@@ -524,6 +542,32 @@ export interface KitchenEffects {
   /** The kitchen after it. */
   kitchen: Kitchen;
 }
+
+/** set_admin_order_batch: the usual effects plus the order as it is now. */
+export type OrderBatchEffects = KitchenEffects & { order: Order };
+
+/** get_admin_batches: one batch with everyone it went to. */
+export interface BatchRecord {
+  id: string;
+  code: string;
+  product_id: string;
+  grams: number;
+  made_on: string;
+  expires_on: string | null;
+  days_left: number | null;
+  state: SpareState;
+  to_orders: number;
+  spare: number;
+  written_off: number;
+  created_at: string;
+  by_name: string | null;
+  /** Oldest order first. grams came from this batch; packs are the order's packs of this product. */
+  orders: {
+    order_id: string; code: string; name: string | null; status: OrderStatus; created_at: string; grams: number;
+    packs: { size: string; quantity: number; grams_each: number }[];
+  }[];
+}
+export interface BatchList { today: string; batches: BatchRecord[]; more: boolean }
 
 /** give_admin_priority: one packed pouch kind a priority order can take from another order (Packing or Ready, never Delivered). */
 export interface PriorityPouch {

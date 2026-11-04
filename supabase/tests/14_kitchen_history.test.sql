@@ -134,9 +134,10 @@ reset role;
 -- ═══ The backfill (its statements, run with the triggers off) ════════════
 
 set session_replication_role = replica;
-insert into public.kitchen_batches (id, product_id, grams, made_on, created_at, created_by)
+-- code: every batch has a number since 20261104000000, and the trigger that gives it is off here.
+insert into public.kitchen_batches (id, product_id, grams, made_on, created_at, created_by, code)
 values ('00000000-0000-4000-8000-0000000000b1', 'date-bites', 400, pg_temp.day(2)::date,
-  timezone('utc', now()) - interval '3 days', '00000000-0000-4000-8000-000000000001');
+  timezone('utc', now()) - interval '3 days', '00000000-0000-4000-8000-000000000001', 'X010126');
 insert into public.kitchen_writeoffs (id, batch_id, grams, reason, created_at, created_by)
 values ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000b1', 40, 'thrown_out',
   timezone('utc', now()) - interval '2 days', '00000000-0000-4000-8000-000000000001');

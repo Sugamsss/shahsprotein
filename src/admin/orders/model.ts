@@ -243,6 +243,10 @@ export const cleanPastedPhone = (before: string, after: string, inputType?: stri
 
 const product = (id: string) => productsData.find((p) => p.id === id);
 export const productName = (id: string) => product(id)?.name ?? id;
+const siteRank = (id: string) => {
+  const i = productsData.findIndex((p) => p.id === id);
+  return i < 0 ? 99 : i;
+};
 export const thumbOf = (id: string, dark: boolean) => {
   const p = product(id);
   return (dark ? p?.orderThumbDark : p?.orderThumb) ?? '';
@@ -300,6 +304,16 @@ export const productStates = (o: Order): { product_id: string; ready: boolean; m
 /** A Cooking order where some products are ready and some aren't: its card marks each line. */
 export const isPartlyCooked = (o: Order): boolean =>
   o.status === 'cooking' && (o.kitchen ?? []).some((k) => k.waiting) && (o.kitchen ?? []).some((k) => !k.waiting);
+
+/**
+ * Every batch number an order's food came from, in the site's product order: "R041126, M041126".
+ * Empty before batch numbers (20261104000000), and for food covered by hand.
+ */
+export const batchesText = (o: Order): string =>
+  [...(o.kitchen ?? [])]
+    .sort((a, b) => siteRank(a.product_id) - siteRank(b.product_id))
+    .flatMap((k) => k.batches.map((b) => b.code).filter((c): c is string => typeof c === 'string'))
+    .join(', ');
 
 /** "Wed 23 Sep" from an India day ("2026-09-23"). */
 export const madeOnDay = (day: string): string => formatDay(`${day}T12:00:00+05:30`);

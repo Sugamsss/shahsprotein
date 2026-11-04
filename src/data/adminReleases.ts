@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-11-04-batch-numbers',
+    for: ['cook', 'admin'],
+    kind: 'new',
+    title: 'Batch numbers, Mfg and Exp',
+    body: 'Every batch you log gets its number, like R041126, with its Mfg and Exp dates. Orders show which batch they got, and Change batch picks another. More, Batches shows who got each one.',
+  },
+  {
     id: '2026-10-26-journal',
     for: ['admin', 'cook'],
     kind: 'new',
