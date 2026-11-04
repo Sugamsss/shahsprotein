@@ -532,7 +532,7 @@ export interface KitchenEffects {
   preview: boolean;
   /** Undo with undoKitchen(action_id). Null on a preview. */
   action_id: string | null;
-  batches: { id: string; code?: string; expires_on?: string | null; product_id: string; grams: number; made_on: string; to_orders: number; spare: number; written_off: number; deleted: boolean }[];
+  batches: { id: string; code?: string; expires_on?: string | null; logged?: boolean; product_id: string; grams: number; made_on: string; to_orders: number; spare: number; written_off: number; deleted: boolean }[];
   /** Orders whose stage or batch grams changed, oldest first. change is net batch grams per product; waiting is what a Cooking order still waits for. */
   orders: {
     id: string; code: string; name: string | null; from: OrderStatus; to: OrderStatus;

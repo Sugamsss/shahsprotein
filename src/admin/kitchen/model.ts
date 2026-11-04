@@ -186,7 +186,8 @@ export const outcomesOf = (effects: KitchenEffects, before: Kitchen, mode: 'log'
   for (const b of inSiteOrder(effects.batches)) {
     if (!b.code || b.deleted) continue;
     const was = before.batches.find((x) => x.id === b.id);
-    if (mode === 'log' ? !was : !!was && was.code !== b.code) {
+    // A log names only the batches it logged, not an older one the fill moved grams of.
+    if (mode === 'log' ? b.logged === true : !!was && was.code !== b.code) {
       out.push({ kind: 'batchNumber', product_id: b.product_id, code: b.code, made_on: b.made_on, expires_on: b.expires_on ?? null, changed: mode === 'fix' });
     }
   }

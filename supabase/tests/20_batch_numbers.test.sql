@@ -11,7 +11,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(60);
 
 delete from public.orders;
 delete from public.order_rate_limits;
@@ -175,6 +175,7 @@ select is(
   to_char(pg_temp.day(1) + interval '6 months', 'YYYY-MM-DD'),
   'log effects carry Exp'
 );
+select is(current_setting('t.e1')::jsonb #>> '{batches,0,logged}', 'true', 'log effects: logged marks the batch this call logged');
 
 select is(
   (select b ->> 'code' from json_array_elements(public.get_admin_kitchen() -> 'batches') b
@@ -217,11 +218,30 @@ select is(
 select pg_temp.undo(current_setting('t.fix')::jsonb);
 select is(pg_temp.code('m2'), pg_temp.num('M', 0) || '-2', 'Undo of the fix: the number for the day it was');
 
+-- Undo of a fix puts back the Exp it had, even after a shelf life change.
+select set_config('t.fix2', public.update_admin_batch(pg_temp.bid('m2'), jsonb_build_object('made_on', to_char(pg_temp.day(3), 'YYYY-MM-DD')))::text, true);
+select public.set_admin_kitchen_product('muesli', '{"shelf_life":{"amount":2,"unit":"months"}}');
+select pg_temp.undo(current_setting('t.fix2')::jsonb);
+select is(
+  (select code || ' ' || expires_on from public.kitchen_batches where id = pg_temp.bid('m2')),
+  pg_temp.num('M', 0) || '-2 ' || (pg_temp.day(0) + interval '3 months')::date,
+  'Undo of a fix: the old number and the old Exp (it was logged under 3 months)'
+);
+select public.set_admin_kitchen_product('muesli', '{"shelf_life":{"amount":6,"unit":"months"}}');
+
+-- Its number taken meanwhile: Undo still works, with the next free one.
+select set_config('t.fix3', public.update_admin_batch(pg_temp.bid('m2'), jsonb_build_object('made_on', to_char(pg_temp.day(3), 'YYYY-MM-DD')))::text, true);
+select pg_temp.log('mx', 'muesli', 50);
+select is(pg_temp.code('mx'), pg_temp.num('M', 0) || '-2', 'a new batch takes the number a fix freed');
+select pg_temp.undo(current_setting('t.fix3')::jsonb);
+select is(pg_temp.code('m2'), pg_temp.num('M', 0) || '-3', 'Undo of a fix whose number was taken: the next free one');
+select public.delete_admin_batch(pg_temp.bid('mx'));
+
 -- A deleted batch comes back with its number.
 select set_config('t.del', public.delete_admin_batch(pg_temp.bid('m2'))::text, true);
-select is(current_setting('t.del')::jsonb #>> '{batches,0,code}', pg_temp.num('M', 0) || '-2', 'delete effects: the number of the deleted batch');
+select is(current_setting('t.del')::jsonb #>> '{batches,0,code}', pg_temp.num('M', 0) || '-3', 'delete effects: the number of the deleted batch');
 select pg_temp.undo(current_setting('t.del')::jsonb);
-select is(pg_temp.code('m2'), pg_temp.num('M', 0) || '-2', 'Undo of a delete: same number back');
+select is(pg_temp.code('m2'), pg_temp.num('M', 0) || '-3', 'Undo of a delete: same number back');
 
 select throws_ok(
   $$insert into public.kitchen_batches (product_id, grams, made_on, code) values ('muesli', 10, public.kitchen_today(), 'nope')$$,
@@ -347,6 +367,18 @@ select is(
   (select string_agg(b ->> 'code', ' ') from json_array_elements(public.get_admin_batches('sn-btc') -> 'batches') b),
   pg_temp.num('', 20),
   'batches: search by an order code that got food from it'
+);
+-- A batch number's digits never match a phone.
+update public.orders set phone = '919' || to_char(pg_temp.day(1), 'DDMMYY') || '123' where code = 'SN-BTD22';
+select is(
+  (select string_agg(b ->> 'code', ' ') from json_array_elements(public.get_admin_batches(to_char(pg_temp.day(1), 'DDMMYY')) -> 'batches') b),
+  pg_temp.num('R', 1),
+  'batches: a batch number search doesn''t match phones'
+);
+select is(
+  (select string_agg(b ->> 'code', ' ') from json_array_elements(public.get_admin_batches('9' || to_char(pg_temp.day(1), 'DDMMYY')) -> 'batches') b),
+  pg_temp.num('', 0),
+  'batches: a phone search does'
 );
 select is(
   (select count(*)::integer from json_array_elements(public.get_admin_batches(null, 'muesli') -> 'batches') b),

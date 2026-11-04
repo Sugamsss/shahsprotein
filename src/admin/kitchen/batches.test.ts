@@ -91,9 +91,9 @@ describe('batchChoices', () => {
     });
     const choices = batchChoices(kitchen([shelf('r2', 'R041126', '2026-11-04', 300)]), o, 'raggi-jaggi');
     // R301026 has nothing left on the shelf: 300 g isn't the whole 500 g.
-    expect(choices.map((c) => [c.code, c.current, c.enough])).toEqual([
-      ['R301026', false, false],
-      ['R041126', false, true],
+    expect(choices.map((c) => [c.code, c.current, c.enough, c.needs])).toEqual([
+      ['R301026', false, false, 200],
+      ['R041126', false, true, 300],
     ]);
   });
 
@@ -118,15 +118,19 @@ describe('shelfOf', () => {
 });
 
 describe('the batch number in a log preview, and the CSV column', () => {
-  const effects = (code: string | undefined) => ({
+  const effects = (code: string | undefined, logged = true) => ({
     preview: true, action_id: null, orders: [],
-    batches: [{ id: 'new', code, expires_on: '2027-05-04', product_id: 'raggi-jaggi', grams: 3000, made_on: '2026-11-04', to_orders: 0, spare: 3000, written_off: 0, deleted: false }],
+    batches: [{ id: 'new', code, expires_on: '2027-05-04', logged, product_id: 'raggi-jaggi', grams: 3000, made_on: '2026-11-04', to_orders: 0, spare: 3000, written_off: 0, deleted: false }],
     kitchen: kitchen([]),
   });
 
   it('a log says the number it gets, with Mfg and Exp, first', () => {
     const out = outcomesOf(effects('R041126'), kitchen([]), 'log');
     expect(out[0]).toEqual({ kind: 'batchNumber', product_id: 'raggi-jaggi', code: 'R041126', made_on: '2026-11-04', expires_on: '2027-05-04', changed: false });
+  });
+
+  it('an older batch the fill moved grams of is not "gets batch"', () => {
+    expect(outcomesOf(effects('R011126', false), kitchen([]), 'log').some((o) => o.kind === 'batchNumber')).toBe(false);
   });
 
   it('nothing about numbers before the database sends them', () => {

@@ -88,6 +88,54 @@ $$;
 
 revoke all on function public.kitchen_batch_expires_on(text, date) from public, anon, authenticated;
 
+-- Gives a new batch its number and Exp, and works them out again when its
+-- made-on day changes. A row that arrives with a number it can keep keeps it
+-- (Undo puts a deleted batch back with its old one, or a fixed one back on
+-- its old day with its old number), unless another batch has taken it since.
+-- Created before the backfill, so a batch logged meanwhile gets one too.
+create or replace function public.kitchen_batch_label()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.code is null or exists (
+      select 1 from public.kitchen_batches b where b.code = new.code and b.id <> new.id
+    ) then
+      new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
+    end if;
+    if new.expires_on is null then
+      new.expires_on := public.kitchen_batch_expires_on(new.product_id, new.made_on);
+    end if;
+    return new;
+  end if;
+
+  if new.made_on is distinct from old.made_on or new.product_id is distinct from old.product_id then
+    if new.code is not distinct from old.code or exists (
+      select 1 from public.kitchen_batches b where b.code = new.code and b.id <> new.id
+    ) then
+      new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
+    end if;
+    if new.expires_on is not distinct from old.expires_on then
+      new.expires_on := public.kitchen_batch_expires_on(new.product_id, new.made_on);
+    end if;
+  end if;
+
+  if new.code is null then
+    new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.kitchen_batch_label() from public, anon, authenticated;
+
+drop trigger if exists trg_kitchen_batches_label on public.kitchen_batches;
+create trigger trg_kitchen_batches_label
+  before insert or update on public.kitchen_batches
+  for each row execute function public.kitchen_batch_label();
+
 -- Backfill, oldest first, so the first batch of a day keeps the plain number.
 -- Exp from today's shelf life, which is what the kitchen showed until now.
 -- Not through the trigger below (it doesn't exist yet), and grams and
@@ -121,51 +169,6 @@ alter table public.kitchen_batches
   add constraint kitchen_batches_code_check check (code ~ '^[A-Z]{0,3}[0-9]{6}(-[0-9]{1,4})?$');
 
 create unique index if not exists kitchen_batches_code_key on public.kitchen_batches (code);
-
--- Gives a new batch its number and Exp, and works them out again when its
--- made-on day changes. A row that arrives with a number it can keep keeps it
--- (Undo puts a deleted batch back with its old one), and so does an update
--- that sets the number itself.
-create or replace function public.kitchen_batch_label()
-returns trigger
-language plpgsql
-set search_path = public
-as $$
-begin
-  if tg_op = 'INSERT' then
-    if new.code is null or exists (
-      select 1 from public.kitchen_batches b where b.code = new.code and b.id <> new.id
-    ) then
-      new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
-    end if;
-    if new.expires_on is null then
-      new.expires_on := public.kitchen_batch_expires_on(new.product_id, new.made_on);
-    end if;
-    return new;
-  end if;
-
-  if new.made_on is distinct from old.made_on or new.product_id is distinct from old.product_id then
-    if new.code is not distinct from old.code then
-      new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
-    end if;
-    if new.expires_on is not distinct from old.expires_on then
-      new.expires_on := public.kitchen_batch_expires_on(new.product_id, new.made_on);
-    end if;
-  end if;
-
-  if new.code is null then
-    new.code := public.kitchen_batch_code(new.product_id, new.made_on, new.id);
-  end if;
-  return new;
-end;
-$$;
-
-revoke all on function public.kitchen_batch_label() from public, anon, authenticated;
-
-drop trigger if exists trg_kitchen_batches_label on public.kitchen_batches;
-create trigger trg_kitchen_batches_label
-  before insert or update on public.kitchen_batches
-  for each row execute function public.kitchen_batch_label();
 
 -- ═══════════════════════════════════════════════════════
 -- 3. The kitchen reads the batch's own Exp, and shows its number
@@ -320,7 +323,8 @@ $$;
 
 revoke all on function public.kitchen_state_json() from public, anon, authenticated;
 
--- As in 20260929000001, plus each batch's code and Exp.
+-- As in 20260929000001, plus each batch's code and Exp, and logged: true for
+-- the batches this call logged.
 create or replace function public.kitchen_effects_json(p_action_id uuid, p_preview boolean)
 returns jsonb
 language sql
@@ -377,6 +381,10 @@ as $$
         'code', coalesce(kb.code, gone.old ->> 'code'),
         'made_on', coalesce(r.made_on, (gone.old ->> 'made_on')::date),
         'expires_on', coalesce(r.expires_on, (gone.old ->> 'expires_on')::date),
+        -- Logged by this call (not an older batch the fill moved grams of).
+        'logged', exists (
+          select 1 from s where s.tbl = 'kitchen_batches' and s.op = 'insert' and (s.new ->> 'id')::uuid = i.id
+        ),
         'to_orders', coalesce(r.to_orders, 0),
         'spare', coalesce(r.spare, 0),
         'written_off', coalesce(r.written_off, 0),
@@ -539,6 +547,112 @@ $$;
 
 revoke all on function public.admin_order_json(public.orders) from public, anon, authenticated;
 
+-- As in 20260930000000, plus a fixed batch's Undo puts its number and Exp
+-- back (the trigger gives it a new number only if another batch took it).
+create or replace function public.kitchen_undo_step(p_step public.kitchen_action_steps)
+returns boolean
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_old jsonb := p_step.old;
+  v_new jsonb := p_step.new;
+  v_id uuid := (coalesce(p_step.new, p_step.old) ->> 'id')::uuid;
+begin
+  if p_step.tbl = 'orders' then
+    update public.orders
+    set status = v_old ->> 'status', priority = (v_old ->> 'priority')::boolean,
+      kitchen_hold = coalesce((v_old ->> 'kitchen_hold')::boolean, false),
+      status_changed_at = (v_old ->> 'status_changed_at')::timestamptz
+    where id = v_id and status = v_new ->> 'status' and priority = (v_new ->> 'priority')::boolean
+      and kitchen_hold = coalesce((v_new ->> 'kitchen_hold')::boolean, false);
+    return found;
+  end if;
+
+  if p_step.tbl = 'kitchen_allocations' then
+    if p_step.op = 'insert' then
+      delete from public.kitchen_allocations where id = v_id and grams = (v_new ->> 'grams')::integer;
+      return found;
+    elsif p_step.op = 'update' then
+      update public.kitchen_allocations set grams = (v_old ->> 'grams')::integer
+      where id = v_id and grams = (v_new ->> 'grams')::integer;
+      return found;
+    end if;
+
+    if exists (
+      select 1 from public.kitchen_allocations a
+      where a.id = v_id
+         or (a.order_id, a.product_id, a.batch_id) is not distinct from
+            ((v_old ->> 'order_id')::uuid, v_old ->> 'product_id', (v_old ->> 'batch_id')::uuid)
+    )
+    or not exists (select 1 from public.orders o where o.id = (v_old ->> 'order_id')::uuid)
+    or (v_old ->> 'batch_id' is not null and not exists (
+      select 1 from public.kitchen_batches b where b.id = (v_old ->> 'batch_id')::uuid
+    )) then
+      return false;
+    end if;
+
+    insert into public.kitchen_allocations
+    select (jsonb_populate_record(null::public.kitchen_allocations, v_old)).*;
+    return true;
+  end if;
+
+  if p_step.tbl = 'kitchen_batches' then
+    if p_step.op = 'insert' then
+      if exists (select 1 from public.kitchen_allocations a where a.batch_id = v_id)
+         or exists (select 1 from public.kitchen_writeoffs w where w.batch_id = v_id) then
+        return false;
+      end if;
+      delete from public.kitchen_batches
+      where id = v_id and grams = (v_new ->> 'grams')::integer and made_on = (v_new ->> 'made_on')::date;
+      return found;
+    elsif p_step.op = 'update' then
+      -- Its old number and Exp too (20261104000000); a step logged before
+      -- them has neither, and the trigger works them out from the day.
+      update public.kitchen_batches
+      set grams = (v_old ->> 'grams')::integer,
+        made_on = (v_old ->> 'made_on')::date,
+        code = case when v_old ? 'code' then v_old ->> 'code' else code end,
+        expires_on = case when v_old ? 'expires_on' then (v_old ->> 'expires_on')::date else expires_on end,
+        updated_at = (v_old ->> 'updated_at')::timestamptz,
+        updated_by = (v_old ->> 'updated_by')::uuid
+      where id = v_id and grams = (v_new ->> 'grams')::integer and made_on = (v_new ->> 'made_on')::date;
+      return found;
+    end if;
+
+    if exists (select 1 from public.kitchen_batches b where b.id = v_id) then
+      return false;
+    end if;
+    insert into public.kitchen_batches
+    select (jsonb_populate_record(null::public.kitchen_batches, v_old)).*;
+    return true;
+  end if;
+
+  if p_step.tbl = 'kitchen_writeoffs' then
+    if p_step.op = 'insert' then
+      delete from public.kitchen_writeoffs where id = v_id and grams = (v_new ->> 'grams')::integer;
+      return found;
+    elsif p_step.op = 'update' then
+      update public.kitchen_writeoffs set grams = (v_old ->> 'grams')::integer
+      where id = v_id and grams = (v_new ->> 'grams')::integer;
+      return found;
+    end if;
+
+    if exists (select 1 from public.kitchen_writeoffs w where w.id = v_id)
+       or not exists (select 1 from public.kitchen_batches b where b.id = (v_old ->> 'batch_id')::uuid) then
+      return false;
+    end if;
+    insert into public.kitchen_writeoffs
+    select (jsonb_populate_record(null::public.kitchen_writeoffs, v_old)).*;
+    return true;
+  end if;
+
+  return false;
+end;
+$$;
+
+revoke all on function public.kitchen_undo_step(public.kitchen_action_steps) from public, anon, authenticated;
+
 -- ═══════════════════════════════════════════════════════
 -- 4. Change an order's batch
 -- ═══════════════════════════════════════════════════════
@@ -667,7 +781,7 @@ grant execute on function public.set_admin_order_batch(uuid, text, uuid) to auth
 -- ═══════════════════════════════════════════════════════
 
 -- Newest made first. p_search matches a batch number, or an order's code,
--- name or phone (4 digits or more) that got food from it. p_limit 1 to 500
+-- name or phone (4 digits or more, digits only) that got food from it. p_limit 1 to 500
 -- (default 60); `more` says there are older ones. by_name is the display
 -- name only.
 create or replace function public.get_admin_batches(
@@ -684,7 +798,10 @@ as $$
 declare
   v_limit integer := least(greatest(coalesce(p_limit, 60), 1), 500);
   v_search text := nullif(lower(btrim(coalesce(p_search, ''))), '');
-  v_digits text := regexp_replace(coalesce(p_search, ''), '\D', '', 'g');
+  -- Phones only for a search that's all digits (a batch number like R041126
+  -- or 041126 has digits too, and would match strangers' phones).
+  v_digits text := case when btrim(coalesce(p_search, '')) ~ '^[0-9 +()-]+$' and btrim(p_search) !~ '^[0-9]{6}(-[0-9]+)?$'
+    then regexp_replace(p_search, '\D', '', 'g') else '' end;
   v_result json;
 begin
   if not public.is_admin() then

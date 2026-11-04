@@ -110,7 +110,7 @@ export const LogSheet: React.FC<{
       const effects = await logBatches(batches);
       // "Logged 2 kg Raggi Jaggi (R041126)": the number it got, once the database gives one.
       const items = inSiteOrder(batches).map((b) => copy.item(formatWeight(b.grams), productName(b.product_id),
-        effects.batches.find((x) => x.product_id === b.product_id && !x.deleted)?.code));
+        effects.batches.find((x) => x.product_id === b.product_id && x.logged)?.code));
       onLogged(effects, copy.logged(items, packedCount(effects)));
       return true;
     } catch (err) {

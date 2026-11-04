@@ -57,6 +57,8 @@ export interface BatchChoice {
   current: boolean;
   /** It has enough spare (with what this order already has from it) to take the whole product. */
   enough: boolean;
+  /** Grams it would have to give: what the order has of the product, less what it already has from this batch. */
+  needs: number;
   /** Past food never goes out (a delivered order can still be put right). */
   past: boolean;
   /** The first (oldest) batch: what the kitchen picks by itself. */
@@ -73,7 +75,7 @@ export const batchChoices = (kitchen: Kitchen, o: Order, productId: string): Bat
   const covered = k?.covered ?? 0;
   const held = new Map(orderBatches(o, productId).map((b) => [b.batch_id, b] as const));
   const shelf = kitchen.products.find((p) => p.product_id === productId)?.spare_batches ?? [];
-  const rows = new Map<string, Omit<BatchChoice, 'current' | 'enough' | 'oldest' | 'past'>>();
+  const rows = new Map<string, Omit<BatchChoice, 'current' | 'enough' | 'oldest' | 'past' | 'needs'>>();
   for (const b of shelf) {
     if (!b.code) continue;
     rows.set(b.batch_id, { batch_id: b.batch_id, code: b.code, made_on: b.made_on, expires_on: b.expires_on, state: b.state, spare: b.grams });
@@ -92,6 +94,7 @@ export const batchChoices = (kitchen: Kitchen, o: Order, productId: string): Bat
       ...r,
       current: covered > 0 && mine >= covered,
       enough: r.spare + mine >= covered,
+      needs: Math.max(covered - mine, 0),
       past,
       oldest: i === 0,
     };

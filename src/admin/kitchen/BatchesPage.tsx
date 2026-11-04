@@ -15,6 +15,8 @@ import { batchDates, shelfOf } from './batches';
 
 const copy = adminCopy.batches;
 const PAGE = 60;
+/** The most get_admin_batches gives in one answer. */
+const MOST = 500;
 
 /** One order a batch went to: name, code and stage, and what it got. A tap opens the order. */
 const WentTo: React.FC<{ o: BatchRecord['orders'][number] }> = ({ o }) => (
@@ -143,8 +145,8 @@ const BatchesPage: React.FC = () => {
         </ul>
       )}
 
-      {list.data?.more && (
-        <button type="button" className="adm-btn adm-btn--quiet adm-hist__more" disabled={list.loading} onClick={() => setLimit((n) => n + PAGE)}>
+      {list.data?.more && limit < MOST && (
+        <button type="button" className="adm-btn adm-btn--quiet adm-hist__more" disabled={list.loading} onClick={() => setLimit((n) => Math.min(n + PAGE, MOST))}>
           {copy.showMore}
         </button>
       )}

@@ -97,9 +97,9 @@ export const ProductBatches: React.FC<{ order: Order; productId: string; onChang
 };
 
 /** One choice in the sheet: number, Mfg and Exp, and what's on the shelf. Acts on the tap. */
-const ChoiceRow: React.FC<{ c: BatchChoice; need: number; onPick: (c: BatchChoice) => void }> = ({ c, need, onPick }) => {
+const ChoiceRow: React.FC<{ c: BatchChoice; onPick: (c: BatchChoice) => void }> = ({ c, onPick }) => {
   const { mfg, exp } = batchDates(c);
-  const why = c.current ? copy.inOrder : c.past ? copy.pastExp : !c.enough ? copy.notEnough(formatWeight(c.spare), formatWeight(need)) : copy.spare(formatWeight(c.spare));
+  const why = c.current ? copy.inOrder : c.past ? copy.pastExp : !c.enough ? copy.notEnough(formatWeight(c.spare), formatWeight(c.needs)) : copy.spare(formatWeight(c.spare));
   return (
     <li>
       <button type="button" className={`adm-bchoice${c.current ? ' is-current' : ''}`} disabled={c.current || c.past || !c.enough}
@@ -127,7 +127,6 @@ export const ChangeBatchSheet: React.FC<{
   const isOpen = !!order && !!productId;
   const kitchen = useRpc(() => (isOpen ? getKitchen() : Promise.resolve(null)), [isOpen, order?.updated_at, productId]);
   const name = productId ? productName(productId) : '';
-  const need = order?.kitchen?.find((k) => k.product_id === productId)?.covered ?? 0;
   const choices = kitchen.data && order && productId ? batchChoices(kitchen.data, order, productId) : null;
   return (
     <AdminSheet isOpen={isOpen} onClose={onClose} title={copy.sheetTitle(name)} closeLabel={adminCopy.close} className="adm-kx-sheet">
@@ -137,7 +136,7 @@ export const ChangeBatchSheet: React.FC<{
         {kitchen.loading && !kitchen.data && <Skeleton cards={1} rows={2} />}
         {choices && (
           <ul className="adm-bchoices">
-            {choices.map((c) => <ChoiceRow key={c.batch_id} c={c} need={need} onPick={(x) => { onPick(order!, productId!, x); onClose(); }} />)}
+            {choices.map((c) => <ChoiceRow key={c.batch_id} c={c} onPick={(x) => { onPick(order!, productId!, x); onClose(); }} />)}
           </ul>
         )}
         {choices && choices.filter((c) => !c.current).length === 0 && <p className="adm-muted">{copy.nothingElse}</p>}
