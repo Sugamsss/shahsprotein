@@ -18,6 +18,7 @@ import { type HowPaid, type PaymentActions, usePayments } from './usePayments';
 import { BillSheet } from './BillSheet';
 import { useDeliveredBill } from './useDeliveredBill';
 import { type PriceBook, usePriceBook } from './usePriceBook';
+import { ChangeBatchSheet, useBatchChange } from './OrderBatches';
 
 const copy = adminCopy.order;
 
@@ -49,17 +50,25 @@ const OrderBody: React.FC<{
   onPriorityOn: (o: Order) => void;
   book: PriceBook;
   onOpenBill?: (o: Order) => void;
-}> = ({ order, change, show, payments, onPayRest, onPriorityOn, book, onOpenBill }) => (
-  <>
-    <OrderNotes order={order} />
-    <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
-    <div className="adm-od-cols">
-      <ItemsCard order={order} />
-      <DetailsCard order={order} onSaved={show} book={book} onOpenBill={onOpenBill} />
-    </div>
-    <History history={order.history} />
-  </>
-);
+  /** Changing a batch moved other orders (the food it freed filled them): load the board again. */
+  onKitchen?: () => void;
+}> = ({ order, change, show, payments, onPayRest, onPriorityOn, book, onOpenBill, onKitchen }) => {
+  const [batchFor, setBatchFor] = useState<string | null>(null);
+  const changeBatch = useBatchChange(show, onKitchen);
+  return (
+    <>
+      <OrderNotes order={order} />
+      <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
+      <div className="adm-od-cols">
+        <ItemsCard order={order} onChangeBatch={setBatchFor} />
+        <DetailsCard order={order} onSaved={show} book={book} onOpenBill={onOpenBill} />
+      </div>
+      <History history={order.history} />
+      <ChangeBatchSheet order={batchFor ? order : null} productId={batchFor} onClose={() => setBatchFor(null)}
+        onPick={(o, productId, choice) => void changeBatch(o, productId, choice)} />
+    </>
+  );
+};
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
@@ -118,7 +127,7 @@ export const OrderPage: React.FC<{
         <OrderMenu order={order} change={change} payments={payments} onDeleted={() => { onDeleted?.(order); navigate(board, { replace: true }); }} onOpenBill={onOpenBill} />
       </div>
       <h1 className="adm-od-head"><OrderHead order={order} /></h1>
-      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} />
+      <OrderBody order={order} change={change} show={show} payments={payments} onPayRest={setPaying} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} onKitchen={onKitchen} />
       {/* Nothing to do next: no bar. The status card already says "All done." or why. */}
       {next && (
         <div className="adm-od-bar">
@@ -277,7 +286,7 @@ export const OrderPopup: React.FC<{
     >
       {!order && (detail.error ? <LoadError onRetry={detail.reload} /> : detail.loading ? <Skeleton cards={2} rows={3} /> : <p>{copy.notFound(code)}</p>)}
       {order && <OrderBody order={order} change={change} show={show} payments={payments}
-        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} />}
+        onPayRest={(o) => setPaying({ order: o, moveOn: false })} onPriorityOn={give.offer} book={book} onOpenBill={onOpenBill} onKitchen={onKitchen} />}
       {give.popup}
       <PaidSheet order={paying?.order ?? null} onClose={() => setPaying(null)}
         onPick={(o, how) => (paying?.moveOn ? doNext(how) : void payments.payTheRest(o, how))} />

@@ -17,6 +17,7 @@ import { Code, FromWebsite, Thumb, Via } from './OrderCard';
 import { MOVE_BACK_TO_COOKING, MOVE_TO_PACKING, canMoveBack, isHeld, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
 import { historyDetailText } from './giveText';
 import { PaymentsBlock } from './PaymentsBlock';
+import { ProductBatches } from './OrderBatches';
 import type { PriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
 
@@ -135,7 +136,7 @@ const LineState: React.FC<{ order: Order; productId: string }> = ({ order, produ
   );
 };
 
-export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
+export const ItemsCard: React.FC<{ order: Order; onChangeBatch?: (productId: string) => void }> = ({ order: o, onChangeBatch }) => (
   <section className="adm-card">
     <div className="adm-card__h">
       <h2>{packsText(o)}</h2>
@@ -151,6 +152,8 @@ export const ItemsCard: React.FC<{ order: Order }> = ({ order: o }) => (
             {lines[i + 1]?.product_id !== l.product_id && <LineState order={o} productId={l.product_id} />}
           </span>
           <span className="adm-items__q">× {l.quantity}</span>
+          {/* Once per product, its own full-width line: the batch number and Exp; a tap for more. */}
+          {lines[i + 1]?.product_id !== l.product_id && <ProductBatches order={o} productId={l.product_id} onChange={onChangeBatch} />}
         </li>
       ))}
     </ul>

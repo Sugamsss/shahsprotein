@@ -160,7 +160,9 @@ export type Outcome =
   /** Nothing goes spare (said quietly, after the orders). */
   | { kind: 'noSpare' }
   /** A fix that moves no order. */
-  | { kind: 'ordersSame' };
+  | { kind: 'ordersSame' }
+  /** The number a batch gets (a log), or its new one (a fix of its day): with Mfg and Exp. */
+  | { kind: 'batchNumber'; product_id: string; code: string; made_on: string; expires_on: string | null; changed: boolean };
 
 const orderName = (o: EffectOrder) => nameOf(o);
 const gained = (o: EffectOrder) => o.grams.filter((g) => g.change > 0).map((g) => g.product_id);
@@ -180,6 +182,15 @@ const waitsOf = (after: Kitchen, orderId: string) =>
 export const outcomesOf = (effects: KitchenEffects, before: Kitchen, mode: 'log' | 'fix'): Outcome[] => {
   const after = effects.kitchen;
   const out: Outcome[] = [];
+  // First the batch number it gets (since 20261104000000): what goes on the pack.
+  for (const b of inSiteOrder(effects.batches)) {
+    if (!b.code || b.deleted) continue;
+    const was = before.batches.find((x) => x.id === b.id);
+    // A log names only the batches it logged, not an older one the fill moved grams of.
+    if (mode === 'log' ? b.logged === true : !!was && was.code !== b.code) {
+      out.push({ kind: 'batchNumber', product_id: b.product_id, code: b.code, made_on: b.made_on, expires_on: b.expires_on ?? null, changed: mode === 'fix' });
+    }
+  }
   const toPacking = effects.orders.filter((o) => o.from === 'cooking' && o.to !== 'cooking');
   if (toPacking.length) {
     const waiting = new Set(before.products.flatMap((p) => p.queue.map((q) => q.order_id)));
@@ -222,7 +233,7 @@ export const outcomesOf = (effects: KitchenEffects, before: Kitchen, mode: 'log'
       }
     }
     if (names.length) out.push({ kind: 'stillWait', names, toCook: toCook(after) });
-  } else if (!out.length) {
+  } else if (!out.some((o) => o.kind !== 'batchNumber')) {
     out.push({ kind: 'ordersSame' });
   }
 

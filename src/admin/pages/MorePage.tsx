@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ListTodo, ClipboardList, Download, History, Mail, Settings, Ticket, Users, type LucideIcon } from 'lucide-react';
+import { ChevronRight, ListTodo, ClipboardList, Download, History, Layers, Mail, Settings, Ticket, Users, type LucideIcon } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
 import { getCoupons, getEmailList, getTodos, getWebsiteRequests } from '../api';
 import { useAdminMe } from '../auth';
@@ -7,6 +7,7 @@ import { useJournalAvailable } from '../journal/available';
 import { dueOf } from '../todos/model';
 import { HISTORY_PATH } from '../kitchen/history';
 import { useHistoryAvailable } from '../kitchen/useHistoryAvailable';
+import { BATCHES_PATH, useBatchesAvailable } from '../kitchen/useBatchesAvailable';
 import { ExportSheet } from '../orders/ExportSheet';
 import { AdminLink as Link } from '../router';
 import { useRpc } from '../useRpc';
@@ -31,6 +32,7 @@ const MorePage: React.FC = () => {
   const couponsOn = coupons.data?.filter((c) => c.active && !(c.expires_at && Date.parse(c.expires_at) <= Date.now())).length;
   const people = emails.data?.members.length;
   const historyOn = useHistoryAvailable();
+  const batchesOn = useBatchesAvailable();
   const admin = useAdminMe().home_view !== 'cook';
   const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), []);
   const open = todos.data?.todos.filter((t) => !t.done_at) ?? null;
@@ -69,6 +71,11 @@ const MorePage: React.FC = () => {
         {historyOn && (
           <Link to={HISTORY_PATH}>
             <Row Icon={History} title={copy.kitchen.history.moreRow[0]} sub={copy.kitchen.history.moreRow[1]} />
+          </Link>
+        )}
+        {batchesOn && (
+          <Link to={BATCHES_PATH}>
+            <Row Icon={Layers} title={copy.batches.moreRow[0]} sub={copy.batches.moreRow[1]} />
           </Link>
         )}
         <button type="button" onClick={() => setExporting(true)}>

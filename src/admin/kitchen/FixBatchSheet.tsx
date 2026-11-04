@@ -7,7 +7,10 @@ import { deleteBatch, toAdminError, updateBatch } from '../api';
 import { formatDayInSentence, formatWeight } from '../format';
 import { productName } from '../orders/model';
 import type { Kitchen, KitchenBatch, KitchenEffects } from '../types';
+import { AdminLink } from '../router';
 import { BatchHistory } from './BatchHistory';
+import { batchDates } from './batches';
+import { batchLink, useBatchesAvailable } from './useBatchesAvailable';
 import { MadeOn } from './MadeOn';
 import { nameOf, packedCount } from './model';
 import { Outcomes } from './Outcomes';
@@ -73,6 +76,8 @@ export const FixBatchSheet: React.FC<{
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const name = productName(batch.product_id);
+  const batchesOn = useBatchesAvailable();
+  const dates = batchDates(batch);
 
   const changes = {
     ...(grams !== batch.grams ? { grams } : {}),
@@ -128,6 +133,17 @@ export const FixBatchSheet: React.FC<{
     >
       <div className="adm-kx-body">
         {error && <p className="adm-form__error" role="alert">{error}</p>}
+        {/* Its number, Mfg and Exp (20261104000000): what's on the pack. */}
+        {batch.code && (
+          <div className="adm-kx-batchno">
+            <dl className="adm-obatch__facts">
+              <div><dt>{adminCopy.batches.batchNo}</dt><dd className="adm-obatch__code">{batch.code}</dd></div>
+              <div><dt>{adminCopy.batches.mfg}</dt><dd>{dates.mfg}</dd></div>
+              <div><dt>{adminCopy.batches.exp}</dt><dd>{dates.exp ?? adminCopy.batches.noExp}</dd></div>
+            </dl>
+            {batchesOn && <AdminLink className="adm-kx-history-link" to={batchLink(batch.code)}>{adminCopy.batches.seeBatch}</AdminLink>}
+          </div>
+        )}
         {!deleting && (
           <>
             <MadeOn value={madeOn} today={kitchen.today} onChange={setMadeOn} />

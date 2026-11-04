@@ -622,7 +622,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Samples', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Samples', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note', 'Batches'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 
@@ -943,7 +943,7 @@ export const adminCopy = {
     batchGone: 'That batch is gone. Nothing was changed.',
     /** The check above names the product, so the button stays short at 320px. [lead, weight]: the weight never breaks. */
     yesLog: (weight: string) => ['Yes, log ', weight] as const,
-    item: (weight: string, product: string) => `${weight} ${product}`,
+    item: (weight: string, product: string, code?: string) => `${weight} ${product}${code ? ` (${code})` : ''}`,
     logged: (items: string[], packed: number) =>
       `Logged ${andList(items)}.${packed ? ` ${packed} ${packed === 1 ? 'order' : 'orders'} to Packing.` : ''}`,
 
@@ -971,6 +971,9 @@ export const adminCopy = {
       spareLess: (before: string, after: string | null, product: string) =>
         (after ? `${product} spare goes from ${before} to ${after}.` : `The ${before} spare ${product} comes off the shelf.`),
       noSpare: 'Nothing goes spare.',
+      /** "Raggi Jaggi gets batch R041126." */
+      number: (product: string, code: string) => `${product} gets batch ${code}.`,
+      newNumber: (product: string, code: string) => `${product} becomes batch ${code}.`,
       ordersSame: "Orders don't change.",
     },
 
@@ -1039,7 +1042,7 @@ export const adminCopy = {
     // Used up / thrown out.
     offTitle: 'Take some off the shelf',
     onShelf: (product: string) => `${product} on the shelf`,
-    made: (day: string) => `Made ${day}`,
+    made: (day: string, code?: string) => `${code ? `${code} · ` : ''}Made ${day}`,
     useBy: (day: string) => `use by ${day}`,
     allOfIt: (weight: string) => `All of it · ${weight}`,
     partOfIt: 'Part of it',
@@ -1054,6 +1057,72 @@ export const adminCopy = {
       `Took ${weight} ${product} off the shelf. ${left ? `${left} left.` : 'None left of that batch.'}`,
     threw: (weight: string, product: string, left: string | null) =>
       `Threw out ${weight} ${product}. ${left ? `${left} left.` : 'None left of that batch.'}`,
+  },
+
+  // Batch numbers, Mfg and Exp (20261104000000). Every batch gets its number when it's
+  // logged: R for Raggi Jaggi, M for Muesli, none for Date Bites, then the made-on day.
+  batches: {
+    title: 'Batches',
+    moreRow: ['Batches', 'Batch numbers, Mfg, Exp and who got each one'],
+    intro: 'R Raggi Jaggi, M Muesli, no letter Date Bites, then the day it was made.',
+    /** "Batch R041126" */
+    label: (code: string) => `Batch ${code}`,
+    batchNo: 'Batch no.',
+    mfg: 'Mfg',
+    exp: 'Exp',
+    noExp: 'Doesn’t expire',
+    /** "Mfg 4 Nov 2026 · Exp 3 May 2027" */
+    mfgExp: (mfg: string, exp: string | null) => (exp ? `Mfg ${mfg} · Exp ${exp}` : `Mfg ${mfg}`),
+
+    // The order view: under each product's lines.
+    showDetails: (code: string) => `Batch ${code}, show Mfg and Exp`,
+    fromIt: (weight: string) => `${weight} from this batch`,
+    byHand: (weight: string) => `${weight} not from a logged batch`,
+    noBatch: 'No batch yet',
+    /** Beside the number, readable without a tap. */
+    expShort: (day: string) => `Exp ${day}`,
+    change: 'Change batch',
+    pick: 'Pick batch',
+    changeName: (product: string) => `Change the batch for ${product}`,
+    whoElse: 'Who else got it',
+
+    // Change batch: the sheet.
+    sheetTitle: (product: string) => `${product}: which batch?`,
+    sheetHint: 'Oldest goes first. Pick another if that’s what you packed.',
+    oldest: 'Oldest',
+    inOrder: 'In this order',
+    spare: (weight: string) => `${weight} spare`,
+    notEnough: (spare: string, need: string) => `${spare} spare, needs ${need}`,
+    pastExp: 'Past its Exp date',
+    nothingElse: 'No other batch of this is on the shelf.',
+    changed: (product: string, code: string) => `${product} now from batch ${code}.`,
+
+    // The Batches page.
+    searchLabel: 'Search batches',
+    searchPlaceholder: 'Batch number, name or order',
+    all: 'All',
+    filterLabel: 'Show one product',
+    empty: 'No batches logged yet.',
+    emptyProduct: (product: string) => `No ${product} batches logged yet.`,
+    noMatch: (q: string) => `No batch matches “${q}”.`,
+    showMore: 'Show more',
+    made: 'Made',
+    toOrders: 'To orders',
+    spareLeft: 'Spare',
+    off: 'Used up or thrown out',
+    loggedBy: 'Logged by',
+    /** The line under a batch's number: "Raggi Jaggi · 2 kg · 4 orders". */
+    rowSub: (product: string, weight: string, orders: number) =>
+      [product, weight, orders ? `${orders} ${orders === 1 ? 'order' : 'orders'}` : ''].filter(Boolean).join(' · '),
+    /** The chip by a batch's number: what's left of it, at a glance. */
+    shelf: (kind: 'none' | 'fresh' | 'near' | 'past', left: string) =>
+      (kind === 'none' ? 'All gone' : kind === 'past' ? 'Past Exp' : kind === 'near' ? `${left} left, near Exp` : `${left} left`),
+    wentTo: 'Went to',
+    nobodyYet: 'Not in any order yet.',
+    /** "500 g · 250 g × 2" */
+    orderLine: (weight: string, packs: string[]) => [weight, packs.join(', ')].filter(Boolean).join(' · '),
+    statuses: { cooking: 'Cooking', packing: 'Packing', ready: 'Ready', delivered: 'Delivered', cancelled: 'Cancelled' } as Record<string, string>,
+    seeBatch: 'See who got it',
   },
 
   // ---- Kitchen flow, lane B: samples and priority in Add order / Edit, sample and
@@ -1086,7 +1155,7 @@ export const adminCopy = {
     editLabel: (name: string) => `Edit ${name}`,
     save: 'Save',
     keepTitle: 'Sample and shelf life',
-    keepHint: 'A sample is always free. Shelf life counts from the day a batch is made.',
+    keepHint: 'A sample is always free. Shelf life counts from the day a batch is made, and sets the Exp of batches logged from now on.',
     sampleField: 'Free sample',
     sampleUnit: 'g',
     keepsFor: 'Keeps for',

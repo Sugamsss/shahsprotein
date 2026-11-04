@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Archive, Check, Hourglass, PackageCheck } from 'lucide-react';
+import { Archive, Check, Hourglass, PackageCheck, Tag } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { toAdminError, type AdminError } from '../api';
 import { formatWeight } from '../format';
 import { madeOnDay, productName } from '../orders/model';
 import type { Kitchen, KitchenEffects } from '../types';
+import { batchDates } from './batches';
 import { outcomesOf, type Outcome } from './model';
 
 const copy = adminCopy.kitchen;
@@ -78,6 +79,15 @@ const lineOf = (o: Outcome): Line => {
         icon: <Archive size={18} aria-hidden="true" />, tone: 'wait',
         title: say.spareLess(formatWeight(o.before), o.after ? formatWeight(o.after) : null, productName(o.product_id)),
       };
+    case 'batchNumber': {
+      // Mfg is the made-on day picked above, so the line keeps to Exp.
+      const { exp } = batchDates(o);
+      return {
+        icon: <Tag size={18} aria-hidden="true" />, tone: 'ok',
+        title: o.changed ? say.newNumber(productName(o.product_id), o.code) : say.number(productName(o.product_id), o.code),
+        detail: exp ? adminCopy.batches.expShort(exp) : adminCopy.batches.noExp,
+      };
+    }
     case 'noSpare':
       return { title: say.noSpare, quiet: true };
     case 'ordersSame':
