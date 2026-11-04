@@ -130,7 +130,7 @@ export const productsData: Product[] = [
     ],
     weightOptions: ['250 g'],
     mrp: { '250 g': 225 },
-    shelfLife: '15 days',
+    shelfLife: '21 days',
     madeToOrder: true,
     contains: 'Tree nuts (almonds, cashew), dairy (ghee)',
   },

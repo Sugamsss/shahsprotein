@@ -17,7 +17,7 @@ export const faqsData: FAQItem[] = [
   {
     id: 'faq-3',
     question: 'How long do they stay fresh?',
-    answer: "Raggi Jaggi and Muesli keep for 6 months. Date Bites keep for 15 days. We don't use preservatives in any of them. We make Date Bites after you order, so they reach you fresh.",
+    answer: "Raggi Jaggi and Muesli keep for 6 months. Date Bites keep for 21 days. We don't use preservatives in any of them. We make Date Bites after you order, so they reach you fresh.",
   },
   {
     id: 'faq-4',
