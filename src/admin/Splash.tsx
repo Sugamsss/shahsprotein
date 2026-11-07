@@ -10,8 +10,8 @@ export const Logo: React.FC<{ className?: string }> = ({ className }) => {
       className={className}
       src={logoSrc(theme)}
       alt={copy.brand}
-      width={150}
-      height={50}
+      width={720}
+      height={201}
     />
   );
 };

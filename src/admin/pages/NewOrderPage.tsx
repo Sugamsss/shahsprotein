@@ -22,7 +22,7 @@ import { useUnsavedWork } from '../unsavedWork';
 import { SAMPLE, cleanPastedPhone, normalisePhone, packsText, plainPhone, productName, sortLines } from '../orders/model';
 import { isSamplesOnly, moneyInput } from '../orders/samples';
 import { bookPrice, couponState, hasKinds, rateKey, repeatCoupon, usedBefore, type Rates } from '../orders/quote';
-import { BIG_ORDER_PACKS, MAX_QUANTITY, isCustomSize, packGrams } from '../orders/bigOrder';
+import { BIG_ORDER_PACKS, MAX_QUANTITY, isCustomSize, packGrams } from '../orders/bigOrderUtils';
 import { BigOrderHero, BigOrderLines, BigOrderParty, BigOrderSaved, Toran, type BigLine } from '../orders/BigOrder';
 import { AdvancedEditSheet } from '../orders/AdvancedEditSheet';
 import { prefetchPartySound, unlockPartySound } from '../orders/partySound';

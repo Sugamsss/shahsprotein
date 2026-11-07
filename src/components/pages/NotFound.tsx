@@ -28,8 +28,8 @@ export const NotFound: React.FC = () => {
         <img
           src={logoSrc(theme)}
           alt={siteConfig.name}
-          width={600}
-          height={200}
+          width={720}
+          height={201}
           className="not-found__logo"
         />
         <h1 className="not-found__title">{notFound.title}</h1>

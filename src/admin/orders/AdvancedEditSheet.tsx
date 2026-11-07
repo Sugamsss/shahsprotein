@@ -6,7 +6,7 @@ import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { formatMoney, formatWeight } from '../format';
 import { Field, Segmented } from '../parts';
-import { fromDrafts, sizeFor, sizeGrams, toDrafts, typedNumber, type Draft, type DraftError } from './bigOrder';
+import { fromDrafts, sizeFor, sizeGrams, toDrafts, typedNumber, type Draft, type DraftError } from './bigOrderUtils';
 import type { Rates } from './quote';
 
 const copy = adminCopy.orderForm.advanced;

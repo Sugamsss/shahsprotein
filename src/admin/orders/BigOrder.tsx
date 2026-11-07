@@ -9,7 +9,7 @@ import type { Product } from '../../types/product';
 import { formatMoney, formatMoneyShort, formatWeight } from '../format';
 import { dimStatusBar } from '../homeScreenApp';
 import type { Order } from '../types';
-import { MAX_QUANTITY, hypeLevel, typedNumber } from './bigOrder';
+import { MAX_QUANTITY, hypeLevel, typedNumber } from './bigOrderUtils';
 import { itemsText } from './model';
 import { partySoundOn, playParty, setPartySoundOn, unlockPartySound, type PartyKind } from './partySound';
 

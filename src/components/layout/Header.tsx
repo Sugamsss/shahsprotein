@@ -95,8 +95,8 @@ export const Header: React.FC = () => {
           <img
             src={logoSrc(theme)}
             alt={siteConfig.name}
-            width={600}
-            height={200}
+            width={720}
+            height={201}
             loading="eager"
             className="header-logo"
           />

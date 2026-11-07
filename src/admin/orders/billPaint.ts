@@ -72,8 +72,9 @@ export async function paintBill(bill: Bill): Promise<HTMLCanvasElement> {
   const draw = (ctx: CanvasRenderingContext2D): number => {
     let y = 28;
     ctx.textAlign = 'center';
-    ctx.drawImage(logo, (width - 200) / 2, y, 200, 67);
-    y += 67 + 10;
+    const logoHeight = 200 * logo.naturalHeight / logo.naturalWidth;
+    ctx.drawImage(logo, (width - 200) / 2, y, 200, logoHeight);
+    y += logoHeight + 10;
     ctx.font = 'italic 400 13px Georgia, Gelasio, serif';
     ctx.fillStyle = billPalette.ink2;
     ctx.fillText(siteConfig.tagline, width / 2, y + 13);

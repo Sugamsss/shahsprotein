@@ -7,7 +7,7 @@ import type { Theme } from '../types/theme';
  * srcset for the saved theme; keep the two in sync.
  */
 export const logoSrc = (theme: Theme): string =>
-  theme === 'dark' ? '/assets/logo-dark-v2.webp' : '/assets/logo-v2.webp';
+  theme === 'dark' ? '/assets/logo-dark-tm-v3.webp' : '/assets/logo-tm-v3.webp';
 
 const heroBase = (theme: Theme) => `/assets/generated-muesli/muesli-hero-accurate-v2-${theme}`;
 
