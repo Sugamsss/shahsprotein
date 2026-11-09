@@ -401,11 +401,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentOrder = useCallback((): OrderMessageInput => {
     const currentLines = sortLines(inStockLines(linesRef.current, stockRef.current.isOut));
     const boundCoupon = messageCoupon?.checked ? messageCoupon.code : null;
-    const quoteMatches = Boolean(quote && Date.parse(quote.expires_at) > Date.now()
+    // The server sorts its canonical cart by product and size; the popup shows
+    // products in catalogue order. Compare by the pack key, never by index.
+    const priced = quote ? new Map(quote.lines.map((line) => [`${line.product_id}|${line.size}`, line.quantity])) : null;
+    const quoteMatches = Boolean(quote && priced && Date.parse(quote.expires_at) > Date.now()
       && quoteCoupon === boundCoupon
       && quote.lines.length === currentLines.length
-      && quote.lines.every((priced, index) => priced.product_id === currentLines[index].productId
-        && priced.size === currentLines[index].size && priced.quantity === currentLines[index].quantity));
+      && currentLines.every((line) => priced.get(`${line.productId}|${line.size}`) === line.quantity));
     return {
       code,
       lines: currentLines,

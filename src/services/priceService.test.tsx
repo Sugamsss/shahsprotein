@@ -15,6 +15,7 @@ const answer = { schema_version: 1, status: 'ready', version: 'fixture-v1', serv
 
 let root: Root | null = null;
 let shown = '';
+let offered = false;
 const storage = new Map<string, string>();
 const localStorageMock = { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => { storage.set(key, value); }, removeItem: (key: string) => { storage.delete(key); }, clear: () => storage.clear() };
 
@@ -22,12 +23,13 @@ const localStorageMock = { getItem: (key: string) => storage.get(key) ?? null, s
 const mount = async (respond: () => Promise<Response>) => {
   vi.stubGlobal('fetch', vi.fn(respond));
   vi.resetModules();
-  const { usePrices } = await import('./priceService');
+  const { usePrices, useWebsiteOffer } = await import('./priceService');
   const { mrpOf } = await import('../utils/prices');
   const container = document.createElement('div');
   root = createRoot(container);
   const Shown: React.FC = () => {
     usePrices();
+    offered = useWebsiteOffer() !== null;
     shown = String(mrpOf(muesli, '250 g'));
     return null;
   };
@@ -35,12 +37,15 @@ const mount = async (respond: () => Promise<Response>) => {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 };
 
+const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+
 beforeEach(() => {
   vi.stubGlobal('localStorage', localStorageMock);
   vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
   storage.clear();
   shown = '';
+  offered = false;
 });
 
 afterEach(() => {
@@ -81,5 +86,37 @@ describe('priceService', () => {
     await mount(() => new Promise(() => undefined));
     expect(shown).toBe(String(muesli.mrp['250 g']));
     vi.restoreAllMocks();
+  });
+
+  it('never shows an expired offer, even from the cache', async () => {
+    localStorageMock.setItem('shahs-prices-v2', JSON.stringify({ schema_version: 1, fetched_at: Date.now(), offer: { ...answer, expires_at: '2020-01-01T00:00:00Z' } }));
+    await mount(() => new Promise(() => undefined));
+    expect(offered).toBe(false);
+  });
+
+  it('drops the offer when it expires and asks for the next version', async () => {
+    const soon = { ...answer, expires_at: new Date(Date.now() + 80).toISOString() };
+    await mount(() => Promise.resolve(Response.json(soon)));
+    expect(offered).toBe(true);
+    await wait(1300);
+    expect(offered).toBe(false);
+  });
+
+  it('keeps a still-valid offer when a refresh fails', async () => {
+    await mount(() => Promise.resolve(Response.json(answer)));
+    expect(offered).toBe(true);
+    vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error('offline')));
+    act(() => { window.dispatchEvent(new Event('focus')); });
+    await wait(20);
+    expect(offered).toBe(true);
+  });
+
+  it('clears an expired offer when the refresh also fails', async () => {
+    const soon = { ...answer, expires_at: new Date(Date.now() + 80).toISOString() };
+    await mount(() => Promise.resolve(Response.json(soon)));
+    expect(offered).toBe(true);
+    vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error('offline')));
+    await wait(1300);
+    expect(offered).toBe(false);
   });
 });

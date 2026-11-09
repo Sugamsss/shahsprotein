@@ -431,6 +431,34 @@ describe('buildBill', () => {
     expect(bill?.payment).toEqual({ kind: 'paid' });
   });
 
+  it('reconciles a quantity edited after the quote so the bill adds up', () => {
+    // The quote saved one pack at ₹359 + ₹50 = ₹409. The owner later changed the
+    // order to 2 packs and kept the agreed ₹409 total.
+    const order = makeOrder({
+      lines: [{ product_id: 'muesli', size: '250 g', quantity: 2 }],
+      amount: 409,
+      amount_paid: 409,
+      amount_due: 0,
+      quote: guestQuote(),
+    });
+
+    const bill = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+
+    expect(bill?.lines).toEqual([
+      { name: 'Muesli', detail: '250 g', amount: 718, sample: false, quantity: 2, rate: 359 },
+    ]);
+    expect(bill?.sums).toEqual([
+      { kind: 'items', amount: 718 },
+      { kind: 'saving', amount: 80, code: null },
+      { kind: 'delivery', amount: 50, waived: false },
+      { kind: 'changed', amount: 359, up: false },
+    ]);
+    expect(bill?.total).toBe(409);
+    const sumOf = (kind: 'items' | 'delivery') => bill!.sums.filter((s) => s.kind === kind).reduce((n, s) => n + (s as { amount: number }).amount, 0);
+    const changed = bill!.sums.find((s) => s.kind === 'changed') as { kind: 'changed'; amount: number; up: boolean };
+    expect(sumOf('items') + sumOf('delivery') - changed.amount).toBe(409);
+  });
+
   it('prints free delivery from the saved quote', () => {
     const quote = guestQuote({
       lines: [{ product_id: 'muesli', size: '500 g', quantity: 1, grams: 500, mrp: 699, unit_price: 629, line_total: 629 }],

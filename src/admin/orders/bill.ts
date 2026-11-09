@@ -126,11 +126,16 @@ export function buildBill(input: BillInput): Bill | null {
     return { kind: 'notPaid' };
   };
 
-  // A saved Slice A quote: its rates and amounts are frozen, so editing the price book
-  // later never changes this bill. One Muesli 250 g guest bill is ₹359 + ₹50 = ₹409.
+  // A saved Slice A quote: its rates are frozen, so editing the price book later
+  // never changes this bill. One Muesli 250 g guest bill is ₹359 + ₹50 = ₹409.
+  // An order edited after confirmation keeps the historical snapshot and its
+  // current quantities; the agreed total is reconciled in a visible row.
   const quote = order.quote;
   if (quote) {
     const saved = new Map(quote.lines.map((l) => [`${l.product_id}|${l.size}`, l]));
+    let missingLine = false;
+    let items = 0;
+    let mrpItems = 0;
     const lines: BillLine[] = orderedLines.map((l) => {
       if (l.size === SAMPLE) {
         return {
@@ -145,6 +150,7 @@ export function buildBill(input: BillInput): Bill | null {
       const line = saved.get(`${l.product_id}|${l.size}`);
       // A line the snapshot doesn't carry never borrows today's price.
       if (!line) {
+        missingLine = true;
         return {
           name: productName(l.product_id),
           detail: `${l.size} · ${l.quantity}`,
@@ -154,27 +160,33 @@ export function buildBill(input: BillInput): Bill | null {
           rate: null,
         };
       }
+      const amount = line.unit_price * l.quantity;
+      items += amount;
+      mrpItems += line.mrp * l.quantity;
       return {
         name: productName(l.product_id),
         detail: l.size,
-        amount: line.unit_price * l.quantity,
+        amount,
         sample: false,
         quantity: l.quantity,
         rate: line.unit_price,
       };
     });
+    const delivery = quote.delivery_waived ? 0 : quote.delivery_fee;
+    const savings = Math.max(0, mrpItems - items);
     const sums: BillSum[] = [];
-    if (quote.savings > 0) {
-      sums.push({ kind: 'saving', amount: quote.savings, code: quote.coupon_code });
+    if (!missingLine) {
+      sums.push({ kind: 'items', amount: items });
+      if (savings > 0) sums.push({ kind: 'saving', amount: savings, code: quote.coupon_code });
     }
     if (quote.delivery_waived || quote.delivery_fee > 0) {
       sums.push({ kind: 'delivery', amount: quote.delivery_fee, waived: quote.delivery_waived });
     }
-    if (sums.length) sums.unshift({ kind: 'items', amount: quote.items_total });
     // The owner's typed total is the agreed one; the quote keeps the breakdown honest.
     const total = order.amount;
-    if (total !== quote.total) {
-      sums.push({ kind: 'changed', amount: Math.abs(total - quote.total), up: total > quote.total });
+    const worked = missingLine ? null : items + delivery;
+    if (worked != null && total !== worked) {
+      sums.push({ kind: 'changed', amount: Math.abs(total - worked), up: total > worked });
     }
     return {
       code: order.code,

@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderProvider, useOrder, type OrderContextType } from './OrderContext';
 import type { QuoteResult, WebsiteQuote } from '../types/offer';
 import type { OrderLine } from '../types/order';
+import { saveOrder } from '../services/orderService';
+import { buildOrderMessage } from '../utils/orderMessage';
 
 // Synthetic rates only: never a real coupon code, phone or customer record.
 const quoteFor = (lines: ReadonlyArray<{ productId: string; size: string; quantity: number }>, overrides: Partial<WebsiteQuote> = {}): WebsiteQuote => ({
@@ -48,6 +50,7 @@ const orderState = vi.hoisted(() => ({
   quote: vi.fn(),
   offer: null as { version: string } | null,
 }));
+const saveState = vi.hoisted(() => ({ postCustomerQuote: vi.fn() }));
 
 vi.mock('../context/CustomerAuthContext', () => ({
   useCustomerAuth: () => ({
@@ -58,6 +61,8 @@ vi.mock('../context/CustomerAuthContext', () => ({
     logout: async () => undefined,
   }),
 }));
+vi.mock('../services/customerAuthClient', () => ({ postCustomerQuote: saveState.postCustomerQuote }));
+vi.mock('../services/publicRpc', () => ({ isLiveSite: () => true, postPublicRpc: vi.fn(), getPublicRpc: vi.fn() }));
 vi.mock('../services/offerService', () => ({
   quoteWebsiteOrder: (...args: unknown[]) => orderState.quote(...args),
 }));
@@ -109,6 +114,7 @@ describe('OrderContext quote lifecycle', () => {
     orderState.offer = { version: 'guest-1' };
     orderState.quote.mockReset();
     orderState.quote.mockImplementation(async (lines: ReadonlyArray<{ productId: string; size: string; quantity: number }>) => ({ status: 'ready', quote: quoteFor(lines), prices: {} }));
+    saveState.postCustomerQuote.mockReset();
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
@@ -162,6 +168,31 @@ describe('OrderContext quote lifecycle', () => {
     const sent = order.currentOrder();
     expect(sent.quote?.lines).toHaveLength(2);
     expect(sent.unpriced).toBe(false);
+  });
+
+  it('prices and saves a mixed cart whose server order differs from the popup order', async () => {
+    // The SQL canonical cart sorts by product id: bites, then muesli. The popup
+    // shows catalogue order: muesli, then bites.
+    const serverOrder = [
+      { productId: 'bites', size: '250 g', quantity: 1 },
+      { productId: 'muesli', size: '250 g', quantity: 1 },
+    ];
+    orderState.quote.mockImplementation(async () => ({ status: 'ready', quote: quoteFor(serverOrder), prices: {} }));
+    run((value) => { value.addItem('muesli', '250 g'); value.addItem('bites', '250 g'); });
+    await act(async () => undefined);
+
+    const placed = order.currentOrder();
+    expect(placed.unpriced).toBe(false);
+    expect(placed.quote?.lines.map((line) => line.product_id)).toEqual(['bites', 'muesli']);
+    const message = buildOrderMessage(placed);
+    expect(message).toContain('• Muesli 250 g × 1 · ₹279');
+    expect(message).toContain('• Date Bites 250 g × 1 · ₹279');
+
+    saveOrder(placed);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(saveState.postCustomerQuote).toHaveBeenCalledTimes(1);
+    expect(saveState.postCustomerQuote.mock.calls[0][0]).toBe(placed.quote!.quote_id);
+    expect(saveState.postCustomerQuote.mock.calls[0][1]).toBe(placed.code);
   });
 
   it('drops an expired quote and offers retry', async () => {
