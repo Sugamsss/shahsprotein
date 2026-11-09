@@ -291,6 +291,8 @@ export const siteConfig = {
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapTotal: 'Total before delivery',
+    // A frozen quote's total already includes delivery.
+    recapTotalQuoted: 'Total',
     recapCoupon: (code: string) => `Coupon ${code}`,
     // Its own row in the recap, so it can be grabbed when WhatsApp didn't open.
     sentCode: 'Your order code',

@@ -100,7 +100,7 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
             })}
             {total && (
               <li className="order-recap__total">
-                {copy.recapTotal} <span>{formatRupees(total.total)}</span>
+                {sent.quote ? copy.recapTotalQuoted : copy.recapTotal} <span>{formatRupees(total.total)}</span>
               </li>
             )}
           </ul>

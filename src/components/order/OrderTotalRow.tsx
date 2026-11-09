@@ -10,9 +10,10 @@ const guestCopy = siteConfig.order.loginNudge;
 const copy = siteConfig.order;
 
 /**
- * Items total, one delivery line (or the nudge that replaces it), the payable
- * total and the saving. Every amount comes from the server quote, so the cart,
- * the message and the saved bill can't drift apart.
+ * Delivery (with the nudge above it), the payable total and the saving. The
+ * total takes no strike: it includes delivery, so a struck items MRP beside it
+ * would not add up. Every amount comes from the server quote, so the cart, the
+ * message and the saved bill can't drift apart.
  */
 export const OrderTotalRow: React.FC<{ quote: WebsiteQuote }> = ({ quote }) => {
   const { session } = useCustomerAuth();
@@ -22,7 +23,6 @@ export const OrderTotalRow: React.FC<{ quote: WebsiteQuote }> = ({ quote }) => {
     { weight: copy.deliveryNudgeWeight, packs: copy.deliveryNudgePacks },
   );
   const savings = quoteSavings(quote);
-  const showsStruckTotal = quote.total < quote.mrp_total;
   return <div className="order-total">
     {!session && (
       <div className="order-total__signin">
@@ -30,15 +30,14 @@ export const OrderTotalRow: React.FC<{ quote: WebsiteQuote }> = ({ quote }) => {
         <Link className="offer-login-chip offer-login-chip--small" to="/login?return=%2F%23products">{copy.logIn}</Link>
       </div>
     )}
-    {nudge
-      ? <p className="order-total__nudge" role="status">{nudge}</p>
-      : <p className="order-total__delivery"><span>{copy.deliveryLabel}</span><b>{quote.delivery_waived ? copy.freeLabel : formatRupees(quote.delivery_fee)}</b></p>}
+    {nudge && <p className="order-total__nudge" role="status">{nudge}</p>}
+    <p className="order-total__delivery">
+      <span>{copy.deliveryLabel}</span>
+      <b>{quote.delivery_waived ? copy.freeLabel : formatRupees(quote.delivery_fee)}</b>
+    </p>
     <p className="order-total__row">
       <span className="order-total__label">{copy.totalLabel}</span>
-      <span className="order-total__amount">
-        {showsStruckTotal && <><s>{formatRupees(quote.mrp_total)}</s>{' '}</>}
-        {formatRupees(quote.total)}
-      </span>
+      <span className="order-total__amount">{formatRupees(quote.total)}</span>
     </p>
     <p className="order-total__savings">{copy.savingsLine(formatRupees(savings))}</p>
   </div>;

@@ -53,16 +53,42 @@ describe('OrderTotalRow', () => {
 
   afterEach(() => { act(() => root.unmount()); container.remove(); });
 
-  it('shows ₹489 + ₹70 = ₹559 and one pack away from free delivery', () => {
+  it('shows items + ₹70 delivery = ₹559 with no struck total', () => {
     render(secondTier);
     const text = container.textContent ?? '';
-    expect(text).toContain('₹559');
+    const delivery = container.querySelector('.order-total__delivery')?.textContent;
+    expect(delivery).toBe(`${siteConfig.order.deliveryLabel}₹70`);
+    expect(container.querySelector('.order-total__amount')?.textContent).toBe('₹559');
+    expect(container.querySelector('.order-total__amount s')).toBeNull();
     expect(text).toContain(siteConfig.order.savingsLine('₹210'));
     expect(text).toContain(siteConfig.order.deliveryNudgePacks);
     expect(text).not.toContain('₹629');
   });
 
-  it('swaps the nudge for a free Delivery row once the second pack is there', () => {
+  it('reads a ₹359 pack as items ₹359 + delivery ₹50 = ₹409', () => {
+    render({
+      ...secondTier,
+      offer_kind: 'guest',
+      free_delivery_rule: { min_grams: 500, min_packs: null, up_to_250: 50, above_250: 70, cap: 70 },
+      lines: [{ product_id: 'muesli', size: '250 g', quantity: 1, grams: 250, mrp: 399, unit_price: 359, line_total: 359 }],
+      catalogue: [{ product_id: 'muesli', size: '250 g', mrp: 399, unit_price: 359 }],
+      mrp_total: 399,
+      items_total: 359,
+      savings: 40,
+      grams: 250,
+      packs: 1,
+      delivery_base: 50,
+      delivery_fee: 50,
+      total: 409,
+    });
+    const delivery = container.querySelector('.order-total__delivery')?.textContent;
+    expect(delivery).toBe(`${siteConfig.order.deliveryLabel}₹50`);
+    expect(container.querySelector('.order-total__nudge')?.textContent).toBe(siteConfig.order.deliveryNudgeWeight(250));
+    expect(container.querySelector('.order-total__amount')?.textContent).toBe('₹409');
+    expect(container.textContent).toContain(siteConfig.order.savingsLine('₹40'));
+  });
+
+  it('shows Delivery · Free once the second pack is there', () => {
     render({
       ...secondTier,
       grams: 1000,
@@ -74,11 +100,10 @@ describe('OrderTotalRow', () => {
       lines: [{ ...secondTier.lines[0], quantity: 2, line_total: 978 }],
       total: 978,
     });
-    const text = container.textContent ?? '';
-    expect(text).toContain(siteConfig.order.deliveryLabel);
-    expect(text).toContain(siteConfig.order.freeLabel);
-    expect(text).toContain('₹978');
-    expect(text).not.toContain(siteConfig.order.deliveryNudgePacks);
+    const delivery = container.querySelector('.order-total__delivery')?.textContent;
+    expect(delivery).toBe(`${siteConfig.order.deliveryLabel}${siteConfig.order.freeLabel}`);
+    expect(container.querySelector('.order-total__amount')?.textContent).toBe('₹978');
+    expect(container.querySelector('.order-total__nudge')).toBeNull();
   });
 
   it('offers the login chip to guests only', () => {
