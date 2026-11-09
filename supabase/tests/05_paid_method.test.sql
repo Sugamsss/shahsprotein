@@ -74,7 +74,7 @@ select is(pg_temp.how(current_setting('test.a')::json),
 select is(
   public.update_admin_order('00000000-0000-4000-a000-00000000000a', '{"paid":true,"paid_method":"cash"}')::jsonb
     - array['id', 'code', 'message_code', 'source', 'status', 'paid', 'free_sample', 'priority', 'held', 'name', 'pincode', 'phone',
-            'note', 'amount', 'coupon', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'customer',
+            'note', 'amount', 'coupon', 'quote', 'lines', 'packs', 'samples', 'kitchen', 'kitchen_effects', 'customer',
             'created_at', 'updated_at', 'status_changed_at',
             'payment_state', 'payments', 'amount_paid', 'amount_due', 'amount_extra', 'delivery_address'],
   jsonb_build_object('paid_at', current_setting('test.a')::jsonb -> 'paid_at', 'paid_method', 'cash', 'paid_note', null),

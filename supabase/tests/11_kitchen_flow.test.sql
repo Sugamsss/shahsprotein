@@ -662,7 +662,7 @@ select set_config('t.fs', public.save_admin_order(null, '{
 }')::text, true);
 
 select is(
-  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'delivery_address', 'note', 'coupon',
+  current_setting('t.fs')::jsonb - array['id', 'code', 'message_code', 'source', 'name', 'phone', 'pincode', 'delivery_address', 'note', 'coupon', 'quote',
     'customer', 'created_at', 'updated_at', 'status_changed_at', 'payments', 'paid_at', 'paid_method', 'paid_note', 'kitchen'],
   '{"status":"cooking","free_sample":true,"priority":false,"held":false,"paid":false,"payment_state":"not_paid","amount":null,"amount_paid":0,
     "amount_due":null,"amount_extra":null,"packs":0,"samples":2,
