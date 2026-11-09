@@ -38,12 +38,6 @@ export const deliveryNudge = (metrics: PaidPackMetrics, rule: DeliveryRule, copy
   return copy?.weight(remaining) ?? `Add ${remaining} g more and delivery’s on us.`;
 };
 
-export const fallbackOfferPrices = {
-  guest: { 'muesli|250 g': 359, 'muesli|500 g': 629, 'raggi-jaggi|250 g': 224, 'raggi-jaggi|500 g': 431, 'bites|250 g': 287 },
-  first: { 'muesli|250 g': 319, 'muesli|500 g': 559, 'raggi-jaggi|250 g': 199, 'raggi-jaggi|500 g': 383, 'bites|250 g': 255 },
-  second: { 'muesli|250 g': 279, 'muesli|500 g': 489, 'raggi-jaggi|250 g': 174, 'raggi-jaggi|500 g': 335, 'bites|250 g': 223 },
-} as const;
-
 export const sliceADeliveryRule = {
   guest: { min_grams: 500, min_packs: null, up_to_250: 50, above_250: 70, cap: 70 },
   first: { min_grams: 500, min_packs: null, up_to_250: 50, above_250: 70, cap: 70 },
