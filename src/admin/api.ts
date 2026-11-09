@@ -1,11 +1,13 @@
 import { adminCopy as copy } from '../data/adminCopy';
 import type {
   AdminMe, AdminUser, BatchInput, BatchList, Coupon, CouponInput, CouponUse, CustomerList, EmailList, Kitchen, KitchenEffects,
-  KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderBatchEffects, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderPage, OutOfStock, Overview,
+  KitchenHistoryPage, KitchenSettings, Metrics, Order, OrderBatchEffects, OrderChanges, OrderDetail, OrderFilters, OrderInput, OrderLine,
+  OrderPage, OrderSource, OrderStatus, OutOfStock, Overview,
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
   WebsiteRequest, WebsiteRequestPage, EntryInput, HomeExtras, IngredientBook, IngredientInput, JournalEntry, JournalFeed,
   JournalLookback, JournalMilestone, JournalMonth, JournalSearch, JournalSearchFilter, Todo, TodoInput, TodoList, WorkDay,
 } from './types';
+import type { DeliveryRule, OrderQuoteSnapshot } from '../types/offer';
 import { holdUntilDone } from './unsavedWork';
 
 // One typed wrapper per admin RPC in temp/admin-rebuild/contract.md.
@@ -191,6 +193,41 @@ export const setStock = (productId: string, size: string, inStock: boolean) =>
 export const getPrices = () => rpc<Prices>('get_admin_prices');
 export const setPrices = (changes: PriceChange[]) => rpc<Prices>('set_admin_prices', { prices: changes });
 
+/** One cart line as quote_admin_order prices it: the cart line, plus its rate. */
+export type AdminQuoteLine = OrderLine & {
+  grams?: number;
+  mrp?: number;
+  /** Whole rupees for one pack. Missing while the offer rules aren't configured. */
+  unit_price?: number;
+  line_total?: number;
+};
+
+/**
+ * quote_admin_order's answer. The Slice A fields are optional so an older database,
+ * whose function returns only the totals, still type-checks (NewOrderPage then keeps
+ * the total typed by hand rather than accepting a partial one).
+ */
+export interface AdminOrderQuote {
+  offer_kind: string;
+  configured: boolean;
+  lines: AdminQuoteLine[];
+  items_total: number;
+  mrp_total: number;
+  savings: number;
+  grams: number;
+  packs: number;
+  coupon_code?: string | null;
+  free_delivery_rule?: DeliveryRule | null;
+  delivery_base?: number;
+  delivery_waived?: boolean;
+  delivery_fee?: number;
+  /** items_total + delivery_fee: what they pay. */
+  total?: number | null;
+  currency?: 'INR';
+}
+export const quoteAdminOrder = (source: OrderSource, phone: string | null, lines: OrderLine[]) =>
+  rpc<AdminOrderQuote>('quote_admin_order', { source, phone, lines });
+
 export const getCoupons = () => rpc<Coupon[]>('get_admin_coupons');
 export const createCoupon = (code: string, coupon: CouponInput) =>
   rpc<Coupon>('create_admin_coupon', { code, ...coupon });
@@ -206,8 +243,21 @@ export const getEmailList = () => rpc<EmailList>('get_admin_email_list');
 export const getWebsiteRequests = (filter: { state?: string; search?: string; before?: string; before_id?: string; limit?: number } = {}) =>
   rpc<WebsiteRequestPage>('get_admin_website_requests', filter);
 export const getWebsiteRequest = (id: string) => rpc<WebsiteRequest | null>('get_admin_website_request', { id });
+
+/**
+ * Find by code: the saved quote first, then the request that carries the code. A request
+ * summary comes back without its lines; fetch it with getWebsiteRequest before opening it.
+ */
+export interface AdminWebsiteQuoteLookup {
+  code: string | null;
+  quote: OrderQuoteSnapshot | null;
+  request: { id: string; code: string; state: WebsiteRequest['state']; name: string | null; phone: string | null; created_at: string } | null;
+  order: { id: string; code: string; status: OrderStatus } | null;
+}
+export const getAdminWebsiteQuote = (code: string) =>
+  rpc<AdminWebsiteQuoteLookup>('get_admin_website_quote', { code });
 export const confirmWebsiteRequest = (id: string, details: object = {}) =>
-  rpc<{ state: 'confirmed' | 'dismissed'; order: Order | null }>('confirm_admin_website_request', { id, details });
+  rpc<{ state: 'confirmed' | 'dismissed' | 'conflict'; order: Order | null; promised?: string; current?: string }>('confirm_admin_website_request', { id, details });
 export const dismissWebsiteRequest = (id: string) =>
   rpc<{ state: 'dismissed' | 'confirmed' }>('dismiss_admin_website_request', { id });
 

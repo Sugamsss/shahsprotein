@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
+const CustomerLogin = React.lazy(() => import('./components/pages/CustomerLogin').then((module) => ({ default: module.CustomerLogin })));
 import { ThemeProvider } from './context/ThemeContext';
 import { WaitlistProvider } from './context/WaitlistContext';
 import { OrderProvider } from './context/OrderContext';
@@ -39,52 +41,58 @@ const LandingPage: React.FC = () => (
   <>
     <SectionSettle />
     <WaitlistProvider>
-      <OrderProvider>
-        <div className="app-shell">
-            <a href="#main-content" className="skip-link">{siteConfig.ui.skipLink}</a>
-            <Header />
-            <main id="main-content" className="site-main">
-              <ErrorBoundary>
-                <HeroSection />
-              </ErrorBoundary>
-              <ErrorBoundary>
-                <ProductsSection />
-              </ErrorBoundary>
-              <ErrorBoundary>
-                <ValuesSection />
-              </ErrorBoundary>
-              <ErrorBoundary>
-                <StorySection />
-              </ErrorBoundary>
-              <ErrorBoundary>
-                <FAQSection />
-              </ErrorBoundary>
-              <ErrorBoundary>
-                <div className="final-page-section">
-                  <NewsletterSection />
-                  <Footer />
-                </div>
-              </ErrorBoundary>
-            </main>
+      <div className="app-shell">
+        <a href="#main-content" className="skip-link">{siteConfig.ui.skipLink}</a>
+        <Header />
+        <main id="main-content" className="site-main">
+          <ErrorBoundary>
+            <HeroSection />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <ProductsSection />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <ValuesSection />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <StorySection />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <FAQSection />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <div className="final-page-section">
+              <NewsletterSection />
+              <Footer />
+            </div>
+          </ErrorBoundary>
+        </main>
 
-            <Toast />
-            <OrderDialog />
-        </div>
-      </OrderProvider>
+        <Toast />
+        <OrderDialog />
+      </div>
     </WaitlistProvider>
   </>
 );
 
+// The order provider sits above the routes on purpose: /login must not unmount
+// the cart, the typed details or the order code, and the customer session and
+// the quote belong to the same cart whichever page is showing.
 export const App: React.FC = () => (
   <ThemeProvider>
     <BrowserRouter>
-      <React.Suspense fallback={null}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/admin/*" element={<AdminRedirect />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </React.Suspense>
+      <CustomerAuthProvider>
+        <OrderProvider>
+          <React.Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<CustomerLogin />} />
+              <Route path="/admin/*" element={<AdminRedirect />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </React.Suspense>
+        </OrderProvider>
+      </CustomerAuthProvider>
     </BrowserRouter>
   </ThemeProvider>
 );

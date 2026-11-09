@@ -5,6 +5,7 @@ import { preloadOrderHandlers } from '../order/OrderButton';
 import { Mail, Menu, Moon, Sun, X } from 'lucide-react';
 import { siteConfig } from '../../data/siteConfig';
 import { useTheme } from '../../context/ThemeContext';
+import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { logoSrc, warmTheme } from '../../utils/themeAssets';
 import { useOrder } from '../../context/OrderContext';
 
@@ -52,6 +53,7 @@ const HeaderOrderButton: React.FC = () => {
 
 export const Header: React.FC = () => {
   const { theme, setTheme } = useTheme();
+  const { session, logout } = useCustomerAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -128,6 +130,12 @@ export const Header: React.FC = () => {
           {/* Stays visible on phones too, where WhatsApp lives. */}
           <HeaderOrderButton />
 
+          {session && (
+            <button type="button" className="header-account desktop-nav" onClick={() => void logout()}>
+              {copy.logout}
+            </button>
+          )}
+
           <button
             type="button"
             className="mobile-toggle"
@@ -176,6 +184,11 @@ export const Header: React.FC = () => {
             <Mail size={18} aria-hidden="true" />
             {text.emailPill}
           </a>
+          {session && (
+            <button type="button" className="drawer-pill drawer-account" onClick={() => { setMobileMenuOpen(false); void logout(); }}>
+              {copy.logout}
+            </button>
+          )}
         </div>
 
         <div className="drawer-appearance">

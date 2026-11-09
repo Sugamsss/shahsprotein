@@ -20,7 +20,7 @@ type Field = 'name' | 'phone';
 /** "Your details" (name, pincode, coupon, message preview) and the pinned Send link. */
 export const OrderCheckout: React.FC = () => {
   const {
-    name, setName, phone, setPhone, address, sendLines, currentOrder, currentUrl, markSent, openedFrom,
+    name, setName, phone, setPhone, address, sendLines, currentOrder, currentUrl, markSent, openedFrom, quote, quoteLoading, quoteError, retryQuote,
   } = useOrder();
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -133,6 +133,8 @@ export const OrderCheckout: React.FC = () => {
           <DeliveryAddressFields submitted={submitted} />
         </form>
 
+        {quoteError && <p className="order-offer-error" role="status">{copy.offerError} <button type="button" onClick={retryQuote}>{copy.offerRetry}</button></p>}
+        {quoteLoading && <p className="order-offer-wait" role="status">{copy.offerWaiting}</p>}
         <CouponField />
         <MessagePreview />
         <p className="order-privacy">{copy.privacyNote}</p>
@@ -146,7 +148,7 @@ export const OrderCheckout: React.FC = () => {
             <WhatsAppIcon size={18} />
             <span>{copy.send}</span>
           </button>
-        ) : valid ? (
+        ) : valid && !quoteLoading && (quote || quoteError) ? (
           <a
             ref={sendRef as React.RefObject<HTMLAnchorElement>}
             href={currentUrl()}
@@ -158,8 +160,14 @@ export const OrderCheckout: React.FC = () => {
             <WhatsAppIcon size={18} />
             <span>{copy.send}</span>
           </a>
+        ) : valid && quoteLoading ? (
+          // The quote is on its way; Send opens with the frozen prices the moment it lands.
+          <button type="button" className="order-btn order-btn--lg order-send__btn" disabled>
+            <WhatsAppIcon size={18} />
+            <span>{copy.send}</span>
+          </button>
         ) : (
-          <button ref={sendRef as React.RefObject<HTMLButtonElement>} type="button" className="order-btn order-btn--lg order-send__btn" onClick={() => {
+          <button ref={sendRef as React.RefObject<HTMLButtonElement>} type="button" className="order-btn order-btn--lg order-send__btn" disabled={valid} onClick={() => {
             setSubmitted(true); const firstAddressKey = (['premises', 'area', 'city', 'state', 'pincode'] as const).find((key) => !address[key].trim() || (key === 'pincode' && !/^[1-9]\d{5}$/.test(address.pincode)));
             const target = !nameOk ? nameRef.current : !phoneOk ? phoneRef.current : document.getElementById(`delivery-${firstAddressKey ?? 'premises'}`) as HTMLInputElement | null;
             target?.focus({ preventScroll: true }); target?.scrollIntoView({ block:'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });

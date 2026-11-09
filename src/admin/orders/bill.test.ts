@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Coupon, Order, Prices } from '../types';
+import type { OrderQuoteSnapshot } from '../../types/offer';
 import { billShare, billShareText, buildBill } from './bill';
 import { SAMPLE } from './model';
 
@@ -64,6 +65,17 @@ const makeOrder = (overrides: Partial<Order> = {}): Parameters<typeof buildBill>
   paid: true,
   status_changed_at: '2026-10-02T11:00:00+05:30',
   status: 'delivered',
+  ...overrides,
+});
+
+/** One Muesli 250 g at the guest rate: ₹359 items + ₹50 delivery = ₹409, saving ₹40. */
+const guestQuote = (overrides: Partial<OrderQuoteSnapshot> = {}): OrderQuoteSnapshot => ({
+  quote_id: 'q-1', expires_at: '2026-10-02T12:15:00+05:30', version: 'v1', offer_kind: 'guest', coupon_code: null,
+  free_delivery_rule: { min_grams: 500, min_packs: null, up_to_250: 50, above_250: 70, cap: 70 },
+  lines: [{ product_id: 'muesli', size: '250 g', quantity: 1, grams: 250, mrp: 399, unit_price: 359, line_total: 359 }],
+  catalogue: [{ product_id: 'muesli', size: '250 g', mrp: 399, unit_price: 359 }],
+  mrp_total: 399, items_total: 359, savings: 40, grams: 250, packs: 1,
+  delivery_base: 50, delivery_waived: false, delivery_fee: 50, total: 409, currency: 'INR',
   ...overrides,
 });
 
@@ -373,6 +385,104 @@ describe('buildBill', () => {
 
     expect(bill2?.deliverTo).toBe('Satara');
     expect(bill2?.sums.some((s) => s.kind === 'deliverySatara')).toBe(true);
+  });
+
+  it('uses the saved quote: ₹359 items + ₹50 delivery = ₹409, never ₹399 + ₹10', () => {
+    const order = makeOrder({
+      lines: [{ product_id: 'muesli', size: '250 g', quantity: 1 }],
+      amount: 409,
+      amount_paid: 409,
+      amount_due: 0,
+      quote: guestQuote(),
+    });
+
+    const bill = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+
+    expect(bill?.lines).toEqual([
+      { name: 'Muesli', detail: '250 g', amount: 359, sample: false, quantity: 1, rate: 359 },
+    ]);
+    expect(bill?.sums).toEqual([
+      { kind: 'items', amount: 359 },
+      { kind: 'saving', amount: 40, code: null },
+      { kind: 'delivery', amount: 50, waived: false },
+    ]);
+    expect(bill?.total).toBe(409);
+    expect(bill?.payment).toEqual({ kind: 'paid' });
+  });
+
+  it('keeps the owner\u2019s typed total beside the saved breakdown', () => {
+    const order = makeOrder({
+      lines: [{ product_id: 'muesli', size: '250 g', quantity: 1 }],
+      amount: 400,
+      amount_paid: 400,
+      amount_due: 0,
+      quote: guestQuote(),
+    });
+
+    const bill = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+
+    expect(bill?.total).toBe(400);
+    expect(bill?.sums).toEqual([
+      { kind: 'items', amount: 359 },
+      { kind: 'saving', amount: 40, code: null },
+      { kind: 'delivery', amount: 50, waived: false },
+      { kind: 'changed', amount: 9, up: false },
+    ]);
+    expect(bill?.payment).toEqual({ kind: 'paid' });
+  });
+
+  it('prints free delivery from the saved quote', () => {
+    const quote = guestQuote({
+      lines: [{ product_id: 'muesli', size: '500 g', quantity: 1, grams: 500, mrp: 699, unit_price: 629, line_total: 629 }],
+      mrp_total: 699, items_total: 629, savings: 70, grams: 500,
+      delivery_waived: true, delivery_fee: 0, total: 629,
+    });
+    const order = makeOrder({
+      lines: [{ product_id: 'muesli', size: '500 g', quantity: 1 }],
+      amount: 629, amount_paid: 629, amount_due: 0, quote,
+    });
+
+    const bill = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+
+    expect(bill?.sums).toEqual([
+      { kind: 'items', amount: 629 },
+      { kind: 'saving', amount: 70, code: null },
+      { kind: 'delivery', amount: 0, waived: true },
+    ]);
+    expect(bill?.total).toBe(629);
+  });
+
+  it('keeps a saved-quote bill identical after the price book changes', () => {
+    const order = makeOrder({
+      lines: [{ product_id: 'muesli', size: '250 g', quantity: 1 }],
+      amount: 409, amount_paid: 409, amount_due: 0, quote: guestQuote(),
+    });
+    const before = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+    // The owner edits every base price and drops the coupon prices after Send.
+    const edited: Prices = { base: basePrices.base.map((row) => ({ ...row, price: 999 })), coupons: [] };
+    const after = buildBill({ order, prices: edited, coupons: [], now: new Date('2026-12-01T10:00:00+05:30') });
+
+    expect(after).toEqual(before);
+    expect(after?.total).toBe(409);
+  });
+
+  it('falls back to the live price-book bill when there is no saved quote', () => {
+    const order = makeOrder({
+      coupon: { code: 'EXAMPLE10', valid: true, known: true, description: '10% off' },
+      amount: 1044,
+      amount_paid: 1044,
+      amount_due: 0,
+      quote: null,
+    });
+
+    const bill = buildBill({ order, prices: basePrices, coupons: couponsList, now: dummyNow });
+
+    expect(bill?.lines.map((line) => line.rate)).toEqual([405, 234]);
+    expect(bill?.sums).toEqual([
+      { kind: 'items', amount: 1160 },
+      { kind: 'coupon', code: 'EXAMPLE10', saving: 116 },
+    ]);
+    expect(bill?.total).toBe(1044);
   });
 });
 

@@ -11,7 +11,7 @@ Stack: Vite + React + TypeScript (`src/`), deployed on Vercel from this repo. Su
 - **Name:** Shah's Nutrition. **Tagline:** "Tasty food. Healthy habits. A brighter you." (`siteConfig.tagline`)
 - **Voice:** first-person founder (Pranjali). Warm, simple, honest, a bit personal. No hype, no exclamation spam.
 - **Ordering copy says "we".** Orders go to Sunit on the order number, so the "Your order" popup names Sunit as the one who gets the message and says "we" for replying ("We'll reply with delivery and how to pay"). The WhatsApp message itself is the customer speaking.
-- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". MRPs are shown per pack size (the base prices the owners set in the admin, with `src/data/products.ts` as the fallback): price tags on the cards, and the picked pack's price in the popup's Add button.
+- **Honesty rules:** no invented food, health or allergen claims. Food, allergen, delivery and payment wording comes from the founder (see `src/data/faqs.ts` and `src/data/products.ts`). Jaggery counts as added sugar, so never say "no added sugar". Slice A founder lock: show the real crossed MRP and actual “Your price” on cards, product popup and cart; the planned shared quote also governs WhatsApp amounts. Do not describe this planned capability as live until released.
 
 ## 2. Themes and design tokens
 
@@ -47,38 +47,39 @@ Rules:
 
 ### The "Your order" popup
 
-People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **The site shows MRPs, each line's price and the order's total before delivery** (an accepted coupon's own prices from the admin where it has them), in the popup and in the WhatsApp message (the founder's call, 2026-10-22). **No delivery costs or payment on the site:** we reply on WhatsApp with delivery and how to pay. WhatsApp stays the last step. There are no customer accounts. On Send, the order is also saved to the order book with a short code (see "Saved orders" below).
+People build their order on the site and send Sunit one tidy WhatsApp message on the order number. **Slice A specifies crossed MRP + actual “Your price” on cards, popup and cart, with the same server quote used for delivery, final total and WhatsApp message.** It adds customer OTP for eligibility, not online payment: no Razorpay, gateway ledger or payment reservation. Requests still enter kitchen work only after Sunit confirms WhatsApp receipt. This is a planned contract, not a statement that implementation, provider setup or release is complete; see [docs/slice-a-pricing.md](docs/slice-a-pricing.md). On Send, the planned flow saves a quote snapshot with the request and short code (see “Saved orders” below).
 
 - **Opening it.** The product card's **+ Add** and the product popup's **Add to order** add a pack and open "Your order" (the product popup switches to it in place). The header **Order** button (with a pack count when there's something in the order), and **Order on WhatsApp** in the hero, bottom banner and footer Quick links, open it too.
 - **Inside.** Lines (thumbnail, name, pack size, quantity 1 to 10, remove with undo), three tiles to add more, then name, pincode (6 digits, so we can quote delivery), an optional coupon, "See your message", which shows the exact text, and a short privacy note ("We keep your name, pincode and what you ordered, so we can look after your order."). **Send order on WhatsApp** opens `wa.me` with the message. The empty popup offers the three products and "Rather just chat? Message us on WhatsApp", which opens the chat with `Hi! I'd like to place an order.`
 - **Order of lines.** Always product order (Raggi Jaggi, Muesli, Date Bites), smaller pack first, in the popup and in the message (`sortLines`).
-- **What's kept in the browser.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, pincode, the coupon and the order code stay in memory for the visit and never go into browser storage (they're sent to our server with the order on Send). At Send the cart is cleared, and a snapshot stays in memory so the "Now press send in WhatsApp" panel can offer **Try again**. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
+- **What's kept in the browser.** Only the cart (product, pack size, quantity) is saved, in localStorage (`shahs-order-v1`), and it still works when storage is blocked. Name, delivery contact/address, coupon choice and order code stay out of browser storage. Slice A also specifies a verified customer session and quote lifecycle; personal eligibility results are in memory, while the server quote snapshot is bound to its inputs. At Send the cart is cleared, and the message/retry path must retain its original quote rather than consulting today's prices. Saved lines whose product or pack size no longer exists are dropped, with a one-time notice.
 - **The message** comes from `buildOrderMessage` (`src/utils/orderMessage.ts`), with its words in `siteConfig.order.message`:
 
   ```
   Hi! I'm Anjali, and I'd like to place an order:
 
-  • Raggi Jaggi 250 g × 1 · ₹175
-  • Muesli 250 g × 2 · ₹580
+  • Muesli 250 g × 1 · ₹359
 
-  Total: ₹755 (before delivery)
+  Delivery: ₹50
+  Total: ₹409
+  You save ₹40 on this order.
 
-  Coupon: EXAMPLE10
+  Offer: Guest price
   Pincode: 415001
   Order code: SN-7KQ4M
 
-  Could you let me know the delivery charge and how to pay?
+  Could you let me know how to pay?
   ```
 
-  Amounts and the total use the popup's prices: MRP, or a checked coupon's own price for that pack. A pack with no price drops its amount and the whole total (never a wrong total). Back-soon lines aren't sent, so they aren't counted. The popup shows the same total under the lines (`orderTotal` in `src/utils/prices.ts`, with the MRP total struck through when a coupon saves), and the sent panel repeats it.
+  The example illustrates the planned message shape only. A valid quote carries line amounts, delivery, savings and final total from the same saved snapshot used in the cart and confirmation. If no usable quote exists, the message is explicitly unpriced and omits every payable amount; it never silently sends an MRP total after displaying a lower offer. Back-soon lines are not sent or counted.
 
-  A code the server couldn't check reads `Coupon: EXAMPLE10 (not checked yet)`. A code it rejected is left out. The order code is always there: it's made when the order starts. The sent panel also shows it ("Your order code is SN-7KQ4M.").
+  The order code is always there: it's made when the order starts. The sent panel also shows it. This describes the planned quote/message contract; the currently deployed message and save path remain as-built until Slice A is released.
 - **State** lives in `OrderContext` (`src/context/OrderContext.tsx`). All popup copy is in `siteConfig.order`. The popup body is lazy-loaded.
 
 ### Saved orders
 
-- **The code.** `SN-` plus 5 characters from an alphabet with no look-alikes (`23456789ABCDEFGHJKMNPQRSTVWXYZ`), made in the browser with `crypto.getRandomValues` (`src/utils/orderCode.ts`). The browser makes it because Send has to open WhatsApp straight away: anything awaited before the link opens gets blocked on iOS and in in-app browsers.
-- **The save.** Send builds the link, then `saveOrder` (`src/services/orderService.ts`) posts to the RPC `submit_order` with `fetch(..., { keepalive: true })` and doesn't wait. If the save fails, the WhatsApp message still goes, and Sunit adds the order by hand with the code from the chat. **Try again** saves the same order again, and the server ignores a repeat. Only the live site saves (the same host rule as click tracking, below).
+- **The code (current implementation).** `SN-` plus 5 characters from an alphabet with no look-alikes (`23456789ABCDEFGHJKMNPQRSTVWXYZ`), made in the browser with `crypto.getRandomValues` (`src/utils/orderCode.ts`). The browser makes it because Send has to open WhatsApp straight away: anything awaited before the link opens gets blocked on iOS and in in-app browsers. Slice A plans to preserve synchronous opening while saving a quote-bound snapshot.
+- **The current save path.** Send builds the link, then `saveOrder` (`src/services/orderService.ts`) posts to `submit_order` with `fetch(..., { keepalive: true })` and does not wait. Slice A specifies a quote-id-based request save with retry-safe frozen snapshots and explicitly unpriced manual fallback; do not infer that planned contract is already installed. Only the live site saves (the same host rule as click tracking, below).
 - **On the server.** `submit_order` checks everything again, allows 10 orders per IP per hour and 300 per hour overall, and ignores a repeat of the same order. If two different orders get the same code (rare), the second is stored as `SN-7KQ4M-2`. Orders keep the name, pincode and items; Sunit adds the phone in the admin. They're kept with no auto-delete.
 - **A saved order means "they tapped Send", not "they bought".** Statuses in the admin turn it into a real record.
 
@@ -86,9 +87,9 @@ People build their order on the site and send Sunit one tidy WhatsApp message on
 
 Pranjali turns a pack size off in the admin (Products). The site reads which sizes are out with one GET to `get_product_stock` (`src/services/stockService.ts`, plain `fetch`, no supabase-js), caches the answer in localStorage (`shahs-stock-v1`), and **fails open**: if the check fails, everything stays orderable. A product with every size out shows a **Back soon** label instead of **+ Add** and **Add to order**. One size out is disabled in the size switch ("500 g is back soon."). A saved cart line that's now out stays in the cart, dimmed, and is left out of the message, the save and the pack count. If every line is out, Send is off and says why.
 
-### Coupons
+### Coupons and automatic offers
 
-Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. The popup asks `check_coupon(p_code)`, which answers valid with a short public description (like "10% off your order") and that coupon's own prices per pack, or not valid. Lines with a coupon price show the MRP struck through and the coupon price; other packs stay at MRP. Descriptions can't mention an amount (₹, Rs or INR are rejected). The check allows 30 tries per IP per hour. When it can't answer (offline, timeout, rate limit), the popup says so and the code goes in the message as not checked yet. Pranjali manages codes in the admin under Coupons (see §7).
+Codes live **only in Supabase** (`public.coupons`), never in the site code or this repo. `EXAMPLE10` is a placeholder only. Slice A keeps ordinary coupons but adds automatic guest/eligible customer offers. The server compares whole-cart final payable quotes (automatic offer, checked ordinary coupon, and MRP), does not stack or blend line-by-line winners, and breaks ties in favour of the automatic offer. Public guest price data contains no private coupon identifiers/codes or customer history. Coupon descriptions still cannot mention an amount (₹, Rs or INR are rejected); displayed public price labels are separate from coupon descriptions. The existing `check_coupon` contract remains the currently deployed behavior until the Slice A contract is implemented and released.
 
 ### Direct WhatsApp links
 
@@ -124,7 +125,7 @@ Other events (`waitlist_submission_*`, `render_error`) still only log in develop
 
 - No preservatives, made fresh in small batches. Muesli has added sugar and tutti frutti (candied fruit).
 - Nutrition panel: Raggi Jaggi and Muesli. Date Bites shows the "still adding" note.
-- `weightOptions` holds pack sizes and `mrp` their fallback MRPs. The real MRPs are the owners' base prices in the admin: the site reads them with one GET to `get_product_prices` (`src/services/priceService.ts`, cached in localStorage `shahs-prices-v1`) and uses `mrp` only until that answers, or if it fails or is empty. Once it answers, a size the admin has no price for shows no price. Coupon prices reach the site only through `check_coupon` for that code (see §7).
+- `weightOptions` holds pack sizes and `mrp` their fallback MRPs. In the current implementation, the site reads owners' base prices with one GET to `get_product_prices` (`src/services/priceService.ts`, cached in localStorage `shahs-prices-v1`) and uses `mrp` only until that answers, or if it fails or is empty. Once it answers, a size the admin has no price for shows no price. The current legacy coupon flow uses `check_coupon` for a supplied code (see §7); Slice A's planned automatic offers and server quotes are documented separately in [docs/slice-a-pricing.md](docs/slice-a-pricing.md).
 - **Ingredient sprites** (`public/assets/ingredients/`) supply the small round pictures in the wrapping ingredient chips. Names are text in a list; pictures are decorative. Each sprite has 3 columns, read across then down in `ingredients` order; `ingredientSprite.rows` must match (Muesli has 6). The site loads `raggi-jaggi-648w.webp`, `muesli-v5-648w.webp` and `date-bites-v3-648w.webp`, exported at 216px per tile, 648px wide. Keep the full-size masters (`raggi-jaggi.webp`, `muesli-v5.webp`, `date-bites-v3.webp`). `/assets/*` has a one-year `immutable` cache, so a changed sprite needs a new filename.
 - **Card images** (`image`) are per-product crops in `public/assets/product-cards/`, cut at the card's 1.3 ratio from `english-product-portfolio.png`. Image rules for the whole site are in `AGENTS.md` under "Images, fonts and bundle size".
 
@@ -173,8 +174,8 @@ The public page no longer fetches or shows a sign-up count. The confirmation ema
 - **Orders.** One stage at a time on the phone (a switcher: Cooking · Packing · Ready · ₹ To collect; Sunit lands on his first stage with work, Pranjali on Cooking), a four-lane board on the laptop. Cards carry the next step (Packed, Delivered, Mark paid) with Undo; Cooking cards have none, they move by themselves. One order opens as a page on the phone and a popup over the board on the laptop, with its history. `?product=raggi-jaggi` keeps one product's orders. Search by code, name or phone. **Done** is a table on the laptop. Orders export to CSV.
 - **Add or edit an order** by hand, for orders that came by WhatsApp, a call, Instagram or in person ("Came via").
 - **Products** (stock switches, and per product the sample weight and shelf life), **Customers** (grouped by phone, with their orders), **Coupons** (add, edit, on/off, Repeat or One-time, how often used), **Email list** (with CSV), **Settings** (who has access, appearance, password, sign out).
-- The amount Sunit quoted is private to the admin. ₹ amounts are fine there; the "no prices" rule is for the public site.
-- Prices: a base price per product and pack size, and optionally a set price per coupon per pack size, edited on Products (one sheet per product, with its sample weight and shelf life). A blank coupon price means the base price. The order total fills in from them (before delivery) and stays editable. In Add order, a returning customer's Repeat coupon fills in by itself while it's live (removable in one tap), and a One-time coupon their number already used shows a quiet note, never a block.
+- The admin may show ₹ amounts and explicit adjustments. Slice A public amounts are the eligible displayed pack prices and quote totals, not private coupon descriptions.
+- Prices: the existing admin price book has base prices per product and pack size, and optionally a set price per coupon per pack size. Slice A specifies stored whole-rupee price tables for guest, first, second and third+ tiers (never recalculate percentages), server quote snapshots and delivery fees; see [docs/slice-a-pricing.md](docs/slice-a-pricing.md). In Add order, a returning customer's Repeat coupon fills in by itself while it's live (removable in one tap), and a One-time coupon their number already used shows a quiet note, never a block.
 - **The delivered bill (admin only).** A browser-generated PNG shows a receipt coming out of a printer, with quantities, pack sizes, unit rates, line amounts and a total; it is not a tax invoice. Opens only when someone asks for it, from a delivered order's Bill button or menu (never by itself on Delivered), and closes if delivery is undone. Owner refreshes keep its order/payment data current. The saved total and payment ledger are the financial source of truth; advances are recorded part payments, not a second bill-only figure. A non-sample bill requires a saved total; free samples show ₹0. Current prices/live coupons supply the item breakdown (no historical rate snapshot). Missing line amounts show a dash, not zero; an unavailable coupon list never invents base prices or a saving/gap. The image contains name/code/date, not phone/pincode, and is not uploaded. Supported browsers open the device file-share chooser; it cannot preselect WhatsApp or a recipient. Otherwise download and open the chat, or download alone without a number. Prices stay in the lazy admin bundle; no new backend migration is required.
 
 The bill preview initially fits the whole image. Zoom in/Fit bill offers a scrollable reading view without altering the PNG; short screens scroll the sheet. Feedback and Undo reserve space inside the bill's actions, never outside its clipped frame.

@@ -6,6 +6,7 @@ import { formatPhone, formatTime, istDateValue } from '../format';
 import type { Order } from '../types';
 import { Segmented, SheetForm } from '../parts';
 import { batchesText, itemsText, paymentsByText, productName } from './model';
+import { quoteOfferText } from './bill';
 
 const copy = adminCopy.exportOrders;
 type Range = keyof typeof copy.ranges;
@@ -25,14 +26,18 @@ const paidWord = { paid: adminCopy.orders.paid, part_paid: adminCopy.orders.part
 const paidOf = (o: Order) => (o.free_sample ? adminCopy.orders.freeSample : paidWord[o.payment_state]);
 
 /**
- * Paid on is when it was paid in full. Amount paid and Due are blank when there's no
- * total (an order paid with no total is still Paid); paying over shows as more paid than quoted.
+ * One CSV row. Paid on is when it was paid in full; Amount paid and Due are blank when
+ * there's no total (an order paid with no total is still Paid). Offer, Delivery and
+ * Savings ride on the saved quote; legacy orders leave them blank.
  */
-const row = (o: Order) => [
+export const orderExportRow = (o: Order) => [
   o.code, istDateValue(o.created_at), formatTime(o.created_at), o.name, o.phone && formatPhone(o.phone), o.pincode,
   itemsText(o), o.packs, o.samples, o.coupon?.code, adminCopy.orders.via[o.source], statusWord(o),
   paidOf(o), o.paid_at && istDateValue(o.paid_at), paymentsByText(o),
   o.amount, o.amount != null ? o.amount_paid : null, o.amount_due, o.note, batchesText(o),
+  o.quote ? quoteOfferText(o.quote) : '',
+  o.quote ? (o.quote.delivery_waived ? adminCopy.bill.free : o.quote.delivery_fee) : '',
+  o.quote ? o.quote.savings : '',
 ];
 
 /** Export orders (spec 2.5): every order in the range, newest first, paged with next_before. */
@@ -48,7 +53,7 @@ export const ExportSheet: React.FC<{ isOpen: boolean; onClose: () => void; produ
       before = page.next_before ?? undefined;
     } while (before);
     if (!orders.length) throw new AdminError('message', copy.none); // SheetForm shows it at the top
-    downloadCsv(copy.file(istDateValue()), toCsv(copy.columns, orders.map(row)));
+    downloadCsv(copy.file(istDateValue()), toCsv(copy.columns, orders.map(orderExportRow)));
   };
 
   if (!isOpen) return null;

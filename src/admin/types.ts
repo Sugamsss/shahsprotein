@@ -2,6 +2,8 @@
 // supabase/migrations/20260929000001_kitchen_flow.sql). Timestamps are ISO
 // strings, days are "2026-09-29" (India), amounts are whole rupees, weights grams.
 
+import type { OrderQuoteSnapshot } from '../types/offer';
+
 /** Cooking → Packing → Ready → Delivered. Done = delivered and (paid in full, or a free sample order). */
 export type OrderStatus = 'cooking' | 'packing' | 'ready' | 'delivered' | 'cancelled';
 export type OrderSource = 'site' | 'whatsapp' | 'call' | 'instagram' | 'in_person';
@@ -17,6 +19,8 @@ export interface WebsiteRequest {
   lines: OrderLine[]; coupon_code: string | null; created_at: string;
   state: 'pending' | 'confirmed' | 'dismissed'; is_legacy?: boolean; pincode?: string | null;
   confirmed_order_id?: string | null; confirmed_at?: string | null; dismissed_at?: string | null;
+  /** The Slice A quote saved with this request, exactly as the customer saw it. Legacy requests have none. */
+  quote?: OrderQuoteSnapshot | null;
 }
 export interface WebsiteRequestPage { requests: WebsiteRequest[]; next_before: string | null; next_before_id?: string | null }
 
@@ -123,6 +127,8 @@ export interface Order {
   note: string | null;
   amount: number | null;
   coupon: { code: string; valid: boolean; known: boolean; description: string | null } | null;
+  /** The Slice A quote the order was confirmed from. The bill and the admin use its frozen rates. */
+  quote?: OrderQuoteSnapshot | null;
   lines: OrderLine[];
   /** Packs, samples left out. */
   packs: number;

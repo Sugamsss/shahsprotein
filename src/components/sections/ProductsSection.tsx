@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { Container } from '../layout/Container';
 import { Badge } from '../ui/Badge';
@@ -11,12 +12,14 @@ import { LazyOrderPanel } from '../order/orderPanelLoader';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import { useOrder } from '../../context/OrderContext';
+import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
-import { usePrices } from '../../services/priceService';
+import { usePrices, useWebsiteOffer } from '../../services/priceService';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
-import { formatRupees, mrpOf } from '../../utils/prices';
+import { formatRupees, mrpOf, packPrice } from '../../utils/prices';
 import type { Product } from '../../types/product';
+import type { WebsiteQuote } from '../../types/offer';
 import type { Theme } from '../../types/theme';
 
 /** ["250 g", "500 g"] -> "250 g and 500 g" */
@@ -26,24 +29,38 @@ const joinWithAnd = (items: string[]): string =>
 const copy = siteConfig.order;
 const text = siteConfig.products;
 
+/** The pack as the current whole-cart quote priced it, so cards never blend candidates. */
+const quotePack = (quote: WebsiteQuote | null, product: Product, size: string) =>
+  quote?.catalogue.find((pack) => pack.product_id === product.id && pack.size === size) ?? null;
+
 /** The pack sizes that have an MRP, with it, in pack order. */
-const pricedSizes = (product: Product): Array<[size: string, mrp: number]> =>
+const pricedSizes = (product: Product, quote: WebsiteQuote | null): Array<[size: string, mrp: number, price: number]> =>
   product.weightOptions.flatMap((size) => {
-    const mrp = mrpOf(product, size);
-    return mrp == null ? [] : [[size, mrp] as [string, number]];
+    const priced = quotePack(quote, product, size);
+    if (priced) return [[size, priced.mrp, priced.unit_price] as [string, number, number]];
+    // With a quote, a pack it doesn't price is shown at MRP; the guest list never blends in.
+    if (quote) {
+      const mrp = mrpOf(product, size);
+      return mrp == null ? [] : [[size, mrp, mrp] as [string, number, number]];
+    }
+    const pack = packPrice(product, size);
+    return pack == null ? [] : [[size, pack.mrp, pack.price] as [string, number, number]];
   });
 
 /** A price tag per pack: the MRP, with its pack size under it. */
 const PackPrices: React.FC<{ product: Product }> = ({ product }) => {
   usePrices();
-  const sizes = pricedSizes(product);
+  const offer = useWebsiteOffer();
+  const { quote } = useOrder();
+  const sizes = pricedSizes(product, quote);
   if (sizes.length === 0) return null;
+  if (!quote && !offer) return <dl className="pack-prices pack-prices--unpriced" aria-label={text.mrpLabel(product.name)}>{product.weightOptions.map((size) => <div key={size} className="pack-prices__item"><dt>{size}</dt><dd>{mrpOf(product, size) != null ? formatRupees(mrpOf(product, size)!) : '—'}</dd></div>)}</dl>;
   return (
     <dl className="pack-prices" aria-label={text.mrpLabel(product.name)}>
-      {sizes.map(([size, mrp]) => (
+      {sizes.map(([size, mrp, price]) => (
         <div key={size} className="pack-prices__item">
           <dt>{size}</dt>
-          <dd>{formatRupees(mrp)}</dd>
+          <dd><del><span className="visually-hidden">MRP </span>{formatRupees(mrp)}</del><span className="pack-prices__now"><span className="visually-hidden">Your price </span>{formatRupees(price)}</span></dd>
         </div>
       ))}
     </dl>
@@ -108,10 +125,20 @@ const ProductCard: React.FC<{
 const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => void }> = ({ product, onAdd }) => {
   const stock = useStock();
   usePrices();
+  const offer = useWebsiteOffer();
+  const { quote } = useOrder();
   const [picked, setSize] = useState<string | undefined>(undefined);
   // The picked size, unless it's out (stock can arrive while the popup is open):
   // then the first size in stock. Undefined when every size is out.
   const size = picked && !stock.isOut(product.id, picked) ? picked : firstInStockSize(product, stock);
+  const priced = size ? quotePack(quote, product, size) : null;
+  const fallbackPrice = size ? packPrice(product, size) : null;
+  const price = priced
+    ? { price: priced.unit_price, mrp: priced.mrp }
+    : quote
+      ? (() => { const mrp = size ? mrpOf(product, size) : undefined; return mrp == null ? null : { price: mrp, mrp }; })()
+      : fallbackPrice;
+  const priceKnown = Boolean(quote || offer);
 
   // Every size out: a calm line in place of the switch and the button, never a
   // button itself, with a way to ask in the order chat (counted as an order click
@@ -127,7 +154,6 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
     );
   }
 
-  const mrp = mrpOf(product, size);
   const outSizes = product.weightOptions.filter((option) => stock.isOut(product.id, option));
 
   return (
@@ -152,8 +178,9 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
         <span className="product-detail__add-long">{copy.addToOrder}</span>
         <span className="product-detail__add-short">{copy.addToOrderShort}</span>
         {/* The picked pack's MRP, so the price changes with the switch. */}
-        {mrp != null && <span className="product-detail__add-price">{formatRupees(mrp)}</span>}
+        {price && <span className="product-detail__add-price">{priceKnown ? formatRupees(price.price) : copy.priceToConfirm}</span>}
       </button>
+      {price && <p className="product-detail__price-line">{priceKnown ? <><del>{formatRupees(price.mrp)}</del> <span><span className="visually-hidden">Your price </span>{formatRupees(price.price)}</span></> : copy.offerError}</p>}
       {outSizes.map((option) => (
         <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>
       ))}
@@ -163,6 +190,7 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
 
 export const ProductsSection: React.FC = () => {
   const { theme } = useTheme();
+  const { session } = useCustomerAuth();
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { addItem, openOrder, closeOrder, isOpen, openedFrom } = useOrder();
@@ -199,6 +227,8 @@ export const ProductsSection: React.FC = () => {
             <p className="portfolio-intro__eyebrow"><Badge>{text.eyebrow}</Badge></p>
             <h2><HighlightedText segments={text.heading} as="em" /></h2>
             <p>{text.intro}</p>
+            <p className="portfolio-intro__price-note">{text.priceHonesty}</p>
+            {!session && <Link className="offer-login-chip" to="/login?return=%2F%23products">{text.loginChip}</Link>}
           </div>
           <div className="portfolio-grid">
             {productsData.map((product) => (

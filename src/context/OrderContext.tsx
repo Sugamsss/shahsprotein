@@ -20,6 +20,10 @@ import { cleanName, orderMessageUrl } from '../utils/orderMessage';
 import { makeOrderCode } from '../utils/orderCode';
 import { checkCoupon, looksLikeCouponCode, normalizeCouponCode } from '../services/couponService';
 import { firstInStockSize, useStock } from '../services/stockService';
+import { useCustomerAuth } from './CustomerAuthContext';
+import { quoteWebsiteOrder } from '../services/offerService';
+import type { WebsiteQuote } from '../types/offer';
+import { useWebsiteOffer } from '../services/priceService';
 
 // Everything behind the "Your order" popup.
 //
@@ -119,6 +123,10 @@ export interface OrderContextType {
   /** Call once the Send link has opened: keeps the snapshot, clears the cart and the coupon. */
   markSent: (order: OrderMessageInput, url: string) => void;
   sent: SentOrder | null;
+  quote: WebsiteQuote | null;
+  quoteLoading: boolean;
+  quoteError: boolean;
+  retryQuote: () => void;
   /** Drops the snapshot and starts a new code. Name and pincode stay. */
   startNewOrder: () => void;
 }
@@ -177,6 +185,15 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [sent, setSent] = useState<SentOrder | null>(null);
   const [code, setCode] = useState(makeOrderCode);
   const stock = useStock();
+  const { session } = useCustomerAuth();
+  const offer = useWebsiteOffer();
+  const [quote, setQuote] = useState<WebsiteQuote | null>(null);
+  // The checked coupon the quote was asked with; the snapshot only names a coupon that won.
+  const [quoteCoupon, setQuoteCoupon] = useState<string | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState(false);
+  const quoteGeneration = useRef(0);
+  const [quoteRevision, setQuoteRevision] = useState(0);
 
   // Refs hold the latest values, so actions answer synchronously and two quick
   // clicks in the same tick both count (the second sees the first's result).
@@ -191,6 +208,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   phoneRef.current = phone;
   const stockRef = useRef(stock);
   stockRef.current = stock;
+  // The identity a quote belongs to: a late guest reply must never price a signed-in cart.
+  const sessionId = session?.user.id ?? null;
+  const sessionRef = useRef<string | null>(sessionId);
+  sessionRef.current = sessionId;
 
   const commit = useCallback((next: OrderLine[]) => {
     if (next === linesRef.current) return;
@@ -202,6 +223,37 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     couponRef.current = next;
     setCoupon(next);
   }, []);
+
+  const retryQuote = useCallback(() => setQuoteRevision((revision) => revision + 1), []);
+
+  useEffect(() => {
+    const lines = inStockLines(storedLines, stock.isOut);
+    const generation = ++quoteGeneration.current;
+    const requestedCoupon = coupon.status === 'valid' ? coupon.code : null;
+    setQuote(null);
+    if (!lines.length) { setQuoteLoading(false); setQuoteError(false); return; }
+    setQuoteLoading(true); setQuoteError(false);
+    const owner = sessionId;
+    void quoteWebsiteOrder(lines, code, requestedCoupon).then((result) => {
+      if (quoteGeneration.current !== generation || sessionRef.current !== owner) return;
+      if (result.status === 'ready' && Date.parse(result.quote.expires_at) > Date.now()) {
+        setQuote(result.quote);
+        setQuoteCoupon(requestedCoupon);
+      } else { setQuote(null); setQuoteError(true); }
+      setQuoteLoading(false);
+    });
+  }, [storedLines, stock, sessionId, coupon.status === 'valid' ? coupon.code : null, offer?.version, quoteRevision]);
+
+  // A quote is what Send freezes, so it must never outlive the server's window.
+  // Asking again keeps the cart usable while the customer finishes typing.
+  useEffect(() => {
+    if (!quote) return undefined;
+    const left = Date.parse(quote.expires_at) - Date.now();
+    if (!Number.isFinite(left)) { setQuote(null); setQuoteError(true); return undefined; }
+    if (left <= 0) { setQuoteRevision((revision) => revision + 1); return undefined; }
+    const timer = setTimeout(() => setQuoteRevision((revision) => revision + 1), Math.min(left + 1000, 2_147_000_000));
+    return () => clearTimeout(timer);
+  }, [quote]);
 
   const updateSent = useCallback((next: SentOrder | null) => {
     sentRef.current = next;
@@ -346,15 +398,26 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const sendLines = useMemo(() => inStockLines(storedLines, stock.isOut), [storedLines, stock]);
 
   // Built from the refs at call time, so a click right after a change sends what's on screen.
-  const currentOrder = useCallback((): OrderMessageInput => ({
-    code,
-    lines: inStockLines(linesRef.current, stockRef.current.isOut),
-    name: cleanName(name),
-    pincode: addressRef.current.pincode,
-    phone: cleanPhone(phoneRef.current),
-    address: cleanDeliveryAddress(addressRef.current),
-    coupon: messageCoupon,
-  }), [code, name, phone, address, messageCoupon]);
+  const currentOrder = useCallback((): OrderMessageInput => {
+    const currentLines = sortLines(inStockLines(linesRef.current, stockRef.current.isOut));
+    const boundCoupon = messageCoupon?.checked ? messageCoupon.code : null;
+    const quoteMatches = Boolean(quote && Date.parse(quote.expires_at) > Date.now()
+      && quoteCoupon === boundCoupon
+      && quote.lines.length === currentLines.length
+      && quote.lines.every((priced, index) => priced.product_id === currentLines[index].productId
+        && priced.size === currentLines[index].size && priced.quantity === currentLines[index].quantity));
+    return {
+      code,
+      lines: currentLines,
+      name: cleanName(name),
+      pincode: addressRef.current.pincode,
+      phone: cleanPhone(phoneRef.current),
+      address: cleanDeliveryAddress(addressRef.current),
+      coupon: messageCoupon,
+      quote: quoteMatches ? quote : null,
+      unpriced: !quoteMatches,
+    };
+  }, [code, name, phone, address, messageCoupon, quote, quoteCoupon]);
 
   const currentUrl = useCallback(() => orderMessageUrl(currentOrder()), [currentOrder]);
 
@@ -405,12 +468,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     currentUrl,
     markSent,
     sent,
+    quote,
+    quoteLoading,
+    quoteError,
+    retryQuote,
     startNewOrder,
   }), [
     lines, sendLines, addItem, setQuantity, changeSize, removeItem, clear, lastAdd, droppedOnLoad,
     name, pincode, setPincode, phone, setPhone, address, setAddress, editAddressPart, couponOpen, couponInput, setCouponInput, coupon, applyCoupon,
     removeCoupon, messageCoupon, isOpen, openedFrom, openOrder, closeOrder, code, sendLines,
-    currentOrder, currentUrl, markSent, sent, startNewOrder,
+    currentOrder, currentUrl, markSent, sent, quote, quoteLoading, quoteError, retryQuote, startNewOrder,
   ]);
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;

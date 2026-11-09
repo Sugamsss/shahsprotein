@@ -7,6 +7,16 @@ import { productsData } from './products';
 const SERVER_PRODUCT_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const SERVER_SIZE = /^[0-9]{1,5} ?(g|kg)$/;
 
+describe('founder-locked Slice A fallback MRPs', () => {
+  it('keeps the exact five pack MRPs aligned with the public offer', () => {
+    expect(Object.fromEntries(productsData.flatMap((p) => Object.entries(p.mrp).map(([size, price]) => [`${p.id}|${size}`, price])))).toEqual({
+      'muesli|250 g': 399, 'muesli|500 g': 699,
+      'raggi-jaggi|250 g': 249, 'raggi-jaggi|500 g': 479,
+      'bites|250 g': 319,
+    });
+  });
+});
+
 describe('products the order book can store', () => {
   it.each(productsData.map((product) => [product.id, product] as const))('%s', (_id, product) => {
     expect(product.id).toMatch(SERVER_PRODUCT_ID);

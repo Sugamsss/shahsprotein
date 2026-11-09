@@ -19,12 +19,14 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'example10', checked: true } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Raggi Jaggi 250 g × 1 · ₹175\n'
-      + '• Muesli 250 g × 2 · ₹580\n'
-      + '• Muesli 500 g × 1 · ₹550\n'
-      + '• Date Bites 250 g × 1 · ₹225\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹249\n'
+      + '• Muesli 250 g × 2 · ₹798\n'
+      + '• Muesli 500 g × 1 · ₹699\n'
+      + '• Date Bites 250 g × 1 · ₹319\n'
       + '\n'
-      + 'Total: ₹1,530 (before delivery)\n'
+      + 'Total: ₹2,065\n'
+      + '\n'
+      + 'Delivery: Free\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Phone: 9876543210\n'
@@ -40,12 +42,12 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Raggi Jaggi 250 g × 1 · ₹175\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹249\n'
       + '• Muesli 250 g × 2 · ₹500\n'
-      + '• Muesli 500 g × 1 · ₹550\n'
-      + '• Date Bites 250 g × 1 · ₹225\n'
+      + '• Muesli 500 g × 1 · ₹699\n'
+      + '• Date Bites 250 g × 1 · ₹319\n'
       + '\n'
-      + 'Total: ₹1,450 (before delivery)\n'
+      + 'Total: ₹1,767\n' + '\n' + 'Delivery: Free\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Phone: 9876543210\n'
@@ -61,7 +63,7 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: odd, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 1 · ₹290\n'
+      + '• Muesli 250 g × 1 · ₹399\n'
       + '• Date Bites 500 g × 1\n'
       + '\n'
       + 'Phone: 9876543210\n'
@@ -77,9 +79,11 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'EXAMPLE10', checked: false } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹580\n'
+      + '• Muesli 250 g × 2 · ₹798\n'
       + '\n'
-      + 'Total: ₹580 (before delivery)\n'
+      + 'Total: ₹798\n'
+      + '\n'
+      + 'Delivery: Free\n'
       + '\n'
       + 'Coupon: EXAMPLE10 (not checked yet)\n'
       + 'Phone: 9876543210\n'
@@ -91,9 +95,11 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone:'919876543210', address:{premises:'Flat 4B',area:'Shivaji Nagar',city:'Satara',state:'Maharashtra',pincode:'415001'}, coupon: null })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹580\n'
+      + '• Muesli 250 g × 2 · ₹798\n'
       + '\n'
-      + 'Total: ₹580 (before delivery)\n'
+      + 'Total: ₹798\n'
+      + '\n'
+      + 'Delivery: Free\n'
       + '\n'
       + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
@@ -114,9 +120,11 @@ describe('buildOrderMessage', () => {
     expect(message).toBe(
       "Hi! I'm Priya Shah, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹580\n'
+      + '• Muesli 250 g × 2 · ₹798\n'
       + '\n'
-      + 'Total: ₹580 (before delivery)\n'
+      + 'Total: ₹798\n'
+      + '\n'
+      + 'Delivery: Free\n'
       + '\n'
       + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
@@ -138,6 +146,34 @@ describe('orderMessageParts with blanks (the preview)', () => {
     ]);
     const filled = parts.map((part) => (part.blank === 'name' ? 'Anjali' : part.blank === 'phone' ? '9876543210' : part.blank === 'address' ? 'Flat, Area, City, State, 415001' : part.text)).join('');
     expect(filled).toBe(buildOrderMessage({ ...input, name: 'Anjali', phone:'919876543210', address:{premises:'Flat',area:'Area',city:'City',state:'State',pincode:'415001'} }));
+  });
+});
+
+describe('Slice A frozen quote messages', () => {
+  const details = { code: 'SN-7KQ4M', lines: [{ productId: 'muesli', size: '250 g', quantity: 1 }], name: 'Asha', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' } };
+  const quote = { quote_id:'00000000-0000-0000-0000-000000000001', expires_at:'2099-01-01T00:00:00Z', version:'fixture', offer_kind:'guest' as const, coupon_code:null, free_delivery_rule:{min_grams:500,min_packs:null,up_to_250:50,above_250:70,cap:70}, lines:[{product_id:'muesli',size:'250 g',quantity:1,grams:250,mrp:399,unit_price:359,line_total:359}], catalogue:[{product_id:'muesli',size:'250 g',mrp:399,unit_price:359}], mrp_total:399,items_total:359,savings:40,grams:250,packs:1,delivery_base:50,delivery_waived:false,delivery_fee:50,total:409,currency:'INR' as const };
+  it('shows the quote total once, including delivery: ₹359 + ₹50 = ₹409', () => {
+    expect(buildOrderMessage({ ...details, quote })).toContain('Total: ₹409');
+    expect(buildOrderMessage({ ...details, quote })).toContain('Delivery: ₹50');
+  });
+  it('keeps the second-tier one-500 g order at ₹489 + ₹70 = ₹559', () => {
+    const fiveHundred = {
+      ...quote,
+      offer_kind: 'second' as const,
+      free_delivery_rule: { min_grams: null, min_packs: 2, up_to_250: 50, above_250: 70, cap: 70 },
+      lines: [{ product_id: 'muesli', size: '500 g', quantity: 1, grams: 500, mrp: 699, unit_price: 489, line_total: 489 }],
+      catalogue: [{ product_id: 'muesli', size: '500 g', mrp: 699, unit_price: 489 }],
+      mrp_total: 699, items_total: 489, savings: 210, grams: 500, packs: 1,
+      delivery_base: 70, delivery_waived: false, delivery_fee: 70, total: 559,
+    };
+    const message = buildOrderMessage({ ...details, lines: [{ productId: 'muesli', size: '500 g', quantity: 1 }], quote: fiveHundred });
+    expect(message).toContain('• Muesli 500 g × 1 · ₹489');
+    expect(message).toContain('Total: ₹559');
+    expect(message).toContain('Delivery: ₹70');
+  });
+  it('omits every payable amount for an explicitly unpriced order', () => {
+    const message = buildOrderMessage({ ...details, unpriced: true });
+    expect(message).not.toMatch(/₹\\d|Total:|Delivery:/);
   });
 });
 

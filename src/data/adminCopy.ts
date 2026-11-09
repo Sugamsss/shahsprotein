@@ -65,6 +65,18 @@ export const adminCopy = {
 
   websiteRequests: {
     title: 'Website requests', hint: 'Confirm once their WhatsApp message comes in.', filterLabel: 'Request status', search: 'Search name, phone or request code', loadMore: 'Load older requests',
+    findByCode: {
+      title: 'Find by code',
+      hint: 'If a code isn’t in the list, I can look it up: a request, or a quote that never became one.',
+      field: 'Order code',
+      placeholder: 'SN-AB234',
+      button: 'Find',
+      busy: 'Looking…',
+      notFound: (code: string) => `Nothing matches ${code}. Check the code in their message.`,
+      /** A quote with no request behind it: the save never reached us. */
+      quoteOnly: 'I priced this one, but the request never reached me, so it isn’t in the list. Add the order by hand with these prices.',
+      addByHand: 'Add the order by hand',
+    },
     states: { pending: 'To confirm', dismissed: 'Dismissed' }, empty: { pending: 'No requests waiting.', dismissed: 'No dismissed requests.' }, confirmed: 'Confirmed',
     notAvailable: 'Website requests are not set up on this database yet.', notConfirmed: 'Not confirmed',
     nameMissing: 'No name', addressMissing: 'No delivery address yet', missing: 'Not provided', items: 'Items', coupon: 'Coupon', openMaps: 'Open in Maps',
@@ -83,6 +95,37 @@ export const adminCopy = {
     resetDetails: 'Use details from the WhatsApp message', discardEdits: 'Discard your unsaved changes?',
     saving: 'Confirming…', saveFailed: "That didn't save. Check the details and try again.", concurrentConfirmed: 'Another admin confirmed this request first. Refreshing the list.', concurrentDismissed: 'Another admin dismissed this request first. Refreshing the list.', details: 'Customer details',
     addAddress: 'Add delivery address',
+    /** A promised tier that another confirmation has overtaken: the owner decides, never a silent repricing. */
+    tierConflictTitle: 'Their price has moved since',
+    tierConflict: (promised: string, current: string) => `This quote was sent as ${promised}, but this number now counts as ${current}, because another order was confirmed in the meantime. Nothing is saved yet. Choose which price this order gets.`,
+    tierHonour: 'Honour the quoted price',
+    tierAdjust: 'Use today’s price',
+    tierHonourHint: 'Keeps the prices they were sent.',
+    tierAdjustHint: 'Reprices the same items at today’s price before the order is saved.',
+    tierUnknown: 'an offer',
+  },
+
+  /**
+   * A saved Slice A quote, shown the same way on a website request and on the order it
+   * became: the offer word, each line's rate, delivery and the total. Legacy rows have none.
+   */
+  quote: {
+    title: 'Saved quote',
+    offers: {
+      guest: 'Guest offer',
+      first: 'First order offer',
+      second: 'Second order offer',
+      third_plus: 'Third order offer',
+      coupon: 'Coupon offer',
+      mrp: 'No offer',
+    } as Record<string, string>,
+    couponOffer: (code: string) => `Coupon ${code}`,
+    each: (money: string) => `${money} each`,
+    items: 'Items',
+    delivery: 'Delivery',
+    free: 'Free',
+    saving: 'Saving',
+    total: 'Total',
   },
 
   signOut: 'Sign out',
@@ -574,6 +617,9 @@ export const adminCopy = {
     items: 'Items',
     coupon: 'Coupon',
     couponApplied: 'Applied',
+    /** The saved quote's own rows: its delivery fee (or free) and what its offer took off. */
+    delivery: 'Delivery',
+    saving: 'Saving',
     deliveryOther: 'Delivery and other',
     adjusted: 'Adjusted',
     sampleRate: 'Sample',
@@ -622,7 +668,7 @@ export const adminCopy = {
     download: 'Download CSV',
     busy: 'Making the file…',
     none: 'No orders in that range.',
-    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Samples', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note', 'Batches'],
+    columns: ['Code', 'Date', 'Time', 'Name', 'Phone', 'Pincode', 'Items', 'Packs', 'Samples', 'Coupon', 'Came via', 'Status', 'Paid', 'Paid on', 'Paid by', 'Total quoted', 'Amount paid', 'Due', 'Note', 'Batches', 'Offer', 'Delivery', 'Savings'],
     file: (day: string) => `shahs-orders-${day}.csv`,
   },
 
@@ -769,6 +815,16 @@ export const adminCopy = {
     remove: (item: string) => `Remove ${item}`,
     backSoon: 'Back soon on the site',
     siteNote: 'The chat is the truth. Change this to match what they finally asked for.',
+    quoteLoading: 'Checking the server price…',
+    serverQuote: (offer: string, configured: boolean) => configured
+      ? `Server-quoted ${offer}`
+      : 'Unconfigured source, using the Repeat fallback',
+    /** The quote's delivery and total, on the same quiet line, only when the server sends them. */
+    serverDelivery: (money: string) => `${money} delivery`,
+    serverFreeDelivery: 'Delivery free',
+    serverTotal: (money: string) => `Total ${money}`,
+    /** A partial server answer (a pack with no price, no total): never filled in, typed instead. */
+    serverTotalMissing: 'Type the total',
     who: "Who it's for",
     phone: 'Phone',
     name: 'Name',

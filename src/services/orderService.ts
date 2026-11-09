@@ -14,8 +14,12 @@ import { isLiveSite, postPublicRpc } from './publicRpc';
  * `submit_website_request`, so it falls back to `submit_order` (name and pincode).
  * Only the live site saves (see `isLiveSite`).
  */
-export const saveOrder = ({ code, lines, name, phone, address, coupon }: OrderMessageInput): void => {
-  if (!isLiveSite() || lines.length === 0 || !address) return;
+export const saveOrder = ({ code, lines, name, phone, address, coupon, quote, unpriced }: OrderMessageInput): void => {
+  if (!isLiveSite() || lines.length === 0 || !address || unpriced) return;
+  if (quote) {
+    void import('./customerAuthClient').then(({ postCustomerQuote }) => postCustomerQuote(quote.quote_id, code, { name: cleanName(name), phone, address }));
+    return;
+  }
   const common = {
     p_code: code,
     p_lines: lines.map((line) => ({ product_id: line.productId, size: line.size, quantity: line.quantity })),

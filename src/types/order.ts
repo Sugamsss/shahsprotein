@@ -53,6 +53,9 @@ export interface OrderMessageInput {
   phone: string;
   address: DeliveryAddress;
   coupon?: MessageCoupon | null;
+  /** Frozen server quote used by preview, Send, retry and request persistence. */
+  quote?: import('./offer').WebsiteQuote | null;
+  unpriced?: boolean;
 }
 
 /** One piece of the message. `blank` pieces only appear in the preview, where a value is still missing. */

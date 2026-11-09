@@ -16,10 +16,12 @@ import type { DeliveryAddress } from '../../types/delivery';
 import { Code, FromWebsite, Thumb, Via } from './OrderCard';
 import { MOVE_BACK_TO_COOKING, MOVE_TO_PACKING, canMoveBack, isHeld, itemsText, orderOnly, lineState, madeOnDay, nextOf, normalisePhone, packsText, productName, sizeText, sortLines } from './model';
 import { historyDetailText } from './giveText';
+import { quoteOfferText } from './bill';
 import { PaymentsBlock } from './PaymentsBlock';
 import { ProductBatches } from './OrderBatches';
 import type { PriceBook } from './usePriceBook';
 import type { PaymentActions } from './usePayments';
+import type { OrderQuoteSnapshot } from '../../types/offer';
 
 // The pieces of one order (spec 2.6), shared by the phone page and the laptop popup.
 
@@ -162,6 +164,33 @@ export const ItemsCard: React.FC<{ order: Order; onChangeBatch?: (productId: str
         <Ticket size={18} aria-hidden="true" /><span><b>{o.coupon.code}</b>{o.coupon.description && ` · ${o.coupon.description}`}{!o.coupon.valid && ` ${copy.couponInvalid}`}</span>
       </p>
     )}
+  </section>
+);
+
+/**
+ * The saved Slice A quote the order came from: the offer word, each pack's rate, items,
+ * delivery, saving and the total, exactly as the customer saw them at Send.
+ */
+export const QuoteCard: React.FC<{ quote: OrderQuoteSnapshot }> = ({ quote }) => (
+  <section className="adm-card adm-quote">
+    <div className="adm-card__h">
+      <h2>{adminCopy.quote.title}</h2>
+      <span className="adm-quote__offer">{quoteOfferText(quote)}</span>
+    </div>
+    <ul className="adm-quote__lines">
+      {quote.lines.map((l, i) => (
+        <li key={`${l.product_id}-${l.size}-${i}`}>
+          <span>{productName(l.product_id)} <small>{sizeText(l.size)} × {l.quantity}</small></span>
+          <span>{adminCopy.quote.each(formatMoney(l.unit_price))}</span>
+        </li>
+      ))}
+    </ul>
+    <dl className="adm-quote__sums">
+      <div><dt>{adminCopy.quote.items}</dt><dd>{formatMoney(quote.items_total)}</dd></div>
+      {quote.savings > 0 && <div className="is-saving"><dt>{adminCopy.quote.saving}</dt><dd>{formatMoney(quote.savings)}</dd></div>}
+      <div><dt>{adminCopy.quote.delivery}</dt><dd>{quote.delivery_waived ? adminCopy.quote.free : formatMoney(quote.delivery_fee)}</dd></div>
+      <div className="is-total"><dt>{adminCopy.quote.total}</dt><dd>{formatMoney(quote.total)}</dd></div>
+    </dl>
   </section>
 );
 

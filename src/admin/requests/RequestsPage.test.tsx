@@ -5,10 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RequestsPage from './RequestsPage';
 import type { WebsiteRequest, WebsiteRequestPage } from '../types';
+import type { OrderQuoteSnapshot } from '../../types/offer';
 
 const api = vi.hoisted(() => ({
   getWebsiteRequests: vi.fn(), getWebsiteRequest: vi.fn(),
-  confirmWebsiteRequest: vi.fn(), dismissWebsiteRequest: vi.fn(), navigate: vi.fn(),
+  confirmWebsiteRequest: vi.fn(), dismissWebsiteRequest: vi.fn(), getAdminWebsiteQuote: vi.fn(), navigate: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ show: vi.fn(), error: vi.fn() }));
 vi.mock('../api', () => api);
@@ -31,6 +32,16 @@ const request = (id: string, overrides: Partial<WebsiteRequest> = {}): WebsiteRe
   created_at: '2026-10-22T10:00:00Z', state: 'pending', ...overrides,
 });
 const page = (requests: WebsiteRequest[], next_before: string | null = null, next_before_id?: string): WebsiteRequestPage => ({ requests, next_before, next_before_id });
+
+/** One Muesli 250 g at the guest rate: ₹359 + ₹50 delivery = ₹409, ₹40 off the MRP. */
+const quote: OrderQuoteSnapshot = {
+  quote_id: 'q-1', expires_at: '2026-10-22T10:15:00Z', version: 'v1', offer_kind: 'guest', coupon_code: null,
+  free_delivery_rule: { min_grams: 500, min_packs: null, up_to_250: 50, above_250: 70, cap: 70 },
+  lines: [{ product_id: 'muesli', size: '250 g', quantity: 1, grams: 250, mrp: 399, unit_price: 359, line_total: 359 }],
+  catalogue: [{ product_id: 'muesli', size: '250 g', mrp: 399, unit_price: 359 }],
+  mrp_total: 399, items_total: 359, savings: 40, grams: 250, packs: 1,
+  delivery_base: 50, delivery_waived: false, delivery_fee: 50, total: 409, currency: 'INR',
+};
 const deferred = <T,>() => { let resolve!: (v: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; };
 const flush = async () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
@@ -45,6 +56,7 @@ describe('website requests owner flow', () => {
     api.getWebsiteRequests.mockReset().mockResolvedValue(page([request('A'), request('B')], 'cursor-1', 'B'));
     api.getWebsiteRequest.mockReset().mockImplementation(async (id: string) => request(id));
     api.confirmWebsiteRequest.mockReset(); api.dismissWebsiteRequest.mockReset(); api.navigate.mockReset(); toast.show.mockReset();
+    api.getAdminWebsiteQuote.mockReset();
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); render(); await flush();
   });
   afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMocks(); });
@@ -119,6 +131,35 @@ describe('website requests owner flow', () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
+  it('asks the owner to honour or adjust when the promised tier moved', async () => {
+    act(() => button('SN-A').click()); await flush();
+    act(() => button('Confirm order').click());
+    const receipt = [...container.querySelectorAll('label')].find((l) => l.textContent?.includes('WhatsApp message has arrived'))?.querySelector('input') as HTMLInputElement;
+    act(() => receipt.click());
+    api.confirmWebsiteRequest.mockResolvedValue({ state: 'conflict', order: null, promised: 'first', current: 'second' });
+    act(() => button('Confirm order').click()); await flush();
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.textContent).toContain('Their price has moved since');
+    expect(dialog.textContent).toContain('First order offer');
+    expect(dialog.textContent).toContain('Second order offer');
+    expect(api.navigate).not.toHaveBeenCalled();
+
+    api.confirmWebsiteRequest.mockResolvedValue({ state: 'confirmed', order: { code: 'SN-ORDER' } });
+    act(() => button('Honour the quoted price').click()); await flush();
+    expect(api.confirmWebsiteRequest).toHaveBeenLastCalledWith('A', expect.objectContaining({ tier_decision: 'honour' }));
+    expect(api.navigate).toHaveBeenCalledWith('/admin/orders/SN-ORDER');
+
+    act(() => button('SN-B').click()); await flush();
+    act(() => button('Confirm order').click());
+    const secondReceipt = [...container.querySelectorAll('label')].find((l) => l.textContent?.includes('WhatsApp message has arrived'))?.querySelector('input') as HTMLInputElement;
+    act(() => secondReceipt.click());
+    api.confirmWebsiteRequest.mockResolvedValueOnce({ state: 'conflict', order: null, promised: 'first', current: 'second' });
+    act(() => button('Confirm order').click()); await flush();
+    api.confirmWebsiteRequest.mockResolvedValueOnce({ state: 'confirmed', order: { code: 'SN-ORDER-2' } });
+    act(() => button('Use today’s price').click()); await flush();
+    expect(api.confirmWebsiteRequest).toHaveBeenLastCalledWith('B', expect.objectContaining({ tier_decision: 'adjust' }));
+  });
+
   it('keeps confirmation recovery in the sheet and reports server validation text', async () => {
     act(() => button('SN-A').click()); await flush();
     act(() => button('Confirm order').click());
@@ -151,5 +192,64 @@ describe('website requests owner flow', () => {
     change(search, 'Meera'); await new Promise((resolve) => setTimeout(resolve, 320)); await flush();
     expect(api.getWebsiteRequests).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Meera', limit: 100 }));
     expect(api.getWebsiteRequests).not.toHaveBeenLastCalledWith(expect.objectContaining({ before: 'cursor-1' }));
+  });
+
+  it('shows the saved quote, its rates and its total in a request that has one', async () => {
+    const quoted = request('A', { quote });
+    api.getWebsiteRequests.mockResolvedValue(page([quoted]));
+    api.getWebsiteRequest.mockResolvedValue(quoted);
+    act(() => root.unmount());
+    root = createRoot(container); render(); await flush();
+    act(() => button('SN-A').click()); await flush();
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.textContent).toContain('Saved quote');
+    expect(dialog.textContent).toContain('Guest offer');
+    expect(dialog.textContent).toContain('₹359 each');
+    expect(dialog.textContent).toContain('₹50');
+    expect(dialog.textContent).toContain('₹40');
+    expect(dialog.textContent).toContain('₹409');
+  });
+
+  it('leaves a request without a quote quiet', async () => {
+    act(() => button('SN-A').click()); await flush();
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.textContent).not.toContain('Saved quote');
+  });
+
+  it('finds a request by its code and opens it', async () => {
+    api.getAdminWebsiteQuote.mockResolvedValue({
+      code: 'SN-AB234', quote: null,
+      request: { id: 'A', code: 'SN-A', state: 'pending', name: 'Name A', phone: null, created_at: '2026-10-22T10:00:00Z' },
+      order: null,
+    });
+    change(input('Order code'), 'SN-AB234');
+    act(() => button('Find').click()); await flush(); await flush();
+    expect(api.getAdminWebsiteQuote).toHaveBeenCalledWith('SN-AB234');
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(input('Name').value).toBe('Name A');
+  });
+
+  it('shows a quote whose request never saved, with the way to add it by hand', async () => {
+    api.getAdminWebsiteQuote.mockResolvedValue({ code: 'SN-AB234', quote, request: null, order: null });
+    change(input('Order code'), 'SN-AB234');
+    act(() => button('Find').click()); await flush();
+    expect(container.textContent).toContain('never reached me');
+    expect(container.textContent).toContain('₹359 each');
+    expect(container.textContent).toContain('₹409');
+    let added: HTMLButtonElement | undefined;
+    act(() => { added = button('Add the order by hand'); added.click(); });
+    expect(api.navigate).toHaveBeenCalledWith('/admin/orders/new?code=AB234');
+  });
+
+  it('announces a find that fails or matches nothing', async () => {
+    api.getAdminWebsiteQuote.mockRejectedValue(new Error('Offers are not configured.'));
+    change(input('Order code'), 'SN-AB234');
+    act(() => button('Find').click()); await flush();
+    expect(toast.show).toHaveBeenCalledWith({ text: 'Offers are not configured.' });
+
+    api.getAdminWebsiteQuote.mockResolvedValue({ code: 'SN-ZZZZZ', quote: null, request: null, order: null });
+    change(input('Order code'), 'SN-ZZZZZ');
+    act(() => button('Find').click()); await flush();
+    expect(toast.show).toHaveBeenCalledWith({ text: 'Nothing matches SN-ZZZZZ. Check the code in their message.' });
   });
 });

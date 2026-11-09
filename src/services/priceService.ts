@@ -1,65 +1,57 @@
 import { useSyncExternalStore } from 'react';
-import { getLiveMrps, parseCouponPrices, setLiveMrps } from '../utils/prices';
+import { productsData } from '../data/products';
 import type { CouponPrices } from '../types/order';
 import { getPublicRpc } from './publicRpc';
+import { parseWebsiteOffer } from './offerService';
+import { couponPriceKey, setLiveMrps, setLiveOfferPrices } from '../utils/prices';
 
-// The MRPs follow the admin: get_product_prices() answers the base price per
-// product and pack size set on the admin Products page. Fetched once, on the
-// first use. It fails open to the copy in products.ts: no answer, an error, a
-// database without the function yet (404) or an empty list all keep those.
-// The last answer is cached (prices aren't personal), so a repeat visit shows
-// the admin's prices straight away. Every storage access is guarded.
-
-const STORAGE_KEY = 'shahs-prices-v1';
+const STORAGE_KEY = 'shahs-prices-v2';
+const CACHE_TTL_MS = 5 * 60 * 1000;
 const TIMEOUT_MS = 5000;
-
-/** The admin's prices, or null when there's nothing usable (keep products.ts). */
-const toMrps = (data: unknown): CouponPrices | null => {
-  const mrps = parseCouponPrices(data);
-  return Object.keys(mrps).length > 0 ? mrps : null;
-};
-
-const readCache = (): CouponPrices | null => {
-  try {
-    return toMrps(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]'));
-  } catch {
-    return null;
-  }
-};
-
-const writeCache = (data: unknown): void => {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // Blocked or full storage: next visit just asks again.
-  }
-};
-
+interface PriceEnvelope { schema_version: 1; fetched_at: number; offer: unknown }
+let currentOffer: ReturnType<typeof parseWebsiteOffer> = null;
+let currentPrices: Readonly<CouponPrices> | null = null;
 let started = false;
 const listeners = new Set<() => void>();
 
-const subscribe = (listener: () => void) => {
-  listeners.add(listener);
-  if (!started) {
-    started = true;
-    void getPublicRpc('get_product_prices', { timeoutMs: TIMEOUT_MS }).then((data) => {
-      const mrps = toMrps(data);
-      if (!mrps) return;
-      writeCache(data);
-      setLiveMrps(mrps);
-      listeners.forEach((notify) => notify());
-    });
-  }
-  return () => {
-    listeners.delete(listener);
-  };
+const fromOffer = (raw: unknown): { offer: NonNullable<typeof currentOffer>; prices: CouponPrices } | null => {
+  const offer = parseWebsiteOffer(raw);
+  if (!offer || Date.parse(offer.expires_at) <= Date.now()) return null;
+  const prices: CouponPrices = {};
+  for (const pack of offer.packs) prices[couponPriceKey(pack.product_id, pack.size)] = pack.price;
+  if (productsData.some((product) => product.weightOptions.some((size) => prices[couponPriceKey(product.id, size)] == null))) return null;
+  return { offer, prices };
 };
-
-// Before the first render, so nothing shows the old prices first.
-if (typeof window !== 'undefined') setLiveMrps(readCache());
-
-/**
- * Call it in any component that shows a price, so it redraws when the admin's
- * prices arrive. Prices are read with `mrpOf`, `packPrice` and `orderTotal`.
- */
-export const usePrices = (): Readonly<CouponPrices> | null => useSyncExternalStore(subscribe, getLiveMrps);
+const notify = () => listeners.forEach((listener) => listener());
+const readCache = (): void => {
+  try {
+    const envelope = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null') as PriceEnvelope | null;
+    if (envelope?.schema_version === 1 && Date.now() - envelope.fetched_at < CACHE_TTL_MS) {
+      const parsed = fromOffer(envelope.offer);
+      if (parsed) { currentOffer = parsed.offer; currentPrices = parsed.prices; setLiveMrps(Object.fromEntries(parsed.offer.packs.map((pack) => [couponPriceKey(pack.product_id, pack.size), pack.mrp]))); setLiveOfferPrices(parsed.prices); }
+    }
+  } catch { /* Blocked or malformed storage means fetch current prices. */ }
+};
+const refresh = async (): Promise<void> => {
+  const data = await getPublicRpc('get_website_offer', { timeoutMs: TIMEOUT_MS });
+  const parsed = fromOffer(data);
+  if (!parsed) return;
+  currentOffer = parsed.offer;
+  currentPrices = parsed.prices;
+  setLiveMrps(Object.fromEntries(parsed.offer.packs.map((pack) => [couponPriceKey(pack.product_id, pack.size), pack.mrp])));
+  setLiveOfferPrices(parsed.prices);
+  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schema_version: 1, fetched_at: Date.now(), offer: data } satisfies PriceEnvelope)); } catch { /* Storage is optional. */ }
+  notify();
+};
+const start = () => {
+  if (started) return;
+  started = true;
+  readCache();
+  void refresh();
+  window.addEventListener('focus', () => void refresh());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refresh(); });
+};
+const subscribe = (listener: () => void) => { listeners.add(listener); start(); return () => listeners.delete(listener); };
+export const refreshPrices = (): void => { started = false; start(); };
+export const usePrices = (): Readonly<CouponPrices> | null => useSyncExternalStore(subscribe, () => currentPrices);
+export const useWebsiteOffer = () => useSyncExternalStore(subscribe, () => currentOffer);

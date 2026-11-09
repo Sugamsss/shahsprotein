@@ -6,6 +6,7 @@ import { whatsappUrl } from './contact';
 import { sortLines } from './orderCart';
 import { cleanPhone, formatDeliveryAddress } from './deliveryAddress';
 import { formatRupees, orderTotal, packPrice } from './prices';
+import { deliveryFee, paidPackMetrics, sliceADeliveryRule } from './orderOffer';
 
 // Builds the WhatsApp order message. Pure: the words live in siteConfig.order.message.
 // Each line carries its amount and the order its total before delivery, at the
@@ -76,11 +77,21 @@ export const orderMessageParts = (
   const items = sortLines(input.lines, products).flatMap((line) => {
     const product = products.find((p) => p.id === line.productId);
     if (!product) return [];
+    const snapshotLine = input.quote?.lines.find((item) => item.product_id === line.productId && item.size === line.size);
     const price = packPrice(product, line.size, couponPrices);
-    const amount = price ? formatRupees(price.price * line.quantity) : undefined;
+    const amount = input.unpriced ? undefined : snapshotLine ? formatRupees(snapshotLine.line_total) : price ? formatRupees(price.price * line.quantity) : undefined;
     return [words.line(product.name, line.size, line.quantity, amount)];
   });
-  const total = orderTotal(input.lines, couponPrices, products);
+  const total = input.unpriced ? null : input.quote
+    ? { total: input.quote.total, mrpTotal: input.quote.mrp_total }
+    : orderTotal(input.lines, couponPrices, products);
+  const metrics = paidPackMetrics(input.lines.filter((line) => products.some((p) => p.id === line.productId && p.weightOptions.includes(line.size))));
+  const delivery = input.quote
+    ? { fee: input.quote.delivery_fee, waived: input.quote.delivery_waived }
+    : deliveryFee(metrics, sliceADeliveryRule.guest);
+  const deliveryText = delivery.waived ? 'Delivery: Free' : `Delivery: ${formatRupees(delivery.fee)}`;
+  // The quote already includes delivery; the MRP-only fallback adds it here.
+  const payable = total ? (input.quote ? total.total : total.total + delivery.fee) : null;
 
   const details: MessagePart[][] = [];
   if (couponCode) {
@@ -100,9 +111,10 @@ export const orderMessageParts = (
   const blocks: MessagePart[][] = [
     greeting,
     items.length ? [{ text: items.join('\n') }] : [],
-    total ? [{ text: words.total(formatRupees(total.total)) }] : [],
+    payable ? [{ text: words.total(formatRupees(payable)) }] : [],
+    total ? [{ text: deliveryText }] : [],
     details.flatMap((line, i) => (i === 0 ? line : [{ text: '\n' }, ...line])),
-    [{ text: words.closing }],
+    [{ text: input.quote && total ? words.closingQuoted : words.closing }],
   ].filter((block) => block.length > 0);
 
   return blocks.flatMap((block, i) => (i === 0 ? block : [{ text: '\n\n' }, ...block]));

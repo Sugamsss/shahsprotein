@@ -377,6 +377,20 @@
 .adm-od-coupon svg { color: var(--color-text-accent); }
 .adm-od-coupon b { color: var(--adm-ink-1); font-weight: 600; letter-spacing: 0.02em; }
 
+/* A saved Slice A quote on the order and on its website request: offer, rates, delivery, total. */
+.adm-quote { display: grid; gap: 12px; }
+.adm-quote__offer { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; line-height: 1.35; }
+.adm-quote__lines { display: grid; gap: 8px; list-style: none; }
+.adm-quote__lines li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--adm-ink-1); }
+.adm-quote__lines small { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; }
+.adm-quote__lines li > span:last-child { font-weight: 600; white-space: nowrap; }
+.adm-quote__sums { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--adm-hairline); }
+.adm-quote__sums > div { display: flex; justify-content: space-between; gap: 12px; color: var(--adm-ink-2); }
+.adm-quote__sums dt, .adm-quote__sums dd { margin: 0; }
+.adm-quote__sums dd { color: var(--adm-ink-1); font-weight: 600; white-space: nowrap; }
+.adm-quote__sums .is-saving dd { color: var(--adm-success-text); }
+.adm-quote__sums .is-total { padding-top: 8px; border-top: 1px solid var(--adm-hairline); color: var(--adm-ink-1); font-weight: 600; }
+
 .adm-od-cols { display: grid; gap: 12px; }
 .adm-field__control textarea.adm-input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 /* "Use ₹1,180 from your prices" under the total it would fill. */

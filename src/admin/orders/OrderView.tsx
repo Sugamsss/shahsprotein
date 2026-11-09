@@ -10,7 +10,7 @@ import type { Order } from '../types';
 import { ToastSlot } from '../toast';
 import { useRpc } from '../useRpc';
 import { type WorkLane, laneOf, nextOf } from './model';
-import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, StatusCard } from './OrderParts';
+import { DetailsCard, History, ItemsCard, OrderHead, OrderMenu, OrderNotes, PrimaryAction, QuoteCard, StatusCard } from './OrderParts';
 import { PaidSheet } from './PaidMethod';
 import { useOfferOnArrival, usePriorityGive } from './PriorityGive';
 import { useOrderChange } from './useOrderChange';
@@ -59,6 +59,7 @@ const OrderBody: React.FC<{
     <>
       <OrderNotes order={order} />
       <StatusCard key={order.id} order={order} change={change} payments={payments} onPayRest={onPayRest} onPriorityOn={onPriorityOn} />
+      {order.quote && <QuoteCard quote={order.quote} />}
       <div className="adm-od-cols">
         <ItemsCard order={order} onChangeBatch={setBatchFor} />
         <DetailsCard order={order} onSaved={show} book={book} onOpenBill={onOpenBill} />

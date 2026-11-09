@@ -18,6 +18,9 @@ export type BillLine = {
 export type BillSum =
   | { kind: 'items'; amount: number }
   | { kind: 'coupon'; code: string; saving: number | null } // null = "Applied", no fake ₹0
+  | { kind: 'saving'; amount: number; code: string | null } // a saved quote's offer, coupon or tier
+  | { kind: 'delivery'; amount: number; waived: boolean }
+  | { kind: 'changed'; amount: number; up: boolean } // the owner typed a total that differs from the quote
   | { kind: 'deliveryOther'; amount: number }
   | { kind: 'adjusted'; amount: number }
   | { kind: 'deliverySatara' };
@@ -53,12 +56,19 @@ export type BillInput = {
     | 'amount_paid'
     | 'amount_due'
     | 'paid'
+    | 'quote'
     | 'status_changed_at'
   > & { status?: OrderStatus };
   prices: Prices | null;
   coupons: Coupon[] | null;
   now: Date;
 };
+
+/** The saved quote's offer word: "Guest offer", "Coupon EXAMPLE10", "No offer". */
+export const quoteOfferText = (quote: { offer_kind: string; coupon_code: string | null }): string =>
+  quote.offer_kind === 'coupon' && quote.coupon_code
+    ? adminCopy.quote.couponOffer(quote.coupon_code)
+    : adminCopy.quote.offers[quote.offer_kind] ?? quote.offer_kind;
 
 export function buildBill(input: BillInput): Bill | null {
   const { order, prices, coupons, now } = input;
@@ -103,6 +113,81 @@ export function buildBill(input: BillInput): Bill | null {
 
   // A bill records the agreed total, never a fresh quote from today's prices.
   if (order.amount == null) return null;
+
+  const paymentOf = (total: number): Bill['payment'] => {
+    if (order.paid) return { kind: 'paid' };
+    if (order.payment_state === 'part_paid') {
+      return {
+        kind: 'part',
+        paid: order.amount_paid,
+        due: order.amount_due ?? Math.max(0, total - order.amount_paid),
+      };
+    }
+    return { kind: 'notPaid' };
+  };
+
+  // A saved Slice A quote: its rates and amounts are frozen, so editing the price book
+  // later never changes this bill. One Muesli 250 g guest bill is ₹359 + ₹50 = ₹409.
+  const quote = order.quote;
+  if (quote) {
+    const saved = new Map(quote.lines.map((l) => [`${l.product_id}|${l.size}`, l]));
+    const lines: BillLine[] = orderedLines.map((l) => {
+      if (l.size === SAMPLE) {
+        return {
+          name: productName(l.product_id),
+          quantity: l.quantity,
+          rate: null,
+          detail: adminCopy.bill.sample,
+          amount: 0,
+          sample: true,
+        };
+      }
+      const line = saved.get(`${l.product_id}|${l.size}`);
+      // A line the snapshot doesn't carry never borrows today's price.
+      if (!line) {
+        return {
+          name: productName(l.product_id),
+          detail: `${l.size} · ${l.quantity}`,
+          amount: null,
+          sample: false,
+          quantity: l.quantity,
+          rate: null,
+        };
+      }
+      return {
+        name: productName(l.product_id),
+        detail: l.size,
+        amount: line.unit_price * l.quantity,
+        sample: false,
+        quantity: l.quantity,
+        rate: line.unit_price,
+      };
+    });
+    const sums: BillSum[] = [];
+    if (quote.savings > 0) {
+      sums.push({ kind: 'saving', amount: quote.savings, code: quote.coupon_code });
+    }
+    if (quote.delivery_waived || quote.delivery_fee > 0) {
+      sums.push({ kind: 'delivery', amount: quote.delivery_fee, waived: quote.delivery_waived });
+    }
+    if (sums.length) sums.unshift({ kind: 'items', amount: quote.items_total });
+    // The owner's typed total is the agreed one; the quote keeps the breakdown honest.
+    const total = order.amount;
+    if (total !== quote.total) {
+      sums.push({ kind: 'changed', amount: Math.abs(total - quote.total), up: total > quote.total });
+    }
+    return {
+      code: order.code,
+      date,
+      name: order.name ?? null,
+      phone: order.phone ? formatPhone(order.phone) : null,
+      deliverTo,
+      lines,
+      sums,
+      total,
+      payment: paymentOf(total),
+    };
+  }
 
   // Live coupon check (same rule as quote)
   const couponCode = order.coupon?.code;
@@ -223,19 +308,6 @@ export function buildBill(input: BillInput): Bill | null {
     }
   }
 
-  let payment: Bill['payment'];
-  if (order.paid) {
-    payment = { kind: 'paid' };
-  } else if (order.payment_state === 'part_paid') {
-    payment = {
-      kind: 'part',
-      paid: order.amount_paid,
-      due: order.amount_due ?? Math.max(0, total - order.amount_paid),
-    };
-  } else {
-    payment = { kind: 'notPaid' };
-  }
-
   return {
     code: order.code,
     date,
@@ -245,7 +317,7 @@ export function buildBill(input: BillInput): Bill | null {
     lines,
     sums,
     total,
-    payment,
+    payment: paymentOf(total),
   };
 }
 
