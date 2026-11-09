@@ -34,6 +34,10 @@ A missing, invalid, expired or unreachable quote must not silently send an MRP-p
 
 Release remains blocked on founder/PM decisions for the history cutoff and part-gift eligibility, non-site channel mappings, and approved India OTP/SMS/DLT readiness. The temporary ₹70 delivery cap is an explicit assumption in the plan, not a verified permanent rate or a new shipping band. Do not add real codes, phone numbers or emails to docs; `EXAMPLE10` is the only permitted example code.
 
+## Slice B prepaid checkout (test scaffold; not deployed)
+
+Test-mode Razorpay scaffold only: `create-test-order`, `checkout-status` and the signed `verify-test-webhook` Edge Function, a browser button behind `VITE_TEST_CHECKOUT`, and migration `20261110000000_slice_b_test_checkout.sql`. Nothing here is applied or deployed; the migration is for an isolated test project only. Secrets, the webhook URL shape, test cards, and the live launch gates are in [../docs/slice-b-test.md](../docs/slice-b-test.md). The webhook is the only function deployed with `--no-verify-jwt`.
+
 ## Admin sign-in (usernames)
 
 The admin at `/admin` signs in with a **username and password**, set by the site owner and handed to each person. There's no sign-up and no email of any kind: no invites, no password-reset emails.

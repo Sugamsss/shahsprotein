@@ -2911,6 +2911,67 @@ button.drawer-pill:focus-visible { outline: 2px solid var(--color-text-accent); 
   font-size: 0.8125rem;
 }
 
+/* TEST ONLY: the flagged prepaid block in the sent panel (Slice B scaffold).
+   Dashed, so it never reads as part of the shipped order flow. */
+.order-test-pay {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  text-align: left;
+}
+
+.order-test-pay__lead {
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-test-pay__note {
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.order-test-pay__button {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.order-test-pay__status {
+  margin-top: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.order-test-pay__status--ok {
+  color: var(--color-success-text);
+}
+
+.order-test-pay__fallback {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.order-test-pay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (pointer: coarse) {
+  .order-test-pay__actions .order-text-link,
+  .order-test-pay__fallback > .order-text-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
 .order-sent__bar {
   display: flex;
   gap: 0.625rem;

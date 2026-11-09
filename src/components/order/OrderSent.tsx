@@ -9,6 +9,7 @@ import { formatRupees } from '../../utils/prices';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
+import { TestCheckout } from './TestCheckout';
 
 const copy = siteConfig.order;
 const order = siteConfig.contact.order;
@@ -126,6 +127,8 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
           </div>
           {meta && <p className="order-recap__meta">{meta}</p>}
         </div>
+
+        <TestCheckout sent={sent} />
 
         <p className="order-sent__retry">
           <span>{copy.retryLead}</span>

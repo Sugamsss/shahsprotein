@@ -303,6 +303,21 @@ export const siteConfig = {
     newOrder: 'Start a new order',
     done: 'Done',
 
+    // TEST ONLY: the flagged prepaid button in the sent panel (Slice B scaffold,
+    // docs/slice-b-test.md). Never shown unless VITE_TEST_CHECKOUT is "true", and
+    // still only after a frozen quote exists. No launch claim here.
+    testCheckout: {
+      lead: 'Prepaid checkout is in test mode.',
+      label: 'Pay online (test)',
+      note: 'This opens Razorpay in test mode. No money moves, and Sunit still confirms your order on WhatsApp.',
+      opening: 'Opening secure checkout…',
+      paid: 'Payment received, in test mode. Sunit will still confirm your order on WhatsApp.',
+      unconfirmed: "We couldn't confirm that payment here. Send your order on WhatsApp so Sunit can check it.",
+      failedLead: "Online payment isn't working right now.",
+      fallback: 'Send your order on WhatsApp',
+      retry: 'Try again',
+    },
+
     // Screen reader announcements (polite)
     announceAdded: (item: string, packs: number) => `${item} added. ${packs} ${packs === 1 ? 'pack' : 'packs'} in your order.`,
     announceQty: (item: string, qty: number) => `${item}: ${qty}.`,

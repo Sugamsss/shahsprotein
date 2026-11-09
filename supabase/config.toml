@@ -385,6 +385,22 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Slice B test-mode checkout (docs/slice-b-test.md). Test project only.
+# The webhook is the one function without a Supabase JWT: Razorpay calls it and
+# the HMAC signature is its authentication. The customer-facing pair keeps the
+# gateway check on (an anon key is enough for guests).
+[functions.create-test-order]
+enabled = true
+verify_jwt = true
+
+[functions.checkout-status]
+enabled = true
+verify_jwt = true
+
+[functions.verify-test-webhook]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
