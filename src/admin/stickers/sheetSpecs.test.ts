@@ -96,9 +96,10 @@ describe('modeOptionsFor', () => {
     expect(modeOptionsFor(null, true)).toEqual({ default: false, gift: false, custom: false, blank: false });
   });
   it('Blank needs a price on every back, like Default', () => {
-    // Blank prints the MRP and unit price and nothing else, so a back with no
-    // price (every 100 g pack: products.ts has no printed 100 g MRP) cannot
-    // print it. Gift and Custom always can.
+    // Blank prints the MRP and unit price and nothing else, so it needs a
+    // price like Default does. The loop passes one in (`true`): with no price
+    // (every 100 g pack today, since products.ts has no printed 100 g MRP)
+    // Blank is off. Gift and Custom always can print.
     for (const [productId, pack] of [['raggi-jaggi', '100 g'], ['muesli', '250 g'], ['bites', '250 g'], ['muesli', '500 g']] as const) {
       const spec = specFor(productId, pack, 'back');
       expect(modeOptionsFor(spec, false).blank).toBe(false);

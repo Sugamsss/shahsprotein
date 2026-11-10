@@ -47,7 +47,7 @@ describe('makeSheetPdf', () => {
   it('a back with no values hands the art straight back', async () => {
     // No values at all — no batch, dates or price — and no font is parsed. A
     // Blank sheet is not this case: it always sends its price, so it takes the
-    // stamping path below.
+    // stamping path.
     const blank = specFor('raggi-jaggi', '500 g', 'back', 'blank') as SheetSpec;
     const basePdf = await blankSheet();
     const bytes = await makeSheetPdf(values, blank, loader(basePdf));

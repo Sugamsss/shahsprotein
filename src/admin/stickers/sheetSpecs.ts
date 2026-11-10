@@ -179,6 +179,15 @@ const spec = (s: SheetSpec): SheetSpec => s;
  */
 const VALUE_INK = '#000000';
 
+/**
+ * The gift heart's red (owner, 2026-11-10). This is the maroon the pack art
+ * already prints — the heart in "Raggi ♥ Jaggi" and the label bands are
+ * #861520, sampled from the shipped sheets — so a gift heart matches the pack
+ * it sits on instead of introducing a second red. Print-safe: it is a dark
+ * maroon that holds on the cream card at 5.2 pt.
+ */
+export const GIFT_INK = '#861520';
+
 /** The 114 x 142 backs (250 g and 500 g): 2 x 3, same details block. */
 const stamp114x142 = (): StampLayout => ({
   align: 'right',

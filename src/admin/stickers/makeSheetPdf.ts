@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, type RGB } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { cellOrigin, type SheetSpec, type StampRow } from './sheetSpecs';
+import { cellOrigin, GIFT_INK, type SheetSpec, type StampRow } from './sheetSpecs';
 
 // Vector-only variable stamping for /admin/stickers.
 //
@@ -44,15 +44,6 @@ const HEART_GAP = 0.8;
  * a run ending flush touches the printed hairline.
  */
 const RULE_END_PAD = 1.5;
-
-/**
- * The gift heart's red (owner, 2026-11-10). This is the maroon the pack art
- * already prints — the heart in "Raggi ♥ Jaggi" and the label bands are
- * #861520, sampled from the shipped sheets — so a gift heart matches the pack
- * it sits on instead of introducing a second red. Print-safe: it is a dark
- * maroon that holds on the cream card at 5.2 pt.
- */
-const GIFT_INK = '#861520';
 
 /**
  * pdf-lib's writer hands the event loop back every `objectsPerTick` objects
