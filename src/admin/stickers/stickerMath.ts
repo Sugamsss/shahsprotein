@@ -26,7 +26,7 @@ export const SHELF_LIFE = {
   bites: { unit: 'days', amount: 21 },
 } as const;
 
-export type ShelfLife = (typeof SHELF_LIFE)[StickerProductId];
+export type ShelfLife = { amount: number; unit: 'days' | 'months' };
 
 export type StickerProductId = keyof typeof BATCH_PREFIX;
 
@@ -104,13 +104,17 @@ export const batchSequenceFor = (prefix: string, madeOn: string, codes: readonly
  * Use By is the kitchen's Exp: the last good day, the day before the first
  * past one (`expDay` in the admin: expires_on − 1), never the expiry day
  * itself. A 6-month shelf life from 9-11-2026 expires on 9-5-2027, so the
- * sticker says use by 8-5-2027.
+ * sticker says use by 8-5-2027. Pass the kitchen row's own shelf life when it
+ * is loaded, so an owner's change there reaches the label.
  */
-export const useByDate = (productId: StickerProductId, madeOn: string): string => {
-  const shelf = SHELF_LIFE[productId];
+export const useByFrom = (shelf: ShelfLife, madeOn: string): string => {
   const expiresOn = shelf.unit === 'months' ? addMonthsClamp(madeOn, shelf.amount) : addDays(madeOn, shelf.amount);
   return addDays(expiresOn, -1);
 };
+
+/** The label rule's own shelf life, for a page that has not got the kitchen row yet. */
+export const useByDate = (productId: StickerProductId, madeOn: string): string =>
+  useByFrom(SHELF_LIFE[productId], madeOn);
 
 const paiseOf = (mrp: number): number => Math.round(mrp * 100);
 

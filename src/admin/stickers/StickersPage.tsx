@@ -17,7 +17,8 @@ import {
   formatDDMMYYYY,
   mrpSource,
   unitPrice,
-  useByDate,
+  useByFrom,
+  type ShelfLife,
   type StickerProductId,
 } from './stickerMath';
 import { cellTrimOrigin, modeOptionsFor, specFor, type SheetSpec, type StickerSide } from './sheetSpecs';
@@ -180,7 +181,9 @@ const StickersPage: React.FC = () => {
     if (productId === 'bites' && pack === '250 g' && side !== 'back') setSide('back');
   }, [productId, pack, side]);
 
-  const shelf = SHELF_LIFE[productId];
+  // The kitchen's own shelf life wins once it is here: a change in ProductSheet
+  // must reach the label, or the sticker's Exp and the order view's disagree.
+  const shelf: ShelfLife = kitchen.data?.products.find((p) => p.product_id === productId)?.shelf_life ?? SHELF_LIFE[productId];
 
   // The kitchen's own number for this product and day, -2/-3 included: it gives
   // the first batch of the day the plain code, so the sticker matches it.
@@ -191,7 +194,7 @@ const StickersPage: React.FC = () => {
   const batch = today && madeOn
     ? batchCode(BATCH_PREFIX[productId], madeOn, batchSequenceFor(BATCH_PREFIX[productId], madeOn, dayCodes))
     : '';
-  const useBy = madeOn ? useByDate(productId, madeOn) : '';
+  const useBy = madeOn ? useByFrom(shelf, madeOn) : '';
   const madeOnValid = Boolean(madeOn) && (!today || (madeOn >= addDays(today, -60) && madeOn <= addDays(today, 14)));
 
   /** The sheet's shape, kind-independent: the gift twin shares it. */

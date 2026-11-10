@@ -12,6 +12,7 @@ import {
   sheetsNeeded,
   unitPrice,
   useByDate,
+  useByFrom,
 } from './stickerMath';
 
 describe('formatDDMMYYYY', () => {
@@ -88,6 +89,12 @@ describe('useByDate', () => {
 
   it('clamps the month end on a 31st start (28-02 minus a day)', () => {
     expect(useByDate('raggi-jaggi', '2026-08-31')).toBe('2027-02-27');
+  });
+
+  it("uses the kitchen's own shelf life when the page passes it", () => {
+    // A 15-day row written in ProductSheet: expires 24-11, so use by 23-11.
+    expect(useByFrom({ amount: 15, unit: 'days' }, '2026-11-09')).toBe('2026-11-23');
+    expect(useByFrom({ amount: 3, unit: 'months' }, '2026-11-09')).toBe('2027-02-08');
   });
 });
 
