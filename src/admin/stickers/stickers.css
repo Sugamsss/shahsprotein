@@ -164,6 +164,8 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
 /* ---- The stage: one sticker, full screen, pinned Download + Send. ---- */
 .adm-st-stage {
   position: fixed; inset: 0; z-index: 600; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  /* A nowrap title must ellipsis, not widen the whole stage past a 320px phone. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100dvh; background: var(--adm-page);
 }
 .adm-st-stage__head {

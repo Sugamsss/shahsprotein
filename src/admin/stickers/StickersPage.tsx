@@ -4,7 +4,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { Field, LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
-import { ToastSlot, useToast } from '../toast/Toast';
+import { useToast } from '../toast/Toast';
 import { getKitchen } from '../api';
 import { dimStatusBar } from '../homeScreenApp';
 import { useRpc } from '../useRpc';
@@ -21,15 +21,33 @@ import {
   type ShelfLife,
   type StickerProductId,
 } from './stickerMath';
-import { cellTrimOrigin, modeOptionsFor, specFor, type SheetSpec, type StickerSide } from './sheetSpecs';
-import { makeSheetPdf } from './makeSheetPdf';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { modeOptionsFor, specFor, type SheetSpec, type StickerPack, type StickerSide } from './sheetSpecs';
+import { canSharePdf, pdfFile, shareCancelled } from './shareSheet';
+import { warmPdfjs } from './pdfjs';
+import { STAGE_TARGET_PX, ZOOM_TARGET_PX, sheetPreview } from './preview';
+
+/**
+ * The sheet writer is pdf-lib + fontkit, about 500 kB gzipped, and only Create
+ * needs it. It loads on its own so the form is on screen first, and the idle
+ * warm-up below means the tap never waits for the chunk either.
+ */
+const loadSheetWriter = () => import('./makeSheetPdf');
+
+/**
+ * How long the picks must sit still before the sheet for them is built and
+ * drawn in the background. Long enough that flicking through sizes and days
+ * does the work once, short enough that reading the read-back finishes it.
+ */
+const PREPARE_DELAY_MS = 450;
 
 const copy = adminCopy.stickers;
 
 type ProductId = StickerProductId;
-type Pack = '100 g' | '250 g';
+type Pack = StickerPack;
 type MrpMode = 'default' | 'gift' | 'custom';
+
+/** Every pack the page offers. A pack a product has no sheet for is disabled. */
+const PACKS: Pack[] = ['100 g', '250 g', '500 g'];
 
 const WHATSAPP_URL = `https://wa.me/${copy.whatsappTo}`;
 
@@ -43,7 +61,10 @@ const PRODUCTS: { id: ProductId; dot: string }[] = [
 
 const productName = (id: ProductId): string => productsData.find((p) => p.id === id)?.name ?? id;
 
-const gramsOf = (pack: Pack): number => (pack === '250 g' ? 250 : 100);
+const gramsOf = (pack: Pack): number => (pack === '500 g' ? 500 : pack === '250 g' ? 250 : 100);
+
+/** A pack is offered only where its sheet exists: Date Bites has no 500 g pack. */
+const packHasSheet = (productId: ProductId, pack: Pack): boolean => specFor(productId, pack, 'back') !== null;
 
 /** The MRP printed on the pack (founder-locked in products.ts), never the site's list. */
 const printedMrp = (productId: ProductId, pack: Pack): number | null => {
@@ -76,65 +97,6 @@ const addDays = (day: string, n: number): string => {
   return d.toISOString().slice(0, 10);
 };
 
-/** A PDF's first page painted at ~2x device pixels for the stage preview. */
-async function rasterizeFirstPage(pdfBytes: Uint8Array, scale: number): Promise<HTMLCanvasElement> {
-  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
-  if (!GlobalWorkerOptions.workerSrc) {
-    GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-  }
-  const task = getDocument({ data: pdfBytes.slice().buffer as ArrayBuffer });
-  const pdf = await task.promise;
-  try {
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('no 2d context');
-    await page.render({ canvas, viewport }).promise;
-    await page.cleanup();
-    return canvas;
-  } finally {
-    await task.destroy();
-  }
-}
-
-/**
- * Raster scale from a pixel budget for the sticker's own trim box, not from the
- * device pixel ratio. The stage scales the canvas up with CSS, so a DPR-based
- * raster is too small and reads soft on anything wider than a phone. Capped so
- * the offscreen full-sheet canvas stays inside phone memory.
- */
-function rasterScale(spec: SheetSpec, targetLongEdgePx: number): number {
-  const longMm = Math.max(spec.trim[0], spec.trim[1]);
-  const wanted = (targetLongEdgePx * 25.4) / (72 * longMm);
-  const sheetLongMm =
-    Math.max(spec.cols * spec.pitch[0], spec.rowsCount * spec.pitch[1]) + spec.bleed * 2 + 24;
-  const maxScale = Math.sqrt(26_000_000) / (sheetLongMm * (72 / 25.4));
-  return Math.min(wanted, maxScale);
-}
-
-/**
- * Crop one sticker's trim box out of a full-sheet render. pdf.js works in CSS
- * px at 72 dpi; the sheet geometry is mm, so 1 mm = scale × 72/25.4 px.
- */
-function cropTrim(source: HTMLCanvasElement, spec: SheetSpec, scale: number): HTMLCanvasElement {
-  const pxPerMm = (scale * 72) / 25.4;
-  const [tx, ty] = cellTrimOrigin(spec, 0);
-  const sx = Math.round(tx * pxPerMm);
-  const sy = Math.round(ty * pxPerMm);
-  const sw = Math.round(spec.trim[0] * pxPerMm);
-  const sh = Math.round(spec.trim[1] * pxPerMm);
-  const out = document.createElement('canvas');
-  out.width = Math.max(1, sw);
-  out.height = Math.max(1, sh);
-  const ctx = out.getContext('2d');
-  if (!ctx) throw new Error('no 2d context');
-  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, out.width, out.height);
-  return out;
-}
-
 /** The exact bytes Download saves, and the picture the stage shows. */
 interface Build {
   bytes: Uint8Array;
@@ -142,7 +104,16 @@ interface Build {
   fileName: string;
   spec: SheetSpec;
   /** The message for exactly these bytes, so word and file cannot drift apart. */
+  message: string;
+  /** That same message as the chat link, for the fallback that opens WhatsApp. */
   shareUrl: string;
+}
+
+/** Build bytes and the stage's crop of them, made ahead of the tap. */
+interface Prepared {
+  key: string;
+  build: Build;
+  canvas: HTMLCanvasElement;
 }
 
 /**
@@ -169,6 +140,7 @@ const StickersPage: React.FC = () => {
   const [build, setBuild] = useState<Build | null>(null);
   const [buildError, setBuildError] = useState<'failed' | 'signed-out' | 'no-sheet' | null>(null);
   const [waFallback, setWaFallback] = useState(false);
+  const [shareFiles, setShareFiles] = useState(false);
   const [zoomed, setZoomed] = useState(false);
 
   // IST today lands with the kitchen; before that the page shows skeletons.
@@ -176,10 +148,26 @@ const StickersPage: React.FC = () => {
     if (today && !madeOn) setMadeOn(today);
   }, [today, madeOn]);
 
+  // The two heavy pieces are only needed at Create: the sheet writer and
+  // pdf.js. Fetch both once the form is on screen, so the tap finds them ready
+  // and the page's own first paint is not behind them.
+  useEffect(() => {
+    if (!today) return undefined;
+    const warm = (): void => { void loadSheetWriter().catch(() => undefined); warmPdfjs(); };
+    const timer = setTimeout(warm, 200);
+    return () => clearTimeout(timer);
+  }, [today]);
+
   // Date Bites 250 g prints on the one-sided container sticker.
   useEffect(() => {
     if (productId === 'bites' && pack === '250 g' && side !== 'back') setSide('back');
   }, [productId, pack, side]);
+
+  // A new product may have no sheet for the picked pack (Date Bites has no
+  // 500 g), so the pick lands on the first pack it can actually print.
+  useEffect(() => {
+    if (!packHasSheet(productId, pack)) setPack('250 g');
+  }, [productId, pack]);
 
   // The kitchen's own shelf life wins once it is here: a change in ProductSheet
   // must reach the label, or the sticker's Exp and the order view's disagree.
@@ -234,6 +222,28 @@ const StickersPage: React.FC = () => {
   const unitLabel = isGift ? copy.giftUnit : showMrp !== null ? copy.perGram(unitPrice(showMrp, gramsOf(pack))) : '—';
 
   const datesOk = Boolean(batch && useBy && madeOnValid);
+
+  /**
+   * Everything that decides the printed bytes, and a key over it. The memo, the
+   * background prepare and the stage's ready picture all agree on this key, so
+   * a picture is only ever shown for the bytes behind it.
+   */
+  const sheetValues = useMemo(() => ({
+    mrp: !stamps ? '' : isGift ? 'GIFT' : mrp != null ? mrp.toFixed(2) : '',
+    unit: !stamps ? '' : isGift ? 'for you' : mrp != null ? `${unitPrice(mrp, gramsOf(pack))} per g` : '',
+    gift: stamps && isGift,
+    batch: stamps ? batch : '',
+    madeOn: stamps ? formatDDMMYYYY(madeOn) : '',
+    useBy: stamps ? formatDDMMYYYY(useBy) : '',
+  }), [stamps, isGift, mrp, pack, batch, madeOn, useBy]);
+
+  const buildKey = spec
+    ? [spec.asset, spec.id, sheetValues.mrp, sheetValues.unit, sheetValues.batch, sheetValues.madeOn, sheetValues.useBy].join('|')
+    : '';
+
+  /** What Create's own gates allow, minus "a build is already running". */
+  const canBuild = Boolean(spec && (!stamps || (datesOk && (isGift || (mrp !== null && mrpValid)))));
+
   const canCreate = Boolean(
     today
     && spec
@@ -275,6 +285,13 @@ const StickersPage: React.FC = () => {
     [],
   );
 
+  // True only on a touch screen whose browser can put a PDF in the share sheet.
+  // A fine pointer (a laptop) keeps Download + the wa.me chat: a desktop share
+  // sheet has no WhatsApp chat to pick, so it would only add a step.
+  useEffect(() => {
+    setShareFiles(!fine && canSharePdf(navigator));
+  }, [fine]);
+
   const dirty = useRef(false);
   useUnsavedWork(() => making || dirty.current || stage !== 'form');
   useEffect(() => {
@@ -283,14 +300,128 @@ const StickersPage: React.FC = () => {
 
   /** Free the old blob URL when a new build replaces it. */
   const revokeRef = useRef<string | null>(null);
-  useEffect(() => () => {
-    if (revokeRef.current) URL.revokeObjectURL(revokeRef.current);
+  const disposed = useRef(false);
+  useEffect(() => {
+    // A second mount is alive again: StrictMode mounts, cleans up and mounts
+    // once more, and a latched flag would make every later build throw.
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
+      if (revokeRef.current) URL.revokeObjectURL(revokeRef.current);
+    };
   }, []);
 
   const rememberUrl = useCallback((url: string) => {
     if (revokeRef.current) URL.revokeObjectURL(revokeRef.current);
     revokeRef.current = url;
   }, []);
+
+  /**
+   * The last build, keyed by everything that goes into it. Pressing Create on
+   * the same picks again (after closing the stage, or a double tap) hands back
+   * those bytes instead of rebuilding the whole sheet and dropping its URL.
+   */
+  const lastBuild = useRef<{ key: string; build: Build } | null>(null);
+
+  /**
+   * The build made ahead of the tap, with its sticker already rasterised: what
+   * a Create finds so it only has to paint. Holds one entry, because its URL is
+   * the one `rememberUrl` keeps alive; a new build clears it.
+   */
+  const preparedRef = useRef<Prepared | null>(null);
+  /** The prepare currently in flight, so a tap joins it instead of repeating it. */
+  const preparingRef = useRef<{ key: string; promise: Promise<Prepared | null> } | null>(null);
+
+  /** What is ready for these picks, and only while its bytes are still live. */
+  const readyFor = useCallback((key: string): Prepared | null => {
+    const ready = preparedRef.current;
+    return ready !== null && ready.key === key && revokeRef.current === ready.build.url ? ready : null;
+  }, []);
+
+  /** Bytes for the current picks. No state: the callers decide what to say. */
+  const composeBuild = useCallback(async (): Promise<Build> => {
+    if (!spec) throw new Error('no sticker sheet for these picks');
+    const key = buildKey;
+    if (lastBuild.current?.key === key) return lastBuild.current.build;
+    // pdf.js only paints the preview, but the stage wants it the moment these
+    // bytes exist: start it here so its chunk load overlaps the build.
+    warmPdfjs();
+    const { makeSheetPdf } = await loadSheetWriter();
+    const bytes = await makeSheetPdf(sheetValues, spec);
+    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }));
+    // A build that lands after the page is left has nobody to hand its bytes
+    // to, and an object URL outlives the component: free it here.
+    if (disposed.current) {
+      URL.revokeObjectURL(url);
+      throw new Error('left the sticker page');
+    }
+    rememberUrl(url);
+    // That URL replaced the older one, so a picture drawn for it is no longer
+    // shippable: drop it rather than let a tap paint bytes it cannot save.
+    preparedRef.current = null;
+    const stampsHere = spec.stamp != null;
+    const line = `${productName(productId)} ${pack}`;
+    const message = stampsHere
+      ? copy.shareText(line, batch, `${formatDDMMYYYY(madeOn)} to ${formatDDMMYYYY(useBy)}`, mrpLabel)
+      : copy.shareTextFront(line);
+    const slug = (s: string): string => s.replace(/\s+/g, '-');
+    const next: Build = {
+      bytes,
+      url,
+      fileName: stampsHere
+        ? `Shahs-Nutrition-Sticker-${batch}.pdf`
+        : `Shahs-Nutrition-Front-${slug(productName(productId))}-${slug(pack)}.pdf`,
+      spec,
+      message,
+      shareUrl: whatsappLink(message),
+    };
+    lastBuild.current = { key, build: next };
+    return next;
+  }, [spec, buildKey, sheetValues, batch, madeOn, useBy, mrpLabel, productId, pack, rememberUrl]);
+
+  /**
+   * Build the current picks and draw their sticker, in the background. Silent:
+   * a failure here is nobody's problem until Create asks again.
+   */
+  const prepare = useCallback((key: string): Promise<Prepared | null> => {
+    const already = readyFor(key);
+    if (already) return Promise.resolve(already);
+    if (preparingRef.current?.key === key) return preparingRef.current.promise;
+    const promise = (async (): Promise<Prepared | null> => {
+      const build = await composeBuild();
+      const canvas = await sheetPreview(build.bytes, build.spec, STAGE_TARGET_PX);
+      // A newer build may have replaced these bytes while this one was drawing,
+      // which revokes their URL: a picture is only kept if it can still be saved.
+      if (revokeRef.current !== build.url) return null;
+      const ready: Prepared = { key, build, canvas };
+      preparedRef.current = ready;
+      return ready;
+    })().catch(() => null);
+    preparingRef.current = { key, promise };
+    return promise;
+  }, [composeBuild, readyFor]);
+
+  // Once the picks sit still, have the sheet and its picture ready before the
+  // tap. Nothing is created by this: the same bytes, the same crop, just made
+  // while he is still reading the read-back.
+  useEffect(() => {
+    if (stage !== 'form' || !canBuild) return undefined;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let idleId: number | undefined;
+    const run = () => { if (!cancelled) void prepare(buildKey); };
+    timer = setTimeout(() => {
+      if (cancelled) return;
+      // Idle where it exists, so the form keeps its frames while it works.
+      if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(run, { timeout: 1200 });
+      else run();
+    }, PREPARE_DELAY_MS);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+    };
+  }, [stage, canBuild, buildKey, prepare]);
 
   const buildSheet = useCallback(async (): Promise<Build | null> => {
     if (!spec) {
@@ -309,32 +440,7 @@ const StickersPage: React.FC = () => {
       return null;
     }
     try {
-      const stampsHere = spec.stamp != null;
-      const values = {
-        mrp: !stampsHere ? '' : isGift ? 'GIFT' : mrp != null ? mrp.toFixed(2) : '',
-        unit: !stampsHere ? '' : isGift ? 'for you' : mrp != null ? `${unitPrice(mrp, gramsOf(pack))} per g` : '',
-        gift: stampsHere && isGift,
-        batch: stampsHere ? batch : '',
-        madeOn: stampsHere ? formatDDMMYYYY(madeOn) : '',
-        useBy: stampsHere ? formatDDMMYYYY(useBy) : '',
-      };
-      const bytes = await makeSheetPdf(values, spec);
-      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }));
-      rememberUrl(url);
-      const line = `${productName(productId)} ${pack}`;
-      const message = stampsHere
-        ? copy.shareText(line, batch, `${formatDDMMYYYY(madeOn)} to ${formatDDMMYYYY(useBy)}`, mrpLabel)
-        : copy.shareTextFront(line);
-      const slug = (s: string): string => s.replace(/\s+/g, '-');
-      const next: Build = {
-        bytes,
-        url,
-        fileName: stampsHere
-          ? `Shahs-Nutrition-Sticker-${batch}.pdf`
-          : `Shahs-Nutrition-Front-${slug(productName(productId))}-${slug(pack)}.pdf`,
-        spec,
-        shareUrl: whatsappLink(message),
-      };
+      const next = await composeBuild();
       setBuild(next);
       return next;
     } catch (err) {
@@ -343,18 +449,38 @@ const StickersPage: React.FC = () => {
       setBuild(null);
       return null;
     }
-  }, [spec, useBy, isGift, mrp, mrpValid, batch, madeOn, mrpLabel, productId, pack, rememberUrl]);
+  }, [spec, useBy, isGift, mrp, mrpValid, composeBuild]);
 
   const doCreate = useCallback(async () => {
     if (!canCreate) return;
+    setBuildError(null);
+    setWaFallback(false);
+    // The common case: these picks were built and drawn while he was reading
+    // them, with the bytes still the live ones. Nothing to wait for, so the
+    // stage opens in this tap.
+    const ready = readyFor(buildKey);
+    if (ready) {
+      setBuild(ready.build);
+      setStage('stage');
+      return;
+    }
     setMaking(true);
     try {
+      // One job owns the work: a prepare already running for these picks is
+      // joined, and if none is, this tap starts it. Building here as well would
+      // draw the same sticker twice at once, which is slower than either.
+      const ready = canBuild ? await prepare(buildKey) : null;
+      if (ready) {
+        setBuild(ready.build);
+        setStage('stage');
+        return;
+      }
       const made = await buildSheet();
       if (made) setStage('stage');
     } finally {
       setMaking(false);
     }
-  }, [canCreate, buildSheet]);
+  }, [canCreate, canBuild, buildKey, readyFor, prepare, buildSheet]);
 
   /** One save path for Download and Send: exactly the bytes the stage shows. */
   const saveFile = useCallback((b: Build, announce = true) => {
@@ -367,10 +493,53 @@ const StickersPage: React.FC = () => {
     if (announce) toast.show({ text: copy.downloaded });
   }, [toast]);
 
-  /** Create and send: the blank tab opens in the tap, navigated once the PDF exists. */
+  /**
+   * The one way the PDF itself reaches the chat: the phone's share sheet, asked
+   * inside the tap. 'cancelled' is a sheet closed on purpose (not a failure),
+   * 'failed' means this browser or OS refused, so the saved PDF and the chat
+   * link take over.
+   */
+  const sharePdf = useCallback(async (b: Build): Promise<'shared' | 'cancelled' | 'failed'> => {
+    try {
+      await navigator.share({ files: [pdfFile(b.bytes, b.fileName)], text: b.message });
+      return 'shared';
+    } catch (err) {
+      return shareCancelled(err) ? 'cancelled' : 'failed';
+    }
+  }, []);
+
+  /** Say how the sheet went once, and fall back to saving the PDF when it refused. */
+  const afterShare = useCallback((b: Build, result: 'shared' | 'cancelled' | 'failed') => {
+    if (result === 'shared') {
+      toast.show({ text: copy.shared });
+      return;
+    }
+    if (result === 'cancelled') return;
+    saveFile(b, false);
+    setWaFallback(true);
+    toast.show({ text: copy.fallbackNote });
+  }, [saveFile, toast]);
+
+  /** Create and send: the sheet takes the PDF where it can; the blank tab covers the rest. */
   const doCreateAndSend = useCallback(() => {
     if (!canCreate) return;
     setWaFallback(false);
+
+    // A share has to be asked for in a tap, and the PDF does not exist until it
+    // is made. So build first and land on the stage: the sheet opens from this
+    // tap where the browser still counts it, and the stage's own Send covers
+    // the browsers (iOS) that do not.
+    if (shareFiles) {
+      setMaking(true);
+      void buildSheet().then((made) => {
+        setMaking(false);
+        if (!made) return;
+        setStage('stage');
+        void sharePdf(made).then((result) => afterShare(made, result));
+      });
+      return;
+    }
+
     const win = window.open('about:blank', '_blank');
     if (win) win.opener = null;
     setMaking(true);
@@ -390,12 +559,17 @@ const StickersPage: React.FC = () => {
         toast.show({ text: copy.fallbackNote });
       }
     });
-  }, [canCreate, buildSheet, saveFile, toast]);
+  }, [canCreate, shareFiles, buildSheet, sharePdf, afterShare, saveFile, toast]);
 
-  /** Send from the stage: same gesture rule, the PDF is already built. */
+  /** Send from the stage: the sheet first, save-and-chat where it cannot attach. */
   const doSend = useCallback(() => {
     if (!build) return;
     setWaFallback(false);
+    // The bytes are already built, so a touch screen's sheet opens inside this tap.
+    if (shareFiles) {
+      void sharePdf(build).then((result) => afterShare(build, result));
+      return;
+    }
     // Opened inside the tap so no blocker eats it; the handle survives because
     // 'noopener' is not a feature here, and opener is severed by hand.
     const win = window.open('about:blank', '_blank');
@@ -408,7 +582,7 @@ const StickersPage: React.FC = () => {
       setWaFallback(true);
       toast.show({ text: copy.fallbackNote });
     }
-  }, [build, saveFile, toast]);
+  }, [build, shareFiles, sharePdf, afterShare, saveFile, toast]);
 
   const doDownload = useCallback(() => {
     if (!build) return;
@@ -469,6 +643,9 @@ const StickersPage: React.FC = () => {
   const tapToZoom = fine ? copy.tapToZoom.mouse : copy.tapToZoom.touch;
   const zoomHint = fine ? copy.zoomHint.mouse : copy.zoomHint.touch;
 
+  // The sticker for the stage, when it was drawn before the tap.
+  const ahead = readyFor(buildKey);
+
   const fromPicker = Boolean(madeOn) && !days.includes(madeOn);
   const dayName = madeOn
     ? new Date(`${madeOn}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })
@@ -511,13 +688,26 @@ const StickersPage: React.FC = () => {
           <h2 className="adm-of__h" id="st-size">{copy.size}</h2>
           <fieldset className="adm-st-chips">
             <legend className="visually-hidden">{copy.size}</legend>
-            {(['100 g', '250 g'] as Pack[]).map((p) => (
-              <label key={p}>
-                <input type="radio" name="st-size" checked={pack === p} onChange={() => setPack(p)} />
-                <span>{p}</span>
-              </label>
-            ))}
+            {PACKS.map((p) => {
+              const hasSheet = packHasSheet(productId, p);
+              return (
+                <label key={p}>
+                  <input
+                    type="radio"
+                    name="st-size"
+                    checked={pack === p}
+                    disabled={!hasSheet}
+                    aria-describedby={hasSheet ? undefined : 'st-size-note'}
+                    onChange={() => setPack(p)}
+                  />
+                  <span>{p}</span>
+                </label>
+              );
+            })}
           </fieldset>
+          {PACKS.some((p) => !packHasSheet(productId, p)) && (
+            <p className="adm-st-note adm-st-note--body" id="st-size-note">{copy.noPackSheet}</p>
+          )}
           {isContainer ? (
             <p className="adm-st-note adm-st-note--body">{copy.containerSide}</p>
           ) : (
@@ -700,9 +890,10 @@ const StickersPage: React.FC = () => {
           title={copy.stageTitle(copy.sides[side], line)}
           batch={stamps ? batch : ''}
           build={build}
+          preview={ahead?.build === build ? ahead.canvas : null}
           zoomHint={tapToZoom}
           downloadLabel={copy.download}
-          sendLabel={copy.send}
+          sendLabel={shareFiles ? copy.share : copy.send}
           fallbackNote={copy.fallbackNote}
           attachHint={copy.attachHint}
           openWhatsAppLabel={copy.openWhatsApp}
@@ -725,7 +916,14 @@ const StickersPage: React.FC = () => {
           onClose={() => { setZoomOpen(false); setZoomed(false); }}
         />
       )}
-      <ToastSlot />
+      {/*
+       * No <ToastSlot /> here on purpose. The slot is `position: absolute;
+       * bottom: 100%` and this page has no positioned ancestor, so on this page
+       * it lands above the top of the viewport and every message was invisible.
+       * The admin's fixed dock carries them instead: it stays on screen and sits
+       * above the stage overlay, so "Saved to Downloads." and the share result
+       * are actually seen.
+       */}
     </div>
   );
 };
@@ -735,6 +933,8 @@ const Stage: React.FC<{
   title: string;
   batch: string;
   build: Build | null;
+  /** The sticker for `build`, already drawn before the tap. */
+  preview: HTMLCanvasElement | null;
   zoomHint: string;
   downloadLabel: string;
   sendLabel: string;
@@ -747,7 +947,7 @@ const Stage: React.FC<{
   onSend: () => void;
   onClose: () => void;
   onZoom: () => void;
-}> = ({ title, batch, build, zoomHint, downloadLabel, sendLabel, fallbackNote, attachHint, openWhatsAppLabel, waUrl, waFallback, onDownload, onSend, onClose, onZoom }) => {
+}> = ({ title, batch, build, preview, zoomHint, downloadLabel, sendLabel, fallbackNote, attachHint, openWhatsAppLabel, waUrl, waFallback, onDownload, onSend, onClose, onZoom }) => {
   const canvasHost = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -755,17 +955,21 @@ const Stage: React.FC<{
   useEffect(() => {
     let live = true;
     const host = canvasHost.current;
+    const show = (cropped: HTMLCanvasElement): void => {
+      if (!live || !host) return;
+      host.querySelector('canvas')?.remove();
+      host.prepend(cropped);
+    };
     if (host && build) {
-      const ratio = rasterScale(build.spec, 1000);
-      void rasterizeFirstPage(build.bytes, ratio).then((full) => {
-        if (!live) return;
-        const cropped = cropTrim(full, build.spec, ratio);
-        host.querySelector('canvas')?.remove();
-        host.prepend(cropped);
-      }).catch(() => undefined);
+      // Drawn ahead of the tap: painting it now is the whole wait.
+      if (preview) {
+        show(preview);
+      } else {
+        void sheetPreview(build.bytes, build.spec, STAGE_TARGET_PX).then(show).catch(() => undefined);
+      }
     }
     return () => { live = false; };
-  }, [build]);
+  }, [build, preview]);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -835,10 +1039,8 @@ const ZoomView: React.FC<{
 
   useEffect(() => {
     let live = true;
-    const ratio = rasterScale(build.spec, 1500);
-    void rasterizeFirstPage(build.bytes, ratio).then((full) => {
+    void sheetPreview(build.bytes, build.spec, ZOOM_TARGET_PX).then((cropped) => {
       if (!live) return;
-      const cropped = cropTrim(full, build.spec, ratio);
       canvasRef.current = cropped;
       surfaceRef.current?.querySelector('canvas')?.remove();
       surfaceRef.current?.append(cropped);

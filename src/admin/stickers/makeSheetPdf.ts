@@ -34,6 +34,16 @@ const RULE_ERASE_PAD = 0.15;
 /** "for you" ends this far left of the heart (the label engine's own lockup). */
 const HEART_GAP = 0.8;
 
+/**
+ * pdf-lib's writer hands the event loop back every `objectsPerTick` objects
+ * (50 by default) with a `setTimeout(0)` tick. A browser clamps nested timers
+ * to ~4 ms, so a 1,200-object sheet spends most of its save waiting on the
+ * timer, not writing: 590 ms measured against 8 ms for the same bytes in one
+ * slice. Nothing can paint during either version, so the tick only ever costs
+ * time here. Keep it large enough to never fire.
+ */
+const SERIALIZE_OBJECTS_PER_TICK = 1_000_000;
+
 /** The gift heart, a 24-box y-down path from the label engine. */
 const HEART_PATH =
   'M12 21.4l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.6z';
@@ -273,6 +283,6 @@ export const makeSheetPdf = async (
       );
     }
   }
-  return doc.save({ useObjectStreams: true });
+  return doc.save({ useObjectStreams: true, objectsPerTick: SERIALIZE_OBJECTS_PER_TICK });
 };
 
