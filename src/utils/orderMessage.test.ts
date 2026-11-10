@@ -141,6 +141,34 @@ describe('orderMessageParts with blanks (the preview)', () => {
   });
 });
 
+describe('Slice A frozen quote messages', () => {
+  const details = { code: 'SN-7KQ4M', lines: [{ productId: 'muesli', size: '250 g', quantity: 1 }], name: 'Asha', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' } };
+  const quote = { quote_id:'00000000-0000-0000-0000-000000000001', expires_at:'2099-01-01T00:00:00Z', version:'fixture', offer_kind:'guest' as const, coupon_code:null, free_delivery_rule:{min_grams:500,min_packs:null,up_to_250:50,above_250:70,cap:70}, lines:[{product_id:'muesli',size:'250 g',quantity:1,grams:250,mrp:399,unit_price:359,line_total:359}], catalogue:[{product_id:'muesli',size:'250 g',mrp:399,unit_price:359}], mrp_total:399,items_total:359,savings:40,grams:250,packs:1,delivery_base:50,delivery_waived:false,delivery_fee:50,total:409,currency:'INR' as const };
+  it('shows the quote total once, including delivery: ₹359 + ₹50 = ₹409', () => {
+    expect(buildOrderMessage({ ...details, quote })).toContain('Total: ₹409');
+    expect(buildOrderMessage({ ...details, quote })).toContain('Delivery: ₹50');
+  });
+  it('keeps the second-tier one-500 g order at ₹489 + ₹70 = ₹559', () => {
+    const fiveHundred = {
+      ...quote,
+      offer_kind: 'second' as const,
+      free_delivery_rule: { min_grams: null, min_packs: 2, up_to_250: 50, above_250: 70, cap: 70 },
+      lines: [{ product_id: 'muesli', size: '500 g', quantity: 1, grams: 500, mrp: 699, unit_price: 489, line_total: 489 }],
+      catalogue: [{ product_id: 'muesli', size: '500 g', mrp: 699, unit_price: 489 }],
+      mrp_total: 699, items_total: 489, savings: 210, grams: 500, packs: 1,
+      delivery_base: 70, delivery_waived: false, delivery_fee: 70, total: 559,
+    };
+    const message = buildOrderMessage({ ...details, lines: [{ productId: 'muesli', size: '500 g', quantity: 1 }], quote: fiveHundred });
+    expect(message).toContain('• Muesli 500 g × 1 · ₹489');
+    expect(message).toContain('Total: ₹559');
+    expect(message).toContain('Delivery: ₹70');
+  });
+  it('omits every payable amount for an explicitly unpriced order', () => {
+    const message = buildOrderMessage({ ...details, unpriced: true });
+    expect(message).not.toMatch(/₹\\d|Total:|Delivery:/);
+  });
+});
+
 describe('delivery details', () => {
   it('normalizes Indian phone input and cleans bounded address text', () => {
     expect(cleanPhone('+91 98765-43210')).toBe('919876543210');

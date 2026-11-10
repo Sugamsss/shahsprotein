@@ -28,6 +28,7 @@ const JournalSearchPage = React.lazy(() => import('./journal/JournalSearchPage')
 const JournalMonthPage = React.lazy(() => import('./journal/JournalMonthPage'));
 const TodosPage = React.lazy(() => import('./todos/TodosPage'));
 const IngredientsPage = React.lazy(() => import('./ingredients/IngredientsPage'));
+const StickersPage = React.lazy(() => import('./stickers/StickersPage'));
 import adminCss from './admin.css?inline';
 
 // The admin's lazy entry (App.tsx: /admin/*). Its own chunk, so the landing
@@ -83,6 +84,7 @@ const AdminApp: React.FC = () => {
           <Route path="orders/:code/edit" element={<NewOrderPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="products/ingredients" element={<IngredientsPage />} />
+          <Route path="stickers" element={<StickersPage />} />
           <Route path="journal" element={<JournalPage />} />
           <Route path="journal/search" element={<JournalSearchPage />} />
           <Route path="journal/month/:month" element={<JournalMonthPage />} />

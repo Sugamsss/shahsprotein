@@ -238,6 +238,25 @@ a {
   transition: transform var(--transition-fast);
 }
 
+/* "Log out": the same quiet nav voice, as a button. */
+.header-account {
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--color-nav-link);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.header-account:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 3px; border-radius: 8px; }
+.header-account:active { color: var(--color-text-primary); }
+button.drawer-pill { font-family: inherit; cursor: pointer; }
+button.drawer-pill:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 3px; }
+
 /* Header icon buttons inside the glass pill */
 .header-icon-btn {
   width: 32px;
@@ -1145,6 +1164,108 @@ a {
   font-size: 1rem;
 }
 
+.portfolio-intro .portfolio-intro__price-note {
+  margin: 0.5rem 0 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+}
+
+.offer-login-chip {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-badge);
+  border-radius: 999px;
+  background: var(--color-bg-badge);
+  color: var(--color-text-accent-strong);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+.offer-login-chip:active { transform: scale(0.97); }
+.offer-login-chip:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 3px; }
+@media (hover: hover) { .offer-login-chip:hover { filter: brightness(0.97); } }
+@media (prefers-reduced-motion: reduce) { .offer-login-chip { transition: none; } .offer-login-chip:active { transform: none; } }
+
+/* Customer login: one quiet card, the number in, the code in. */
+.customer-login {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 5vw, 3rem) 1rem;
+  background: var(--color-bg-main);
+  color: var(--color-text-primary);
+}
+.customer-login__card {
+  width: min(420px, 100%);
+  padding: clamp(1.35rem, 5vw, 2rem);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+.customer-login__back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.customer-login__back:focus-visible,
+.customer-login__guest:focus-visible,
+.customer-login__secondary:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 3px; border-radius: var(--radius-sm); }
+.customer-login__eyebrow {
+  margin: 0.5rem 0 0.25rem;
+  color: var(--color-text-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.customer-login h1 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-family-serif);
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  line-height: 1.2;
+}
+.customer-login__body { margin: 0; color: var(--color-text-secondary); font-size: 0.9375rem; line-height: 1.6; }
+.customer-login__form { display: grid; gap: 0.6rem; margin-top: 1.25rem; }
+.customer-login__label { color: var(--color-text-secondary); font-size: 0.875rem; font-weight: 500; }
+.customer-login__code { letter-spacing: 0.35em; text-align: center; font-variant-numeric: tabular-nums; }
+.customer-login__submit { width: 100%; flex: none; }
+.customer-login__secondary {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-text-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.customer-login__secondary:disabled { color: var(--color-text-muted); cursor: default; }
+.customer-login__guest {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}
+.customer-login__error {
+  margin: 1rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+
 .portfolio-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1236,8 +1357,7 @@ a {
   text-wrap: pretty;
 }
 
-/* Price tags: the MRP big, its pack size small under it, a hairline between
-   packs. Inter's lining figures, not the serif's old-style ones. */
+/* Slice A: real MRP then the amount paid, with one consistent pair everywhere. */
 .pack-prices {
   display: flex;
   margin: 0;
@@ -1254,8 +1374,8 @@ a {
 
 .pack-prices__item {
   display: flex;
-  flex-direction: column-reverse;
-  gap: 0.05rem;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .pack-prices__item + .pack-prices__item {
@@ -1265,6 +1385,8 @@ a {
 }
 
 .pack-prices dd {
+  display: grid;
+  gap: 0.1rem;
   margin: 0;
   color: var(--color-text-primary);
   font-size: 1.3rem;
@@ -1272,6 +1394,22 @@ a {
   line-height: 1.2;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+}
+
+.pack-prices dd del,
+.product-detail__price-line del,
+.order-line__price s {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration-thickness: 1px;
+}
+
+.pack-prices__now,
+.product-detail__price-line > span {
+  color: var(--color-text-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
 .pack-prices dt {
@@ -1434,13 +1572,17 @@ a {
   gap: 0.625rem;
 }
 
-.product-detail__size-note {
+.product-detail__size-note,
+.product-detail__price-line {
   flex: 1 0 100%;
+  margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: 13px;
   line-height: 1.4;
   text-align: center;
+  white-space: nowrap;
 }
+.product-detail__price-line > span { font-size: 13px; }
 
 .product-detail__add {
   flex: 1;
@@ -1731,13 +1873,23 @@ a {
 }
 
 .order-line__price-now {
-  color: var(--color-success-text);
+  color: var(--color-text-primary);
 }
 
 /* Under the lines: "Total" and the amount, then the delivery note. */
 .order-total {
   padding: 0.875rem 0 0.25rem;
 }
+.order-total__signin, .order-total__delivery, .order-total__nudge {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 44px;
+}
+.order-total__signin { color: var(--color-text-secondary); font-size: 13px; }
+.offer-login-chip--small { min-height: 44px; padding-inline: 16px; flex: 0 0 auto; }
+.order-total__delivery { color: var(--color-text-secondary); font-size: 15px; }
+.order-total__delivery b { color: var(--color-success-text); font-weight: 600; }
+.order-total__nudge { color: var(--color-text-secondary); font-size: 13px; }
+.order-total__savings { margin-top: 0.2rem; color: var(--color-success-text); font-size: 13px; font-weight: 600; text-align: right; }
+@media (max-width: 359px) { .order-total__signin { align-items: flex-start; flex-direction: column; justify-content: center; } }
 
 .order-total__row {
   display: flex;
@@ -2757,6 +2909,67 @@ a {
   margin-top: 0.375rem;
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+}
+
+/* TEST ONLY: the flagged prepaid block in the sent panel (Slice B scaffold).
+   Dashed, so it never reads as part of the shipped order flow. */
+.order-test-pay {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  text-align: left;
+}
+
+.order-test-pay__lead {
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.order-test-pay__note {
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.order-test-pay__button {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.order-test-pay__status {
+  margin-top: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.order-test-pay__status--ok {
+  color: var(--color-success-text);
+}
+
+.order-test-pay__fallback {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.order-test-pay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (pointer: coarse) {
+  .order-test-pay__actions .order-text-link,
+  .order-test-pay__fallback > .order-text-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 
 .order-sent__bar {

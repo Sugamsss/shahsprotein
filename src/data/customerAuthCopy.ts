@@ -1,0 +1,16 @@
+export const customerLoginCopy = {
+  eyebrow: 'A healthier habit',
+  title: 'Log in to see your best price',
+  body: "I'm so happy you're trying a healthier habit, and honestly that's the hardest part. Logging in with your number is the only way we can confirm your first order. We'll send you a code, and you're in.",
+  phone: 'Phone number',
+  send: 'Send me a code',
+  sending: 'Sending…',
+  code: 'Code',
+  confirm: 'Log in',
+  checking: 'Checking…',
+  resend: 'Send another code',
+  guest: 'Continue as a guest',
+  back: "Back to Shah's Nutrition",
+  invalid: "That code didn't work. Try once more, or order as a guest.",
+  error: "We couldn't send or check that code just now. Try again, or order as a guest.",
+} as const;

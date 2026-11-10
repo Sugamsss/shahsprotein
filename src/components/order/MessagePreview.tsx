@@ -1,28 +1,23 @@
-import React, { useId, useMemo, useState } from 'react';
+import React, { useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useOrder } from '../../context/OrderContext';
 import { siteConfig } from '../../data/siteConfig';
-import { usePrices } from '../../services/priceService';
 import { orderMessageParts } from '../../utils/orderMessage';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 
 const copy = siteConfig.order;
 
 /**
- * "See your message": the exact WhatsApp text, as a chat bubble. Missing name or
- * pincode show as highlighted blanks where they'll go. Closed each time the popup opens.
+ * "See your message": the exact WhatsApp text, as a chat bubble. Missing name,
+ * phone or address show as highlighted blanks where they'll go. Built from the
+ * same order Send uses, so a frozen quote can't drift from the preview.
  */
 export const MessagePreview: React.FC = () => {
-  const { code, sendLines, name, pincode, phone, address, messageCoupon } = useOrder();
+  const { currentOrder } = useOrder();
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const mrps = usePrices();
 
-  const parts = useMemo(
-    () => orderMessageParts({ code, lines: sendLines, name, pincode, phone, address, coupon: messageCoupon }, { blanks: true }),
-    // mrps: the admin's prices can arrive while it's open.
-    [code, sendLines, name, pincode, phone, address, messageCoupon, mrps],
-  );
+  const parts = orderMessageParts(currentOrder(), { blanks: true });
 
   return (
     <div className="order-preview">

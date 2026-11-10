@@ -4,16 +4,16 @@ The website for Shah's Nutrition, a small food brand from Satara making Raggi Ja
 
 The site does two jobs:
 
-- **The landing page** tells the brand's story and lets people build an order. They send it to us on WhatsApp. There are no prices, checkout or payment on the site: we reply in the chat with the total, delivery and how to pay.
+- **The landing page** tells the brand's story and lets people build an order to send on WhatsApp. Slice A specifies displayed pack prices, delivery and a server-confirmed total in the quote/message, with no online payment or payment gateway. This is a planned change, not a claim that the feature is live; see [docs/slice-a-pricing.md](docs/slice-a-pricing.md).
 - **The order book at `/admin`** is where Pranjali and Sunit manage website requests and active orders through "delivered and paid". Requests are separate from kitchen work until Sunit confirms after receiving the WhatsApp message.
 
 ## How an order works
 
 1. The customer enters their phone and delivery address and taps **Continue to WhatsApp**. Address suggestions are optional; manual entry works without Google configuration.
-2. WhatsApp opens with a draft containing their details and an order code. The customer must press Send there; the website cannot tell whether the message arrived.
+2. WhatsApp opens with a draft and order code. For the planned Slice A flow, the message uses the frozen server quote (or is explicitly unpriced for manual confirmation when no usable quote exists). The customer must press Send there; the website cannot tell whether the message arrived.
 3. The tap saves a pending request (never a kitchen order). It does not wait for the save, so WhatsApp opens even if saving fails.
 4. After the message arrives, Sunit finds the request in `/admin/requests` and explicitly confirms it. Confirmation creates an active order; kitchen rules may allocate food or move it straight to Packing. Dismissed requests remain available in the inbox filter. Confirmation has no instant Undo because it can reserve food; correct an accidental confirmation with normal order cancellation.
-5. Sunit moves active orders along: **Cooking → Packing → Ready → Delivered**. Marking one Delivered opens a bill, which can be shared or downloaded as a PNG and reopened from the order. It is a receipt, not a tax invoice; the public site has no prices. Payments are recorded separately, including part payments, because some people pay on delivery.
+5. Sunit moves active orders along: **Cooking → Packing → Ready → Delivered**. Marking one Delivered opens a bill, which can be shared or downloaded as a PNG and reopened from the order. It is a receipt, not a tax invoice. Payments are recorded separately, including part payments, because some people pay on delivery.
 6. Orders that come in by WhatsApp, a call, Instagram or in person are added by hand.
 
 The admin's Home is different for each person. Pranjali (`home_view = cook`) sees what to make per product, in kilos and packs. Sunit and anyone else (`admin`) sees every order and rupee per product and stage. Each product card opens that product's orders. The admin also has a stock switch per product and size (the site shows "Back soon"), customers, coupons, the email list, and CSV export.
@@ -51,10 +51,13 @@ React 18, TypeScript, Vite, plain CSS and Lucide icons. Supabase handles the dat
 - Website request rollout uses a separate admin-first order: deploy the UI with missing-RPC gating, apply and verify the additive request migration, then release the public request form. The migration is the safety cutover for old clients too: legacy `submit_order` calls must create pending, incomplete requests, never active orders. Do not restore the pre-cutover function body on rollback. Confirm only after WhatsApp receipt; no real production change is part of local implementation verification.
 - Database changes go out with `supabase db push`. Always dry-run first and follow the request-specific rollout in [supabase/README.md](supabase/README.md).
 
+Slice A rollout is separate from this existing website-request rollout. Do not apply or imply new pricing/auth database capabilities are deployed; the plan requires isolated testing and explicit release gates.
+
 ## Where to look next
 
 - [AGENTS.md](AGENTS.md): the rules and gotchas. Read it before changing anything.
 - [SPEC.md](SPEC.md): the brand, product and design spec.
 - [supabase/README.md](supabase/README.md): backend setup, the RPCs, and how to add someone to the admin.
+- [docs/slice-a-pricing.md](docs/slice-a-pricing.md): planned server-quoted pricing contract and remaining release gates.
 
 The repo is public. Never commit real coupon codes, keys, or anyone's email or phone number.

@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_TRACK_EVENTS?: string;
   /** Optional browser key for address suggestions (Places). Without it the address is typed in. */
   readonly VITE_GOOGLE_MAPS_API_KEY?: string;
+  /** TEST ONLY: set to "true" to show the Slice B prepaid button (Razorpay test mode). */
+  readonly VITE_TEST_CHECKOUT?: string;
 }
 
 /** This build's id (vite.config.ts). Admin code only: the landing bundle never reads it. */

@@ -8,6 +8,8 @@ import { OrderCheckout } from './OrderCheckout';
 const { saveOrder, trackOrderSend } = vi.hoisted(() => ({ saveOrder: vi.fn(), trackOrderSend: vi.fn() }));
 vi.mock('../../services/orderService', () => ({ saveOrder }));
 vi.mock('../../utils/contact', async (original) => ({ ...await original<typeof import('../../utils/contact')>(), trackOrderSend }));
+vi.mock('../../services/offerService', () => ({ quoteWebsiteOrder: vi.fn(async () => ({ status: 'unavailable', message: 'unavailable' })) }));
+vi.mock('../../services/priceService', () => ({ usePrices: () => null, useWebsiteOffer: () => null }));
 vi.mock('../../services/stockService', () => ({ useStock: () => ({ isOut: () => false }), firstInStockSize: () => '250 g' }));
 vi.mock('../../services/placesAddress', () => ({ loadPlaces: () => new Promise(() => {}), searchPlaces: vi.fn(), selectedAddress: vi.fn() }));
 
@@ -53,8 +55,9 @@ describe('checkout lifecycle', () => {
     expect(host.querySelector('input[aria-invalid="true"]')).toBeTruthy();
   });
 
-  it('opens the native WhatsApp link synchronously and saves the same complete snapshot', () => {
+  it('opens the native WhatsApp link synchronously and saves the same complete snapshot', async () => {
     setAddress({ premises: 'Flat 4B', area: 'Shivaji Nagar', city: 'Satara', state: 'Maharashtra', pincode: '415001' });
+    await vi.waitFor(() => expect(host.querySelector('.order-send a')).toBeTruthy());
     const link = host.querySelector<HTMLAnchorElement>('.order-send a')!;
     expect(link.href).toContain('wa.me');
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });

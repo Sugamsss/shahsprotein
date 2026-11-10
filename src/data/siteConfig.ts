@@ -24,6 +24,8 @@ export const siteConfig = {
       { text: 'Extraordinary benefits.', highlight: true },
     ] satisfies TextSegment[],
     intro: 'Wholesome everyday foods made with real ingredients and honest nutrition.',
+    priceHonesty: 'MRP is the price printed on the pack. Your price is what you actually pay, and it’s lower.',
+    loginChip: 'Log in for a bigger discount',
     cardImageAlt: (name: string) => `${name} pouch and ingredients from the Shah's Nutrition product portfolio`,
     viewDetails: 'View details',
     viewDetailsLabel: (name: string) => `View details for ${name}`,
@@ -35,8 +37,8 @@ export const siteConfig = {
       `${shelfLife}. No preservatives.${madeToOrder ? ' Made after you order.' : ''}`,
     contains: 'Contains',
     packSizes: (count: number) => (count > 1 ? 'Pack sizes' : 'Pack size'),
-    // A card's price tags (MRP per pack size, from products.ts). The popup shows
-    // the picked pack's MRP in its "Add to order" button.
+    // Public price pairs come from the complete guest offer; fallback MRPs are reference only.
+    // The popup price line follows its picked size.
     mrpLabel: (name: string) => `${name} MRP`,
     nutrition: 'Nutrition information',
     nutrient: 'Nutrient',
@@ -138,6 +140,18 @@ export const siteConfig = {
   // in our WhatsApp reply. Items read
   // "Muesli, 250 g" in the popup and "Muesli 250 g" in the message.
   order: {
+    loginNudge: 'Log in with your number and you may pay even less.',
+    logIn: 'Log in',
+    logout: 'Log out',
+    deliveryNudgeWeight: (grams: number) => `Add ${grams} g more and delivery’s on us.`,
+    deliveryNudgePacks: 'Add one more pack and delivery’s on us.',
+    deliveryLabel: 'Delivery',
+    freeLabel: 'Free',
+    savingsLine: (amount: string) => `You save ${amount} on this order.`,
+    offerError: 'We couldn’t confirm your offer. Retry, or message us—we’ll confirm your price and delivery. Your guest discount still applies.',
+    offerRetry: 'Retry',
+    offerWaiting: 'Confirming your offer…',
+    priceToConfirm: 'Price to be confirmed',
     // Most packs of one product in one size per order. Bigger orders are a chat.
     maxQuantity: 10,
 
@@ -173,8 +187,7 @@ export const siteConfig = {
     itemName: (name: string, size: string) => `${name}, ${size}`,
     // A line's price: packs × the pack price. With a coupon price, the MRP amount shows struck through.
     linePriceWas: 'MRP ', // visually hidden
-    linePriceNow: 'with your coupon ', // visually hidden
-    // Under the lines: packs added up at the prices shown. Delivery isn't in it.
+    linePriceNow: 'Your price ', // visually hidden
     totalLabel: 'Total',
     totalNote: 'Delivery isn’t included. We’ll confirm it on WhatsApp.',
     sizeLegend: (name: string) => `Pack size for ${name}`,
@@ -278,6 +291,8 @@ export const siteConfig = {
     forgot: 'Forgot something? Just add it in the chat.',
     recapQty: (qty: number) => `× ${qty}`,
     recapTotal: 'Total before delivery',
+    // A frozen quote's total already includes delivery.
+    recapTotalQuoted: 'Total',
     recapCoupon: (code: string) => `Coupon ${code}`,
     // Its own row in the recap, so it can be grabbed when WhatsApp didn't open.
     sentCode: 'Your order code',
@@ -287,6 +302,21 @@ export const siteConfig = {
     codeCopyFailed: "Couldn't copy it here. The code is selected, so you can copy it yourself.",
     newOrder: 'Start a new order',
     done: 'Done',
+
+    // TEST ONLY: the flagged prepaid button in the sent panel (Slice B scaffold,
+    // docs/slice-b-test.md). Never shown unless VITE_TEST_CHECKOUT is "true", and
+    // still only after a frozen quote exists. No launch claim here.
+    testCheckout: {
+      lead: 'Prepaid checkout is in test mode.',
+      label: 'Pay online (test)',
+      note: 'This opens Razorpay in test mode. No money moves, and Sunit still confirms your order on WhatsApp.',
+      opening: 'Opening secure checkout…',
+      paid: 'Payment received, in test mode. Sunit will still confirm your order on WhatsApp.',
+      unconfirmed: "We couldn't confirm that payment here. Send your order on WhatsApp so Sunit can check it.",
+      failedLead: "Online payment isn't working right now.",
+      fallback: 'Send your order on WhatsApp',
+      retry: 'Try again',
+    },
 
     // Screen reader announcements (polite)
     announceAdded: (item: string, packs: number) => `${item} added. ${packs} ${packs === 1 ? 'pack' : 'packs'} in your order.`,
@@ -307,7 +337,10 @@ export const siteConfig = {
       // The amount is packs × pack price, left off only if a pack has no price.
       line: (productName: string, size: string, quantity: number, amount?: string) =>
         `• ${productName} ${size} × ${quantity}${amount ? ` · ${amount}` : ''}`,
+      // The old priced path: packs at the prices shown, delivery confirmed in the chat.
       total: (amount: string) => `Total: ${amount} (before delivery)`,
+      // A frozen quote's total already includes the delivery row below it.
+      totalQuoted: (amount: string) => `Total: ${amount}`,
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       phone: (phone: string) => `Phone: ${phone}`,
@@ -315,6 +348,8 @@ export const siteConfig = {
       // The code Sunit matches to the order book. Always there: it's made when the order starts.
       code: (code: string) => `Order code: ${code}`,
       closing: 'Could you confirm my order, and let me know the delivery charge and how to pay?',
+      // Priced orders already show delivery, so the chat only has to confirm.
+      closingQuoted: 'Could you confirm my order, and let me know how to pay?',
     },
   },
   social: {

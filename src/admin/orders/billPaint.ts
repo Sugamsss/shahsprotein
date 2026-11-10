@@ -225,6 +225,16 @@ function sumRow(sum: BillSum): [string, string, string?] {
       ? [`${copy.coupon} ${sum.code}`, `−${formatMoney(sum.saving)}`, billPalette.saving]
       : [`${copy.coupon} ${sum.code}`, copy.couponApplied, billPalette.ink2];
   }
+  if (sum.kind === 'saving') {
+    // The item rates already carry the offer, so this names what they saved; it isn't taken off again.
+    return [`${copy.saving}${sum.code ? ` ${sum.code}` : ''}`, formatMoney(sum.amount), billPalette.saving];
+  }
+  if (sum.kind === 'delivery') {
+    return [copy.delivery, sum.waived ? copy.free : `+${formatMoney(sum.amount)}`];
+  }
+  if (sum.kind === 'changed') {
+    return [copy.adjusted, `${sum.up ? '+' : '−'}${formatMoney(sum.amount)}`];
+  }
   if (sum.kind === 'deliveryOther') return [copy.deliveryOther, `+${formatMoney(sum.amount)}`];
   if (sum.kind === 'adjusted') return [copy.adjusted, `−${formatMoney(sum.amount)}`];
   if (sum.kind === 'deliverySatara') return [copy.deliverySatara, copy.free];

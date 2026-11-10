@@ -8,7 +8,7 @@ import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
 import { AdminSheet } from '../AdminSheet';
 import { useOverview } from '../AdminLayout';
-import { getCouponUses, getKitchen, getOrder, getOrders, getStock, saveOrder, toAdminError } from '../api';
+import { getCouponUses, getKitchen, getOrder, getOrders, getStock, quoteAdminOrder, saveOrder, toAdminError, type AdminOrderQuote } from '../api';
 import { useAdminMe } from '../auth';
 import { firstName, formatDay, formatMoney, formatWeight, istDateValue } from '../format';
 import { Field, LoadError, Segmented, Skeleton } from '../parts';
@@ -28,6 +28,7 @@ import { AdvancedEditSheet } from '../orders/AdvancedEditSheet';
 import { prefetchPartySound, unlockPartySound } from '../orders/partySound';
 import { usePriceBook } from '../orders/usePriceBook';
 import { WorkedFrom } from '../orders/Worked';
+import { quoteOfferText } from '../orders/bill';
 import { ContactsButton, useNameSuggestions, type Picked } from '../orders/CustomerPick';
 import { PAID_METHODS } from '../orders/PaidMethod';
 import OrdersPage, { useLaptop } from '../orders/OrdersPage';
@@ -63,6 +64,18 @@ const PAID_OPTIONS = PAID_METHODS.map((value) => ({ value, label: adminCopy.paid
  */
 const giveState = (saved: Order, before: Order | null) =>
   (saved.priority && !before?.priority ? { give: { id: saved.id, name: saved.name, code: saved.code } } : {});
+
+/**
+ * The server quote's payable total, only when it is whole: a zero, or any pack without
+ * its own price, is refused, so a partial total is never filled in. Then Sunit types it.
+ */
+const quoteTotal = (quote: AdminOrderQuote | null): number | null => {
+  if (!quote || !(quote.total != null && quote.total > 0) || !(quote.items_total > 0)) return null;
+  const packs = quote.lines.filter((line) => line.size !== SAMPLE);
+  if (!packs.length) return null;
+  if (packs.some((line) => !(line.unit_price != null && line.unit_price > 0) || line.line_total == null)) return null;
+  return quote.total;
+};
 
 type Errors = Partial<Record<'lines' | 'name' | 'via' | 'pincode' | 'phone' | 'amount' | 'paidMethod' | 'paidNote' | 'form', string>>;
 
@@ -125,6 +138,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const dirty = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [attempt, setAttempt] = useState(0);
+  const [serverQuote, setServerQuote] = useState<(AdminOrderQuote & { key: string }) | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const quoteGeneration = useRef(0);
 
   // The party's dhol (80 KB) comes down ahead, so it plays the moment Big order? is tapped.
   useEffect(prefetchPartySound, []);
@@ -145,16 +161,47 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   // Only samples: a free sample order, with no total, coupon or payment (the server refuses them).
   const samplesOnly = isSamplesOnly(lines);
   const count = packsText({ packs, samples });
+  const digits = normalisePhone(phone);
+  const quoteKey = `${via ?? ''}|${digits}|${JSON.stringify(lines)}`;
+  useEffect(() => {
+    const generation = ++quoteGeneration.current;
+    setServerQuote(null);
+    if (order || !via || !lines.some((line) => line.size !== SAMPLE) || samplesOnly) {
+      setQuoteLoading(false);
+      return;
+    }
+    setQuoteLoading(true);
+    quoteAdminOrder(via, digits || null, lines)
+      .then((quote) => {
+        if (quoteGeneration.current === generation) setServerQuote({ ...quote, key: quoteKey });
+      })
+      .catch(() => {
+        if (quoteGeneration.current === generation) setServerQuote(null);
+      })
+      .finally(() => {
+        if (quoteGeneration.current === generation) setQuoteLoading(false);
+      });
+    return () => { quoteGeneration.current++; };
+  }, [quoteKey, via, digits, samplesOnly, order]);
 
   // Filled in by itself: only on a new order, only while he hasn't picked, only with the coupon list shown.
-  const digits = normalisePhone(phone);
   const phoneUses = uses && uses.phone === digits ? uses.list : null;
   const filled = couponPick === null && book.ready && phoneUses ? repeatCoupon(phoneUses, book.coupons ?? [], new Date()) : null;
   const coupon = couponPick ?? filled ?? '';
   const worked = book.workOut(lines, coupon || null, rates);
   const workedTotal = worked && 'total' in worked ? worked.total : null;
+  const sourceQuote = !order && !coupon && !Object.keys(rates).length && serverQuote?.key === quoteKey ? serverQuote : null;
+  const needsServerQuote = !order && !!via && !coupon && !Object.keys(rates).length;
+  // Delivery is part of what the customer pays, so the payable total is the one saved.
+  const sourceTotal = sourceQuote ? quoteTotal(sourceQuote) : null;
+  // No answer from the server (the RPC is missing on this database, offline, or it
+  // failed): keep the owner's own price-book total instead of a blank field, and
+  // say under it that the server price could not be checked. A real answer keeps
+  // the strict server total.
+  const quoteAnswered = sourceQuote !== null;
+  const resolvedTotal = needsServerQuote ? (quoteAnswered ? sourceTotal : workedTotal) : workedTotal;
   const missing = worked && 'missing' in worked ? worked.missing : null;
-  const total = totalMode === 'auto' ? (workedTotal != null ? String(workedTotal) : '') : amount;
+  const total = totalMode === 'auto' ? (resolvedTotal != null ? String(resolvedTotal) : '') : amount;
   const typedTotal = /^\d+$/.test(total.replace(/[₹,\s]/g, '')) ? Number(total.replace(/\D/g, '')) : null;
   const couponNow = coupon && book.coupons ? couponState(coupon, book.coupons, new Date()) : null;
   const linesChanged = order !== null && (lines.length !== order.lines.length
@@ -361,7 +408,7 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
       {errors.lines && <p className="adm-field__error" data-error>{errors.lines}</p>}
       {bigMode ? (
         <>
-          <BigOrderHero name={myName} packs={packs} grams={grams} total={typedTotal ?? workedTotal} onParty={() => { unlockPartySound(); setParty(true); }} />
+          <BigOrderHero name={myName} packs={packs} grams={grams} total={typedTotal ?? resolvedTotal} onParty={() => { unlockPartySound(); setParty(true); }} />
           <BigOrderLines lines={bigLines} setPacks={setPack} setRate={setRate} />
         </>
       ) : (
@@ -560,7 +607,23 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   // Under Total: how it was worked out, or the worked-out total to go back to, or why there's none.
   const paidSoFar = order && order.amount_paid > 0 ? adminCopy.payments.paidSoFar(formatMoney(order.amount_paid)) : '';
   let workedLine: React.ReactNode = null;
-  if (totalMode === 'auto' && workedTotal != null) {
+  if (totalMode === 'auto' && sourceQuote) {
+    const total = quoteTotal(sourceQuote);
+    const delivery = sourceQuote.delivery_waived
+      ? copy.serverFreeDelivery
+      : typeof sourceQuote.delivery_fee === 'number' ? copy.serverDelivery(formatMoney(sourceQuote.delivery_fee)) : null;
+    const offer = quoteOfferText({ offer_kind: sourceQuote.offer_kind, coupon_code: sourceQuote.coupon_code ?? null }).toLowerCase();
+    workedLine = (
+      <span className="adm-worked">
+        {[copy.serverQuote(offer, sourceQuote.configured), delivery, total != null ? copy.serverTotal(formatMoney(total)) : copy.serverTotalMissing].filter(Boolean).join(' · ')}
+      </span>
+    );
+  } else if (totalMode === 'auto' && quoteLoading && !order && via && packs > 0) {
+    workedLine = <span className="adm-worked">{copy.quoteLoading}</span>;
+  } else if (totalMode === 'auto' && needsServerQuote && !quoteAnswered && workedTotal != null) {
+    // The server could not check this one, so the total is the price list's own.
+    workedLine = <span className="adm-worked">{copy.serverUnchecked}</span>;
+  } else if (totalMode === 'auto' && resolvedTotal != null) {
     // Samples ride along free, so the line says so rather than leaving it to guess.
     // Prices he typed make them his prices, so the line doesn't credit the coupon.
     const from = couponNow === 'live' && !typedPrices ? coupon : null;

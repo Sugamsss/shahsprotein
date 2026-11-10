@@ -30,6 +30,7 @@
 @import './journal/journal.css';
 @import './todos/todos.css';
 @import './ingredients/ingredients.css';
+@import './stickers/stickers.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {
@@ -63,6 +64,16 @@
   --adm-warn-text: #8a4b08;
   --adm-warn-tint: rgba(245, 158, 11, 0.14);
   --adm-warn-edge: rgba(217, 119, 6, 0.35);
+  /* The near-black sticker zoom (both themes are black there, like a lightbox),
+     and the product dots' brand colours. */
+  --adm-on-dark-bg: #000000;
+  --adm-on-dark: #ffffff;
+  --adm-on-dark-soft: rgba(255, 255, 255, 0.78);
+  --adm-on-dark-well: rgba(255, 255, 255, 0.16);
+  --adm-on-dark-well-press: rgba(255, 255, 255, 0.28);
+  --adm-dot-rj: #861520;
+  --adm-dot-ms: #0e3b1b;
+  --adm-dot-db: #5b1208;
 }
 
 [data-theme='dark'] {
@@ -95,6 +106,16 @@
   --adm-warn-text: #fb9d5b;
   --adm-warn-tint: rgba(251, 146, 60, 0.13);
   --adm-warn-edge: rgba(251, 146, 60, 0.38);
+  /* Same black zoom. The dots lift so a dark green and a dark brown still read
+     on a dark card (the light theme's exact brand colours all but vanish there). */
+  --adm-on-dark-bg: #000000;
+  --adm-on-dark: #ffffff;
+  --adm-on-dark-soft: rgba(255, 255, 255, 0.78);
+  --adm-on-dark-well: rgba(255, 255, 255, 0.16);
+  --adm-on-dark-well-press: rgba(255, 255, 255, 0.28);
+  --adm-dot-rj: #c85a66;
+  --adm-dot-ms: #5aa870;
+  --adm-dot-db: #c2705a;
 }
 
 /* ---- Type: Inter only, four sizes --------------------------------------------

@@ -10,6 +10,7 @@ import { formatRupees, orderTotal } from '../../utils/prices';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
+import { TestCheckout } from './TestCheckout';
 
 const copy = siteConfig.order;
 const order = siteConfig.contact.order;
@@ -76,9 +77,10 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
   const onCopy = () => {
     void copyText(buildOrderMessage(sent)).then((ok) => setCopied(ok ? 'ok' : 'failed'));
   };
-  // The same total the message carried.
+  // The quote's frozen total, or the old path's packs added up (before delivery,
+  // as the message said). An explicitly unpriced order shows no total at all.
   usePrices();
-  const total = orderTotal(sent.lines, sent.coupon?.prices);
+  const total = sent.unpriced ? null : sent.quote ? sent.quote.total : orderTotal(sent.lines, sent.coupon?.prices)?.total ?? null;
   const meta = [sent.name, sent.pincode, sent.coupon && copy.recapCoupon(sent.coupon.code)].filter(Boolean).join(' · ');
 
   return (
@@ -100,9 +102,9 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
                 </li>
               );
             })}
-            {total && (
+            {total != null && (
               <li className="order-recap__total">
-                {copy.recapTotal} <span>{formatRupees(total.total)}</span>
+                {sent.quote ? copy.recapTotalQuoted : copy.recapTotal} <span>{formatRupees(total)}</span>
               </li>
             )}
           </ul>
@@ -128,6 +130,8 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
           </div>
           {meta && <p className="order-recap__meta">{meta}</p>}
         </div>
+
+        <TestCheckout sent={sent} />
 
         <p className="order-sent__retry">
           <span>{copy.retryLead}</span>

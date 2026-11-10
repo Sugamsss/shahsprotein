@@ -37,6 +37,12 @@ export interface Product {
   weightOptions: string[];
   /** Fallback MRP in whole rupees per pack size; the site reads them with `mrpOf`, which prefers the admin's. */
   mrp: Record<string, number>;
+  /**
+   * The MRP printed on the pack (founder-locked, docs/slice-a-pricing.md). The
+   * admin price book is the site's list; this is what the sticker page prints by
+   * default, so a stale site price can never reach a label.
+   */
+  labelMrp: Record<string, number>;
   /** How long it stays fresh. Kept short on purpose: no preservatives. */
   /** How long it keeps, as shown to customers, e.g. "6 months". */
   shelfLife: string;

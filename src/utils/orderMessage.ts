@@ -76,11 +76,20 @@ export const orderMessageParts = (
   const items = sortLines(input.lines, products).flatMap((line) => {
     const product = products.find((p) => p.id === line.productId);
     if (!product) return [];
+    const snapshotLine = input.quote?.lines.find((item) => item.product_id === line.productId && item.size === line.size);
     const price = packPrice(product, line.size, couponPrices);
-    const amount = price ? formatRupees(price.price * line.quantity) : undefined;
+    const amount = input.unpriced ? undefined : snapshotLine ? formatRupees(snapshotLine.line_total) : price ? formatRupees(price.price * line.quantity) : undefined;
     return [words.line(product.name, line.size, line.quantity, amount)];
   });
-  const total = orderTotal(input.lines, couponPrices, products);
+  const total = input.unpriced ? null : input.quote
+    ? { total: input.quote.total, mrpTotal: input.quote.mrp_total }
+    : orderTotal(input.lines, couponPrices, products);
+  // Only a frozen quote prints delivery: its total includes it. The old priced
+  // path leaves delivery to the chat, exactly as it always did.
+  const deliveryText = input.quote
+    ? (input.quote.delivery_waived ? 'Delivery: Free' : `Delivery: ${formatRupees(input.quote.delivery_fee)}`)
+    : null;
+  const payable = total?.total ?? null;
 
   const details: MessagePart[][] = [];
   if (couponCode) {
@@ -100,9 +109,10 @@ export const orderMessageParts = (
   const blocks: MessagePart[][] = [
     greeting,
     items.length ? [{ text: items.join('\n') }] : [],
-    total ? [{ text: words.total(formatRupees(total.total)) }] : [],
+    total ? [{ text: (input.quote ? words.totalQuoted : words.total)(formatRupees(payable!)) }] : [],
+    deliveryText ? [{ text: deliveryText }] : [],
     details.flatMap((line, i) => (i === 0 ? line : [{ text: '\n' }, ...line])),
-    [{ text: words.closing }],
+    [{ text: input.quote && total ? words.closingQuoted : words.closing }],
   ].filter((block) => block.length > 0);
 
   return blocks.flatMap((block, i) => (i === 0 ? block : [{ text: '\n\n' }, ...block]));

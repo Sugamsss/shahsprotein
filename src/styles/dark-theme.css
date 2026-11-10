@@ -38,6 +38,8 @@
   /* Lifted from #6b778c, which was 3.6:1 on the page (WCAG AA needs 4.5:1). */
   --color-text-muted: #8390a3;
   --color-text-accent: #e5c158;
+  /* Already well past 4.5:1 on the gold badge tint, so it stays the accent. */
+  --color-text-accent-strong: var(--color-text-accent);
 
   /* Accent & Buttons */
   --color-accent-primary: #d4af37;

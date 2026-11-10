@@ -41,6 +41,9 @@
   /* Darkened from #64748b, which was 4.1–4.3:1 on the page gradient (WCAG AA needs 4.5:1). */
   --color-text-muted: #56647a;
   --color-text-accent: #2563eb;
+  /* Accent text on a badge tint (the login chip): --color-text-accent is 3.8-4.0:1
+     on that blue tint, this is 5.0-5.2:1 on the page and 5.5:1 on the popup. */
+  --color-text-accent-strong: #1d4ed8;
 
   /* Accent & Buttons */
   --color-accent-primary: #3b82f6;

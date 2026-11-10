@@ -1,4 +1,12 @@
 .adm-requests__filters { display: flex; gap: .5rem; margin: 1rem 0; }
+/* Find by code: a code and its Find button on one row, wrapping on a phone. */
+.adm-request-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem; }
+.adm-request-find .adm-request-field { flex: 1 1 10rem; }
+.adm-request-find .adm-btn { flex: 0 0 auto; }
+.adm-request-find__hint { margin-top: -.25rem; font-size: var(--adm-text-small); }
+/* A quote with no request behind it: the note, the amounts, and add it by hand. */
+.adm-request-recovery { display: grid; gap: .75rem; }
+.adm-request-recovery > .adm-btn { justify-self: start; }
 .adm-requests__filters button { min-height: 44px; border: 1px solid var(--adm-hairline); border-radius: 999px; padding: .5rem 1rem; color: var(--adm-ink-2); background: var(--adm-surface); }
 .adm-requests__filters button.is-active { color: var(--adm-accent-text); background: var(--adm-accent-tint); }
 .adm-requests__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: .75rem; }
