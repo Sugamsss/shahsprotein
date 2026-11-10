@@ -1179,7 +1179,7 @@ button.drawer-pill:focus-visible { outline: 2px solid var(--color-text-accent); 
   border: 1px solid var(--color-border-badge);
   border-radius: 999px;
   background: var(--color-bg-badge);
-  color: var(--color-text-accent);
+  color: var(--color-text-accent-strong);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
