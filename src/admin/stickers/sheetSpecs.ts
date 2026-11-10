@@ -30,12 +30,16 @@ import type { StickerProductId } from './stickerMath';
 export type StickerSide = 'front' | 'back';
 
 export type SheetId =
+  | 'rj-500g-back'
+  | 'ms-500g-back'
   | 'rj-250g-back'
   | 'ms-250g-back'
   | 'rj-100g-back'
   | 'ms-100g-back'
   | 'db-100g-back'
   | 'db-250g-container'
+  | 'rj-500g-front'
+  | 'ms-500g-front'
   | 'rj-250g-front'
   | 'ms-250g-front'
   | 'rj-100g-front'
@@ -136,6 +140,12 @@ const spec = (s: SheetSpec): SheetSpec => s;
 //
 // `rules` is always one entry per row, in row order: the stamper pairs
 // rules[i] with rows[i]. A layout with rules must list five.
+//
+// The two 500 g backs (same trim, 114 x 142, recovered art) carry the identical
+// details block: every row baseline, the `valueRight` column and all five gold
+// rules sit at the 250 g coordinates, measured on the shipped 500 g sheets
+// (temp/sticker-500g/measure_rules.py reads the same 119.832 / 123.938 /
+// 126.330 / 128.722 / 131.135 as the 250 g back). One factory serves both.
 
 /**
  * The ink every stamped value uses: pure black (owner, 2026-11-10).
@@ -148,8 +158,8 @@ const spec = (s: SheetSpec): SheetSpec => s;
  */
 const VALUE_INK = '#000000';
 
-/** 250 g pouches (Raggi Jaggi + Muesli): 2 x 3, trim 114 x 142. */
-const stamp250g = (): StampLayout => ({
+/** The 114 x 142 backs (250 g and 500 g): 2 x 3, same details block. */
+const stamp114x142 = (): StampLayout => ({
   align: 'right',
   valueRight: 73.8,
   rows: [
@@ -172,8 +182,12 @@ const stamp250g = (): StampLayout => ({
 });
 
 /** 250 g — Raggi Jaggi and Muesli: one block, because the value ink is shared. */
-const STAMP_RJ_250G = stamp250g();
-const STAMP_MS_250G = stamp250g();
+const STAMP_RJ_250G = stamp114x142();
+const STAMP_MS_250G = stamp114x142();
+
+/** 500 g — same 114 x 142 art layout, so the same rows. Measured on both sheets. */
+const STAMP_RJ_500G = stamp114x142();
+const STAMP_MS_500G = stamp114x142();
 
 /** 100 g pouch backs (93.75 x 127.5) — Raggi Jaggi: MRP 7.8, rest 6.0 pt. */
 const STAMP_RJ_100G: StampLayout = {
@@ -260,6 +274,20 @@ const STAMP_CONTAINER: StampLayout = {
 };
 
 export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
+  // 500 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142, the 250 g art block.
+  // No gift twin: the 500 g art is blank MRP only (no gift build was made).
+  'rj-500g-back': spec({
+    id: 'rj-500g-back', side: 'back', asset: '/assets/stickers/rj-500g-back-6up-blank-v1.pdf',
+    cols: 2, rowsCount: 3, cells: 6,
+    bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
+    stamp: STAMP_RJ_500G,
+  }),
+  'ms-500g-back': spec({
+    id: 'ms-500g-back', side: 'back', asset: '/assets/stickers/ms-500g-back-6up-blank-v1.pdf',
+    cols: 2, rowsCount: 3, cells: 6,
+    bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
+    stamp: STAMP_MS_500G,
+  }),
   // 250 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142.
   'rj-250g-back': spec({
     id: 'rj-250g-back', side: 'back', asset: '/assets/stickers/rj-250g-back-6up-blank-v1.pdf',
@@ -305,6 +333,20 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
     bleedOrigin: [1.98, 12.4], pitch: [100.28, 86.48], trim: [96.6, 82.8], bleed: 1.84,
     stamp: STAMP_CONTAINER,
   }),
+  // 500 g fronts — 8-up (2 x 4, bleed 2, trim 120 x 100). The design repo cuts
+  // these at 2 mm bleed, not the 250 g fronts' 3 mm, so the pitch is 124 x 104.
+  'rj-500g-front': spec({
+    id: 'rj-500g-front', side: 'front', asset: '/assets/stickers/rj-500g-front-8up-v1.pdf',
+    cols: 2, rowsCount: 4, cells: 8,
+    bleedOrigin: [26.4, 18.6], pitch: [124, 104], trim: [120, 100], bleed: 2,
+    stamp: null,
+  }),
+  'ms-500g-front': spec({
+    id: 'ms-500g-front', side: 'front', asset: '/assets/stickers/ms-500g-front-8up-v1.pdf',
+    cols: 2, rowsCount: 4, cells: 8,
+    bleedOrigin: [26.4, 18.6], pitch: [124, 104], trim: [120, 100], bleed: 2,
+    stamp: null,
+  }),
   // Fronts — nothing variable. 250 g 8-up (2 x 4, bleed 3, trim 120 x 100).
   'rj-250g-front': spec({
     id: 'rj-250g-front', side: 'front', asset: '/assets/stickers/rj-250g-front-8up-v1.pdf',
@@ -339,20 +381,24 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
   }),
 };
 
+export type StickerPack = '100 g' | '250 g' | '500 g';
+
+const PACK_KEY: Record<StickerPack, string> = { '100 g': '100g', '250 g': '250g', '500 g': '500g' };
+
 /**
  * Which sheet a pick prints on, or null when that combination does not exist.
  * The Date Bites 250 g is the plastic container, which has one sticker and no
- * front. 500 g is deliberately absent: only recovered artwork exists for it.
+ * front. Date Bites has no 500 g pack at all, so that size has no sheet.
  */
 export const specFor = (
   productId: StickerProductId,
-  size: '100 g' | '250 g',
+  size: StickerPack,
   side: StickerSide,
   mode: 'default' | 'gift' | 'custom' = 'default',
 ): SheetSpec | null => {
   const found = productId === 'bites' && size === '250 g'
     ? (side === 'back' ? SHEET_SPECS['db-250g-container'] : null)
-    : SHEET_SPECS[`${productId === 'raggi-jaggi' ? 'rj' : productId === 'muesli' ? 'ms' : 'db'}-${size === '250 g' ? '250g' : '100g'}-${side}` as SheetId] ?? null;
+    : SHEET_SPECS[`${productId === 'raggi-jaggi' ? 'rj' : productId === 'muesli' ? 'ms' : 'db'}-${PACK_KEY[size]}-${side}` as SheetId] ?? null;
   if (!found) return null;
   // A front prints nothing variable, so the kind never changes its art.
   if (found.side === 'front') return found;

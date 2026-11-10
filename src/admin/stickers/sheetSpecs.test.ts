@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modeOptionsFor, specFor } from './sheetSpecs';
+import { SHEET_SPECS, modeOptionsFor, specFor } from './sheetSpecs';
 
 describe('specFor gift swap', () => {
   it('swaps to the gift twin on a 250 g back', () => {
@@ -42,4 +42,44 @@ describe('modeOptionsFor', () => {
   it('no sheet offers nothing', () => {
     expect(modeOptionsFor(null, true)).toEqual({ default: false, gift: false, custom: false });
   });
+});
+
+describe('500 g sheets', () => {
+  it('a 500 g back stamps the 250 g rows (same 114 x 142 art block)', () => {
+    const big = specFor('raggi-jaggi', '500 g', 'back');
+    const small = specFor('raggi-jaggi', '250 g', 'back');
+    expect(big?.asset).toBe('/assets/stickers/rj-500g-back-6up-blank-v1.pdf');
+    expect(big?.stamp).toEqual(small?.stamp);
+    expect(big?.cells).toBe(6);
+    expect(big?.trim).toEqual([114, 142]);
+  });
+
+  it('has no gift twin yet, so Gift is off and Default still works', () => {
+    const spec = specFor('muesli', '500 g', 'back');
+    expect(spec?.giftAsset).toBeUndefined();
+    expect(modeOptionsFor(spec, true)).toEqual({ default: true, gift: false, custom: true });
+  });
+
+  it('the 500 g front prints nothing, at 2 mm bleed', () => {
+    const front = specFor('muesli', '500 g', 'front');
+    expect(front?.stamp).toBeNull();
+    expect(front?.bleed).toBe(2);
+    expect(front?.pitch).toEqual([124, 104]);
+  });
+
+  it('Date Bites has no 500 g pack at all', () => {
+    expect(specFor('bites', '500 g', 'back')).toBeNull();
+    expect(specFor('bites', '500 g', 'front')).toBeNull();
+  });
+});
+
+describe('every sheet is one grid whose pitch is its bleed box', () => {
+  for (const [id, spec] of Object.entries(SHEET_SPECS)) {
+    it(id, () => {
+      expect(spec.cells).toBe(spec.cols * spec.rowsCount);
+      expect(spec.pitch[0]).toBeCloseTo(spec.trim[0] + 2 * spec.bleed, 1);
+      expect(spec.pitch[1]).toBeCloseTo(spec.trim[1] + 2 * spec.bleed, 1);
+      expect(spec.stamp?.rules.length ?? 0).toBe(spec.stamp?.rules.length ? spec.stamp.rows.length : 0);
+    });
+  }
 });

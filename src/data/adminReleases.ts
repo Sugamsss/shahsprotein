@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-11-10-500g-stickers',
+    for: ['admin'],
+    kind: 'new',
+    title: '500 g stickers are here',
+    body: 'Stickers now offers 500 g for Raggi Jaggi and Muesli. Batch, dates and MRP print the same way as 250 g. Date Bites has no 500 g pack, so that chip stays off.',
+  },
+  {
     id: '2026-11-04-batch-numbers',
     for: ['cook', 'admin'],
     kind: 'new',

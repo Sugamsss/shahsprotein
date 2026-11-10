@@ -114,7 +114,9 @@ describe('sheetsNeeded', () => {
   });
 
   it('uses the right per-sheet counts', () => {
-    expect(SHEETS_PER).toEqual({ '250g-back': 6, '100g-back': 9, container: 15 });
+    expect(SHEETS_PER).toEqual({ '500g-back': 6, '250g-back': 6, '100g-back': 9, container: 15 });
+    expect(layoutFor('raggi-jaggi', '500 g')).toBe('500g-back');
+    expect(layoutFor('muesli', '500 g')).toBe('500g-back');
     expect(layoutFor('raggi-jaggi', '250 g')).toBe('250g-back');
     expect(layoutFor('bites', '250 g')).toBe('container');
     expect(layoutFor('bites', '100 g')).toBe('100g-back');

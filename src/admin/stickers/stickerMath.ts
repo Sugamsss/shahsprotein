@@ -32,6 +32,7 @@ export type StickerProductId = keyof typeof BATCH_PREFIX;
 
 /** Stickers per printed sheet, from the label repo's sheet inventory. */
 export const SHEETS_PER = {
+  '500g-back': 6,
   '250g-back': 6,
   '100g-back': 9,
   container: 15,
@@ -40,8 +41,10 @@ export const SHEETS_PER = {
 export type StickerLayout = keyof typeof SHEETS_PER;
 
 /** Which sheet a pack prints on: Date Bites 250 g is the container sticker. */
-export const layoutFor = (productId: StickerProductId, size: '100 g' | '250 g'): StickerLayout =>
-  productId === 'bites' && size === '250 g' ? 'container' : size === '250 g' ? '250g-back' : '100g-back';
+export const layoutFor = (productId: StickerProductId, size: '100 g' | '250 g' | '500 g'): StickerLayout =>
+  productId === 'bites' && size === '250 g' ? 'container'
+    : size === '500 g' ? '500g-back'
+      : size === '250 g' ? '250g-back' : '100g-back';
 
 /** "2026-11-10" → "10-11-2026". The only date format on a sticker. */
 export const formatDDMMYYYY = (day: string): string => {
