@@ -1,0 +1,267 @@
+/* /admin/stickers. Phone: one column, pinned bar. Full-screen stage for the print. */
+
+.adm:has(.adm-st-page) .adm-tabbar { display: none; }
+.adm:has(.adm-st-page) { padding-bottom: 0; }
+
+/* ---- Page shell ---- */
+.adm-st-page { display: grid; gap: 16px; min-height: 100dvh; grid-template-columns: minmax(0, 1fr); }
+.adm-st-page__head { display: grid; }
+.adm-st-page__side { display: contents; }               /* phone: card + bar are page-level items, so the bar can stick for the whole page */
+html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset-bottom)); } /* a focused field never lands under the bar */
+.adm-st-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; align-content: start; }
+.adm-st-grid > * { min-width: 0; }
+.adm-st-page .adm-card { min-width: 0; }
+.adm-st-days, .adm-st-chips, .adm-st-tiles { min-inline-size: 0; }
+
+/* Back link (M1): house .adm-back, phone only via .adm-phone-only. */
+
+@media (max-width: 959px) {
+  .adm-page.adm-st-page { padding-top: 4px; }            /* .adm-page gives 20; the 44 px link row supplies the rest */
+  .adm-st-back { margin-bottom: -4px; }                  /* link text sits mid-row; this keeps the gap to the title at ~12 px */
+}
+
+/* Product tiles: the order form's choice-card pattern, three across. */
+.adm-st-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; border: 0; }
+.adm-st-tiles label { position: relative; display: grid; }
+.adm-st-tiles input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-st-tiles span {
+  display: grid; justify-items: center; gap: 6px; min-height: 88px; padding: 12px 8px;
+  border: 1px solid var(--adm-edge); border-radius: 14px; background: var(--adm-surface);
+  font-weight: 600; font-size: var(--adm-text-small); text-align: center; cursor: pointer;
+}
+.adm-st-tiles input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+.adm-st-tiles input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-st-tiles label:active span { transform: scale(0.97); }
+.adm-st-dot { width: 28px; height: 28px; border-radius: 50%; }
+.adm-st-dot--rj { background: #861520; }
+.adm-st-dot--ms { background: #0e3b1b; }
+.adm-st-dot--db { background: #5b1208; }
+
+/* Size and side chips: native radios, at least 44px tall. */
+.adm-st-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; border: 0; }
+.adm-st-chips label { position: relative; display: grid; }
+.adm-st-chips input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-st-chips span {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--adm-edge); border-radius: 999px; background: var(--adm-surface);
+  font-weight: 600; cursor: pointer;
+}
+.adm-st-chips input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+.adm-st-chips input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-st-chips label:active span { transform: scale(0.97); }
+.adm-st-chips input:disabled + span { opacity: 0.55; cursor: not-allowed; }
+
+/* MRP input: hidden while Gift is picked, shown for Default (read-only) and Custom. */
+.adm-st-mrp { margin-top: 12px; }
+
+/* Made-on seven-day strip: wraps 4 + 3 on phones, 7 across from 600px. */
+.adm-st-days {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  margin: 0; padding: 0; border: 0;
+}
+.adm-st-days + .adm-field { margin-top: 12px; }
+@media (min-width: 600px) { .adm-st-days { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.adm-st-days label { position: relative; display: grid; }
+.adm-st-days input { position: absolute; opacity: 0; pointer-events: none; }
+.adm-st-days span {
+  display: grid; justify-items: center; gap: 2px; min-height: 56px; padding: 8px 4px;
+  border: 1px solid var(--adm-edge); border-radius: 14px; background: var(--adm-surface);
+  font-weight: 600; font-size: var(--adm-text-body); cursor: pointer;
+}
+.adm-st-days span small { color: var(--adm-ink-2); font-weight: 500; font-size: var(--adm-text-small); }
+.adm-st-days input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+.adm-st-days input:checked + span small { color: var(--adm-accent-text); }
+.adm-st-days input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+
+/* The date field shows our own DD-MM-YYYY text; the native picker lies invisibly over it. */
+.adm-st-datepick {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 48px; padding: 0 16px;
+  border: 1px solid var(--color-border-input); border-radius: 14px; background: var(--color-bg-input);
+  color: var(--adm-ink-1); font-size: 1rem; line-height: 1.5; font-variant-numeric: tabular-nums;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.adm-st-datepick svg { flex: none; color: var(--adm-ink-2); }
+.adm-st-datepick input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 1rem;
+}
+.adm-st-datepick input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.adm-st-datepick:focus-within {
+  border-color: var(--color-accent-primary); box-shadow: 0 0 0 3px var(--adm-accent-tint); background: var(--color-bg-input-focus);
+}
+.adm-st-datepick.is-picked { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
+.adm-st-datepick.is-picked svg { color: var(--adm-accent-text); }
+
+/* On-the-sticker read-back: the only confirmation before Create. */
+.adm-st-check { display: grid; gap: 0; margin: 0; padding: 6px 0; list-style: none; }
+.adm-st-check li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.adm-st-check li + li { border-top: 1px solid var(--adm-hairline); }
+.adm-st-check dt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; color: var(--adm-ink-2); }
+.adm-st-check dd { margin: 0; font-weight: 600; font-size: var(--adm-text-head); color: var(--adm-ink-1); text-align: right; white-space: nowrap; }
+.adm-st-mono { font-family: var(--font-family-mono); letter-spacing: 0.02em; }
+/* Tags are labels, not actions: neutral well chips (accent is only for things you tap). */
+.adm-st-tag, .adm-st-rule {
+  display: inline-block; margin-left: 0; padding: 2px 10px; border-radius: 999px;
+  background: var(--adm-well); color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500;
+}
+.adm-st-warn {
+  display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px;
+  background: var(--adm-warn-tint); color: var(--adm-warn-text); font-size: var(--adm-text-body); font-weight: 500;
+}
+.adm-st-note { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; }
+.adm-st-note--body { color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; }
+.adm-st-check-card .adm-muted { margin: 0 0 8px; }
+
+/* Cards entering or leaving (Front swap) fade in, once. */
+@media (prefers-reduced-motion: no-preference) {
+  .adm-st-swap { animation: adm-st-in 160ms var(--ease-glide) both; }
+}
+@keyframes adm-st-in { from { opacity: 0; transform: translateY(4px); } }
+
+/* Pinned footer bar: the two Create buttons, above the home-indicator inset. */
+.adm-st-page__bar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: grid; gap: 8px;
+  margin: 8px calc(var(--adm-gutter-r) * -1) 0 calc(var(--adm-gutter-l) * -1);
+  padding: 12px var(--adm-gutter-r) max(12px, env(safe-area-inset-bottom)) var(--adm-gutter-l);
+  border-top: 1px solid var(--adm-hairline); background: var(--adm-page);
+}
+.adm-st-bar__line { display: grid; align-content: center; min-height: 44px; margin: 0; }
+.adm-st-bar__line p { margin: 0; }
+.adm-st-bar__row { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 12px; line-height: 22px; }
+.adm-st-bar__row > span { white-space: nowrap; }
+.adm-st-bar__row--key { color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; }
+.adm-st-bar__row--sub { color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; }
+.adm-st-bar__reason { color: var(--adm-ink-2); font-size: var(--adm-text-body); font-weight: 500; line-height: 22px; }
+@media (max-width: 359px) { .adm-st-bar__row--sub { font-size: var(--adm-text-small); } }
+.adm-st-bar__btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-st-bar__btns .adm-btn { min-height: 48px; }
+.adm-st-page__bar .adm-st-warn { margin: 0; }
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .adm-st-page { padding-bottom: 12px; }
+  .adm-st-page__bar {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    margin: 8px 0 0; padding: 12px;
+    border: 1px solid var(--adm-edge); border-radius: 24px;
+    background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .adm-st-page__bar { position: static; margin-inline: 0; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); border: 0; background: none; box-shadow: none; }
+}
+
+/* ---- The stage: one sticker, full screen, pinned Download + Send. ---- */
+.adm-st-stage {
+  position: fixed; inset: 0; z-index: 600; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh; background: var(--adm-page);
+}
+.adm-st-stage__head {
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 4px;
+  border-bottom: 1px solid var(--adm-hairline);
+}
+.adm-st-stage__head h2 { margin: 0; font-size: var(--adm-text-head); font-weight: 700; }
+.adm-st-stage__back { min-width: 44px; min-height: 44px; }
+.adm-st-stage__body {
+  min-height: 0; overflow: auto; display: grid; place-items: center; padding: 16px;
+  container-type: size;
+}
+.adm-st-stage__shot {
+  border: 0; background: none; padding: 0; cursor: zoom-in; max-width: 100%;
+}
+.adm-st-stage__shot canvas {
+  display: block; max-width: none; height: auto; aspect-ratio: var(--st-ar, 0.8);
+  width: min(100cqw, 1000px, calc((100cqh - 32px) * var(--st-ar, 0.8)));
+  border-radius: 8px; box-shadow: var(--adm-shadow-lift);
+}
+.adm-st-stage__empty { color: var(--adm-ink-2); }
+.adm-st-stage__bar {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--adm-hairline); background: var(--adm-page);
+}
+.adm-st-stage__bar .adm-btn { min-height: 48px; }
+.adm-st-stage__fallback { padding: 0 16px max(12px, env(safe-area-inset-bottom)); }
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .adm-st-stage__bar { grid-template-columns: repeat(2, minmax(0, 240px)); justify-content: center; }
+  .adm-st-stage__body { padding: 24px; }
+}
+
+/* ---- The zoom view: the gesture surface owns every touch. ---- */
+.adm-st-zoom {
+  position: fixed; inset: 0; z-index: 700; display: grid; grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh; background: #000;
+}
+.adm-st-zoom__head {
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 4px; color: #fff;
+}
+.adm-st-zoom__head h2 { margin: 0; font-size: var(--adm-text-head); font-weight: 700; }
+.adm-st-zoom__close { min-width: 44px; min-height: 44px; color: #fff; }
+.adm-st-zoom__surface {
+  min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
+  display: grid; place-items: center;
+  container-type: size;
+}
+.adm-st-zoom__surface:active { cursor: grabbing; }
+.adm-st-zoom__surface canvas {
+  max-width: none; flex: none; aspect-ratio: var(--st-ar, 0.8); height: auto;
+  width: min(100cqw, calc(100cqh * var(--st-ar, 0.8)));
+  border-radius: 4px; will-change: transform;
+}
+.adm-st-zoom__hint { padding: 8px 16px max(8px, env(safe-area-inset-bottom)); color: rgba(255, 255, 255, 0.8); font-size: var(--adm-text-small); text-align: center; }
+
+/* ≥ 960: form left, read-back + Create right. */
+@media (min-width: 960px) {
+  .adm:has(.adm-st-page) { padding-bottom: 48px; }      /* restores the laptop bottom space the phone rule removed */
+  .adm-st-page {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    column-gap: 32px; row-gap: 16px;
+    align-items: start; min-height: 0;
+    width: 100%; max-width: 1120px; margin-inline: auto;
+  }
+  .adm-st-page__head { grid-column: 1 / -1; }
+  .adm-st-grid       { grid-column: 1; grid-row: 2; }
+  .adm-st-page__side {
+    display: grid; gap: 16px; grid-column: 2; grid-row: 2;
+    position: sticky; top: 96px;                        /* header pill = 16 top + 64 tall + 12 margin; 16 clear of it */
+  }
+  .adm-st-page__bar { position: static; margin: 0; padding: 0; border: 0; background: none; }
+  .adm-st-bar__btns { grid-template-columns: 1fr; gap: 10px; }
+  .adm-st-bar__btns .adm-btn--primary { order: -1; }    /* primary on top. Visual order only; both buttons sit side by side in the tab order */
+  .adm-st-bar__line { display: none; }                  /* the read-back card right above already says it, and two live regions would announce twice */
+  .adm-st-stage {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'head bar' 'body body' 'note note';
+  }
+  .adm-st-stage__head { grid-area: head; padding: 12px 16px 12px 12px; }
+  .adm-st-stage__bar  {
+    grid-area: bar; display: flex; align-content: center; align-items: center; gap: 10px;
+    padding: 12px 24px 12px 0; border-top: 0; border-bottom: 1px solid var(--adm-hairline); background: none;
+  }
+  .adm-st-stage__bar .adm-btn { min-height: 44px; min-width: 132px; }
+  .adm-st-stage__body { grid-area: body; padding: 24px 32px 32px; }
+  .adm-st-stage__fallback {
+    grid-area: note; display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 0 24px 16px;
+  }
+}
+@media (min-width: 960px) and (max-height: 640px) {
+  .adm-st-page__side { position: static; }              /* a short laptop: let it scroll with the page rather than clip */
+}
+
+/* Short landscape phone: header row on top; sticker left; buttons stacked right. */
+@media (max-height: 480px) and (orientation: landscape) {
+  .adm-st-stage {
+    grid-template-columns: minmax(0, 1fr) 200px; grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'head head' 'body bar';
+  }
+  .adm-st-stage__head { grid-area: head; }
+  .adm-st-stage__body { grid-area: body; padding: 8px 16px; }
+  .adm-st-stage__bar  {
+    grid-area: bar; display: grid; grid-template-columns: 1fr; align-content: center; gap: 10px; min-width: 0;
+    padding: 12px max(16px, env(safe-area-inset-right)) 12px 16px; border-top: 0; border-left: 1px solid var(--adm-hairline);
+  }
+  .adm-st-stage__fallback { grid-column: 1 / -1; }
+}
