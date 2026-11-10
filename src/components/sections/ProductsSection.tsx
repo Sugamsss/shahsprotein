@@ -195,6 +195,10 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
 export const ProductsSection: React.FC = () => {
   const { theme } = useTheme();
   const { session } = useCustomerAuth();
+  // The offer's words only when there is an offer: on the old priced path the
+  // cards show one plain MRP, and "your price is lower" beside it would be a
+  // promise the page is not making.
+  const offer = useWebsiteOffer();
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { addItem, openOrder, closeOrder, isOpen, openedFrom } = useOrder();
@@ -231,7 +235,7 @@ export const ProductsSection: React.FC = () => {
             <p className="portfolio-intro__eyebrow"><Badge>{text.eyebrow}</Badge></p>
             <h2><HighlightedText segments={text.heading} as="em" /></h2>
             <p>{text.intro}</p>
-            <p className="portfolio-intro__price-note">{text.priceHonesty}</p>
+            {offer && <p className="portfolio-intro__price-note">{text.priceHonesty}</p>}
             {!session && <Link className="offer-login-chip" to="/login?return=%2F%23products">{text.loginChip}</Link>}
           </div>
           <div className="portfolio-grid">
