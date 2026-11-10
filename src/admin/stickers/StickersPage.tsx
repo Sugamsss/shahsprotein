@@ -23,6 +23,7 @@ import {
 } from './stickerMath';
 import { modeOptionsFor, specFor, type SheetSpec, type StickerPack, type StickerSide } from './sheetSpecs';
 import { canSharePdf, pdfFile, shareCancelled } from './shareSheet';
+import { clearPrepare, joinablePrepare, livePrepared, type PrepareJob } from './prepareCache';
 import { warmPdfjs } from './pdfjs';
 import { STAGE_TARGET_PX, ZOOM_TARGET_PX, sheetPreview } from './preview';
 
@@ -330,13 +331,11 @@ const StickersPage: React.FC = () => {
    */
   const preparedRef = useRef<Prepared | null>(null);
   /** The prepare currently in flight, so a tap joins it instead of repeating it. */
-  const preparingRef = useRef<{ key: string; promise: Promise<Prepared | null> } | null>(null);
+  const preparingRef = useRef<PrepareJob<Prepared> | null>(null);
 
   /** What is ready for these picks, and only while its bytes are still live. */
-  const readyFor = useCallback((key: string): Prepared | null => {
-    const ready = preparedRef.current;
-    return ready !== null && ready.key === key && revokeRef.current === ready.build.url ? ready : null;
-  }, []);
+  const readyFor = useCallback((key: string): Prepared | null =>
+    livePrepared(preparedRef.current, key, revokeRef.current), []);
 
   /** Bytes for the current picks. No state: the callers decide what to say. */
   const composeBuild = useCallback(async (): Promise<Build> => {
@@ -386,7 +385,8 @@ const StickersPage: React.FC = () => {
   const prepare = useCallback((key: string): Promise<Prepared | null> => {
     const already = readyFor(key);
     if (already) return Promise.resolve(already);
-    if (preparingRef.current?.key === key) return preparingRef.current.promise;
+    const joined = joinablePrepare(preparingRef.current, key);
+    if (joined) return joined;
     const promise = (async (): Promise<Prepared | null> => {
       const build = await composeBuild();
       const canvas = await sheetPreview(build.bytes, build.spec, STAGE_TARGET_PX);
@@ -397,8 +397,14 @@ const StickersPage: React.FC = () => {
       preparedRef.current = ready;
       return ready;
     })().catch(() => null);
-    preparingRef.current = { key, promise };
-    return promise;
+    // Joining is only for work still running: once this lands its URL can be
+    // revoked by any later build, so a finished job must not be handed out again.
+    const job: PrepareJob<Prepared> = { key, promise };
+    const settled = promise.finally(() => {
+      preparingRef.current = clearPrepare(preparingRef.current, job);
+    });
+    preparingRef.current = job;
+    return settled;
   }, [composeBuild, readyFor]);
 
   // Once the picks sit still, have the sheet and its picture ready before the
@@ -470,8 +476,11 @@ const StickersPage: React.FC = () => {
       // joined, and if none is, this tap starts it. Building here as well would
       // draw the same sticker twice at once, which is slower than either.
       const ready = canBuild ? await prepare(buildKey) : null;
-      if (ready) {
-        setBuild(ready.build);
+      // What comes back was checked when it landed; a newer build may have
+      // revoked its URL since, so the stage only opens on bytes still saveable.
+      const live = livePrepared(ready, buildKey, revokeRef.current);
+      if (live) {
+        setBuild(live.build);
         setStage('stage');
         return;
       }
