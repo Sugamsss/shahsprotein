@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ListTodo, ClipboardList, Download, History, Layers, Mail, Settings, Ticket, Users, type LucideIcon } from 'lucide-react';
+import { ChevronRight, ListTodo, ClipboardList, Download, History, Layers, Mail, Settings, Sticker, Ticket, Users, type LucideIcon } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
 import { getCoupons, getEmailList, getTodos, getWebsiteRequests } from '../api';
 import { useAdminMe } from '../auth';
@@ -64,6 +64,12 @@ const MorePage: React.FC = () => {
         </Link>
         <Link to="/admin/email-list">
           <Row Icon={Mail} title={copy.more.emailList[0]} sub={people === undefined ? copy.more.emailList[1] : copy.emailList.people(people)} />
+        </Link>
+      </section>
+      <h2 className="adm-more__group">{copy.stickers.moreGroup}</h2>
+      <section className="adm-card adm-list" aria-label={copy.stickers.moreGroup}>
+        <Link to="/admin/stickers">
+          <Row Icon={Sticker} title={copy.stickers.moreRow[0]} sub={copy.stickers.moreRow[1]} />
         </Link>
       </section>
       <h2 className="adm-more__group">{copy.more.groups.records}</h2>

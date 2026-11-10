@@ -30,6 +30,7 @@
 @import './journal/journal.css';
 @import './todos/todos.css';
 @import './ingredients/ingredients.css';
+@import './stickers/stickers.css';
 
 /* ---- Admin tokens (design's "proposed" set, the ones in use) ---------------- */
 [data-theme='light'] {
