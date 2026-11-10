@@ -22,6 +22,7 @@ import { checkCoupon, looksLikeCouponCode, normalizeCouponCode } from '../servic
 import { firstInStockSize, useStock } from '../services/stockService';
 import { useCustomerAuth } from './CustomerAuthContext';
 import { quoteWebsiteOrder } from '../services/offerService';
+import { sliceAMissing, useSliceAMissing } from '../services/sliceA';
 import type { WebsiteQuote } from '../types/offer';
 import { useWebsiteOffer } from '../services/priceService';
 
@@ -187,6 +188,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const stock = useStock();
   const { session } = useCustomerAuth();
   const offer = useWebsiteOffer();
+  // Slice A's RPCs answer 404 until its migrations are applied. Until then the
+  // cart keeps the old live-price-book display and priced message, so a quote
+  // is neither asked for nor expected.
+  const legacyPricing = useSliceAMissing();
   const [quote, setQuote] = useState<WebsiteQuote | null>(null);
   // The checked coupon the quote was asked with; the snapshot only names a coupon that won.
   const [quoteCoupon, setQuoteCoupon] = useState<string | null>(null);
@@ -231,18 +236,21 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const generation = ++quoteGeneration.current;
     const requestedCoupon = coupon.status === 'valid' ? coupon.code : null;
     setQuote(null);
-    if (!lines.length) { setQuoteLoading(false); setQuoteError(false); return; }
+    if (!lines.length || legacyPricing) { setQuoteLoading(false); setQuoteError(false); return; }
     setQuoteLoading(true); setQuoteError(false);
     const owner = sessionId;
     void quoteWebsiteOrder(lines, code, requestedCoupon).then((result) => {
       if (quoteGeneration.current !== generation || sessionRef.current !== owner) return;
+      // A 404 flipped the site to its old priced path in the meantime: this
+      // answer no longer applies, and no "could not check" note belongs there.
+      if (sliceAMissing()) { setQuote(null); setQuoteError(false); setQuoteLoading(false); return; }
       if (result.status === 'ready' && Date.parse(result.quote.expires_at) > Date.now()) {
         setQuote(result.quote);
         setQuoteCoupon(requestedCoupon);
       } else { setQuote(null); setQuoteError(true); }
       setQuoteLoading(false);
     });
-  }, [storedLines, stock, sessionId, coupon.status === 'valid' ? coupon.code : null, offer?.version, quoteRevision]);
+  }, [storedLines, stock, sessionId, coupon.status === 'valid' ? coupon.code : null, offer?.version, quoteRevision, legacyPricing]);
 
   // A quote is what Send freezes, so it must never outlive the server's window.
   // Asking again keeps the cart usable while the customer finishes typing.
@@ -417,9 +425,12 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       address: cleanDeliveryAddress(addressRef.current),
       coupon: messageCoupon,
       quote: quoteMatches ? quote : null,
-      unpriced: !quoteMatches,
+      // An unpriced message is Slice A's honest failure. On the old path (no
+      // Slice A server) the message is priced from the price book, as it
+      // always was, so nothing is sent blank.
+      unpriced: !legacyPricing && !quoteMatches,
     };
-  }, [code, name, phone, address, messageCoupon, quote, quoteCoupon]);
+  }, [code, name, phone, address, messageCoupon, quote, quoteCoupon, legacyPricing]);
 
   const currentUrl = useCallback(() => orderMessageUrl(currentOrder()), [currentOrder]);
 

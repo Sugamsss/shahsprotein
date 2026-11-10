@@ -10,6 +10,7 @@ import { CouponField } from './CouponField';
 import { MessagePreview } from './MessagePreview';
 import { DeliveryAddressFields } from './DeliveryAddressFields';
 import { cleanPhone, isValidDeliveryAddress } from '../../utils/deliveryAddress';
+import { useSliceAMissing } from '../../services/sliceA';
 
 const copy = siteConfig.order;
 
@@ -26,6 +27,9 @@ export const OrderCheckout: React.FC = () => {
   const phoneRef = useRef<HTMLInputElement>(null);
   const sendRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
   const id = useId();
+  // Old priced path: with no Slice A server there is no quote to wait for, so
+  // Send opens as soon as the details are there, exactly as before Slice A.
+  const legacyPricing = useSliceAMissing();
 
   // An error shows once someone has typed in a field and left it, or pressed Send.
   // It goes as soon as the field is valid. An untouched field stays quiet until Send.
@@ -148,7 +152,7 @@ export const OrderCheckout: React.FC = () => {
             <WhatsAppIcon size={18} />
             <span>{copy.send}</span>
           </button>
-        ) : valid && !quoteLoading && (quote || quoteError) ? (
+        ) : valid && !quoteLoading && (legacyPricing || quote || quoteError) ? (
           <a
             ref={sendRef as React.RefObject<HTMLAnchorElement>}
             href={currentUrl()}

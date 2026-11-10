@@ -4,8 +4,9 @@ import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import type { SentOrder } from '../../context/OrderContext';
 import { saveOrder } from '../../services/orderService';
+import { usePrices } from '../../services/priceService';
 import { buildOrderMessage } from '../../utils/orderMessage';
-import { formatRupees } from '../../utils/prices';
+import { formatRupees, orderTotal } from '../../utils/prices';
 import { useModalClose } from '../ui/Modal';
 import { WhatsAppIcon } from '../ui/WhatsAppIcon';
 import { lineKey } from './orderLineKey';
@@ -76,8 +77,10 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
   const onCopy = () => {
     void copyText(buildOrderMessage(sent)).then((ok) => setCopied(ok ? 'ok' : 'failed'));
   };
-  // Recap the immutable total from the quote that was sent.
-  const total = sent.unpriced ? null : sent.quote ? { total: sent.quote.total } : null;
+  // The quote's frozen total, or the old path's packs added up (before delivery,
+  // as the message said). An explicitly unpriced order shows no total at all.
+  usePrices();
+  const total = sent.unpriced ? null : sent.quote ? sent.quote.total : orderTotal(sent.lines, sent.coupon?.prices)?.total ?? null;
   const meta = [sent.name, sent.pincode, sent.coupon && copy.recapCoupon(sent.coupon.code)].filter(Boolean).join(' · ');
 
   return (
@@ -99,9 +102,9 @@ export const OrderSent: React.FC<OrderSentProps> = ({ sent, onNewOrder }) => {
                 </li>
               );
             })}
-            {total && (
+            {total != null && (
               <li className="order-recap__total">
-                {sent.quote ? copy.recapTotalQuoted : copy.recapTotal} <span>{formatRupees(total.total)}</span>
+                {sent.quote ? copy.recapTotalQuoted : copy.recapTotal} <span>{formatRupees(total)}</span>
               </li>
             )}
           </ul>

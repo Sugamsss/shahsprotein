@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { formatRupees } from '../../utils/prices';
+import { formatRupees, type OrderTotal } from '../../utils/prices';
 import { siteConfig } from '../../data/siteConfig';
 import { deliveryNudge, quoteSavings } from '../../utils/orderOffer';
 import type { WebsiteQuote } from '../../types/offer';
@@ -42,3 +42,29 @@ export const OrderTotalRow: React.FC<{ quote: WebsiteQuote }> = ({ quote }) => {
     <p className="order-total__savings">{copy.savingsLine(formatRupees(savings))}</p>
   </div>;
 };
+
+/**
+ * The old priced path (no Slice A server): the packs added up at the prices on
+ * the lines, a coupon saving struck through, and a note that delivery comes
+ * later. The wording and markup are the ones the site shipped with.
+ */
+export const OrderMrpTotalRow: React.FC<{ total: OrderTotal }> = ({ total }) => (
+  <div className="order-total">
+    <p className="order-total__row">
+      <span className="order-total__label">{copy.totalLabel}</span>
+      <span className="order-total__amount">
+        {total.total < total.mrpTotal && (
+          <>
+            <s>
+              <span className="visually-hidden">{copy.linePriceWas}</span>
+              {formatRupees(total.mrpTotal)}
+            </s>{' '}
+            <span className="visually-hidden">{copy.linePriceNow}</span>
+          </>
+        )}
+        {formatRupees(total.total)}
+      </span>
+    </p>
+    <p className="order-total__note">{copy.totalNote}</p>
+  </div>
+);

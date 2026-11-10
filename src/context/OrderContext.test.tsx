@@ -6,6 +6,7 @@ import { OrderProvider, useOrder, type OrderContextType } from './OrderContext';
 import type { QuoteResult, WebsiteQuote } from '../types/offer';
 import type { OrderLine } from '../types/order';
 import { saveOrder } from '../services/orderService';
+import { markSliceAMissing, resetSliceA } from '../services/sliceA';
 import { buildOrderMessage } from '../utils/orderMessage';
 
 // Synthetic rates only: never a real coupon code, phone or customer record.
@@ -235,5 +236,24 @@ describe('OrderContext quote lifecycle', () => {
     render();
     expect(orderTypes).toEqual([{ productId: 'muesli', size: '250 g', quantity: 1 }]);
     expect(order.name).toBe('');
+  });
+
+  it('prices the message from the price book when Slice A is not in the database', async () => {
+    // A 404 from the Slice A RPCs flips the site back to its old priced path:
+    // no quote is asked for, no "could not check" note, and the message keeps
+    // the prices the customer saw.
+    run((value) => { value.addItem('muesli', '250 g'); value.setName('Asha'); value.setPhone('919800000008'); });
+    await act(async () => undefined);
+    await act(async () => { markSliceAMissing(); });
+    expect(orderState.quote).toHaveBeenCalledTimes(1);
+    expect(order.quote).toBeNull();
+    expect(order.quoteError).toBe(false);
+    expect(order.quoteLoading).toBe(false);
+    const sent = order.currentOrder();
+    expect(sent.unpriced).toBe(false);
+    expect(sent.quote).toBeNull();
+    expect(buildOrderMessage(sent)).toContain('• Muesli 250 g × 1 · ₹290');
+    expect(buildOrderMessage(sent)).toContain('Total: ₹290 (before delivery)');
+    resetSliceA();
   });
 });

@@ -7,12 +7,24 @@ import { productsData } from './products';
 const SERVER_PRODUCT_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const SERVER_SIZE = /^[0-9]{1,5} ?(g|kg)$/;
 
-describe('founder-locked Slice A fallback MRPs', () => {
-  it('keeps the exact five pack MRPs aligned with the public offer', () => {
-    expect(Object.fromEntries(productsData.flatMap((p) => Object.entries(p.mrp).map(([size, price]) => [`${p.id}|${size}`, price])))).toEqual({
+describe('pack prices', () => {
+  // The printed MRP is founder-locked (docs/slice-a-pricing.md); the sticker
+  // page prints these, so a wrong number here reaches a real label.
+  it('keeps the founder-locked printed MRP for all five packs', () => {
+    expect(Object.fromEntries(productsData.flatMap((p) => Object.entries(p.labelMrp).map(([size, price]) => [`${p.id}|${size}`, price])))).toEqual({
       'muesli|250 g': 399, 'muesli|500 g': 699,
       'raggi-jaggi|250 g': 249, 'raggi-jaggi|500 g': 479,
       'bites|250 g': 319,
+    });
+  });
+
+  // The site fallback (what shows before the price book answers) stays on the
+  // live price book's values, so a cold load never flashes another MRP.
+  it('keeps the site fallback on the live price book', () => {
+    expect(Object.fromEntries(productsData.flatMap((p) => Object.entries(p.mrp).map(([size, price]) => [`${p.id}|${size}`, price])))).toEqual({
+      'muesli|250 g': 290, 'muesli|500 g': 550,
+      'raggi-jaggi|250 g': 175, 'raggi-jaggi|500 g': 325,
+      'bites|250 g': 225,
     });
   });
 });

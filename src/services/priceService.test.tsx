@@ -20,7 +20,7 @@ const storage = new Map<string, string>();
 const localStorageMock = { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => { storage.set(key, value); }, removeItem: (key: string) => { storage.delete(key); }, clear: () => storage.clear() };
 
 /** A fresh copy of the service (its fetch runs once per page), mounted in a component. */
-const mount = async (respond: () => Promise<Response>) => {
+const mount = async (respond: (input: RequestInfo | URL) => Promise<Response>) => {
   vi.stubGlobal('fetch', vi.fn(respond));
   vi.resetModules();
   const { usePrices, useWebsiteOffer } = await import('./priceService');
@@ -118,5 +118,31 @@ describe('priceService', () => {
     vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error('offline')));
     await wait(1300);
     expect(offered).toBe(false);
+  });
+
+  it('shows the live price book while the offer function is not in the database', async () => {
+    // Production today: get_website_offer answers 404, get_product_prices answers
+    // the admin's base prices. The cards must show those, never a stale fallback.
+    const priceBook = [
+      { product_id: 'muesli', size: '250 g', price: 275 },
+      { product_id: 'muesli', size: '500 g', price: 550 },
+      { product_id: 'raggi-jaggi', size: '250 g', price: 175 },
+      { product_id: 'raggi-jaggi', size: '500 g', price: 325 },
+      { product_id: 'bites', size: '250 g', price: 225 },
+    ];
+    await mount((input) => (String(input).includes('get_website_offer')
+      ? Promise.resolve(new Response(null, { status: 404 }))
+      : Promise.resolve(Response.json(priceBook))));
+    expect(offered).toBe(false);
+    expect(shown).toBe('275');
+    expect(JSON.parse(localStorageMock.getItem('shahs-prices-v3')!)).toEqual(priceBook);
+  });
+
+  it('starts the old list from the cache when the offer is not in the database', async () => {
+    localStorageMock.setItem('shahs-prices-v3', JSON.stringify([{ product_id: 'muesli', size: '250 g', price: 261 }]));
+    await mount((input) => (String(input).includes('get_website_offer')
+      ? Promise.resolve(new Response(null, { status: 404 }))
+      : Promise.resolve(new Response(null, { status: 500 }))));
+    expect(shown).toBe('261');
   });
 });

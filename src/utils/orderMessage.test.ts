@@ -19,14 +19,12 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'example10', checked: true } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Raggi Jaggi 250 g × 1 · ₹249\n'
-      + '• Muesli 250 g × 2 · ₹798\n'
-      + '• Muesli 500 g × 1 · ₹699\n'
-      + '• Date Bites 250 g × 1 · ₹319\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹175\n'
+      + '• Muesli 250 g × 2 · ₹580\n'
+      + '• Muesli 500 g × 1 · ₹550\n'
+      + '• Date Bites 250 g × 1 · ₹225\n'
       + '\n'
-      + 'Total: ₹2,065\n'
-      + '\n'
-      + 'Delivery: Free\n'
+      + 'Total: ₹1,530 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Phone: 9876543210\n'
@@ -42,12 +40,12 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Raggi Jaggi 250 g × 1 · ₹249\n'
+      + '• Raggi Jaggi 250 g × 1 · ₹175\n'
       + '• Muesli 250 g × 2 · ₹500\n'
-      + '• Muesli 500 g × 1 · ₹699\n'
-      + '• Date Bites 250 g × 1 · ₹319\n'
+      + '• Muesli 500 g × 1 · ₹550\n'
+      + '• Date Bites 250 g × 1 · ₹225\n'
       + '\n'
-      + 'Total: ₹1,767\n' + '\n' + 'Delivery: Free\n'
+      + 'Total: ₹1,450 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10\n'
       + 'Phone: 9876543210\n'
@@ -63,7 +61,7 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: odd, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 1 · ₹399\n'
+      + '• Muesli 250 g × 1 · ₹290\n'
       + '• Date Bites 500 g × 1\n'
       + '\n'
       + 'Phone: 9876543210\n'
@@ -79,11 +77,9 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone: '919876543210', address: { premises:'Flat 4B', area:'Shivaji Nagar', city:'Satara', state:'Maharashtra', pincode:'415001' }, coupon: { code: 'EXAMPLE10', checked: false } })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹798\n'
+      + '• Muesli 250 g × 2 · ₹580\n'
       + '\n'
-      + 'Total: ₹798\n'
-      + '\n'
-      + 'Delivery: Free\n'
+      + 'Total: ₹580 (before delivery)\n'
       + '\n'
       + 'Coupon: EXAMPLE10 (not checked yet)\n'
       + 'Phone: 9876543210\n'
@@ -95,11 +91,9 @@ describe('buildOrderMessage', () => {
     expect(buildOrderMessage({ code: 'SN-7KQ4M', lines: one, name: 'Anjali', pincode: '415001', phone:'919876543210', address:{premises:'Flat 4B',area:'Shivaji Nagar',city:'Satara',state:'Maharashtra',pincode:'415001'}, coupon: null })).toBe(
       "Hi! I'm Anjali, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹798\n'
+      + '• Muesli 250 g × 2 · ₹580\n'
       + '\n'
-      + 'Total: ₹798\n'
-      + '\n'
-      + 'Delivery: Free\n'
+      + 'Total: ₹580 (before delivery)\n'
       + '\n'
       + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'
@@ -120,11 +114,9 @@ describe('buildOrderMessage', () => {
     expect(message).toBe(
       "Hi! I'm Priya Shah, and I'd like to place an order:\n"
       + '\n'
-      + '• Muesli 250 g × 2 · ₹798\n'
+      + '• Muesli 250 g × 2 · ₹580\n'
       + '\n'
-      + 'Total: ₹798\n'
-      + '\n'
-      + 'Delivery: Free\n'
+      + 'Total: ₹580 (before delivery)\n'
       + '\n'
       + 'Phone: 9876543210\n'
       + 'Deliver to: Flat 4B, Shivaji Nagar, Satara, Maharashtra, 415001\n'

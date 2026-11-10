@@ -3,9 +3,13 @@ import { productsData } from '../data/products';
 import type { CouponPrices } from '../types/order';
 import { getPublicRpc } from './publicRpc';
 import { parseWebsiteOffer } from './offerService';
-import { couponPriceKey, setLiveMrps, setLiveOfferPrices } from '../utils/prices';
+import { markSliceAMissing, sliceAMissing } from './sliceA';
+import { couponPriceKey, parseCouponPrices, setLiveMrps, setLiveOfferPrices, getLiveMrps } from '../utils/prices';
 
 const STORAGE_KEY = 'shahs-prices-v2';
+// The live price book (`get_product_prices`) is the pre-Slice-A list, kept apart
+// from the offer's cache so a rollback shows the same MRPs it always did.
+const PRICE_BOOK_KEY = 'shahs-prices-v3';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const TIMEOUT_MS = 5000;
 interface PriceEnvelope { schema_version: 1; fetched_at: number; offer: unknown }
@@ -81,29 +85,73 @@ const readCache = (): void => {
   } catch { /* Blocked or malformed storage means fetch current prices. */ }
 };
 
+/** The live price book's MRPs, or null when there's nothing usable. */
+const priceBookFrom = (raw: unknown): CouponPrices | null => {
+  const mrps = parseCouponPrices(raw);
+  return Object.keys(mrps).length > 0 ? mrps : null;
+};
+
+/**
+ * Show the price book (`get_product_prices`) as the MRPs: production's list
+ * until Slice A's offer exists. An offer that is already on screen owns the
+ * MRPs (its catalogue has to match its prices), so this steps aside for one.
+ */
+const applyPriceBook = (raw: unknown, announce = true): void => {
+  const mrps = priceBookFrom(raw);
+  if (!mrps || currentOffer) return;
+  setLiveMrps(mrps);
+  if (announce) {
+    try { window.localStorage.setItem(PRICE_BOOK_KEY, JSON.stringify(raw)); } catch { /* Storage is optional. */ }
+    notify();
+  }
+};
+
+const readPriceBookCache = (): void => {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(PRICE_BOOK_KEY) ?? 'null');
+    if (raw) applyPriceBook(raw, false);
+  } catch { /* Blocked or malformed storage means ask for the prices. */ }
+};
+
+/** No usable offer: keep the live price book's MRPs, cached for the next visit. */
+const refreshPriceBook = async (generation: number): Promise<void> => {
+  const raw = await getPublicRpc('get_product_prices', { timeoutMs: TIMEOUT_MS });
+  if (generation !== refreshGeneration) return;
+  applyPriceBook(raw);
+};
+
 const refresh = async (): Promise<void> => {
+  // A 404 already said Slice A is not in this database: the price book is the list.
+  if (sliceAMissing()) return;
   const generation = ++refreshGeneration;
   try {
-    const data = await getPublicRpc('get_website_offer', { timeoutMs: TIMEOUT_MS });
-    if (generation !== refreshGeneration) return; // a newer read already won
+    const data = await getPublicRpc('get_website_offer', { timeoutMs: TIMEOUT_MS, onMissing: markSliceAMissing });
+    if (generation !== refreshGeneration) return;
     const parsed = fromOffer(data);
     if (parsed) { apply(parsed.offer, parsed.prices, data); return; }
-    if (currentOffer && Date.parse(currentOffer.expires_at) <= Date.now()) clear();
+    if (currentOffer && Date.parse(currentOffer.expires_at) > Date.now()) return;
   } catch {
     if (generation !== refreshGeneration) return;
-    // Offline or failed: keep a list that is still valid; never keep an expired one.
-    if (currentOffer && Date.parse(currentOffer.expires_at) <= Date.now()) clear();
+    // Offline or failed while a list is still valid: keep it.
+    if (currentOffer && Date.parse(currentOffer.expires_at) > Date.now()) return;
   }
+  if (currentOffer) clear();
+  await refreshPriceBook(generation);
 };
 
 const start = () => {
   if (started) return;
   started = true;
-  readCache();
   void refresh();
   window.addEventListener('focus', () => void refresh());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refresh(); });
 };
+// Before the first render, so a repeat visit never flashes another price. The
+// offer wins when both are cached: its catalogue has to match its own MRPs.
+if (typeof window !== 'undefined') {
+  readPriceBookCache();
+  readCache();
+}
 const subscribe = (listener: () => void) => { listeners.add(listener); start(); return () => listeners.delete(listener); };
-export const usePrices = (): Readonly<CouponPrices> | null => useSyncExternalStore(subscribe, () => currentPrices);
+export const usePrices = (): Readonly<CouponPrices> | null => useSyncExternalStore(subscribe, () => getLiveMrps());
 export const useWebsiteOffer = () => useSyncExternalStore(subscribe, () => currentOffer);

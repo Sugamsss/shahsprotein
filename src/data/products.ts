@@ -11,7 +11,8 @@ const orderTile = (name: string): ImageSet => ({
 // The English product portfolio is the source for this launch range. Nutrition
 // is populated only where a product label has been supplied. `mrp` is the
 // fallback, one per pack size in weightOptions: the site shows the admin's
-// base prices (priceService) once it has them.
+// base prices (priceService) once it has them. `labelMrp` is the founder-locked
+// MRP printed on the pack, which the sticker page uses by default.
 // Each ingredient sprite follows its ingredient list in row-major order, three columns per row.
 // Sprites are served with a one-year immutable cache, so a changed sprite needs a new filename.
 // Sprites are exported at 216px per tile as WebP; the chips crop each tile into a round picture.
@@ -45,7 +46,8 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '15.8 mg', perServing: '4.8 mg' },
     ],
     weightOptions: ['250 g', '500 g'],
-    mrp: { '250 g': 249, '500 g': 479 },
+    mrp: { '250 g': 175, '500 g': 325 },
+    labelMrp: { '250 g': 249, '500 g': 479 },
     shelfLife: '6 months',
     contains: 'Tree nuts (cashew), dairy (ghee)',
   },
@@ -96,7 +98,8 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '54.1 mg', perServing: '16.2 mg' },
     ],
     weightOptions: ['250 g', '500 g'],
-    mrp: { '250 g': 399, '500 g': 699 },
+    mrp: { '250 g': 290, '500 g': 550 },
+    labelMrp: { '250 g': 399, '500 g': 699 },
     shelfLife: '6 months',
     contains: 'Tree nuts (almonds), gluten (wheat, oats)',
   },
@@ -129,7 +132,8 @@ export const productsData: Product[] = [
       { label: 'Sodium', per100g: '3.3 mg', perServing: '1.0 mg' },
     ],
     weightOptions: ['250 g'],
-    mrp: { '250 g': 319 },
+    mrp: { '250 g': 225 },
+    labelMrp: { '250 g': 319 },
     shelfLife: '21 days',
     madeToOrder: true,
     contains: 'Tree nuts (almonds, cashew), dairy (ghee)',

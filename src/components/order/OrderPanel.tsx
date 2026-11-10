@@ -4,8 +4,10 @@ import { useOrder } from '../../context/OrderContext';
 import { productsData } from '../../data/products';
 import { siteConfig } from '../../data/siteConfig';
 import { usePrices } from '../../services/priceService';
+import { useSliceAMissing } from '../../services/sliceA';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { orderUrl, trackOrderChat } from '../../utils/contact';
+import { orderTotal, packPrice } from '../../utils/prices';
 import type { OrderLine } from '../../types/order';
 import { OrderCheckout } from './OrderCheckout';
 import { OrderEmpty } from './OrderEmpty';
@@ -13,7 +15,7 @@ import { OrderLineRow, OrderUndoRow, type LineFlash } from './OrderLineRow';
 import { OrderSent } from './OrderSent';
 import { OrderShelf } from './OrderShelf';
 import { lineKey } from './orderLineKey';
-import { OrderTotalRow } from './OrderTotalRow';
+import { OrderMrpTotalRow, OrderTotalRow } from './OrderTotalRow';
 
 const copy = siteConfig.order;
 
@@ -86,10 +88,16 @@ interface UndoState {
 export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false }) => {
   const {
     lines, itemCount, maxQuantity, addItem, setQuantity, changeSize, removeItem,
-    lastAdd, droppedOnLoad, sent, startNewOrder, sendLines, quote,
+    lastAdd, droppedOnLoad, sent, startNewOrder, sendLines, quote, coupon,
   } = useOrder();
+  // Old priced path (no Slice A server): the cart shows the price book's MRPs (an
+  // accepted coupon's own prices on its packs) and adds them up, as it did before
+  // Slice A. With Slice A, every pack comes from the one quote.
+  const legacyPricing = useSliceAMissing();
+  const couponPrices = coupon.status === 'valid' ? coupon.prices : null;
   // Only what's sent (back-soon lines aren't), so it matches the message.
   usePrices();
+  const legacyTotal = legacyPricing ? orderTotal(sendLines, couponPrices) : null;
   const stock = useStock();
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -294,7 +302,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           maxQuantity={maxQuantity}
           flash={flash?.key === key ? flash : undefined}
           notes={notes}
-          price={quote ? (() => { const priced = quote.lines.find((item) => item.product_id === line.productId && item.size === line.size); return priced ? { price: priced.unit_price, mrp: priced.mrp } : null; })() : null}
+          price={quote ? (() => { const priced = quote.lines.find((item) => item.product_id === line.productId && item.size === line.size); return priced ? { price: priced.unit_price, mrp: priced.mrp } : null; })() : legacyPricing ? packPrice(product, line.size, couponPrices) : null}
           leaving={leavingKey === key}
           isSizeOut={(size) => stock.isOut(line.productId, size)}
           backSoonNote={backSoonNote}
@@ -335,6 +343,7 @@ export const OrderPanel: React.FC<{ switched?: boolean }> = ({ switched = false 
           <h4 className="visually-hidden">{copy.itemsHeading}</h4>
           <ul className="order-lines">{rows}</ul>
           {quote && <OrderTotalRow quote={quote} />}
+          {legacyTotal && <OrderMrpTotalRow total={legacyTotal} />}
         </div>
         <OrderShelf onAdd={(id) => add(id, false)} />
         <OrderCheckout />

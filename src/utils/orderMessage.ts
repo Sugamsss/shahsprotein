@@ -6,7 +6,6 @@ import { whatsappUrl } from './contact';
 import { sortLines } from './orderCart';
 import { cleanPhone, formatDeliveryAddress } from './deliveryAddress';
 import { formatRupees, orderTotal, packPrice } from './prices';
-import { deliveryFee, paidPackMetrics, sliceADeliveryRule } from './orderOffer';
 
 // Builds the WhatsApp order message. Pure: the words live in siteConfig.order.message.
 // Each line carries its amount and the order its total before delivery, at the
@@ -85,13 +84,12 @@ export const orderMessageParts = (
   const total = input.unpriced ? null : input.quote
     ? { total: input.quote.total, mrpTotal: input.quote.mrp_total }
     : orderTotal(input.lines, couponPrices, products);
-  const metrics = paidPackMetrics(input.lines.filter((line) => products.some((p) => p.id === line.productId && p.weightOptions.includes(line.size))));
-  const delivery = input.quote
-    ? { fee: input.quote.delivery_fee, waived: input.quote.delivery_waived }
-    : deliveryFee(metrics, sliceADeliveryRule.guest);
-  const deliveryText = delivery.waived ? 'Delivery: Free' : `Delivery: ${formatRupees(delivery.fee)}`;
-  // The quote already includes delivery; the MRP-only fallback adds it here.
-  const payable = total ? (input.quote ? total.total : total.total + delivery.fee) : null;
+  // Only a frozen quote prints delivery: its total includes it. The old priced
+  // path leaves delivery to the chat, exactly as it always did.
+  const deliveryText = input.quote
+    ? (input.quote.delivery_waived ? 'Delivery: Free' : `Delivery: ${formatRupees(input.quote.delivery_fee)}`)
+    : null;
+  const payable = total?.total ?? null;
 
   const details: MessagePart[][] = [];
   if (couponCode) {
@@ -111,8 +109,8 @@ export const orderMessageParts = (
   const blocks: MessagePart[][] = [
     greeting,
     items.length ? [{ text: items.join('\n') }] : [],
-    payable ? [{ text: words.total(formatRupees(payable)) }] : [],
-    total ? [{ text: deliveryText }] : [],
+    total ? [{ text: (input.quote ? words.totalQuoted : words.total)(formatRupees(payable!)) }] : [],
+    deliveryText ? [{ text: deliveryText }] : [],
     details.flatMap((line, i) => (i === 0 ? line : [{ text: '\n' }, ...line])),
     [{ text: input.quote && total ? words.closingQuoted : words.closing }],
   ].filter((block) => block.length > 0);

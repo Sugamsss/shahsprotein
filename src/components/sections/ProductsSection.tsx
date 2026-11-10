@@ -15,6 +15,7 @@ import { useOrder } from '../../context/OrderContext';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { usePrices, useWebsiteOffer } from '../../services/priceService';
+import { useSliceAMissing } from '../../services/sliceA';
 import { firstInStockSize, useStock } from '../../services/stockService';
 import { useTheme } from '../../context/ThemeContext';
 import { formatRupees, mrpOf, packPrice } from '../../utils/prices';
@@ -127,6 +128,9 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
   usePrices();
   const offer = useWebsiteOffer();
   const { quote } = useOrder();
+  // No Slice A server (its offer RPC answers 404): the old plain MRP, no
+  // crossed price and no "your price" line, exactly as the site shipped.
+  const legacyPricing = useSliceAMissing();
   const [picked, setSize] = useState<string | undefined>(undefined);
   // The picked size, unless it's out (stock can arrive while the popup is open):
   // then the first size in stock. Undefined when every size is out.
@@ -178,9 +182,9 @@ const ProductOrderBar: React.FC<{ product: Product; onAdd: (size: string) => voi
         <span className="product-detail__add-long">{copy.addToOrder}</span>
         <span className="product-detail__add-short">{copy.addToOrderShort}</span>
         {/* The picked pack's MRP, so the price changes with the switch. */}
-        {price && <span className="product-detail__add-price">{priceKnown ? formatRupees(price.price) : copy.priceToConfirm}</span>}
+        {price && <span className="product-detail__add-price">{legacyPricing || priceKnown ? formatRupees(price.price) : copy.priceToConfirm}</span>}
       </button>
-      {price && <p className="product-detail__price-line">{priceKnown ? <><del>{formatRupees(price.mrp)}</del> <span><span className="visually-hidden">Your price </span>{formatRupees(price.price)}</span></> : copy.offerError}</p>}
+      {price && !legacyPricing && <p className="product-detail__price-line">{priceKnown ? <><del>{formatRupees(price.mrp)}</del> <span><span className="visually-hidden">Your price </span>{formatRupees(price.price)}</span></> : copy.offerError}</p>}
       {outSizes.map((option) => (
         <p key={option} className="product-detail__size-note">{copy.sizeBackSoon(option)}</p>
       ))}

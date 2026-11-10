@@ -46,14 +46,20 @@ export const postPublicRpc = (name: string, body: Record<string, unknown>, onMis
 /**
  * GETs a `stable` RPC with the key in the query string: a simple request, so
  * there's no CORS preflight. Returns the parsed JSON, or null on any failure or timeout.
+ * `onMissing` runs only when PostgREST answers 404 (the function is not in the
+ * database yet), so a caller can tell that apart from an offline or failed call.
  */
-export const getPublicRpc = async (name: string, { timeoutMs }: { timeoutMs: number }): Promise<unknown> => {
+export const getPublicRpc = async (
+  name: string,
+  { timeoutMs, onMissing }: { timeoutMs: number; onMissing?: () => void },
+): Promise<unknown> => {
   const target = endpoint(name);
   if (!target) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${target.url}?apikey=${encodeURIComponent(target.key)}`, { signal: controller.signal });
+    if (response.status === 404) { onMissing?.(); return null; }
     return response.ok ? await response.json() : null;
   } catch {
     return null;

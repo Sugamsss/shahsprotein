@@ -189,7 +189,7 @@ export const siteConfig = {
     linePriceWas: 'MRP ', // visually hidden
     linePriceNow: 'Your price ', // visually hidden
     totalLabel: 'Total',
-    totalNote: 'Delivery is calculated for this order.',
+    totalNote: 'Delivery isn’t included. We’ll confirm it on WhatsApp.',
     sizeLegend: (name: string) => `Pack size for ${name}`,
     singleSize: (size: string) => `${size} pack`,
     qtyGroup: (item: string) => `How many ${item}`,
@@ -337,7 +337,10 @@ export const siteConfig = {
       // The amount is packs × pack price, left off only if a pack has no price.
       line: (productName: string, size: string, quantity: number, amount?: string) =>
         `• ${productName} ${size} × ${quantity}${amount ? ` · ${amount}` : ''}`,
-      total: (amount: string) => `Total: ${amount}`,
+      // The old priced path: packs at the prices shown, delivery confirmed in the chat.
+      total: (amount: string) => `Total: ${amount} (before delivery)`,
+      // A frozen quote's total already includes the delivery row below it.
+      totalQuoted: (amount: string) => `Total: ${amount}`,
       coupon: (code: string) => `Coupon: ${code}`,
       couponUnchecked: (code: string) => `Coupon: ${code} (not checked yet)`,
       phone: (phone: string) => `Phone: ${phone}`,

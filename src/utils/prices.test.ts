@@ -35,14 +35,14 @@ describe('parseCouponPrices', () => {
 describe('packPrice', () => {
   const muesli = product('muesli');
 
-  it('is the MRP without an offer loaded', () => {
-    expect(packPrice(muesli, '500 g')).toEqual({ price: 699, mrp: 699 });
+  it('is the MRP without a coupon', () => {
+    expect(packPrice(muesli, '500 g')).toEqual({ price: 550, mrp: 550 });
   });
 
   it("uses the coupon's price for that pack, else the MRP", () => {
     const prices = { [couponPriceKey('muesli', '250 g')]: 250 };
-    expect(packPrice(muesli, '250 g', prices)).toEqual({ price: 250, mrp: 399 });
-    expect(packPrice(muesli, '500 g', prices)).toEqual({ price: 699, mrp: 699 });
+    expect(packPrice(muesli, '250 g', prices)).toEqual({ price: 250, mrp: 290 });
+    expect(packPrice(muesli, '500 g', prices)).toEqual({ price: 550, mrp: 550 });
   });
 
   it('is null for a size with no MRP', () => {
@@ -57,11 +57,11 @@ describe('orderTotal', () => {
   ];
 
   it('adds up packs at MRP', () => {
-    expect(orderTotal(lines)).toEqual({ total: 1_357, mrpTotal: 1_357 });
+    expect(orderTotal(lines)).toEqual({ total: 940, mrpTotal: 940 });
   });
 
   it("uses a coupon's own prices and keeps the MRP total beside it", () => {
-    expect(orderTotal(lines, { [couponPriceKey('muesli', '250 g')]: 250 })).toEqual({ total: 1_208, mrpTotal: 1_357 });
+    expect(orderTotal(lines, { [couponPriceKey('muesli', '250 g')]: 250 })).toEqual({ total: 900, mrpTotal: 940 });
   });
 
   it('is null for nothing, or when a pack has no price', () => {
@@ -99,6 +99,6 @@ describe("the admin's MRPs", () => {
       address: { premises: 'Flat 4B', area: 'Shivaji Nagar', city: 'Satara', state: 'Maharashtra', pincode: '415001' },
     });
     expect(message).toContain('• Raggi Jaggi 250 g × 2 · ₹360\n');
-    expect(message).toContain('Total: ₹360\n\nDelivery: Free');
+    expect(message).toContain('Total: ₹360 (before delivery)');
   });
 });

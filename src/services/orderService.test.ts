@@ -97,6 +97,12 @@ describe('saveOrder', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('still saves an unpriced message, so Sunit has the record', () => {
+    saveOrder({ ...order, unpriced: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toContain('submit_website_request');
+  });
+
   it('never throws, even when fetch does', () => {
     fetchMock.mockImplementationOnce(() => {
       throw new TypeError('Failed to fetch');
