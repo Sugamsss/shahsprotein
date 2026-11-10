@@ -4,8 +4,10 @@ import { makeSheetPdf, type SheetAssets } from './makeSheetPdf';
 import { specFor, type SheetSpec } from './sheetSpecs';
 
 // What this can check without the 4.3 MB print assets on disk: the shapes of
-// the two paths that do no glyph work. The stamping itself is covered by the
-// byte-for-byte diff against the approved delivery (temp/stickers/).
+// the paths that do no glyph work. The stamping itself — GIFT and "for you" in
+// italic, the maroon heart, the tax line covered, and Blank printing just its
+// two money rows — is checked by the proof driver in temp/sticker-gift/, which
+// builds the real sheet and looks at it.
 
 const blankSheet = async (): Promise<ArrayBuffer> => {
   const doc = await PDFDocument.create();
@@ -15,6 +17,7 @@ const blankSheet = async (): Promise<ArrayBuffer> => {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 };
 
+/** No fonts at all: enough for every path that draws no glyph. */
 const loader = (basePdf: ArrayBuffer): (() => Promise<SheetAssets>) => async () => ({
   basePdf,
   semiBold: new ArrayBuffer(0),
@@ -39,5 +42,16 @@ describe('makeSheetPdf', () => {
     await expect(makeSheetPdf({ ...values, mrp: '249.00' }, { ...back, stamp: null } as SheetSpec, load))
       .rejects.toThrow(/no stamp geometry/);
     expect(load).not.toHaveBeenCalled();
+  });
+
+  it('a back with no values hands the art straight back', async () => {
+    // No values at all — no batch, dates or price — and no font is parsed. A
+    // Blank sheet is not this case: it always sends its price, so it takes the
+    // stamping path.
+    const blank = specFor('raggi-jaggi', '500 g', 'back', 'blank') as SheetSpec;
+    const basePdf = await blankSheet();
+    const bytes = await makeSheetPdf(values, blank, loader(basePdf));
+    expect(bytes.length).toBe(basePdf.byteLength);
+    expect(Array.from(bytes)).toEqual(Array.from(new Uint8Array(basePdf)));
   });
 });

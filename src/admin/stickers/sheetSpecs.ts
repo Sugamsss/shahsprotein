@@ -60,6 +60,15 @@ export interface StampRow {
   face: StampFace;
 }
 
+/** A patch of the art covered with the paper hex in gift mode. */
+export interface StampCover {
+  /** Label-local mm from the trim top-left, y down. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** One gold hairline the value is written over. Erase it before stamping. */
 export interface StampRule {
   /** Rule centre, label-local mm from the trim top. */
@@ -81,6 +90,14 @@ export interface StampLayout {
   rows: StampRow[];
   /** Rules to erase where a value is printed. Empty when the art has none. */
   rules: StampRule[];
+  /**
+   * Art a gift pack must not keep: the priced build's own words, painted over
+   * with `paper`. Only drawn for Gift. The two 250 g backs and the Date Bites
+   * container have a real gift twin (same art, minus that wording), so their
+   * cover would paint paper on paper — which is why it lives on the shared
+   * 114 x 142 block, where the 500 g backs have no gift twin.
+   */
+  giftCover?: StampCover[];
   /** Hex of the paper behind the values, used to cover the rules. */
   paper: string;
   /** Hex of the value ink (the art's own ink). */
@@ -99,7 +116,11 @@ export interface SheetSpec {
   side: StickerSide;
   /** File under public/assets/stickers/. */
   asset: string;
-  /** Gift-blank twin, used when the MRP mode is Gift. Absent = no gift art. */
+  /**
+   * The gift twin of this art: the same sheet with the priced build's own
+   * wording taken out. Absent means a gift pack prints on `asset` and the
+   * layout's `giftCover` paints that wording out instead.
+   */
   giftAsset?: string;
   /** Cells on page 1, laid out row-major: `cols` across, then down. */
   cols: number;
@@ -158,6 +179,15 @@ const spec = (s: SheetSpec): SheetSpec => s;
  */
 const VALUE_INK = '#000000';
 
+/**
+ * The gift heart's red (owner, 2026-11-10). This is the maroon the pack art
+ * already prints — the heart in "Raggi ♥ Jaggi" and the label bands are
+ * #861520, sampled from the shipped sheets — so a gift heart matches the pack
+ * it sits on instead of introducing a second red. Print-safe: it is a dark
+ * maroon that holds on the cream card at 5.2 pt.
+ */
+export const GIFT_INK = '#861520';
+
 /** The 114 x 142 backs (250 g and 500 g): 2 x 3, same details block. */
 const stamp114x142 = (): StampLayout => ({
   align: 'right',
@@ -176,6 +206,13 @@ const stamp114x142 = (): StampLayout => ({
     { y: 128.719, x0: 58.17, x1: 73.8, thickness: 0.17 },
     { y: 131.119, x0: 58.17, x1: 73.8, thickness: 0.17 },
   ],
+  // "(incl. of all taxes)" under MRP. The gift twins for the 250 g backs differ
+  // from their priced art by exactly this line and nothing else (diffed
+  // 2026-11-10), so a gift pack that prints here must lose it too. Ink measured
+  // at 1200 dpi on the shipped sheets: x 44.784–58.711, y 120.352–122.003. The
+  // patch keeps 0.08 mm off the top of "Unit Sale Price" (its ink starts at
+  // y 122.278) and the card behind it is flat #FCF9F0, so nothing shows.
+  giftCover: [{ x: 44.5, y: 120.1, w: 14.5, h: 2.1 }],
   paper: '#FCF9F0',
   ink: VALUE_INK,
   currencyInArt: false,
@@ -275,7 +312,8 @@ const STAMP_CONTAINER: StampLayout = {
 
 export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
   // 500 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142, the 250 g art block.
-  // No gift twin: the 500 g art is blank MRP only (no gift build was made).
+  // No gift twin was ever built for 500 g, so Gift prints on this blank art and
+  // the layout's giftCover takes out "(incl. of all taxes)".
   'rj-500g-back': spec({
     id: 'rj-500g-back', side: 'back', asset: '/assets/stickers/rj-500g-back-6up-blank-v1.pdf',
     cols: 2, rowsCount: 3, cells: 6,
@@ -389,12 +427,15 @@ const PACK_KEY: Record<StickerPack, string> = { '100 g': '100g', '250 g': '250g'
  * Which sheet a pick prints on, or null when that combination does not exist.
  * The Date Bites 250 g is the plastic container, which has one sticker and no
  * front. Date Bites has no 500 g pack at all, so that size has no sheet.
+ *
+ * Blank prints on the sheet's own art (never a gift twin) and stamps only the
+ * MRP and unit price: the batch and dates are left to be written in by hand.
  */
 export const specFor = (
   productId: StickerProductId,
   size: StickerPack,
   side: StickerSide,
-  mode: 'default' | 'gift' | 'custom' = 'default',
+  mode: 'default' | 'gift' | 'custom' | 'blank' = 'default',
 ): SheetSpec | null => {
   const found = productId === 'bites' && size === '250 g'
     ? (side === 'back' ? SHEET_SPECS['db-250g-container'] : null)
@@ -402,19 +443,26 @@ export const specFor = (
   if (!found) return null;
   // A front prints nothing variable, so the kind never changes its art.
   if (found.side === 'front') return found;
-  // Gift swaps in the gift-blank twin. With no gift art there is no honest
-  // gift sticker: refuse rather than stamp GIFT onto priced art.
-  if (mode === 'gift') return found.giftAsset ? { ...found, asset: found.giftAsset } : null;
+  // Gift swaps in the gift twin where one was built; where none was, the blank
+  // art is already the priced build's art, and the layout's giftCover takes out
+  // the one line that a gift pack must not keep.
+  if (mode === 'gift' && found.giftAsset) return { ...found, asset: found.giftAsset };
   return found;
 }
 
-/** Which pack kinds a sheet can print, from its own art and the prices we have. */
+/**
+ * Which pack kinds a sheet can print, from its own art and the prices we have.
+ * Gift and Custom always print. Default needs a live price, and so does Blank:
+ * Blank prints the two money rows and leaves only the batch and dates to be
+ * filled in by hand, so without a price it could not print what it is for.
+ */
 export const modeOptionsFor = (spec: SheetSpec | null, hasLivePrice: boolean) => {
   const stamps = spec?.stamp != null;
   return {
     default: stamps && hasLivePrice,
-    gift: stamps && Boolean(spec?.giftAsset),
+    gift: stamps,
     custom: stamps,
+    blank: stamps && hasLivePrice,
   };
 };
 

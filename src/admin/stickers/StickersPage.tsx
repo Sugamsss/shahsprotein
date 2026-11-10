@@ -45,7 +45,7 @@ const copy = adminCopy.stickers;
 
 type ProductId = StickerProductId;
 type Pack = StickerPack;
-type MrpMode = 'default' | 'gift' | 'custom';
+type MrpMode = 'default' | 'gift' | 'custom' | 'blank';
 
 /** Every pack the page offers. A pack a product has no sheet for is disabled. */
 const PACKS: Pack[] = ['100 g', '250 g', '500 g'];
@@ -202,6 +202,8 @@ const StickersPage: React.FC = () => {
   );
 
   const isGift = activeMode === 'gift';
+  /** Blank prints only the price: no batch, no dates. */
+  const isBlank = activeMode === 'blank';
   const customText = customMrpRaw.trim();
   const customNum = Number(customText);
   const customValid = MONEY_RE.test(customText) && customNum > 0;
@@ -212,12 +214,13 @@ const StickersPage: React.FC = () => {
   const mrp = resolved.mrp;
   const mrpSourceLabel = isGift || resolved.source === 'missing' ? null : copy.mrpSources[resolved.source];
   const mrpValid = activeMode !== 'custom' || customValid;
-  const noPrice = stamps && !isGift && mrp === null;
+  const noPrice = stamps && !isGift && !isBlank && mrp === null;
 
   // What the read-back shows. A Custom price that is empty or mistyped is not
   // a price at all: the rows stay blank until he types a real one (Create is
   // off meanwhile, so nothing can print). `mrp` above keeps the fallback for
-  // the Default path only.
+  // the Default and Blank paths only (Blank takes the printed MRP, never a
+  // typed price: there is no price field on it).
   const showMrp = activeMode === 'custom' && !customValid ? null : mrp;
   const mrpLabel = isGift ? copy.giftMrp : showMrp !== null ? `₹${showMrp.toFixed(2)}` : '—';
   const unitLabel = isGift ? copy.giftUnit : showMrp !== null ? copy.perGram(unitPrice(showMrp, gramsOf(pack))) : '—';
@@ -229,28 +232,56 @@ const StickersPage: React.FC = () => {
    * background prepare and the stage's ready picture all agree on this key, so
    * a picture is only ever shown for the bytes behind it.
    */
-  const sheetValues = useMemo(() => ({
-    mrp: !stamps ? '' : isGift ? 'GIFT' : mrp != null ? mrp.toFixed(2) : '',
-    unit: !stamps ? '' : isGift ? 'for you' : mrp != null ? `${unitPrice(mrp, gramsOf(pack))} per g` : '',
-    gift: stamps && isGift,
-    batch: stamps ? batch : '',
-    madeOn: stamps ? formatDDMMYYYY(madeOn) : '',
-    useBy: stamps ? formatDDMMYYYY(useBy) : '',
-  }), [stamps, isGift, mrp, pack, batch, madeOn, useBy]);
+  const sheetValues = useMemo(() => {
+    // A front stamps nothing: every value is empty, and the writer hands the
+    // art straight back.
+    if (!stamps) return { mrp: '', unit: '', gift: false, batch: '', madeOn: '', useBy: '' };
+    // Blank stamps the price and nothing else: MRP and unit price print, the
+    // batch and both dates stay empty for him to write in by hand. The net
+    // weight is already in the art, so it is not sent.
+    if (isBlank) {
+      return {
+        mrp: mrp != null ? mrp.toFixed(2) : '',
+        unit: mrp != null ? `${unitPrice(mrp, gramsOf(pack))} per g` : '',
+        gift: false,
+        batch: '',
+        madeOn: '',
+        useBy: '',
+      };
+    }
+    return {
+      mrp: isGift ? 'GIFT' : mrp != null ? mrp.toFixed(2) : '',
+      unit: isGift ? 'for you' : mrp != null ? `${unitPrice(mrp, gramsOf(pack))} per g` : '',
+      gift: isGift,
+      batch,
+      madeOn: formatDDMMYYYY(madeOn),
+      useBy: formatDDMMYYYY(useBy),
+    };
+  }, [stamps, isBlank, isGift, mrp, pack, batch, madeOn, useBy]);
 
   const buildKey = spec
-    ? [spec.asset, spec.id, sheetValues.mrp, sheetValues.unit, sheetValues.batch, sheetValues.madeOn, sheetValues.useBy].join('|')
+    ? [spec.asset, spec.id, activeMode, sheetValues.mrp, sheetValues.unit, sheetValues.batch, sheetValues.madeOn, sheetValues.useBy].join('|')
     : '';
 
-  /** What Create's own gates allow, minus "a build is already running". */
-  const canBuild = Boolean(spec && (!stamps || (datesOk && (isGift || (mrp !== null && mrpValid)))));
+  /**
+   * What Create's own gates allow, minus "a build is already running". Blank
+   * needs only the printed price: its batch and dates are written in by hand,
+   * so a day that is unset or out of range must not hold it back.
+   */
+  const canBuild = Boolean(
+    spec
+    && (!stamps
+      || (isBlank ? mrp !== null : datesOk && (isGift || (mrp !== null && mrpValid)))),
+  );
 
   const canCreate = Boolean(
     today
     && spec
     && !making
     && (!stamps
-      || (options[activeMode] && datesOk && (isGift || (mrp !== null && mrpValid)))),
+      || (isBlank
+        ? mrp !== null
+        : options[activeMode] && datesOk && (isGift || (mrp !== null && mrpValid)))),
   );
 
   // Auto-Gift only where the site sells no such pack. A sold pack with every
@@ -360,23 +391,27 @@ const StickersPage: React.FC = () => {
     preparedRef.current = null;
     const stampsHere = spec.stamp != null;
     const line = `${productName(productId)} ${pack}`;
-    const message = stampsHere
-      ? copy.shareText(line, batch, `${formatDDMMYYYY(madeOn)} to ${formatDDMMYYYY(useBy)}`, mrpLabel)
-      : copy.shareTextFront(line);
+    const message = !stampsHere
+      ? copy.shareTextFront(line)
+      : isBlank
+        ? copy.shareTextBlank(line, mrpLabel)
+        : copy.shareText(line, batch, `${formatDDMMYYYY(madeOn)} to ${formatDDMMYYYY(useBy)}`, mrpLabel);
     const slug = (s: string): string => s.replace(/\s+/g, '-');
     const next: Build = {
       bytes,
       url,
-      fileName: stampsHere
-        ? `Shahs-Nutrition-Sticker-${batch}.pdf`
-        : `Shahs-Nutrition-Front-${slug(productName(productId))}-${slug(pack)}.pdf`,
+      fileName: !stampsHere
+        ? `Shahs-Nutrition-Front-${slug(productName(productId))}-${slug(pack)}.pdf`
+        : isBlank
+          ? `Shahs-Nutrition-Blank-${slug(productName(productId))}-${slug(pack)}.pdf`
+          : `Shahs-Nutrition-Sticker-${batch}.pdf`,
       spec,
       message,
       shareUrl: whatsappLink(message),
     };
     lastBuild.current = { key, build: next };
     return next;
-  }, [spec, buildKey, sheetValues, batch, madeOn, useBy, mrpLabel, productId, pack, rememberUrl]);
+  }, [spec, buildKey, sheetValues, batch, madeOn, useBy, mrpLabel, productId, pack, rememberUrl, isBlank]);
 
   /**
    * Build the current picks and draw their sticker, in the background. Silent:
@@ -434,13 +469,15 @@ const StickersPage: React.FC = () => {
       setBuildError('no-sheet');
       return null;
     }
-    if (spec.stamp && !useBy) {
+    // Blank prints no dates at all, so it needs none.
+    if (spec.stamp && !isBlank && !useBy) {
       setBuildError('no-sheet');
       return null;
     }
     setBuildError(null);
     setWaFallback(false);
-    // A back needs money; a front stamps nothing, so it needs none.
+    // Every stamped back but a gift prints a price, Default and Blank included
+    // (Blank prints only that). A front stamps nothing, so it needs none.
     if (spec.stamp && !isGift && (mrp === null || !mrpValid)) {
       setBuildError('failed');
       return null;
@@ -455,7 +492,7 @@ const StickersPage: React.FC = () => {
       setBuild(null);
       return null;
     }
-  }, [spec, useBy, isGift, mrp, mrpValid, composeBuild]);
+  }, [spec, useBy, isGift, isBlank, mrp, mrpValid, composeBuild]);
 
   const doCreate = useCallback(async () => {
     if (!canCreate) return;
@@ -640,11 +677,13 @@ const StickersPage: React.FC = () => {
   // Why Create is off, in the bar's own words. Null while he can press it.
   const reason: string | null = making
     ? copy.making
-    : !madeOnValid
-      ? copy.badDay
-      : activeMode === 'custom' && !customValid
-        ? copy.needMrp
-        : null;
+    : isBlank
+      ? null
+      : !madeOnValid
+        ? copy.badDay
+        : activeMode === 'custom' && !customValid
+          ? copy.needMrp
+          : null;
 
   const line = `${productName(productId)} ${pack}`;
   const summary = !stamps ? copy.frontSummary(line) : null;
@@ -665,9 +704,7 @@ const StickersPage: React.FC = () => {
     ? null
     : !options.default
       ? copy.noDefaultPrice(pack)
-      : !options.gift
-        ? copy.noGiftSheet
-        : null;
+      : null;
 
   return (
     <div className="adm-page adm-st-page">
@@ -744,7 +781,7 @@ const StickersPage: React.FC = () => {
           <h2 className="adm-of__h" id="st-kind">{copy.kind}</h2>
           <fieldset className="adm-st-chips">
             <legend className="visually-hidden">{copy.kind}</legend>
-            {(['default', 'gift', 'custom'] as MrpMode[]).map((m) => (
+            {(['default', 'gift', 'custom', 'blank'] as MrpMode[]).map((m) => (
               <label key={m}>
                 <input
                   type="radio"
@@ -787,7 +824,7 @@ const StickersPage: React.FC = () => {
         </section>
         )}
 
-        {stamps && (
+        {stamps && !isBlank && (
         <section className="adm-card adm-st-swap" aria-labelledby="st-madeon">
           <h2 className="adm-of__h" id="st-madeon">{copy.madeOn}</h2>
           <fieldset className="adm-st-days">
@@ -831,14 +868,19 @@ const StickersPage: React.FC = () => {
           </section>
         ) : (
         <section className="adm-card adm-st-check-card adm-st-swap" aria-labelledby="st-check" aria-live="polite">
-          <h2 className="adm-of__h" id="st-check">{copy.onSticker}</h2>
+          <h2 className="adm-of__h" id="st-check">{isBlank ? copy.blankTitle : copy.onSticker}</h2>
+          {/* Blank prints the price only, so the batch and date rows are simply
+              not there to read back. */}
+          {isBlank && <p className="adm-muted">{copy.blankBody}</p>}
           <dl className="adm-st-check">
-            <li><dt>{copy.batch}</dt><dd className="adm-st-mono">{batch || '—'}</dd></li>
-            <li><dt>{copy.made}</dt><dd>{madeOn ? formatDDMMYYYY(madeOn) : '—'}</dd></li>
-            <li>
-              <dt>{copy.useBy}<span className="adm-st-rule">{shelf.unit === 'months' ? copy.ruleMonths(shelf.amount) : copy.ruleDays(shelf.amount)}</span></dt>
-              <dd>{useBy ? formatDDMMYYYY(useBy) : '—'}</dd>
-            </li>
+            {!isBlank && <li><dt>{copy.batch}</dt><dd className="adm-st-mono">{batch || '—'}</dd></li>}
+            {!isBlank && <li><dt>{copy.made}</dt><dd>{madeOn ? formatDDMMYYYY(madeOn) : '—'}</dd></li>}
+            {!isBlank && (
+              <li>
+                <dt>{copy.useBy}<span className="adm-st-rule">{shelf.unit === 'months' ? copy.ruleMonths(shelf.amount) : copy.ruleDays(shelf.amount)}</span></dt>
+                <dd>{useBy ? formatDDMMYYYY(useBy) : '—'}</dd>
+              </li>
+            )}
             <li>
               <dt>{copy.mrp}{isGift
                 ? <span className="adm-st-tag">{copy.giftTag}</span>
@@ -860,8 +902,8 @@ const StickersPage: React.FC = () => {
         <div className="adm-st-bar__line" aria-live="polite">
           {reason ? (
             <p className="adm-st-bar__reason">{reason}</p>
-          ) : !stamps ? (
-            <p className="adm-st-bar__reason">{summary}</p>
+          ) : !stamps || isBlank ? (
+            <p className="adm-st-bar__reason">{stamps ? copy.blankSummary(line, mrpLabel) : summary}</p>
           ) : (
             <>
               <p className="adm-st-bar__row adm-st-bar__row--key">
@@ -897,7 +939,7 @@ const StickersPage: React.FC = () => {
       {stage === 'stage' && (
         <Stage
           title={copy.stageTitle(copy.sides[side], line)}
-          batch={stamps ? batch : ''}
+          batch={stamps && !isBlank ? batch : ''}
           build={build}
           preview={ahead?.build === build ? ahead.canvas : null}
           zoomHint={tapToZoom}

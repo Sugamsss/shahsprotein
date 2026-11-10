@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-11-10-gift-and-blank',
+    for: ['admin'],
+    kind: 'new',
+    title: 'Gift on every pack, and Blank',
+    body: 'Gift now works on every back, 500 g too: MRP prints GIFT, and the unit price reads "for you" with a heart. Blank prints the MRP and unit price and leaves the batch and dates empty, ready to fill in by hand.',
+  },
+  {
     id: '2026-11-10-500g-stickers',
     for: ['admin'],
     kind: 'new',

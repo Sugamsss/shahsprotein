@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, type RGB } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { cellOrigin, type SheetSpec, type StampRow } from './sheetSpecs';
+import { cellOrigin, GIFT_INK, type SheetSpec, type StampRow } from './sheetSpecs';
 
 // Vector-only variable stamping for /admin/stickers.
 //
@@ -22,6 +22,10 @@ import { cellOrigin, type SheetSpec, type StampRow } from './sheetSpecs';
 // ("MRP ₹"), so that layout sets currencyInArt. The five pouches set it false
 // and the STAMPER draws the ₹. Exactly one side draws it, never both. GIFT and
 // "for you" never take a rupee sign.
+//
+// Gift prints both money rows in italic, and its heart in the pack's own maroon.
+// Blank fills only the two money rows (MRP and unit price) and leaves the batch
+// and both dates empty, so those rows are simply not drawn.
 
 const MM = 72 / 25.4;
 
@@ -31,8 +35,15 @@ const CAP_RATIO = 1490 / 2048;
 /** How far the paper band reaches past the rule's drawn thickness, each side, mm. */
 const RULE_ERASE_PAD = 0.15;
 
-/** "for you" ends this far left of the heart (the label engine's own lockup). */
+/** Gap between the heart and the "for you" it stands beside, mm. */
 const HEART_GAP = 0.8;
+
+/**
+ * Air between a left-aligned gift lockup and the writing rule's right end, mm.
+ * On the Date Bites container that end sits on the art's own column divider, so
+ * a run ending flush touches the printed hairline.
+ */
+const RULE_END_PAD = 1.5;
 
 /**
  * pdf-lib's writer hands the event loop back every `objectsPerTick` objects
@@ -44,7 +55,12 @@ const HEART_GAP = 0.8;
  */
 const SERIALIZE_OBJECTS_PER_TICK = 1_000_000;
 
-/** The gift heart, a 24-box y-down path from the label engine. */
+/**
+ * The gift heart. A y-down 24-box path whose ink runs x 2–22 and y 3–21.4, so
+ * it is 20 wide and 18.4 tall in path units: a scale of capPt / 18.4 makes it
+ * exactly one cap height. (pdf-lib's `scale` is in points, not mm — the old
+ * 1.08-cap heart was drawn at a third of its intended size because of that.)
+ */
 const HEART_PATH =
   'M12 21.4l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.6z';
 
@@ -184,7 +200,15 @@ export const makeSheetPdf = async (
     throw new Error(`sticker sheet ${spec.id}: rules must pair 1:1 with rows`);
   }
 
+  const gift = isGift(values);
   const assets = await load(spec);
+
+  // Nothing to print: a back the page has no values for yet. The art is already
+  // the answer, so it goes back byte-identical and no font is parsed.
+  if (!gift && !stamp.rows.some((row) => filled(bare(rawFor(values, row))))) {
+    return new Uint8Array(assets.basePdf);
+  }
+
   const doc = await PDFDocument.load(new Uint8Array(assets.basePdf));
   doc.registerFontkit(fontkit);
   const fonts = {
@@ -197,7 +221,7 @@ export const makeSheetPdf = async (
   const pageH = page.getHeight();
   const paper = hex(stamp.paper);
   const ink = hex(stamp.ink);
-  const gift = isGift(values);
+  const giftInk = hex(GIFT_INK);
   const align = stamp.align;
   if ((align === 'right' && stamp.valueRight == null) || (align === 'left' && stamp.valueLeft == null)) {
     throw new Error(`sticker sheet ${spec.id}: ${align} alignment needs its anchor`);
@@ -225,6 +249,20 @@ export const makeSheetPdf = async (
     const x0 = bleedX + spec.bleed;
     const y0 = bleedY + spec.bleed;
 
+    // A gift pack must not keep the priced build's own words (the 250 g gift
+    // twins are that art with them taken out). Cover them with the card first.
+    if (gift) {
+      for (const cover of stamp.giftCover ?? []) {
+        page.drawRectangle({
+          x: (x0 + cover.x) * MM,
+          y: pageH - (y0 + cover.y + cover.h) * MM,
+          width: cover.w * MM,
+          height: cover.h * MM,
+          color: paper,
+        });
+      }
+    }
+
     // Cover the gold writing rule before the value goes above it. Only the
     // rule band — never the whole row: the card's gradient must survive.
     stamp.rows.forEach((row, index) => {
@@ -248,24 +286,28 @@ export const makeSheetPdf = async (
       const anchor = align === 'right' ? x0 + (stamp.valueRight as number) : x0 + (stamp.valueLeft as number);
 
       if (row.key === 'unit' && gift) {
-        // The label engine's lockup: heart flush on the value column, the
-        // words ending HEART_GAP to its left. Values: cap = the row's cap
-        // height, k = cap * 1.08 / 18.4 (heart height 1.08 cap, path 18.4 tall).
-        const capMm = (row.pt / 72) * 25.4 * CAP_RATIO;
-        const k = (capMm * 1.08) / 18.4;
+        // An inline lockup: "for you ♥" — both on the row's baseline, the heart
+        // one cap height tall so it reads with the words instead of floating
+        // over the corner. The heart's right edge lands on the value column, so
+        // a gift line ends where a priced one would.
+        // The heart follows the words, never leads them (owner, 2026-11-10): the
+        // pair reads as one run of type that happens to end in a heart.
         // A right-aligned sheet's value column ends at valueRight. A left-aligned
         // one has no right anchor, so use the writing rule's right end; anchoring
         // to the left edge instead put "for you" on top of the row label.
         const lockupRight = align === 'right'
           ? x0 + (stamp.valueRight as number)
-          : x0 + (stamp.rules[ri]?.x1 ?? (stamp.valueLeft as number));
-        const heartX = lockupRight - 20 * k;
-        drawRun(page, text, heartX - HEART_GAP, baseline, row.pt, fonts.italic, ink, pageH, 'right');
+          : x0 + (stamp.rules[ri]?.x1 ?? (stamp.valueLeft as number)) - RULE_END_PAD;
+        const heartScale = (row.pt * CAP_RATIO) / 18.4;
+        const heartLeftPt = lockupRight * MM - 20 * heartScale;
+        drawRun(page, text, heartLeftPt / MM - HEART_GAP, baseline, row.pt, fonts.italic, ink, pageH, 'right');
+        // pdf-lib maps a path point (px, py) to (x + px·s, y − py·s): the ink's
+        // left edge is x + 2s and its seat on the baseline is y − 21.4s.
         page.drawSvgPath(HEART_PATH, {
-          x: (heartX - 2 * k) * MM,
-          y: pageH - (baseline - capMm - 3 * k) * MM,
-          scale: k,
-          color: ink,
+          x: heartLeftPt - 2 * heartScale,
+          y: pageH - baseline * MM + 21.4 * heartScale,
+          scale: heartScale,
+          color: giftInk,
         });
         continue;
       }
@@ -276,7 +318,8 @@ export const makeSheetPdf = async (
         anchor,
         baseline,
         row.pt,
-        faceFont(row, fonts),
+        // Gift is set in italic on both money rows: "GIFT" over "for you ♥".
+        gift && row.key === 'mrp' ? fonts.italic : faceFont(row, fonts),
         ink,
         pageH,
         align,
