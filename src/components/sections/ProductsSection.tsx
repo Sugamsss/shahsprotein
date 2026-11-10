@@ -201,7 +201,7 @@ export const ProductsSection: React.FC = () => {
   const offer = useWebsiteOffer();
   const sectionRef = useScrollReveal<HTMLElement>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { addItem, openOrder, closeOrder, isOpen, openedFrom } = useOrder();
+  const { addItem, openOrder, closeOrder, isOpen, openedFrom, quote } = useOrder();
   const stock = useStock();
 
   // "Add to order" turns this popup into "Your order" in place: the overlay
@@ -236,7 +236,10 @@ export const ProductsSection: React.FC = () => {
             <h2><HighlightedText segments={text.heading} as="em" /></h2>
             <p>{text.intro}</p>
             {offer && <p className="portfolio-intro__price-note">{text.priceHonesty}</p>}
-            {!session && <Link className="offer-login-chip" to="/login?return=%2F%23products">{text.loginChip}</Link>}
+            {/* The chip promises a bigger discount, so it waits for the quote that
+                would carry it: the legacy path asks for none, and a login there
+                could never change a price. */}
+            {quote && !session && <Link className="offer-login-chip" to="/login?return=%2F%23products">{text.loginChip}</Link>}
           </div>
           <div className="portfolio-grid">
             {productsData.map((product) => (

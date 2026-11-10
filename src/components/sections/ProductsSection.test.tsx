@@ -112,6 +112,16 @@ describe('ProductsSection price lifecycle', () => {
     expect(bar.textContent).toContain('₹699');
   });
 
+  it('offers the login chip only when a quote can carry the tier price', () => {
+    // The legacy path: no quote is asked for, so no login can lower a price.
+    view.quote = null;
+    render();
+    expect(container.textContent).not.toContain(siteConfig.products.loginChip);
+    view.quote = quote;
+    render();
+    expect(container.textContent).toContain(siteConfig.products.loginChip);
+  });
+
   it('hides the login chip once the customer is signed in', () => {
     render();
     expect(container.textContent).toContain(siteConfig.products.loginChip);
