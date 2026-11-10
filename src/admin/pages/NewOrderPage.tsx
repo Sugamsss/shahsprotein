@@ -194,7 +194,12 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
   const needsServerQuote = !order && !!via && !coupon && !Object.keys(rates).length;
   // Delivery is part of what the customer pays, so the payable total is the one saved.
   const sourceTotal = sourceQuote ? quoteTotal(sourceQuote) : null;
-  const resolvedTotal = needsServerQuote ? sourceTotal : workedTotal;
+  // No answer from the server (the RPC is missing on this database, offline, or it
+  // failed): keep the owner's own price-book total instead of a blank field, and
+  // say under it that the server price could not be checked. A real answer keeps
+  // the strict server total.
+  const quoteAnswered = sourceQuote !== null;
+  const resolvedTotal = needsServerQuote ? (quoteAnswered ? sourceTotal : workedTotal) : workedTotal;
   const missing = worked && 'missing' in worked ? worked.missing : null;
   const total = totalMode === 'auto' ? (resolvedTotal != null ? String(resolvedTotal) : '') : amount;
   const typedTotal = /^\d+$/.test(total.replace(/[₹,\s]/g, '')) ? Number(total.replace(/\D/g, '')) : null;
@@ -615,6 +620,9 @@ const OrderForm: React.FC<{ order: Order | null; typedCode: string }> = ({ order
     );
   } else if (totalMode === 'auto' && quoteLoading && !order && via && packs > 0) {
     workedLine = <span className="adm-worked">{copy.quoteLoading}</span>;
+  } else if (totalMode === 'auto' && needsServerQuote && !quoteAnswered && workedTotal != null) {
+    // The server could not check this one, so the total is the price list's own.
+    workedLine = <span className="adm-worked">{copy.serverUnchecked}</span>;
   } else if (totalMode === 'auto' && resolvedTotal != null) {
     // Samples ride along free, so the line says so rather than leaving it to guess.
     // Prices he typed make them his prices, so the line doesn't credit the coupon.

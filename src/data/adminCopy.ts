@@ -825,6 +825,8 @@ export const adminCopy = {
     serverTotal: (money: string) => `Total ${money}`,
     /** A partial server answer (a pack with no price, no total): never filled in, typed instead. */
     serverTotalMissing: 'Type the total',
+    /** No server answer at all: the total came from the price book, and this says so. */
+    serverUnchecked: "Couldn't check the server price, so this is your price list.",
     who: "Who it's for",
     phone: 'Phone',
     name: 'Name',
