@@ -20,6 +20,12 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
   .adm-st-back { margin-bottom: -4px; }                  /* link text sits mid-row; this keeps the gap to the title at ~12 px */
 }
 
+/* Rhythm inside the picks: a head sits 10px over its control, and groups in one
+   card (Pack size → Side) are 20px apart. */
+.adm-st-grid > .adm-card { display: grid; align-content: start; row-gap: 10px; }
+.adm-st-grid .adm-of__h { margin: 0; }
+.adm-st-grid .adm-st-subhead { margin-top: 10px; }
+
 /* Product tiles: the order form's choice-card pattern, three across. */
 .adm-st-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; border: 0; }
 .adm-st-tiles label { position: relative; display: grid; }
@@ -27,15 +33,15 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
 .adm-st-tiles span {
   display: grid; justify-items: center; gap: 6px; min-height: 88px; padding: 12px 8px;
   border: 1px solid var(--adm-edge); border-radius: 14px; background: var(--adm-surface);
-  font-weight: 600; font-size: var(--adm-text-small); text-align: center; cursor: pointer;
+  font-weight: 600; font-size: var(--adm-text-body); text-align: center; cursor: pointer;
 }
 .adm-st-tiles input:checked + span { border-color: var(--color-accent-primary); background: var(--adm-accent-tint); color: var(--adm-accent-text); }
 .adm-st-tiles input:focus-visible + span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
 .adm-st-tiles label:active span { transform: scale(0.97); }
-.adm-st-dot { width: 28px; height: 28px; border-radius: 50%; }
-.adm-st-dot--rj { background: #861520; }
-.adm-st-dot--ms { background: #0e3b1b; }
-.adm-st-dot--db { background: #5b1208; }
+.adm-st-dot { width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 0 0 1px var(--adm-edge); }
+.adm-st-dot--rj { background: var(--adm-dot-rj); }
+.adm-st-dot--ms { background: var(--adm-dot-ms); }
+.adm-st-dot--db { background: var(--adm-dot-db); }
 
 /* Size and side chips: native radios, at least 44px tall. */
 .adm-st-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; border: 0; }
@@ -51,8 +57,11 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
 .adm-st-chips label:active span { transform: scale(0.97); }
 .adm-st-chips input:disabled + span { opacity: 0.55; cursor: not-allowed; }
 
-/* MRP input: hidden while Gift is picked, shown for Default (read-only) and Custom. */
-.adm-st-mrp { margin-top: 12px; }
+/* MRP: a plain line for Default, the field only for Custom. A grey read-only
+   box read as a broken control. */
+.adm-st-mrp { margin-top: 10px; }
+.adm-st-mrp-line { display: flex; align-items: baseline; gap: 8px; margin: 0; color: var(--adm-ink-2); }
+.adm-st-mrp-line b { color: var(--adm-ink-1); font-weight: 600; font-size: var(--adm-text-head); }
 
 /* Made-on seven-day strip: wraps 4 + 3 on phones, 7 across from 600px. */
 .adm-st-days {
@@ -161,7 +170,8 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
   display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 4px;
   border-bottom: 1px solid var(--adm-hairline);
 }
-.adm-st-stage__head h2 { margin: 0; font-size: var(--adm-text-head); font-weight: 700; }
+.adm-st-stage__head h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--adm-text-head); font-weight: 700; }
+.adm-st-stage__head .adm-st-tag { flex: none; }
 .adm-st-stage__back { min-width: 44px; min-height: 44px; }
 .adm-st-stage__body {
   min-height: 0; overflow: auto; display: grid; place-items: center; padding: 16px;
@@ -191,13 +201,16 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
 /* ---- The zoom view: the gesture surface owns every touch. ---- */
 .adm-st-zoom {
   position: fixed; inset: 0; z-index: 700; display: grid; grid-template-rows: auto minmax(0, 1fr);
-  height: 100dvh; background: #000;
+  height: 100dvh; background: var(--adm-on-dark-bg);
 }
 .adm-st-zoom__head {
-  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 4px; color: #fff;
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 4px; color: var(--adm-on-dark);
 }
-.adm-st-zoom__head h2 { margin: 0; font-size: var(--adm-text-head); font-weight: 700; }
-.adm-st-zoom__close { min-width: 44px; min-height: 44px; color: #fff; }
+.adm-st-zoom__head h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--adm-text-head); font-weight: 700; }
+/* Two classes, so the black-well rule wins over .adm-btn--quiet (admin.css loads
+   after this file and would otherwise paint ink-1 on a grey well over black). */
+.adm-st-zoom .adm-st-zoom__close { min-width: 44px; min-height: 44px; color: var(--adm-on-dark); background: var(--adm-on-dark-well); }
+.adm-st-zoom .adm-st-zoom__close:active { background: var(--adm-on-dark-well-press); }
 .adm-st-zoom__surface {
   min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
   display: grid; place-items: center;
@@ -209,7 +222,7 @@ html:has(.adm-st-page) { scroll-padding-bottom: calc(148px + env(safe-area-inset
   width: min(100cqw, calc(100cqh * var(--st-ar, 0.8)));
   border-radius: 4px; will-change: transform;
 }
-.adm-st-zoom__hint { padding: 8px 16px max(8px, env(safe-area-inset-bottom)); color: rgba(255, 255, 255, 0.8); font-size: var(--adm-text-small); text-align: center; }
+.adm-st-zoom__hint { padding: 8px 16px max(8px, env(safe-area-inset-bottom)); color: var(--adm-on-dark-soft); font-size: var(--adm-text-small); text-align: center; }
 
 /* ≥ 960: form left, read-back + Create right. */
 @media (min-width: 960px) {

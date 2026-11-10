@@ -6,6 +6,7 @@ import { Field, LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import { ToastSlot, useToast } from '../toast/Toast';
 import { getKitchen } from '../api';
+import { dimStatusBar } from '../homeScreenApp';
 import { useRpc } from '../useRpc';
 import { useUnsavedWork } from '../unsavedWork';
 import {
@@ -226,7 +227,7 @@ const StickersPage: React.FC = () => {
   // off meanwhile, so nothing can print). `mrp` above keeps the fallback for
   // the Default path only.
   const showMrp = activeMode === 'custom' && !customValid ? null : mrp;
-  const mrpLabel = isGift ? copy.giftMrp : showMrp !== null ? showMrp.toFixed(2) : '—';
+  const mrpLabel = isGift ? copy.giftMrp : showMrp !== null ? `₹${showMrp.toFixed(2)}` : '—';
   const unitLabel = isGift ? copy.giftUnit : showMrp !== null ? copy.perGram(unitPrice(showMrp, gramsOf(pack))) : '—';
 
   const datesOk = Boolean(batch && useBy && madeOnValid);
@@ -513,17 +514,12 @@ const StickersPage: React.FC = () => {
                 <span>{p}</span>
               </label>
             ))}
-            <label>
-              <input type="radio" name="st-size" disabled aria-describedby="st-500-note" onChange={() => {}} checked={false} />
-              <span>{copy.size500}</span>
-            </label>
           </fieldset>
-          <p className="adm-st-note" id="st-500-note">{copy.size500Note}</p>
           {isContainer ? (
             <p className="adm-st-note adm-st-note--body">{copy.containerSide}</p>
           ) : (
             <>
-              <h3 className="adm-of__h" id="st-side" style={{ marginTop: 12 }}>{copy.side}</h3>
+              <h3 className="adm-of__h adm-st-subhead" id="st-side">{copy.side}</h3>
               <fieldset className="adm-st-chips" aria-labelledby="st-side">
                 {(['front', 'back'] as StickerSide[]).map((s) => (
                   <label key={s}>
@@ -563,9 +559,12 @@ const StickersPage: React.FC = () => {
           {kindNote && <p className="adm-st-note adm-st-note--body" id="st-kind-note">{kindNote}</p>}
           {mode === 'default' && (
             <div className="adm-st-mrp">
-              <Field label={copy.mrp} hint={mrpSourceLabel ?? undefined}>
-                <input className="adm-input" value={mrp !== null ? `₹${mrp.toFixed(2)}` : '—'} readOnly aria-readonly="true" />
-              </Field>
+              {/* Plain text: a grey read-only box read as a broken field. The
+                  read-back above already carries the source tag. */}
+              <p className="adm-st-mrp-line">
+                <span>{copy.mrp}</span>
+                <b>{mrp !== null ? `₹${mrp.toFixed(2)}` : '—'}</b>
+              </p>
               {noPrice && <p className="adm-st-warn" role="alert">{copy.noDefaultPrice(pack)}</p>}
             </div>
           )}
@@ -695,8 +694,8 @@ const StickersPage: React.FC = () => {
 
       {stage === 'stage' && (
         <Stage
-          title={stamps ? copy.stageTitle(batch) : copy.stageTitleFront(line)}
-          batch={batch}
+          title={copy.stageTitle(copy.sides[side], line)}
+          batch={stamps ? batch : ''}
           build={build}
           zoomHint={tapToZoom}
           downloadLabel={copy.download}
@@ -745,7 +744,7 @@ const Stage: React.FC<{
   onSend: () => void;
   onClose: () => void;
   onZoom: () => void;
-}> = ({ title, build, zoomHint, downloadLabel, sendLabel, fallbackNote, attachHint, openWhatsAppLabel, waUrl, waFallback, onDownload, onSend, onClose, onZoom }) => {
+}> = ({ title, batch, build, zoomHint, downloadLabel, sendLabel, fallbackNote, attachHint, openWhatsAppLabel, waUrl, waFallback, onDownload, onSend, onClose, onZoom }) => {
   const canvasHost = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -783,6 +782,7 @@ const Stage: React.FC<{
           <X size={22} aria-hidden="true" />
         </button>
         <h2>{title}</h2>
+        {batch && <span className="adm-st-tag adm-st-mono">{batch}</span>}
       </div>
       <div className="adm-st-stage__body">
         {build ? (
@@ -822,6 +822,7 @@ const ZoomView: React.FC<{
   onToggleZoom: () => void;
   onClose: () => void;
 }> = ({ title, hint, build, zoomed, onToggleZoom, onClose }) => {
+  const layerRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -855,6 +856,13 @@ const ZoomView: React.FC<{
     view.current = { scale: zoomed ? 2 : 1, x: 0, y: 0 };
     applyView();
   }, [zoomed]);
+
+  // A near-black overlay that isn't an AdminSheet: the installed app's status
+  // bar must dim to it, or a pale strip glows over the black.
+  useEffect(() => {
+    const layer = layerRef.current;
+    return layer ? dimStatusBar(layer) : undefined;
+  }, []);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -906,7 +914,7 @@ const ZoomView: React.FC<{
   }, [onClose]);
 
   return (
-    <div className="adm-st-zoom" role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={layerRef} className="adm-st-zoom" role="dialog" aria-modal="true" aria-label={title}>
       <div className="adm-st-zoom__head">
         <button ref={closeRef} type="button" className="adm-btn adm-btn--quiet adm-st-zoom__close" onClick={onClose} aria-label="Close">
           <X size={22} aria-hidden="true" />
