@@ -5,12 +5,12 @@ import {
   addDays,
   addMonthsClamp,
   batchCode,
+  batchSequenceFor,
   formatDDMMYYYY,
   layoutFor,
   mrpSource,
   sheetsNeeded,
   unitPrice,
-  unitPriceExact,
   useByDate,
 } from './stickerMath';
 
@@ -41,39 +41,59 @@ describe('addDays', () => {
 });
 
 describe('batchCode', () => {
-  it('builds the owner codes: R/M/D + DDMMYYYY', () => {
-    expect(BATCH_PREFIX).toEqual({ 'raggi-jaggi': 'R', muesli: 'M', bites: 'D' });
-    expect(batchCode(BATCH_PREFIX['raggi-jaggi'], '2026-11-09')).toBe('R09112026');
-    expect(batchCode(BATCH_PREFIX.muesli, '2026-11-09')).toBe('M09112026');
-    expect(batchCode(BATCH_PREFIX.bites, '2026-11-09')).toBe('D09112026');
+  it('builds the kitchen numbers: R/M + DDMMYY, and no letter for Date Bites', () => {
+    expect(BATCH_PREFIX).toEqual({ 'raggi-jaggi': 'R', muesli: 'M', bites: '' });
+    expect(batchCode(BATCH_PREFIX['raggi-jaggi'], '2026-11-09')).toBe('R091126');
+    expect(batchCode(BATCH_PREFIX.muesli, '2026-11-09')).toBe('M091126');
+    expect(batchCode(BATCH_PREFIX.bites, '2026-11-09')).toBe('091126');
+  });
+
+  it('adds -2, -3 for a second or third batch of that product that day', () => {
+    expect(batchCode('R', '2026-11-09', 1)).toBe('R091126');
+    expect(batchCode('R', '2026-11-09', 2)).toBe('R091126-2');
+    expect(batchCode('R', '2026-11-09', 3)).toBe('R091126-3');
+    expect(batchCode('', '2026-11-09', 2)).toBe('091126-2');
+  });
+});
+
+describe('batchSequenceFor', () => {
+  const codes = ['R091126', 'R091126-2'];
+  it('is the first batch when the kitchen has none that day', () => {
+    expect(batchSequenceFor('R', '2026-11-09', [])).toBe(1);
+  });
+  it('follows the numbers the cook logged, -2 included', () => {
+    expect(batchSequenceFor('R', '2026-11-09', ['R091126'])).toBe(1);
+    expect(batchSequenceFor('R', '2026-11-09', codes)).toBe(2);
+    expect(batchSequenceFor('R', '2026-11-09', ['R091126-3'])).toBe(3);
+  });
+  it('ignores another product, another day, and a lookalike code', () => {
+    expect(batchSequenceFor('R', '2026-11-09', ['M091126', 'R081126', 'R091126-99x'])).toBe(1);
   });
 });
 
 describe('useByDate', () => {
-  it('gives Raggi Jaggi 6 months (09-11-2026 → 09-05-2027)', () => {
-    expect(useByDate('raggi-jaggi', '2026-11-09')).toBe('2027-05-09');
+  // The sticker prints the kitchen's Exp: the day before expires_on, so no
+  // sticker ever tells someone a pack is good on a day the kitchen calls past.
+  it('gives Raggi Jaggi the last good day of a 6-month life (09-11-2026 → 08-05-2027)', () => {
+    expect(useByDate('raggi-jaggi', '2026-11-09')).toBe('2027-05-08');
   });
 
-  it('gives Muesli 6 months (09-11-2026 → 09-05-2027)', () => {
-    expect(useByDate('muesli', '2026-11-09')).toBe('2027-05-09');
+  it('gives Muesli the same (09-11-2026 → 08-05-2027)', () => {
+    expect(useByDate('muesli', '2026-11-09')).toBe('2027-05-08');
   });
 
-  it('gives Date Bites 21 days (09-11-2026 → 30-11-2026)', () => {
-    expect(useByDate('bites', '2026-11-09')).toBe('2026-11-30');
+  it('gives Date Bites the day before its 21 days (09-11-2026 → 29-11-2026)', () => {
+    expect(useByDate('bites', '2026-11-09')).toBe('2026-11-29');
   });
 
-  it('clamps the month end on a 31st start', () => {
-    expect(useByDate('raggi-jaggi', '2026-08-31')).toBe('2027-02-28');
+  it('clamps the month end on a 31st start (28-02 minus a day)', () => {
+    expect(useByDate('raggi-jaggi', '2026-08-31')).toBe('2027-02-27');
   });
 });
 
 describe('unitPrice', () => {
   it('rounds 249/250 g to 1.00, ROUND_HALF_UP', () => {
     expect(unitPrice(249, 250)).toBe('1.00');
-  });
-
-  it('keeps the exact figure beside it (0.996)', () => {
-    expect(unitPriceExact(249, 250)).toBeCloseTo(0.996, 6);
   });
 
   it('prices a 100 g pack (80/100 is 0.80)', () => {
@@ -95,19 +115,16 @@ describe('sheetsNeeded', () => {
 });
 
 describe('mrpSource', () => {
+  it('uses the MRP printed on the pack by default', () => {
+    expect(mrpSource(249, null)).toEqual({ mrp: 249, source: 'printed' });
+  });
+
   it('prefers an explicitly typed MRP', () => {
-    expect(mrpSource(249, 249, 259)).toEqual({ mrp: 259, source: 'typed' });
+    expect(mrpSource(249, 259)).toEqual({ mrp: 259, source: 'typed' });
   });
 
-  it('prefers the price book over the website fallback', () => {
-    expect(mrpSource(249, 399, null)).toEqual({ mrp: 249, source: 'price-book' });
-  });
-
-  it('falls back to the website price offline', () => {
-    expect(mrpSource(null, 249, null)).toEqual({ mrp: 249, source: 'website' });
-  });
-
-  it('says missing when there is no price anywhere', () => {
-    expect(mrpSource(null, null, null)).toEqual({ mrp: null, source: 'missing' });
+  it('says missing when there is no printed price', () => {
+    expect(mrpSource(null, null)).toEqual({ mrp: null, source: 'missing' });
+    expect(mrpSource(undefined, null)).toEqual({ mrp: null, source: 'missing' });
   });
 });

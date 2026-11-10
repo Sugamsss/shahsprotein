@@ -3,15 +3,15 @@
 // tested in stickerMath.test.ts. Dates are India calendar days "YYYY-MM-DD".
 
 /**
- * Admin product id → batch-code letter (owner, 2026-11-10, final).
- * R / M / D followed by the full made-on date, e.g. R09112026.
- * The old RJ/MS/DS + DDMMYY and the SRB/SMB print codes are gone — never
- * reintroduce them here.
+ * Admin product id → batch prefix, the kitchen's own (20261104000000):
+ * R and M, and nothing for Date Bites. A number is the prefix plus DDMMYY, so
+ * Raggi Jaggi made on 9-11-2026 is R091126. If this drifts from
+ * kitchen_products.batch_prefix the sticker and the kitchen disagree.
  */
 export const BATCH_PREFIX = {
   'raggi-jaggi': 'R',
   muesli: 'M',
-  bites: 'D',
+  bites: '',
 } as const;
 
 /**
@@ -71,18 +71,45 @@ export const addDays = (day: string, n: number): string => {
 };
 
 /**
- * "R" + DDMMYYYY of the made-on day:
- * batchCode("R", "2026-11-09") → "R09112026".
+ * The kitchen's batch number: prefix + DDMMYY of the made-on day, with -2, -3
+ * for a second or third batch of that product that day
+ * (migration 20261104000000). batchCode("R", "2026-11-09") → "R091126";
+ * batchCode("", "2026-11-09") → "091126" (Date Bites has no letter).
  */
-export const batchCode = (prefix: string, madeOn: string): string => {
+export const batchCode = (prefix: string, madeOn: string, sequence = 1): string => {
   const [y, m, d] = madeOn.split('-');
-  return `${prefix}${d}${m}${y}`;
+  const suffix = sequence > 1 ? `-${sequence}` : '';
+  return `${prefix}${d}${m}${y.slice(2)}${suffix}`;
 };
 
-/** Use By from the made-on day and that product's shelf life. */
+/**
+ * Which batch of that product on that day this is, from the kitchen's own
+ * numbers: no batch logged, or the first one, is 1; R091126-2 is 2. The page
+ * starts from the newest batch the cook logged, so the sticker and the order
+ * view print the same handful of characters.
+ */
+export const batchSequenceFor = (prefix: string, madeOn: string, codes: readonly string[]): number => {
+  const base = batchCode(prefix, madeOn);
+  let highest = 0;
+  for (const code of codes) {
+    if (code === base) { highest = Math.max(highest, 1); continue; }
+    if (!code.startsWith(`${base}-`)) continue;
+    const n = Number(code.slice(base.length + 1));
+    if (Number.isInteger(n) && n > 1) highest = Math.max(highest, n);
+  }
+  return highest || 1;
+};
+
+/**
+ * Use By is the kitchen's Exp: the last good day, the day before the first
+ * past one (`expDay` in the admin: expires_on − 1), never the expiry day
+ * itself. A 6-month shelf life from 9-11-2026 expires on 9-5-2027, so the
+ * sticker says use by 8-5-2027.
+ */
 export const useByDate = (productId: StickerProductId, madeOn: string): string => {
   const shelf = SHELF_LIFE[productId];
-  return shelf.unit === 'months' ? addMonthsClamp(madeOn, shelf.amount) : addDays(madeOn, shelf.amount);
+  const expiresOn = shelf.unit === 'months' ? addMonthsClamp(madeOn, shelf.amount) : addDays(madeOn, shelf.amount);
+  return addDays(expiresOn, -1);
 };
 
 const paiseOf = (mrp: number): number => Math.round(mrp * 100);
@@ -96,30 +123,26 @@ export const unitPrice = (mrp: number, grams: number): string => {
   return (hundredths / 100).toFixed(2);
 };
 
-/** The exact figure beside the rounded one: 249/250 → 0.996. */
-export const unitPriceExact = (mrp: number, grams: number): number => mrp / grams;
-
 /** Packs → sheets, rounded up: 40 packs at 6-up → 7 sheets, 2 spare. */
 export const sheetsNeeded = (packs: number, perSheet: number): { sheets: number; spare: number } => {
   const sheets = Math.ceil(packs / perSheet);
   return { sheets, spare: sheets * perSheet - packs };
 };
 
-export type MrpSource = 'price-book' | 'website' | 'typed' | 'missing';
+export type MrpSource = 'printed' | 'typed' | 'missing';
 
 /**
  * Where the MRP came from. An explicitly typed value (Custom) wins; otherwise
- * the admin price book, then the website fallback, else missing.
+ * the MRP printed on the pack, founder-locked in products.ts. Never the site's
+ * price list: that can lag behind the packs, and a wrong MRP on a label is a
+ * legal problem, not a display one.
  */
 export const mrpSource = (
-  priceBook: number | null | undefined,
-  fallback: number | null | undefined,
+  printed: number | null | undefined,
   typed: number | null | undefined,
 ): { mrp: number | null; source: MrpSource } => {
   if (typeof typed === 'number' && Number.isFinite(typed) && typed > 0) return { mrp: typed, source: 'typed' };
-  if (typeof priceBook === 'number' && Number.isFinite(priceBook) && priceBook > 0)
-    return { mrp: priceBook, source: 'price-book' };
-  if (typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0)
-    return { mrp: fallback, source: 'website' };
+  if (typeof printed === 'number' && Number.isFinite(printed) && printed > 0)
+    return { mrp: printed, source: 'printed' };
   return { mrp: null, source: 'missing' };
 };

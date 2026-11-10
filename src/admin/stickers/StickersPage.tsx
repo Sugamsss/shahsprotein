@@ -2,21 +2,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronLeft, X } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { productsData } from '../../data/products';
-import { getPublicRpc } from '../../services/publicRpc';
 import { Field, LoadError, Skeleton } from '../parts';
 import { AdminLink } from '../router';
 import { ToastSlot, useToast } from '../toast/Toast';
-import { getKitchen, getPrices } from '../api';
+import { getKitchen } from '../api';
 import { useRpc } from '../useRpc';
 import { useUnsavedWork } from '../unsavedWork';
 import {
   BATCH_PREFIX,
   SHELF_LIFE,
   batchCode,
+  batchSequenceFor,
   formatDDMMYYYY,
   mrpSource,
   unitPrice,
-  unitPriceExact,
   useByDate,
   type StickerProductId,
 } from './stickerMath';
@@ -44,9 +43,9 @@ const productName = (id: ProductId): string => productsData.find((p) => p.id ===
 
 const gramsOf = (pack: Pack): number => (pack === '250 g' ? 250 : 100);
 
-/** The website price book's own fallback, when the signed-in price list misses. */
-const websitePrice = (productId: ProductId, pack: Pack): number | null => {
-  const mrp = productsData.find((p) => p.id === productId)?.mrp[pack];
+/** The MRP printed on the pack (founder-locked in products.ts), never the site's list. */
+const printedMrp = (productId: ProductId, pack: Pack): number | null => {
+  const mrp = productsData.find((p) => p.id === productId)?.labelMrp[pack];
   return typeof mrp === 'number' && mrp > 0 ? mrp : null;
 };
 
@@ -152,7 +151,6 @@ interface Build {
 const StickersPage: React.FC = () => {
   const toast = useToast();
   const kitchen = useRpc(getKitchen, []);
-  const prices = useRpc(getPrices, []);
 
   const today: string = kitchen.data?.today ?? '';
 
@@ -176,28 +174,6 @@ const StickersPage: React.FC = () => {
     if (today && !madeOn) setMadeOn(today);
   }, [today, madeOn]);
 
-  // Live website MRP for the read-back when the admin price list misses.
-  const [livePrice, setLivePrice] = useState<{ key: string; mrp: number } | null>(null);
-  const priceKey = `${productId}|${pack}`;
-  useEffect(() => {
-    let live = true;
-    const key = `${productId}|${pack}`;
-    setLivePrice(null);
-    void getPublicRpc('get_product_prices', { timeoutMs: 8000 }).then((raw) => {
-      if (!live) return;
-      try {
-        const packs = (raw as { packs?: { product_id: string; size: string; mrp: number }[] } | null)?.packs;
-        const hit = packs?.find((p) => p.product_id === productId && p.size === pack);
-        if (typeof hit?.mrp === 'number' && hit.mrp > 0) setLivePrice({ key, mrp: hit.mrp });
-      } catch {
-        // The products.ts fallback below covers a strange answer.
-      }
-    });
-    return () => { live = false; };
-  }, [productId, pack]);
-  /** Only trust the answer for the pack it was asked for. */
-  const liveMrp = livePrice?.key === priceKey ? livePrice.mrp : null;
-
   // Date Bites 250 g prints on the one-sided container sticker.
   useEffect(() => {
     if (productId === 'bites' && pack === '250 g' && side !== 'back') setSide('back');
@@ -205,8 +181,15 @@ const StickersPage: React.FC = () => {
 
   const shelf = SHELF_LIFE[productId];
 
-  const defaultBatch = today && madeOn ? batchCode(BATCH_PREFIX[productId], madeOn) : '';
-  const batch = defaultBatch;
+  // The kitchen's own number for this product and day, -2/-3 included: it gives
+  // the first batch of the day the plain code, so the sticker matches it.
+  const dayCodes = useMemo(
+    () => (kitchen.data?.batches ?? []).filter((b) => b.product_id === productId && b.made_on === madeOn && b.code).map((b) => b.code!),
+    [kitchen.data, productId, madeOn],
+  );
+  const batch = today && madeOn
+    ? batchCode(BATCH_PREFIX[productId], madeOn, batchSequenceFor(BATCH_PREFIX[productId], madeOn, dayCodes))
+    : '';
   const useBy = madeOn ? useByDate(productId, madeOn) : '';
   const madeOnValid = Boolean(madeOn) && (!today || (madeOn >= addDays(today, -60) && madeOn <= addDays(today, 14)));
 
@@ -214,11 +197,8 @@ const StickersPage: React.FC = () => {
   const baseSpec = useMemo(() => specFor(productId, pack, side), [productId, pack, side]);
   const stamps = baseSpec?.stamp != null;
 
-  const priceBookPrice: number | null = prices.data
-    ? prices.data.base.find((r) => r.product_id === productId && r.size === pack)?.price ?? null
-    : null;
-  const websiteFallback = liveMrp ?? websitePrice(productId, pack);
-  const options = modeOptionsFor(baseSpec, mrpSource(priceBookPrice, websiteFallback, null).mrp !== null);
+  const founderMrp = printedMrp(productId, pack);
+  const options = modeOptionsFor(baseSpec, founderMrp !== null);
 
   /** A front prints nothing variable, so the kind never applies there. */
   const activeMode: MrpMode = stamps ? mode : 'default';
@@ -235,7 +215,7 @@ const StickersPage: React.FC = () => {
   const typedMrp = activeMode === 'custom' && customValid ? customNum : null;
   const resolved = isGift
     ? { mrp: null as number | null, source: 'missing' as const }
-    : mrpSource(priceBookPrice, websiteFallback, typedMrp);
+    : mrpSource(founderMrp, typedMrp);
   const mrp = resolved.mrp;
   const mrpSourceLabel = isGift || resolved.source === 'missing' ? null : copy.mrpSources[resolved.source];
   const mrpValid = activeMode !== 'custom' || customValid;
@@ -248,24 +228,21 @@ const StickersPage: React.FC = () => {
   const showMrp = activeMode === 'custom' && !customValid ? null : mrp;
   const mrpLabel = isGift ? copy.giftMrp : showMrp !== null ? showMrp.toFixed(2) : '—';
   const unitLabel = isGift ? copy.giftUnit : showMrp !== null ? copy.perGram(unitPrice(showMrp, gramsOf(pack))) : '—';
-  const unitExact = !isGift && showMrp !== null ? unitPriceExact(showMrp, gramsOf(pack)).toFixed(3) : null;
 
-  const pricesSettled = !prices.loading;
   const datesOk = Boolean(batch && useBy && madeOnValid);
   const canCreate = Boolean(
     today
     && spec
     && !making
     && (!stamps
-      || (options[activeMode] && datesOk && (isGift || (mrp !== null && mrpValid))
-        && (activeMode !== 'default' || pricesSettled))),
+      || (options[activeMode] && datesOk && (isGift || (mrp !== null && mrpValid)))),
   );
 
   // Auto-Gift only where the site sells no such pack. A sold pack with every
   // price source down must fall to Custom (a visible prompt), never to GIFT.
   const fallbackMode: MrpMode =
     options.default ? 'default'
-      : options.gift && websitePrice(productId, pack) === null ? 'gift'
+      : options.gift && founderMrp === null ? 'gift'
         : 'custom';
 
   // A kind this sheet cannot print falls back to one it can.
@@ -668,11 +645,10 @@ const StickersPage: React.FC = () => {
               <dd>{mrpLabel}</dd>
             </li>
             <li>
-              <dt>{copy.unitPrice}{unitExact && <span className="adm-st-rule">{copy.exact(unitExact)}</span>}</dt>
+              <dt>{copy.unitPrice}</dt>
               <dd>{unitLabel}</dd>
             </li>
           </dl>
-          {prices.error && !prices.data && <p className="adm-st-warn" role="alert">{copy.offlineNote}</p>}
           {baseSpec && (
             <p className="adm-st-note">{copy.sheetFacts(baseSpec.cells, baseSpec.trim[0], baseSpec.trim[1])}</p>
           )}

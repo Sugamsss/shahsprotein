@@ -1785,10 +1785,9 @@ export const adminCopy = {
     mrp: 'MRP',
     unitPrice: 'Unit price',
     perGram: (money: string) => `${money} per g`,
-    exact: (n: string) => `exact ${n}`,
     ruleMonths: (n: number) => `+${n} months shelf life`,
     ruleDays: (n: number) => `+${n} days shelf life`,
-    mrpSources: { 'price-book': 'Your price list', website: 'Website price', typed: 'Typed' },
+    mrpSources: { printed: 'Printed MRP', typed: 'Typed' },
     giftMrp: 'GIFT',
     giftUnit: 'for you',
     create: 'Create',
@@ -1825,6 +1824,5 @@ export const adminCopy = {
     mrpError: 'Type the rupees, like 259 or 259.50.',
     batchLetters: 'Letters and numbers only, up to 14.',
     useByAfter: (date: string) => `Use by must be after the made date (${date}).`,
-    offlineNote: 'Offline. Using the website price.',
   },
 };
