@@ -3,6 +3,24 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerLoginCopy } from '../../data/customerAuthCopy';
 
+/**
+ * Where to go after signing in: only this site. The URL parser is the judge,
+ * because it treats a backslash or a tab as a path separator for http(s)
+ * (`/\evil.invalid` and `/\t/evil.invalid` are both `https://evil.invalid/`).
+ * Resolving against our own origin and requiring the same origin back rejects
+ * those, `//host`, and any absolute URL; anything unclear goes home.
+ */
+export const safeReturnTo = (raw: string | null, base: string): string => {
+  if (!raw) return '/';
+  try {
+    const target = new URL(raw, base);
+    if (target.origin !== new URL(base).origin) return '/';
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/';
+  }
+};
+
 /** Supabase wants E.164; people type 10 digits, spaces, +91 or 0-prefixed numbers. */
 const toE164 = (raw: string): string => {
   const digits = raw.replace(/\D/g, '');
@@ -25,8 +43,7 @@ export const CustomerLogin: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
-  const rawReturn = params.get('return') || '/';
-  const returnTo = rawReturn.startsWith('/') && !rawReturn.startsWith('//') ? rawReturn : '/';
+  const returnTo = safeReturnTo(params.get('return'), window.location.origin);
 
   React.useEffect(() => {
     if (session) navigate(returnTo, { replace: true });

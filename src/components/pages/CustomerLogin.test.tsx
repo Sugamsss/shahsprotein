@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CustomerLogin } from './CustomerLogin';
+import { CustomerLogin, safeReturnTo } from './CustomerLogin';
 import { customerLoginCopy } from '../../data/customerAuthCopy';
 
 const authState = vi.hoisted(() => ({
@@ -94,5 +94,23 @@ describe('CustomerLogin', () => {
     const guest = Array.from(container.querySelectorAll('a')).find((link) => link.textContent === customerLoginCopy.guest);
     expect(guest?.getAttribute('href')).toBe('/');
     expect(container.textContent).toContain(customerLoginCopy.body);
+  });
+
+  it.each([
+    ['a backslash-escaped host', '/login?return=%2F%5Cevil.invalid'],
+    ['a tab-joined host', '/login?return=%2F%09%2Fevil.invalid'],
+    ['an absolute URL', '/login?return=https%3A%2F%2Fevil.invalid%2Forders'],
+  ])('refuses %s in the return path', (_label, entry) => {
+    render(entry);
+    const guest = Array.from(container.querySelectorAll('a')).find((link) => link.textContent === customerLoginCopy.guest);
+    expect(guest?.getAttribute('href')).toBe('/');
+  });
+
+  it('parses the return path the way the browser does', () => {
+    const base = 'https://www.shahsnutrition.food';
+    expect(safeReturnTo('/#products', base)).toBe('/#products');
+    expect(safeReturnTo('/login?next=%2Fx', base)).toBe('/login?next=%2Fx');
+    for (const raw of ['//evil.invalid', '/\\evil.invalid', '/\t/evil.invalid', 'https://evil.invalid/x', 'javascript:alert(1)', ''])
+      expect(safeReturnTo(raw, base), raw).toBe('/');
   });
 });
