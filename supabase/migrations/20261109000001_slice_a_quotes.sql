@@ -423,14 +423,17 @@ begin
   ph:=coalesce(p_details->>'phone',r.phone);
   if ph is not null then ph:=regexp_replace(ph,'[ +()-]','','g'); if ph ~ '^[0-9]{10}$' then ph:='91'||ph; end if; end if;
   if ph is null or ph !~ '^[1-9][0-9]{10,14}$' then raise exception using message='Enter a valid phone number.',errcode='22023'; end if;
-  perform pg_advisory_xact_lock(hashtext('slice_a_phone:'||ph));
   addr:=public.website_clean_address(coalesce(p_details->'delivery_address',r.delivery_address),true);
   if p_details ? 'pincode' and p_details->>'pincode' is distinct from addr->>'pincode' then raise exception using message='Pincode must match delivery address.',errcode='22023'; end if;
   if exists(select 1 from jsonb_array_elements(r.lines) x where not exists(select 1 from public.kitchen_products kp where kp.product_id=x->>'product_id') or public.order_size_grams(x->>'size') not between 1 and 1000) then raise exception using message='One or more items are no longer available.',errcode='22023'; end if;
   if r.coupon_code is not null then select c.id,(c.active and (c.expires_at is null or c.expires_at>now())) into coupon_id,coupon_valid from public.coupons c where upper(c.code)=r.coupon_code; coupon_valid:=coalesce(coupon_valid,false); end if;
   select * into q from public.website_quotes where request_id=r.id;
+  -- Eligibility belongs to the verified Auth phone the quote was priced for;
+  -- the typed delivery contact is a different person quite often. Lock and
+  -- recheck that same phone, never ph.
   if q.id is not null and q.verified_phone is not null then
-    v_current:=private.slice_a_purchase_tier(ph);
+    perform pg_advisory_xact_lock(hashtext('slice_a_phone:'||q.verified_phone));
+    v_current:=private.slice_a_purchase_tier(q.verified_phone);
     v_promised:=q.snapshot->>'offer_kind';
     if v_promised in ('first','second','third_plus') and v_promised<>v_current then
       v_decision:=p_details->>'tier_decision';
@@ -580,9 +583,11 @@ as $$
         json_build_object(
           'product_id', c.product_id, 'need', c.need, 'covered', c.covered, 'by_hand', c.by_hand,
           'waiting', p_order.status = 'cooking' and c.covered < c.need,
-          -- Where its food came from: each batch's made-on day and grams, oldest first.
+          -- Where its food came from: each batch's number, Mfg (made_on), Exp
+          -- and grams, oldest first (as in 20261104000000).
           'batches', coalesce((
-            select json_agg(json_build_object('made_on', b.made_on, 'grams', a.grams)
+            select json_agg(json_build_object('batch_id', b.id, 'code', b.code, 'made_on', b.made_on,
+                'expires_on', b.expires_on, 'grams', a.grams)
               order by b.made_on, b.created_at, b.id)
             from public.kitchen_allocations a
             join public.kitchen_batches b on b.id = a.batch_id
