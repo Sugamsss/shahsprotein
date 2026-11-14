@@ -101,20 +101,50 @@
 }
 
 /* ---- The Vendor box: a combobox over vendors used before ------------------------ */
-/* The list sits inside the field (the sheet grows; nothing floats over Date and Time).
-   48px rows, hairlines, the typed letters bold, "3 entries" on the right. */
+/* The opened list is a floating card over Date and Time, the same family as the account
+   menu (.adm-menu): solid surface, a 1px edge, the lift shadow, 16px corners, padded, one
+   rounded 44px row per vendor. It hangs 6px under the box instead of pushing the fields
+   down, so opening it never moves the sheet. Four rows show; a fifth is one short scroll
+   away, with the scrollbar hidden so the card stays a card. On a short screen the component
+   caps the height in whole rows to the room left under the box (VendorField.tsx). */
 
-.adm-vend { display: grid; margin: 2px 0 0; padding: 0; list-style: none; }
-.adm-vend li {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px;
-  padding: 13px 18px; border-top: 1px solid var(--adm-hairline); cursor: pointer; touch-action: manipulation;
+.adm-vend-field { position: relative; z-index: 2; } /* lifts the card over Date and Time */
+.adm-vend {
+  position: absolute; z-index: 3; left: 0; right: 0; top: calc(100% + 6px);
+  display: grid; gap: 2px; max-height: 196px; margin: 0; padding: 6px;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; list-style: none;
+  border: 1px solid var(--adm-edge); border-radius: 16px;
+  background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
+  animation: adm-vend-in 160ms var(--ease-glide) both;
 }
-.adm-vend b { min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.adm-vend__hit { font-weight: 700; }
-.adm-vend small { flex: none; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-variant-numeric: tabular-nums; }
+/* 196 is four whole rows: 4 × 44 + 3 × 2 gaps + 2 × 6 padding + 2 × 1 border. */
+.adm-vend[hidden] { display: none; }
+.adm-vend::-webkit-scrollbar { display: none; }
+@keyframes adm-vend-in { from { opacity: 0; transform: translateY(-4px); } }
+.adm-vend li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 8px 12px; border-radius: 12px;
+  cursor: pointer; touch-action: manipulation;
+  transition: background-color var(--transition-fast), transform 120ms ease;
+}
+.adm-vend__name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--adm-ink-1); font-size: var(--adm-text-body); font-weight: 600; line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+/* The letters you typed, in the accent: blue in light, gold in dark. */
+.adm-vend__hit { font-weight: 700; color: var(--adm-accent-text); }
+.adm-vend small {
+  flex: none; color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .adm-vend li:hover { background: var(--adm-well); }
+  .adm-vend li:hover small { color: var(--adm-ink-2); }
+}
 .adm-vend li[aria-selected='true'] { background: var(--adm-accent-tint); }
-.adm-vend li:active { background: var(--adm-accent-tint-press); }
-@media (hover: hover) { .adm-vend li:hover { background: var(--adm-well); } }
+.adm-vend li[aria-selected='true'] small { color: var(--adm-accent-text); }
+.adm-vend li:active { background: var(--adm-accent-tint-press); transform: scale(0.985); }
 
 /* ---- The sheet ----------------------------------------------------------------- */
 
@@ -249,4 +279,7 @@
 @media (prefers-reduced-motion: reduce) {
   .adm-cal__grid, .adm-cal__step, .adm-cal__day > span, .adm-picker-btn, .adm-exp__list { animation: none; transition: none; }
   .adm-picker-btn:active, .adm-cal__day:active > span { transform: none; }
+  /* The card still appears at once (it is how you pick a vendor); it just doesn't rise. */
+  .adm-vend { animation: none; }
+  .adm-vend li, .adm-vend li:active { transition: none; transform: none; }
 }
