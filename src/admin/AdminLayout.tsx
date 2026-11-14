@@ -189,16 +189,16 @@ const tabPage = (pathname: string): string => {
   if (section === 'products' && sub === 'ingredients') return p.ingredients;
   const names: Record<string, string> = {
     products: p.products, customers: p.customers, coupons: p.coupons, 'email-list': p.emailList, settings: p.settings, more: p.more,
-    todos: p.todos, stickers: copy.stickers.tab,
+    todos: p.todos, stickers: copy.stickers.tab, expenses: p.expenses,
   };
   return names[section] ?? p.home;
 };
 
-const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers)(\/|$)/;
+const MORE_PATHS = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers|expenses)(\/|$)/;
 // With the journal on, Customers and To-dos are in More on a phone too.
-const MORE_PATHS_JOURNAL = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers|customers|todos)(\/|$)/;
+const MORE_PATHS_JOURNAL = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers|customers|todos|expenses)(\/|$)/;
 // The laptop header names Customers itself; More covers the rest.
-const MORE_PATHS_LAPTOP = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers|todos)(\/|$)/;
+const MORE_PATHS_LAPTOP = /^\/admin\/(more|coupons|email-list|settings|kitchen\/history|requests|stickers|todos|expenses)(\/|$)/;
 
 const TabBar: React.FC<{ badge: number }> = ({ badge }) => {
   const { pathname } = useLocation();

@@ -229,6 +229,24 @@ RPCs (all `authenticated`, admin only):
 
 **Rollout.** The code ships before the migration and works on both sides of it: while these RPCs answer `missing`, the admin keeps the old tab bar (Customers) and header and hides every journal, to-do and ingredient link. Deploy the code, then run `supabase test db` on a local stack and `supabase db push`. The migration creates the private `journal` bucket (5 MB, WebP/JPEG/PNG) and its three Storage policies when Storage is installed, and skips them with a notice where it isn't. Nothing is seeded: ingredients and how much goes into a kilo are Pranjali's to enter (Products → Ingredients has "Add our products' ingredients" for the names).
 
+## Expenses
+
+Migration `20261114000000_admin_expenses.sql`. Admin only: the table has RLS on, no policies and nothing granted; everything goes through `security definer` RPCs that check `is_admin()` (a non-admin gets `P0001 Unauthorized`). Validation errors are `22023` with a plain message.
+
+**Stored once:** `admin_expenses` — the India day (`spent_on`), the India time (`spent_at`, to the minute), a title (1–200 characters), an optional note (up to 4,000), whole rupees (1 to 2^31−1), who saved it last, and `deleted_at` so delete is soft. Both owners read, change and delete every row: there is no per-owner rule and no "added by" on screen.
+
+**India civil time.** `spent_on` and `spent_at` are what the owners picked in India, never the device's time zone and never UTC sliced. `get_admin_expenses()` answers `today` as `(timezone('Asia/Kolkata', now()))::date`; an expense cannot be dated after that day, because it is money already paid. Audit stamps (`created_at`, `updated_at`) stay UTC.
+
+RPCs (all `authenticated`, admin only):
+
+- `get_admin_expenses(p_from, p_to, p_search)` → `{ today, expenses: [...] }`, newest day first then latest time first. `p_from` is included and `p_to` is left out (both India days); the defaults are the last 31 days. One call may span up to five years, so the admin's All list fits. `p_search` is a case-insensitive plain substring over the title, the note, the amount (plain and grouped), the day (also as "13 Nov") and the time; `%`, `_` and `\` match themselves.
+- `save_admin_expense(p_id, p_expense)` makes a row when `p_id` is null, else replaces its day, time, title, note and amount. It trims the title and note, and refuses a blank title, a note over 4,000, an amount that is not a whole number in range, a day before 2026 or after today, and a time that is not `HH:MM`.
+- `delete_admin_expense(p_id, p_deleted)` hides it (`deleted_at`); `p_deleted false` is Undo and puts the same row back. Deleting twice, or restoring a row that is not deleted, is `22023`.
+
+**Rollout.** The admin ships before the migration and works on both sides of it: while `get_admin_expenses` answers `missing`, the Expenses link is hidden from More and the route shows the admin's "not set up yet" line (`src/admin/expenses/available.ts`). Deploy the code, then run `supabase test db` on a local stack and `supabase db push`. Nothing is seeded.
+
+Tests: `supabase/tests/24_admin_expenses.test.sql`.
+
 ## WhatsApp order click tracking
 
 Migration `20260924000000` adds `site_events` (anonymous, no PII) and the public

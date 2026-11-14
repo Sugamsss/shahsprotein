@@ -6,6 +6,7 @@ import type {
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
   WebsiteRequest, WebsiteRequestPage, EntryInput, HomeExtras, IngredientBook, IngredientInput, JournalEntry, JournalFeed,
   JournalLookback, JournalMilestone, JournalMonth, JournalSearch, JournalSearchFilter, Todo, TodoInput, TodoList, WorkDay,
+  Expense, ExpenseInput, ExpenseList,
 } from './types';
 import type { DeliveryRule, OrderQuoteSnapshot } from '../types/offer';
 import { holdUntilDone } from './unsavedWork';
@@ -360,6 +361,18 @@ export const uncountIngredient = (countId: string) => rpc<IngredientBook>('uncou
 
 /** Home: the caller's to-dos due soon, ingredients running low, and whether they've written today. */
 export const getHomeExtras = () => rpc<HomeExtras>('get_admin_home_extras');
+
+// Expenses (20261114000000). Ships before its migration: useExpensesAvailable hides
+// every link while these answer 'missing'.
+/** A range is inclusive of `from` and leaves out `to` (both India days). */
+export const getExpenses = (filter: { from?: string; to?: string; search?: string } = {}) =>
+  rpc<ExpenseList>('get_admin_expenses', { from: filter.from, to: filter.to, search: filter.search || undefined });
+/** Makes an expense when `id` is left out; otherwise replaces its editable fields. */
+export const saveExpense = (expense: ExpenseInput, id?: string) =>
+  rpc<Expense>('save_admin_expense', { id: id ?? null, expense });
+/** Hides it; deleteExpense(id, false) is the Undo. */
+export const deleteExpense = (id: string, deleted = true) =>
+  rpc<{ id: string; deleted: boolean; deleted_at: string | null }>('delete_admin_expense', { id, deleted });
 
 /** Changes the signed-in admin's password (Settings). */
 export const changePassword = async (password: string): Promise<void> => {

@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-11-14-expenses',
+    for: ['cook', 'admin'],
+    kind: 'new',
+    title: 'Expenses, in More',
+    body: 'Write down what you paid for packaging, courier or raw material, with the day and time. You both see the same list, and you can fix or delete anything. It sits in More, under Records.',
+  },
+  {
     id: '2026-11-10-gift-and-blank',
     for: ['admin'],
     kind: 'new',

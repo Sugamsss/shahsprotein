@@ -27,6 +27,7 @@ const JournalPage = React.lazy(() => import('./journal/JournalPage'));
 const JournalSearchPage = React.lazy(() => import('./journal/JournalSearchPage'));
 const JournalMonthPage = React.lazy(() => import('./journal/JournalMonthPage'));
 const TodosPage = React.lazy(() => import('./todos/TodosPage'));
+const ExpensesPage = React.lazy(() => import('./expenses/ExpensesPage'));
 const IngredientsPage = React.lazy(() => import('./ingredients/IngredientsPage'));
 const StickersPage = React.lazy(() => import('./stickers/StickersPage'));
 import adminCss from './admin.css?inline';
@@ -89,6 +90,7 @@ const AdminApp: React.FC = () => {
           <Route path="journal/search" element={<JournalSearchPage />} />
           <Route path="journal/month/:month" element={<JournalMonthPage />} />
           <Route path="todos" element={<TodosPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="customers/:phone" element={<CustomerPage />} />
           <Route path="coupons" element={<CouponsPage />} />
