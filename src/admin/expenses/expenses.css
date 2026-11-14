@@ -1,0 +1,205 @@
+/* Expenses (src/admin/expenses/): the list from More, its sheet, and the admin's
+   own date and time pickers. Tokens only; both themes; the admin type scale.
+   @imported by admin.css, so it ships inlined with the rest of the admin. */
+
+/* ---- The list ------------------------------------------------------------------ */
+
+.adm-search-field { position: relative; display: flex; align-items: center; }
+.adm-search-field > svg { position: absolute; left: 16px; color: var(--adm-ink-3); pointer-events: none; }
+.adm-search-field .adm-input { padding: 0 48px 0 46px; }
+/* One clear button, ours. Chrome and Safari draw their own × inside a type=search
+   input (admin.css hides it for the header's find field only). */
+.adm-search-field .adm-input::-webkit-search-cancel-button { display: none; -webkit-appearance: none; }
+.adm-search-field__clear {
+  position: absolute; right: 2px; display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: var(--radius-full); color: var(--adm-ink-2);
+}
+.adm-search-field__clear:active { background: var(--adm-well-press); }
+@media (hover: hover) { .adm-search-field__clear:hover { background: var(--adm-well-press); color: var(--adm-ink-1); } }
+
+.adm-exp__tools { display: grid; gap: 12px; }
+
+/* The month rows and day cards keep the page's own rhythm: a heading sits 12px
+   above its first card (16px gap less its own -4px), as in the mockup. */
+.adm-exp__list { display: grid; gap: 16px; }
+.adm-exp__list[aria-busy='true'] { opacity: 0.6; transition: opacity 160ms ease; }
+
+.adm-exp__month { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 8px 4px -4px; }
+.adm-exp__month h2 { color: var(--adm-ink-1); }
+.adm-exp__month b { color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600; }
+.adm-exp__month span { color: var(--adm-ink-3); font-size: var(--adm-text-small); font-weight: 500; margin-right: 6px; }
+
+.adm-card.adm-xday { display: grid; padding: 0; overflow: hidden; }
+.adm-xday__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--adm-hairline);
+}
+.adm-xday__head h3 { min-width: 0; }
+.adm-xday__facts {
+  flex: none; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500;
+  font-variant-numeric: proportional-nums; white-space: nowrap;
+}
+.adm-xday__facts b { color: var(--adm-ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.adm-xrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
+  width: 100%; min-height: 68px; padding: 12px 16px 12px 20px; text-align: left; color: var(--adm-ink-1);
+}
+.adm-xrow + .adm-xrow { border-top: 1px solid var(--adm-hairline); }
+.adm-xrow:active { background: var(--adm-well-press); }
+.adm-xrow:focus-visible { outline-offset: -3px; border-radius: var(--radius-lg); }
+.adm-xrow__main { display: grid; gap: 2px; min-width: 0; }
+.adm-xrow__title { font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.adm-xrow__sub {
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35;
+  font-variant-numeric: proportional-nums; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+.adm-xrow__amt { font-size: var(--adm-text-head); font-weight: 600; text-align: right; }
+.adm-xrow__end { color: var(--adm-ink-3); }
+@media (hover: hover) { .adm-xrow:hover { background: var(--adm-well); } }
+
+.adm-exp__found { margin: 0 4px; color: var(--adm-ink-2); font-variant-numeric: proportional-nums; }
+.adm-exp__found b { color: var(--adm-ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.adm-exp__empty { display: grid; justify-items: center; gap: 6px; padding: 32px 20px; text-align: center; }
+.adm-exp__empty p { color: var(--adm-ink-2); max-width: 32ch; text-wrap: pretty; }
+.adm-exp__empty-icon {
+  display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--adm-well); color: var(--adm-ink-2); margin-bottom: 8px;
+}
+
+/* ---- The sheet ----------------------------------------------------------------- */
+
+.adm-form__pair { align-items: start; } /* an error under one field must not stretch its neighbour */
+.adm-field--amount .adm-input {
+  font-size: 1.75rem; font-weight: 700; letter-spacing: -0.022em; min-height: 60px; padding-left: 42px;
+}
+.adm-field--amount .adm-field__prefix { font-size: 1.5rem; font-weight: 600; left: 18px; }
+
+.adm-text-btn--danger { color: var(--color-error-text); }
+.adm-exp__delete {
+  display: grid; margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--adm-hairline);
+}
+.adm-exp__delete .adm-text-btn { margin-top: 8px; }
+/* Delete's failure belongs inside the pinned bar, not floating above the clipped
+   sheet: while the sheet is open it covers the page toast and its focus trap
+   keeps Tab inside, so this is where Try again can be tapped and tabbed to. */
+.adm-exp__actions { display: grid; gap: 10px; }
+.adm-exp__actions .adm-toast-slot { position: static; padding: 0; }
+.adm-exp__actions .adm-toast { width: 100%; }
+
+/* ---- The Date and Time fields: 48px buttons with an icon ----------------------- */
+
+.adm-picker-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.adm-picker-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-picker-btn > svg { flex: none; color: var(--adm-ink-3); }
+.adm-picker-btn[aria-expanded='true'] {
+  border-color: var(--color-accent-primary); box-shadow: 0 0 0 3px var(--adm-accent-tint);
+  background: var(--color-bg-input-focus);
+}
+.adm-picker-btn:focus-visible {
+  outline: none; border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px var(--adm-accent-tint), 0 0 0 2px var(--color-accent-primary) inset;
+}
+.adm-picker-btn:active { transform: scale(0.99); }
+.adm-field > .adm-picker-btn { width: 100%; }
+
+/* ---- The picker layer: a sheet on a phone, a popover under the field on a laptop -- */
+
+.adm-picker-layer .adm-sheet__bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 12px; }
+
+@media (min-width: 960px) {
+  /* The layer only catches the click outside. */
+  .adm-picker-layer { display: block; padding: 0; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .adm-picker-layer.is-closing { animation: overlay-out 0.16s ease both; }
+  .adm-picker-layer .adm-sheet {
+    position: fixed; width: 320px; max-width: calc(100vw - 16px); max-height: none;
+    border: 1px solid var(--adm-edge); border-radius: 20px; box-shadow: var(--adm-shadow-lift);
+    animation: adm-popup-in 0.16s ease-out both;
+  }
+  .adm-picker-layer.is-closing .adm-sheet { animation: none; }
+  .adm-picker-layer .adm-sheet__body { padding: 12px; }
+  .adm-picker-layer .adm-sheet__bar { padding: 10px 12px 12px; }
+  .adm-picker-layer--time .adm-sheet { width: 296px; }
+}
+
+/* ---- The month grid ------------------------------------------------------------ */
+
+.adm-cal { display: grid; gap: 4px; }
+.adm-cal__nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; margin-bottom: 4px; }
+.adm-cal__nav h3 { text-align: center; }
+.adm-cal__step {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--adm-well); color: var(--adm-ink-2);
+  transition: background-color var(--transition-fast), transform 120ms ease;
+}
+.adm-cal__step:active { background: var(--adm-well-press); transform: scale(0.94); }
+.adm-cal__step:disabled { opacity: 0.4; pointer-events: none; }
+@media (hover: hover) { .adm-cal__step:hover { background: var(--adm-well-press); color: var(--adm-ink-1); } }
+
+.adm-cal__row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.adm-cal__dow span {
+  display: grid; place-items: center; height: 32px; color: var(--adm-ink-3);
+  font-size: var(--adm-text-small); font-weight: 600;
+}
+.adm-cal__grid { display: grid; animation: adm-cal-in 180ms var(--ease-glide) both; }
+@keyframes adm-cal-in { from { opacity: 0; transform: translateY(4px); } }
+
+.adm-cal__day { display: grid; place-items: center; min-height: 44px; touch-action: manipulation; color: var(--adm-ink-1); }
+.adm-cal__day > span {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 500;
+  transition: background-color var(--transition-fast), transform 120ms ease;
+}
+.adm-cal__day:active > span { transform: scale(0.92); }
+.adm-cal__day:focus-visible { outline: none; }
+.adm-cal__day:focus-visible > span { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+.adm-cal__day.is-today > span { background: var(--adm-accent-tint); color: var(--adm-accent-text); font-weight: 700; }
+.adm-cal__day[aria-selected='true'] > span {
+  background: var(--color-accent-gradient); color: var(--color-btn-text); font-weight: 700;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent-primary) 28%, transparent);
+}
+.adm-cal__day[aria-disabled='true'] { cursor: default; }
+.adm-cal__day[aria-disabled='true'] > span { color: var(--adm-ink-3); opacity: 0.5; }
+.adm-cal__day[aria-disabled='true']:active > span { transform: none; }
+.adm-cal__blank { min-height: 44px; }
+@media (hover: hover) {
+  .adm-cal__day:not([aria-selected='true'], [aria-disabled='true']):hover > span { background: var(--adm-well-press); }
+}
+
+/* ---- The time wheels: the kitchen's wheel (kitchen.css), three centred columns --- */
+
+.adm-xp-wheel.adm-wheel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.adm-xp-wheel .adm-wheel__row { grid-template-columns: 1fr; justify-items: center; }
+.adm-xp-wheel .adm-wheel__row b { justify-self: center; }
+.adm-xp-wheel .adm-wheel__col--ap .adm-wheel__row { font-size: var(--adm-text-head); }
+.adm-wheel__colon {
+  position: absolute; z-index: 1; left: 33.333%; top: 67px; height: 40px; transform: translateX(-50%);
+  display: grid; place-items: center; color: var(--adm-ink-1); font-size: var(--adm-text-title);
+  font-weight: 600; line-height: 1; pointer-events: none;
+}
+
+/* ---- Narrow phones: tighten the switch, the cards and the wheels ---------------- */
+
+/* A day heading and its money share a 390px line; the month row above already
+   gives the count for the day's entries, so the small print keeps only the total. */
+@media (max-width: 480px) {
+  .adm-xday__count { display: none; }
+}
+
+@media (max-width: 374px) {
+  .adm-segmented span { padding: 0 6px; font-size: var(--adm-text-small); }
+  .adm-xday__head { padding-inline: 16px; }
+  .adm-xrow { padding-left: 16px; gap: 8px; }
+  .adm-xrow__amt { font-size: var(--adm-text-body); }
+  .adm-search-field .adm-input { font-size: 1rem; }
+  .adm-xp-wheel .adm-wheel__row { font-size: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-cal__grid, .adm-cal__step, .adm-cal__day > span, .adm-picker-btn, .adm-exp__list { animation: none; transition: none; }
+  .adm-picker-btn:active, .adm-cal__day:active > span { transform: none; }
+}

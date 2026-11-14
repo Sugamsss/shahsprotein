@@ -21,7 +21,9 @@ export const Field: React.FC<{
   optional?: string;
   prefix?: string;
   action?: React.ReactNode;
-}> = ({ label, children, hint, error, optional, prefix, action }) => {
+  /** Extra class on the wrapper, for a screen's own look (the big Amount field). */
+  className?: string;
+}> = ({ label, children, hint, error, optional, prefix, action, className }) => {
   const id = useId();
   const note = error || hint;
   const input = React.cloneElement(children, {
@@ -30,7 +32,7 @@ export const Field: React.FC<{
     'aria-invalid': error ? true : undefined,
   });
   return (
-    <div className={`adm-field${prefix ? ' adm-field--prefix' : ''}`}>
+    <div className={`adm-field${prefix ? ' adm-field--prefix' : ''}${className ? ` ${className}` : ''}`}>
       <label htmlFor={id} className="adm-field__label">
         {label}
         {optional && <small>{optional}</small>}

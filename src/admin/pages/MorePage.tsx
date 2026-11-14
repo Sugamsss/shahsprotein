@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { ChevronRight, ListTodo, ClipboardList, Download, History, Layers, Mail, Settings, Sticker, Ticket, Users, type LucideIcon } from 'lucide-react';
+import { ChevronRight, ListTodo, ClipboardList, Download, History, Layers, Mail, ReceiptIndianRupee, Settings, Sticker, Ticket, Users, type LucideIcon } from 'lucide-react';
 import { adminCopy as copy } from '../../data/adminCopy';
-import { getCoupons, getEmailList, getTodos, getWebsiteRequests } from '../api';
+import { getCoupons, getEmailList, getExpenses, getTodos, getWebsiteRequests } from '../api';
 import { useAdminMe } from '../auth';
 import { useJournalAvailable } from '../journal/available';
+import { useExpensesAvailable } from '../expenses/available';
+import { istToday, rangeFor, sumOf } from '../expenses/model';
+import { formatMoney } from '../format';
 import { dueOf } from '../todos/model';
 import { HISTORY_PATH } from '../kitchen/history';
 import { useHistoryAvailable } from '../kitchen/useHistoryAvailable';
@@ -33,12 +36,19 @@ const MorePage: React.FC = () => {
   const people = emails.data?.members.length;
   const historyOn = useHistoryAvailable();
   const batchesOn = useBatchesAvailable();
+  // Expenses: its own link, with this month's money and count once one call answers.
+  const expensesOn = useExpensesAvailable();
+  const expenseMonth = rangeFor('this', istToday());
+  const expenses = useRpc(() => (expensesOn ? getExpenses({ from: expenseMonth.from, to: expenseMonth.to }) : Promise.resolve(null)), [expensesOn, expenseMonth.from, expenseMonth.to]);
   const admin = useAdminMe().home_view !== 'cook';
   const requests = useRpc(() => getWebsiteRequests({ state: 'pending', limit: 100 }), []);
   const open = todos.data?.todos.filter((t) => !t.done_at) ?? null;
   const late = open?.filter((t) => dueOf(t, todos.data?.today ?? '').state === 'late').length ?? 0;
   const pending = admin && !requests.error ? requests.data : null;
   const showRequests = Boolean(pending);
+  const expenseSub = expenses.data
+    ? copy.expenses.moreSub(formatMoney(sumOf(expenses.data.expenses)), expenses.data.expenses.length)
+    : copy.expenses.moreRow[1];
 
   return (
     <div className="adm-page adm-more">
@@ -74,6 +84,11 @@ const MorePage: React.FC = () => {
       </section>
       <h2 className="adm-more__group">{copy.more.groups.records}</h2>
       <section className="adm-card adm-list" aria-label={copy.more.groups.records}>
+        {expensesOn && (
+          <Link to="/admin/expenses">
+            <Row Icon={ReceiptIndianRupee} title={copy.expenses.moreRow[0]} sub={expenseSub} />
+          </Link>
+        )}
         {historyOn && (
           <Link to={HISTORY_PATH}>
             <Row Icon={History} title={copy.kitchen.history.moreRow[0]} sub={copy.kitchen.history.moreRow[1]} />

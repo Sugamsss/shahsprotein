@@ -921,3 +921,33 @@ export interface HomeExtras {
   low: { id: string; name: string; unit: 'g' | 'pieces'; stock: number; buying: boolean }[];
   wrote_today: boolean;
 }
+
+/** One expense both owners can see and change. Money out, never money in. */
+export interface Expense {
+  id: string;
+  /** India calendar day, "2026-11-14". */
+  spent_on: string;
+  /** India time, "18:05" (24h). */
+  spent_at: string;
+  title: string;
+  note: string;
+  /** Whole rupees. */
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What the sheet saves: the same fields, without the audit stamps. */
+export interface ExpenseInput {
+  spent_on: string;
+  spent_at: string;
+  title: string;
+  note: string;
+  amount: number;
+}
+
+/** get_admin_expenses: today's India day, and the expenses in the range, newest first. */
+export interface ExpenseList {
+  today: string;
+  expenses: Expense[];
+}

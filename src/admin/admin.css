@@ -29,6 +29,7 @@
 @import './requests/requests.css';
 @import './journal/journal.css';
 @import './todos/todos.css';
+@import './expenses/expenses.css';
 @import './ingredients/ingredients.css';
 @import './stickers/stickers.css';
 
