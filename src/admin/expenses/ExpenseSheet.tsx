@@ -28,7 +28,9 @@ type Picker = 'date' | 'time';
  * line at the foot, soft, with Undo. The day and time come from the admin's own
  * pickers, never the phone's: an expense can't be dated ahead, and its time can't be
  * later than now. The Vendor field waits for the vendors read: on a database without
- * 20261114000001 it isn't there, and nothing is sent for it.
+ * 20261114000001 it isn't there, and nothing is sent for it. A read that failed without
+ * saying the column is missing proves nothing either: what was typed stays, and Save
+ * waits with it so an older save is never handed a vendor it would drop.
  */
 export const ExpenseSheet: React.FC<{
   expense: Expense | null;
@@ -51,7 +53,7 @@ export const ExpenseSheet: React.FC<{
   const [time, setTime] = useState(expense?.spent_at ?? istNowTime());
   const [note, setNote] = useState(expense?.note ?? '');
   const [errors, setErrors] = useState<{ amount?: string; title?: string; vendor?: string; note?: string }>({});
-  const { vendors, show: vendorOn } = useExpenseVendors();
+  const { vendors, show: vendorOn, ready: vendorsReady } = useExpenseVendors();
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<Picker | null>(null);
@@ -92,7 +94,8 @@ export const ExpenseSheet: React.FC<{
 
   const submit = async (event?: React.FormEvent) => {
     event?.preventDefault();
-    if (busy) return;
+    if (busy || !vendorsReady) return;
+    if (!vendorOn && vendor.trim()) { setFormError(adminCopy.errors.missing); return; }
     const next = {
       amount: amountError(amount) ?? undefined,
       title: titleError(title) ?? undefined,
@@ -183,7 +186,7 @@ export const ExpenseSheet: React.FC<{
           {/* Delete's failure lands here: a sheet covers the page toast, and its
               focus trap keeps Tab inside, so Try again has to be in the bar. */}
           <ToastSlot />
-          <button type="submit" form={formId} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
+          <button type="submit" form={formId} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy || !vendorsReady || (!vendorOn && Boolean(vendor.trim()))}>
             {busy ? copy.saving : editing ? copy.saveEdit : copy.save}
           </button>
         </div>}
@@ -206,11 +209,11 @@ export const ExpenseSheet: React.FC<{
               }} />
           </Field>
 
-          {vendorOn && (
+          {(vendorOn || Boolean(vendor)) && (
             <VendorField value={vendor} onChange={(next) => {
               setVendor(next);
               if (errors.vendor) setErrors((current) => ({ ...current, vendor: undefined }));
-            }} vendors={vendors} error={errors.vendor ?? null} inputRef={vendorField} />
+            }} vendors={vendors} error={errors.vendor ?? null} inputRef={vendorField} disabled={!vendorsReady || !vendorOn} />
           )}
 
           <div className="adm-form__pair">

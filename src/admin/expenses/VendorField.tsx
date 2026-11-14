@@ -10,8 +10,6 @@ const copy = adminCopy.expenses;
  * padding, 44px rows, 2px between them. It is four rows tall at most.
  */
 const CARD = { air: 6, edge: 1, pad: 6, row: 44, gap: 2, rows: 4 };
-const cardHeight = (rows: number) => CARD.edge * 2 + CARD.pad * 2 + rows * CARD.row + (rows - 1) * CARD.gap;
-const CARD_MAX = cardHeight(CARD.rows); // 196
 
 /**
  * The Vendor box as a combobox, the way Add order's name box behaves: an empty box
@@ -34,7 +32,8 @@ export const VendorField: React.FC<{
   error?: string | null;
   /** The sheet's handle on the box, for its error's focus. */
   inputRef?: React.RefObject<HTMLInputElement>;
-}> = ({ value, onChange, vendors, error, inputRef }) => {
+  disabled?: boolean;
+}> = ({ value, onChange, vendors, error, inputRef, disabled = false }) => {
   const fieldId = useId();
   const listId = useId();
   const noteId = useId();
@@ -42,10 +41,12 @@ export const VendorField: React.FC<{
   const box = inputRef ?? ownBox;
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [rows, setRows] = useState(CARD.rows);
+  const [above, setAbove] = useState(false);
 
   const query = normalizeVendor(value);
   const { items, exact } = vendorMatches(vendors, value);
-  const shown = open && items.length > 0;
+  const shown = open && items.length > 0 && rows > 0;
   /** Enough typed to be a name, and nothing we know: say a typo would become a new vendor. */
   const hint = open && query.length >= 2 && items.length === 0 && !exact;
   /** One line under the box: the error if there is one, else the quiet new-vendor hint. */
@@ -83,27 +84,53 @@ export const VendorField: React.FC<{
   // the keyboard up) it shows three rows, or two, and the rest scrolls inside the card.
   // The two alternatives are worse: its foot cut off by the body, or the body scrolling
   // the whole form up to make room, which moves Date and Time every time it opens.
-  const [cardMax, setCardMax] = useState(CARD_MAX);
+  // The room is the sheet body's box intersected with what the visual viewport can
+  // actually show — its panned offset included, which is where a phone keyboard lives.
   useEffect(() => {
-    if (!shown) return undefined;
+    if (!open || !items.length) return undefined;
     const fit = () => {
       const boxElement = box.current;
       if (!boxElement) return;
       const body = boxElement.closest('.adm-sheet__body');
-      const limit = Math.min(body ? body.getBoundingClientRect().bottom : window.innerHeight, window.innerHeight);
-      // 2px of air, so a 1px border never ends up sitting on the clip.
-      const room = limit - boxElement.getBoundingClientRect().bottom - CARD.air - 2;
-      const rows = Math.min(CARD.rows, Math.floor((room - CARD.edge * 2 - CARD.pad * 2 + CARD.gap) / (CARD.row + CARD.gap)));
-      setCardMax(cardHeight(Math.max(1, rows)));
+      const clip = body?.getBoundingClientRect();
+      const rect = boxElement.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      const viewportBottom = viewport ? viewportTop + viewport.height : window.innerHeight;
+      const bottom = Math.min(clip?.bottom ?? window.innerHeight, viewportBottom);
+      const top = Math.max(clip?.top ?? 0, viewportTop);
+      const fit = (room: number) => Math.min(CARD.rows, Math.max(0, Math.floor((room - CARD.edge * 2 - CARD.pad * 2 + CARD.gap) / (CARD.row + CARD.gap))));
+      const below = fit(bottom - rect.bottom - CARD.air - 2);
+      const upper = fit(rect.top - top - CARD.air - 2);
+      if (below > 0) { setAbove(false); setRows(below); }
+      else if (upper > 0) { setAbove(true); setRows(upper); }
+      else { setRows(0); setAbove(false); }
     };
     fit();
     window.addEventListener('resize', fit);
+    window.visualViewport?.addEventListener('resize', fit);
+    window.visualViewport?.addEventListener('scroll', fit);
     document.addEventListener('scroll', fit, true);
     return () => {
       window.removeEventListener('resize', fit);
+      window.visualViewport?.removeEventListener('resize', fit);
+      window.visualViewport?.removeEventListener('scroll', fit);
       document.removeEventListener('scroll', fit, true);
     };
-  }, [shown]);
+  }, [open, items.length]);
+
+  // Keep keyboard navigation inside the floating card: adjust only its scroll offset,
+  // never call scrollIntoView (which may also move the sheet or the page).
+  useEffect(() => {
+    if (!shown || active < 0) return;
+    const list = document.getElementById(listId);
+    const option = document.getElementById(`${listId}-${active}`);
+    if (!list || !option) return;
+    const top = option.offsetTop;
+    const bottom = top + option.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [active, shown, rows, listId]);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (!shown) return;
@@ -122,7 +149,7 @@ export const VendorField: React.FC<{
     <div className="adm-field adm-vend-field">
       <label htmlFor={fieldId} className="adm-field__label">{copy.vendor}<small>{copy.optional}</small></label>
       <div className="adm-field__control">
-        <input ref={box} id={fieldId} className="adm-input" type="text" autoComplete="off" maxLength={VENDOR_MAX}
+        <input ref={box} id={fieldId} className="adm-input" type="text" autoComplete="off" maxLength={VENDOR_MAX} disabled={disabled}
           placeholder={copy.vendorPlaceholder} value={value} role="combobox" aria-autocomplete="list"
           aria-expanded={shown} aria-controls={listId} aria-describedby={note ? noteId : undefined}
           aria-invalid={error ? true : undefined}
@@ -133,8 +160,8 @@ export const VendorField: React.FC<{
           onKeyDown={onKeyDown} />
         {/* The one dynamic measurement in this box: how much room is left under it, which
             only the browser knows (see the fit effect). Everything else is a class. */}
-        <ul id={listId} role="listbox" aria-label={copy.vendorsLabel} className="adm-vend"
-          hidden={!shown} style={shown ? { maxHeight: cardMax } : undefined}>
+        <ul id={listId} role="listbox" aria-label={copy.vendorsLabel} className={`adm-vend${above ? ' adm-vend--above' : ''}`}
+          hidden={!shown} data-rows={rows}>
           {shown && items.map((item, i) => (
             // Options aren't focusable: pressing one keeps focus in the box, so it doesn't blur shut first.
             <li key={item.name} id={`${listId}-${i}`} role="option" aria-selected={i === active}

@@ -30,12 +30,13 @@ describe('the vendor box', () => {
     initial = '',
     onSubmit: (event: React.FormEvent) => void = (event) => event.preventDefault(),
     error: string | null = null,
+    withBody = false,
   ) => {
     const Host: React.FC = () => {
       const [text, setText] = React.useState(initial);
       return (
         <form onSubmit={onSubmit}>
-          <VendorField value={text} vendors={vendors} onChange={setText} error={error} />
+          {withBody ? <div className="adm-sheet__body"><VendorField value={text} vendors={vendors} onChange={setText} error={error} /></div> : <VendorField value={text} vendors={vendors} onChange={setText} error={error} />}
         </form>
       );
     };
@@ -68,6 +69,10 @@ describe('the vendor box', () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    // Each case gives the box its own viewport; drop it so the next starts clean.
+    if (Object.prototype.hasOwnProperty.call(window, 'visualViewport')) {
+      delete (window as unknown as { visualViewport?: unknown }).visualViewport;
+    }
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -80,6 +85,39 @@ describe('the vendor box', () => {
     // The count is what the right side says, and no letters are bold with nothing typed.
     expect(options()[0].querySelector('small')?.textContent).toBe('4 entries');
     expect(document.querySelector('.adm-vend__hit')).toBeNull();
+  });
+
+  it('fits below the input in a panned visual viewport', () => {
+    const viewport = new EventTarget() as VisualViewport;
+    Object.defineProperties(viewport, {
+      offsetTop: { configurable: true, value: 200 },
+      height: { configurable: true, value: 300 },
+    });
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+    render('', undefined, null, true);
+    const body = document.querySelector('.adm-sheet__body')!;
+    const input = box();
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 0, bottom: 800, left: 0, right: 300, width: 300, height: 800, x: 0, y: 0, toJSON: () => ({}) });
+    const inputRect = vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({ top: 210, bottom: 254, left: 0, right: 200, width: 200, height: 44, x: 0, y: 210, toJSON: () => ({}) });
+    focusBox();
+    expect(list().classList.contains('adm-vend--above')).toBe(false);
+    expect(list().dataset.rows).toBe('4');
+
+    // Panning down, the visible band moves with the box, and the card follows it.
+    inputRect.mockReturnValue({ top: 380, bottom: 424, left: 0, right: 200, width: 200, height: 44, x: 0, y: 380, toJSON: () => ({}) });
+    act(() => { viewport.dispatchEvent(new Event('resize')); });
+    expect(list().dataset.rows).toBe('1');
+
+    // Near the band's foot there is no room below, and above is measured from the
+    // band's top (400), not from the layout viewport's 0.
+    Object.defineProperties(viewport, {
+      offsetTop: { configurable: true, value: 400 },
+      height: { configurable: true, value: 200 },
+    });
+    inputRect.mockReturnValue({ top: 560, bottom: 604, left: 0, right: 200, width: 200, height: 44, x: 0, y: 560, toJSON: () => ({}) });
+    act(() => { viewport.dispatchEvent(new Event('scroll')); });
+    expect(list().classList.contains('adm-vend--above')).toBe(true);
+    expect(list().dataset.rows).toBe('3');
   });
 
   it('narrows as you type, with the typed letters bold, and keeps the typing', () => {
@@ -102,6 +140,92 @@ describe('the vendor box', () => {
     expect(box().value).toBe('Patil Traders');
     expect(list().hidden).toBe(true);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('scrolls the fifth keyboard-selected vendor into the card without moving the page', () => {
+    render();
+    focusBox();
+    const card = list();
+    Object.defineProperty(card, 'clientHeight', { configurable: true, value: 196 });
+    options().forEach((option, index) => {
+      Object.defineProperty(option, 'offsetTop', { configurable: true, value: 6 + index * 46 });
+      Object.defineProperty(option, 'offsetHeight', { configurable: true, value: 44 });
+    });
+    // jsdom has no scrollIntoView, so the method is put on the real DOM chain where
+    // the component's own call would find it — not on a detached vi.fn.
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    const scrollPage = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const scrollByPage = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+    expect(options()[0].scrollIntoView).toBe(scrollIntoView);
+    for (let i = 0; i < 5; i += 1) press('ArrowDown');
+    delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
+    expect(options()[4].getAttribute('aria-selected')).toBe('true');
+    expect(card.scrollTop).toBeGreaterThan(0);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(scrollPage).not.toHaveBeenCalled();
+    expect(scrollByPage).not.toHaveBeenCalled();
+  });
+
+  it('scrolls an upward keyboard selection back to the top of the card', () => {
+    render();
+    focusBox();
+    const card = list();
+    Object.defineProperty(card, 'clientHeight', { configurable: true, value: 104 });
+    options().forEach((option, index) => {
+      Object.defineProperty(option, 'offsetTop', { configurable: true, value: 6 + index * 46 });
+      Object.defineProperty(option, 'offsetHeight', { configurable: true, value: 44 });
+    });
+    for (let i = 0; i < 5; i += 1) press('ArrowDown');
+    expect(card.scrollTop).toBeGreaterThan(0);
+    press('ArrowUp');
+    expect(options()[3].getAttribute('aria-selected')).toBe('true');
+    expect(card.scrollTop).toBe(130);
+    press('ArrowUp');
+    expect(options()[2].getAttribute('aria-selected')).toBe('true');
+    expect(card.scrollTop).toBe(98);
+  });
+
+  it('brings the active vendor back into a card that a short screen shrank', () => {
+    render();
+    const input = box();
+    const card = list();
+    const heights: Record<string, number> = { '1': 58, '2': 104, '3': 150, '4': 196 };
+    Object.defineProperty(card, 'clientHeight', { configurable: true, get: () => heights[card.dataset.rows ?? ''] ?? 0 });
+    vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 144, left: 0, right: 200, width: 200, height: 44, x: 0, y: 100, toJSON: () => ({}) });
+    const innerHeight = vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(768);
+    focusBox();
+    // The options exist once the box opens; they keep their nodes as the card shrinks.
+    options().forEach((option, index) => {
+      Object.defineProperty(option, 'offsetTop', { configurable: true, value: 6 + index * 46 });
+      Object.defineProperty(option, 'offsetHeight', { configurable: true, value: 44 });
+    });
+    expect(card.dataset.rows).toBe('4');
+
+    press('ArrowDown');
+    press('ArrowDown');
+    press('ArrowDown');
+    expect(options()[2].getAttribute('aria-selected')).toBe('true');
+    expect(card.scrollTop).toBe(0);
+
+    // The keyboard was up and the screen short: only one row fits now, and the third
+    // option sits below it. Its own card scrolls; the page and the sheet do not.
+    innerHeight.mockReturnValue(222);
+    act(() => { window.dispatchEvent(new Event('resize')); });
+    expect(card.dataset.rows).toBe('1');
+    expect(card.scrollTop).toBe(84);
+    expect(input.getAttribute('aria-activedescendant')).toBe(options()[2].id);
+    expect(98).toBeGreaterThanOrEqual(card.scrollTop);
+    expect(142).toBeLessThanOrEqual(card.scrollTop + card.clientHeight);
+  });
+
+  it('does not advertise an expanded list when neither side has room', () => {
+    render();
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(0);
+    vi.spyOn(box(), 'getBoundingClientRect').mockReturnValue({ top: 0, bottom: 40, left: 0, right: 100, width: 100, height: 40, x: 0, y: 0, toJSON() {} });
+    focusBox();
+    expect(box().getAttribute('aria-expanded')).toBe('false');
+    expect(list().hidden).toBe(true);
   });
 
   it('closes the list on Escape only, and keeps the cursor in the box', () => {

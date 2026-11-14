@@ -111,13 +111,18 @@
 .adm-vend-field { position: relative; z-index: 2; } /* lifts the card over Date and Time */
 .adm-vend {
   position: absolute; z-index: 3; left: 0; right: 0; top: calc(100% + 6px);
-  display: grid; gap: 2px; max-height: 196px; margin: 0; padding: 6px;
+  display: grid; gap: 2px; margin: 0; padding: 6px;
   overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; list-style: none;
   border: 1px solid var(--adm-edge); border-radius: 16px;
   background: var(--adm-surface-solid); box-shadow: var(--adm-shadow-lift);
   animation: adm-vend-in 160ms var(--ease-glide) both;
 }
-/* 196 is four whole rows: 4 × 44 + 3 × 2 gaps + 2 × 6 padding + 2 × 1 border. */
+.adm-vend--above { top: auto; bottom: calc(100% + 6px); }
+/* Whole-row fit caps: edge × 2 + padding × 2 + rows × 44 + (rows − 1) × 2. */
+.adm-vend[data-rows='1'] { max-height: 58px; }
+.adm-vend[data-rows='2'] { max-height: 104px; }
+.adm-vend[data-rows='3'] { max-height: 150px; }
+.adm-vend[data-rows='4'] { max-height: 196px; }
 .adm-vend[hidden] { display: none; }
 .adm-vend::-webkit-scrollbar { display: none; }
 @keyframes adm-vend-in { from { opacity: 0; transform: translateY(-4px); } }

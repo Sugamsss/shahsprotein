@@ -26,11 +26,13 @@ const ExpensesPage: React.FC = () => {
   const search = useSettled(text.trim(), 250);
   const today = istToday();
   const { from, to } = rangeFor(range, today);
-  const list = useRpc(() => getExpenses({ from, to, search }), [from, to, search], { refreshOnFocus: true });
+  const filterKey = JSON.stringify([from, to, search]);
+  const list = useRpc(async () => ({ filterKey, result: await getExpenses({ from, to, search }) }), [from, to, search], { refreshOnFocus: true });
   const [sheet, setSheet] = useState<{ expense: Expense | null } | null>(null);
 
-  const data = list.data;
+  const data = list.data?.result;
   const rows = data?.expenses ?? [];
+  const totalsCurrent = list.data?.filterKey === filterKey;
   const missing = list.error?.kind === 'missing';
   const months = groupExpenses(rows);
 
@@ -61,7 +63,7 @@ const ExpensesPage: React.FC = () => {
     const manyMonths = months.length > 1;
     body = (
       <div className={`adm-exp__list${list.error ? ' is-stale' : ''}`} aria-busy={list.loading || undefined}>
-        {search && (
+        {search && totalsCurrent && (
           <div className="adm-exp__sum" role="status" aria-live="polite">
             <span className="adm-exp__sum-label">{copy.totals(search, copy.rangeWords[range])}</span>
             <b className="adm-exp__sum-total">{formatMoney(sumOf(rows))}</b>
