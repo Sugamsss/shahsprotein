@@ -110,8 +110,36 @@ describe('modeOptionsFor', () => {
   });
 });
 
-describe('500 g sheets', () => {
-  it('a 500 g back stamps the 250 g rows (same 114 x 142 art block)', () => {
+describe('front covers (net weight line painted out)', () => {
+  it('every front carries one cover rect on the front card cream, no back does', () => {
+    for (const spec of Object.values(SHEET_SPECS)) {
+      if (spec.side === 'front') {
+        expect(spec.stamp).toBeNull();
+        expect(spec.cover?.paper).toBe('#F7F2E4');
+        expect(spec.cover?.rects).toHaveLength(1);
+        const [rect] = spec.cover?.rects ?? [];
+        // The rect stays inside the trim box with room to spare.
+        expect(rect.x).toBeGreaterThan(0);
+        expect(rect.y).toBeGreaterThan(0);
+        expect(rect.x + rect.w).toBeLessThan(spec.trim[0]);
+        expect(rect.y + rect.h).toBeLessThan(spec.trim[1]);
+      } else {
+        expect(spec.cover).toBeUndefined();
+      }
+    }
+  });
+
+  it('250 g fronts share one line position, 100 g fronts another', () => {
+    const line = (id: keyof typeof SHEET_SPECS) => SHEET_SPECS[id].cover?.rects[0];
+    expect(line('rj-250g-front')).toEqual(line('ms-250g-front'));
+    expect(line('rj-500g-front')).toEqual(line('ms-500g-front'));
+    expect(line('rj-100g-front')).toEqual(line('ms-100g-front'));
+    expect(line('rj-250g-front')).not.toEqual(line('rj-500g-front'));
+    expect(line('rj-100g-front')).not.toEqual(line('db-100g-front'));
+  });
+});
+
+describe('500 g sheets', () => {  it('a 500 g back stamps the 250 g rows (same 114 x 142 art block)', () => {
     const big = specFor('raggi-jaggi', '500 g', 'back');
     const small = specFor('raggi-jaggi', '250 g', 'back');
     expect(big?.asset).toBe('/assets/stickers/rj-500g-back-6up-blank-v1.pdf');

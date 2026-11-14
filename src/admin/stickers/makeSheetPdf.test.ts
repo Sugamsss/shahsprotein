@@ -28,12 +28,26 @@ const loader = (basePdf: ArrayBuffer): (() => Promise<SheetAssets>) => async () 
 const values = { mrp: '', unit: '', batch: '', madeOn: '', useBy: '' };
 
 describe('makeSheetPdf', () => {
-  it('returns a front sheet byte-identical to the shipped asset', async () => {
-    const front = specFor('raggi-jaggi', '250 g', 'front', 'default') as SheetSpec;
+  it('a front with no cover returns the shipped asset byte-identical', async () => {
+    const front = { ...(specFor('raggi-jaggi', '250 g', 'front', 'default') as SheetSpec), cover: undefined };
     const basePdf = await blankSheet();
     const bytes = await makeSheetPdf(values, front, loader(basePdf));
     expect(bytes.length).toBe(basePdf.byteLength);
     expect(Array.from(bytes)).toEqual(Array.from(new Uint8Array(basePdf)));
+  });
+
+  it('a front paints its cover (the net weight line out) on one page', async () => {
+    // The shipped fronts carry "Net Quantity: …" as live text; the writer
+    // covers it with the card's paper hex on every cell. The fake sheet here
+    // stands in for the art: what matters is the cover path runs and keeps
+    // the page count, without touching the back stamp path.
+    const front = specFor('raggi-jaggi', '250 g', 'front', 'default') as SheetSpec;
+    expect(front.cover?.rects).toHaveLength(1);
+    const basePdf = await blankSheet();
+    const bytes = await makeSheetPdf(values, front, loader(basePdf));
+    expect(Array.from(bytes)).not.toEqual(Array.from(new Uint8Array(basePdf)));
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
   });
 
   it('refuses a back whose stamp geometry is missing, before loading any asset', async () => {

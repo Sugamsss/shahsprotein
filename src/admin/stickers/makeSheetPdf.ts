@@ -4,11 +4,15 @@ import { cellOrigin, GIFT_INK, type SheetSpec, type StampRow } from './sheetSpec
 
 // Vector-only variable stamping for /admin/stickers.
 //
+// Stamped values are glyph OUTLINES, never live text: printer-side CorelDraw
+// rejected live text and the printer may lack our fonts, so keep zero font
+// dependency here. The front net weight line is live text baked into the
+// shipped art; fronts paint it out with the card cream (spec.cover), a path
+// backs never take (their stamp owns their covers).
+//
 // Every number that places ink comes from sheetSpecs.ts (measured from the
-// shipped sheet PDFs); this file only draws. Values are glyph OUTLINES — no
-// font object and no text operator is written for them, so nothing stamped is
-// selectable or re-typesettable (CorelDraw rejected live text). RGB here; the
-// print file still goes through tools/sheet_to_cmyk.py before print.
+// shipped sheet PDFs); this file only draws. RGB here; the print file still
+// goes through tools/sheet_to_cmyk.py before print.
 //
 // Two arrangements exist on the art:
 //   * backs with gold writing rules (250 g pouches, Date Bites container): the
@@ -26,6 +30,10 @@ import { cellOrigin, GIFT_INK, type SheetSpec, type StampRow } from './sheetSpec
 // Gift prints both money rows in italic, and its heart in the pack's own maroon.
 // Blank fills only the two money rows (MRP and unit price) and leaves the batch
 // and both dates empty, so those rows are simply not drawn.
+//
+// Fronts print nothing variable, but their art carries the net weight line as
+// live text. The writer paints it out with the front card's paper hex on every
+// cell (spec.cover), the same cover pattern the backs use for gift wording.
 
 const MM = 72 / 25.4;
 
@@ -181,8 +189,9 @@ const rawFor = (values: StampValues, row: StampRow): string => {
 
 /**
  * Stamps the variable values onto every cell of a back sheet as glyph
- * outlines. A spec with no stamp (every front) returns the shipped asset
- * untouched; a back with no stamp throws rather than print a blank field.
+ * outlines. A front paints its cover (the net weight line out) and nothing
+ * else; a front with no cover returns the shipped asset untouched. A back
+ * with no stamp throws rather than print a blank field.
  */
 export const makeSheetPdf = async (
   values: StampValues,
@@ -193,7 +202,26 @@ export const makeSheetPdf = async (
   if (!stamp) {
     if (spec.side !== 'front') throw new Error(`sticker sheet ${spec.id} has no stamp geometry`);
     const assets = await load(spec);
-    return new Uint8Array(assets.basePdf);
+    if (!spec.cover) return new Uint8Array(assets.basePdf);
+    const doc = await PDFDocument.load(new Uint8Array(assets.basePdf));
+    const page = doc.getPages()[0];
+    const pageH = page.getHeight();
+    const paper = hex(spec.cover.paper);
+    for (let i = 0; i < spec.cells; i++) {
+      const [bleedX, bleedY] = cellOrigin(spec, i);
+      const x0 = bleedX + spec.bleed;
+      const y0 = bleedY + spec.bleed;
+      for (const rect of spec.cover.rects) {
+        page.drawRectangle({
+          x: (x0 + rect.x) * MM,
+          y: pageH - (y0 + rect.y + rect.h) * MM,
+          width: rect.w * MM,
+          height: rect.h * MM,
+          color: paper,
+        });
+      }
+    }
+    return doc.save({ useObjectStreams: true, objectsPerTick: SERIALIZE_OBJECTS_PER_TICK });
   }
 
   if (stamp.rules.length > 0 && stamp.rules.length !== stamp.rows.length) {

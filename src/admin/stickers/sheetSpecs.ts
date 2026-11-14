@@ -22,7 +22,10 @@
 // see makeSheetPdf.ts. Never invent a row.
 //
 // Sides: fronts print no variable data, so their spec carries stamp: null and
-// the sheet is returned byte-identical. The Date Bites 250 g pack is the
+// the kind never changes their art. Every front carries a `cover` rect instead:
+// the net weight line ("Net Quantity: 250 g" etc.) is live text baked into the
+// shipped art, so the writer paints it out with the front card's paper hex,
+// the same pattern as the backs' giftCover. The Date Bites 250 g pack is the
 // container sticker and has no front.
 
 import type { StickerProductId } from './stickerMath';
@@ -60,7 +63,9 @@ export interface StampRow {
   face: StampFace;
 }
 
-/** A patch of the art covered with the paper hex in gift mode. */
+/** A patch of the art covered with the paper hex: the priced build's own words
+ *  in gift mode, or a front's net weight line, always. Label-local mm from the
+ *  trim top-left, y down. */
 export interface StampCover {
   /** Label-local mm from the trim top-left, y down. */
   x: number;
@@ -136,6 +141,12 @@ export interface SheetSpec {
   bleed: number;
   /** null = nothing variable prints on this sheet. */
   stamp: StampLayout | null;
+  /**
+   * Paint-out for a sheet with no stamp (every front): the net weight line is
+   * live text in the shipped art, so the writer covers it with `paper` on
+   * every cell. Backs never carry this; their stamp path owns their covers.
+   */
+  cover?: { paper: string; rects: StampCover[] };
 }
 
 const spec = (s: SheetSpec): SheetSpec => s;
@@ -310,8 +321,54 @@ const STAMP_CONTAINER: StampLayout = {
   currencyInArt: true,
 };
 
-export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
-  // 500 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142, the 250 g art block.
+// -------------------------------------------------------------------------
+// FRONT COVERS (measured 2026-11-14)
+//
+// Label-local mm, origin at the trim top-left of one sticker, y down. Each
+// rect covers the front's net weight line ("Net Quantity: 250 g" etc., live
+// text in the shipped art) with the front card's flat cream, ~1.5 mm of pad
+// past the measured ink on every side. Ink boxes were read from the shipped
+// sheet PDFs with pdftotext -bbox (every cell of every sheet identical):
+//   250 g fronts: x[47.18,72.81] y[88.40,92.39]
+//   500 g fronts: x[47.35,72.64] y[87.68,91.59]
+//   100 g fronts: x[44.03,68.46] y[58.27,61.93]
+//   db 100 g:     x[44.03,68.46] y[56.47,60.13]
+// Clearance checked the same way: nearest word above any rect is 1.7+ mm away,
+// nothing below but the frame zone, zero non-net words inside. Do not nudge by
+// eye. Proof: temp/sticker-weight-removal/ in this repo.
+
+/**
+ * The front card's cream. Measured #F7F2E4 on renders of all seven front
+ * sheets (unanimous corner samples, every cell) — the design repo's front
+ * cream, not the backs' #FCF9F0 card.
+ */
+const FRONT_PAPER = '#F7F2E4';
+
+/** 250 g fronts (120 x 100): Raggi Jaggi and Muesli share the line position. */
+const FRONT_COVER_250G: NonNullable<SheetSpec['cover']> = {
+  paper: FRONT_PAPER,
+  rects: [{ x: 45.5, y: 86.9, w: 28.9, h: 7.1 }],
+};
+
+/** 500 g fronts (120 x 100, 2 mm bleed): same line, its own position. */
+const FRONT_COVER_500G: NonNullable<SheetSpec['cover']> = {
+  paper: FRONT_PAPER,
+  rects: [{ x: 45.8, y: 86.1, w: 28.4, h: 7.0 }],
+};
+
+/** 100 g fronts (112.5 x 67.5): Raggi Jaggi and Muesli share the position. */
+const FRONT_COVER_100G: NonNullable<SheetSpec['cover']> = {
+  paper: FRONT_PAPER,
+  rects: [{ x: 42.5, y: 56.7, w: 27.5, h: 6.8 }],
+};
+
+/** Date Bites 100 g front: same box, ~1.8 mm higher on the card. */
+const FRONT_COVER_100G_DB: NonNullable<SheetSpec['cover']> = {
+  paper: FRONT_PAPER,
+  rects: [{ x: 42.5, y: 54.9, w: 27.5, h: 6.8 }],
+};
+
+export const SHEET_SPECS: Record<SheetId, SheetSpec> = {  // 500 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142, the 250 g art block.
   // No gift twin was ever built for 500 g, so Gift prints on this blank art and
   // the layout's giftCover takes out "(incl. of all taxes)".
   'rj-500g-back': spec({
@@ -378,12 +435,14 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
     cols: 2, rowsCount: 4, cells: 8,
     bleedOrigin: [26.4, 18.6], pitch: [124, 104], trim: [120, 100], bleed: 2,
     stamp: null,
+    cover: FRONT_COVER_500G,
   }),
   'ms-500g-front': spec({
     id: 'ms-500g-front', side: 'front', asset: '/assets/stickers/ms-500g-front-8up-v1.pdf',
     cols: 2, rowsCount: 4, cells: 8,
     bleedOrigin: [26.4, 18.6], pitch: [124, 104], trim: [120, 100], bleed: 2,
     stamp: null,
+    cover: FRONT_COVER_500G,
   }),
   // Fronts — nothing variable. 250 g 8-up (2 x 4, bleed 3, trim 120 x 100).
   'rj-250g-front': spec({
@@ -391,12 +450,14 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
     cols: 2, rowsCount: 4, cells: 8,
     bleedOrigin: [26.4, 16.6], pitch: [126, 106], trim: [120, 100], bleed: 3,
     stamp: null,
+    cover: FRONT_COVER_250G,
   }),
   'ms-250g-front': spec({
     id: 'ms-250g-front', side: 'front', asset: '/assets/stickers/ms-250g-front-8up-v1.pdf',
     cols: 2, rowsCount: 4, cells: 8,
     bleedOrigin: [26.4, 16.6], pitch: [126, 106], trim: [120, 100], bleed: 3,
     stamp: null,
+    cover: FRONT_COVER_250G,
   }),
   // 100 g fronts — 12-up, 2 x 6, bleed 2, trim 112.5 x 67.5.
   'rj-100g-front': spec({
@@ -404,18 +465,21 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
     cols: 2, rowsCount: 6, cells: 12,
     bleedOrigin: [35.9, 14.1], pitch: [116.5, 71.5], trim: [112.5, 67.5], bleed: 2,
     stamp: null,
+    cover: FRONT_COVER_100G,
   }),
   'ms-100g-front': spec({
     id: 'ms-100g-front', side: 'front', asset: '/assets/stickers/ms-100g-front-12up-v1.pdf',
     cols: 2, rowsCount: 6, cells: 12,
     bleedOrigin: [35.9, 14.1], pitch: [116.5, 71.5], trim: [112.5, 67.5], bleed: 2,
     stamp: null,
+    cover: FRONT_COVER_100G,
   }),
   'db-100g-front': spec({
     id: 'db-100g-front', side: 'front', asset: '/assets/stickers/db-100g-front-12up-v1.pdf',
     cols: 2, rowsCount: 6, cells: 12,
     bleedOrigin: [35.9, 14.1], pitch: [116.5, 71.5], trim: [112.5, 67.5], bleed: 2,
     stamp: null,
+    cover: FRONT_COVER_100G_DB,
   }),
 };
 
