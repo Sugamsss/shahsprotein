@@ -146,10 +146,32 @@ describe('no writing rules on any back (owner, 2026-11-14)', () => {
       if (spec.side === 'back') expect(spec.stamp?.rules).toEqual([]);
     }
   });
-  it('the container gift lockup still ends at the value column', () => {
-    const spec = specFor('bites', '250 g', 'back');
-    expect(spec?.stamp?.align).toBe('left');
-    expect(spec?.stamp?.valueRight).toBe(47.482);
+});
+
+describe('uniform product details (owner, 2026-11-14)', () => {
+  it('every back starts its values at one left edge', () => {
+    for (const spec of Object.values(SHEET_SPECS)) {
+      if (spec.side === 'back') {
+        expect(spec.stamp?.align).toBe('left');
+        expect(spec.stamp?.valueLeft).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('every back value row is 6.35 pt, MRP bold, the rest semi', () => {
+    for (const spec of Object.values(SHEET_SPECS)) {
+      if (spec.side !== 'back') continue;
+      for (const row of spec.stamp?.rows ?? []) {
+        expect(row.pt).toBe(6.35);
+        expect(row.face).toBe(row.key === 'mrp' ? 'bold' : 'semi');
+      }
+    }
+  });
+  it('value columns start right of the labels', () => {
+    expect(specFor('raggi-jaggi', '250 g', 'back')?.stamp?.valueLeft).toBe(59.3);
+    expect(specFor('raggi-jaggi', '100 g', 'back')?.stamp?.valueLeft).toBe(47.5);
+    expect(specFor('muesli', '100 g', 'back')?.stamp?.valueLeft).toBe(46.8);
+    expect(specFor('bites', '100 g', 'back')?.stamp?.valueLeft).toBe(48.2);
+    expect(specFor('bites', '250 g', 'back')?.stamp?.valueLeft).toBe(22.353);
   });
 });
 

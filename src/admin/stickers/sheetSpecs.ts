@@ -83,8 +83,7 @@ export interface StampRule {
 export interface StampLayout {
   /** Which edge the value run is anchored to. */
   align: 'right' | 'left';
-  /** Right edge of a right-aligned run, label-local mm from the trim left.
-   *  On the left-aligned container it doubles as the gift lockup anchor. */
+  /** Right edge of a right-aligned run, label-local mm from the trim left. */
   valueRight?: number;
   /** Left edge of a left-aligned run (the Date Bites container only). */
   valueLeft?: number;
@@ -154,6 +153,13 @@ const spec = (s: SheetSpec): SheetSpec => s;
 // (value baseline = label baseline, verified within 0.02 mm on every row).
 // Values print straight onto the label baseline with no rule beneath them.
 //
+// Every value row on every back is one size (owner, 2026-11-14): 6.35 pt,
+// MRP bold, the rest semi. Every value starts at one left edge per layout
+// (`valueLeft`, just right of the widest row label), so the whole Product
+// Details block reads as one column with one start. The 100 g column is the
+// tightest: its values must still end at the old right edge, which the
+// widest realistic values (unit price, dates) do — verified on renders.
+//
 // Every back now ships WITHOUT writing rules (owner, 2026-11-14): the -v2
 // sheets have no gold lines in the Product Details value column, so the
 // stamper draws each value directly and paints no paper band. The 100 g
@@ -167,10 +173,8 @@ const spec = (s: SheetSpec): SheetSpec => s;
 // back lists zero.
 //
 // The two 500 g backs (same trim, 114 x 142, recovered art) carry the identical
-// details block: every row baseline, the `valueRight` column and all five gold
-// rules sit at the 250 g coordinates, measured on the shipped 500 g sheets
-// (temp/sticker-500g/measure_rules.py reads the same 119.832 / 123.938 /
-// 126.330 / 128.722 / 131.135 as the 250 g back). One factory serves both.
+// details block: every row baseline and the value column sit at the 250 g
+// coordinates, measured on the shipped 500 g sheets. One factory serves both.
 
 /**
  * The ink every stamped value uses: pure black (owner, 2026-11-10).
@@ -194,14 +198,15 @@ export const GIFT_INK = '#861520';
 
 /** The 114 x 142 backs (250 g and 500 g): 2 x 3, same details block. */
 const stamp114x142 = (): StampLayout => ({
-  align: 'right',
+  align: 'left',
+  valueLeft: 59.3,
   valueRight: 73.8,
   rows: [
-    { key: 'mrp', baseline: 119.573, pt: 9.0, face: 'bold' },
-    { key: 'unit', baseline: 123.673, pt: 5.2, face: 'semi' },
-    { key: 'batch', baseline: 126.073, pt: 5.2, face: 'semi' },
-    { key: 'made', baseline: 128.473, pt: 5.2, face: 'semi' },
-    { key: 'useBy', baseline: 130.873, pt: 5.2, face: 'semi' },
+    { key: 'mrp', baseline: 119.573, pt: 6.35, face: 'bold' },
+    { key: 'unit', baseline: 123.673, pt: 6.35, face: 'semi' },
+    { key: 'batch', baseline: 126.073, pt: 6.35, face: 'semi' },
+    { key: 'made', baseline: 128.473, pt: 6.35, face: 'semi' },
+    { key: 'useBy', baseline: 130.873, pt: 6.35, face: 'semi' },
   ],
   rules: [],
   // No writing rules on the -v2 art (owner, 2026-11-14), so nothing is
@@ -226,16 +231,19 @@ const STAMP_MS_250G = stamp114x142();
 const STAMP_RJ_500G = stamp114x142();
 const STAMP_MS_500G = stamp114x142();
 
-/** 100 g pouch backs (93.75 x 127.5) — Raggi Jaggi: MRP 7.8, rest 6.0 pt. */
+/** 100 g pouch backs (93.75 x 127.5) — Raggi Jaggi: one 6.35 pt column.
+ * The column is narrow: values start just right of the labels and the
+ * longest dates stop half a millimetre shy of the divider. */
 const STAMP_RJ_100G: StampLayout = {
-  align: 'right',
+  align: 'left',
+  valueLeft: 47.5,
   valueRight: 60.4,
   rows: [
-    { key: 'mrp', baseline: 105.071, pt: 7.8, face: 'bold' },
-    { key: 'unit', baseline: 107.821, pt: 6.0, face: 'semi' },
-    { key: 'batch', baseline: 110.571, pt: 6.0, face: 'semi' },
-    { key: 'made', baseline: 113.321, pt: 6.0, face: 'semi' },
-    { key: 'useBy', baseline: 116.071, pt: 6.0, face: 'semi' },
+    { key: 'mrp', baseline: 105.071, pt: 6.35, face: 'bold' },
+    { key: 'unit', baseline: 107.821, pt: 6.35, face: 'semi' },
+    { key: 'batch', baseline: 110.571, pt: 6.35, face: 'semi' },
+    { key: 'made', baseline: 113.321, pt: 6.35, face: 'semi' },
+    { key: 'useBy', baseline: 116.071, pt: 6.35, face: 'semi' },
   ],
   rules: [],
   paper: '#FCF9F0',
@@ -243,12 +251,14 @@ const STAMP_RJ_100G: StampLayout = {
   currencyInArt: false,
 };
 
-/** 100 g pouch backs — Muesli: MRP 8.25, rest 6.35 pt, its own column. */
+/** 100 g pouch backs — Muesli: one 6.35 pt column. Same narrow-column
+ * rule as Raggi Jaggi: dates stop shy of the divider. */
 const STAMP_MS_100G: StampLayout = {
-  align: 'right',
+  align: 'left',
+  valueLeft: 46.8,
   valueRight: 59.2,
   rows: [
-    { key: 'mrp', baseline: 104.373, pt: 8.25, face: 'bold' },
+    { key: 'mrp', baseline: 104.373, pt: 6.35, face: 'bold' },
     { key: 'unit', baseline: 107.273, pt: 6.35, face: 'semi' },
     { key: 'batch', baseline: 110.173, pt: 6.35, face: 'semi' },
     { key: 'made', baseline: 113.073, pt: 6.35, face: 'semi' },
@@ -260,12 +270,14 @@ const STAMP_MS_100G: StampLayout = {
   currencyInArt: false,
 };
 
-/** 100 g pouch backs — Date Bites: MRP 8.25, rest 6.35 pt, own column. */
+/** 100 g pouch backs — Date Bites: one 6.35 pt column. Same narrow-column
+ * rule: dates stop shy of the divider. */
 const STAMP_DB_100G: StampLayout = {
-  align: 'right',
+  align: 'left',
+  valueLeft: 48.2,
   valueRight: 61.2,
   rows: [
-    { key: 'mrp', baseline: 104.273, pt: 8.25, face: 'bold' },
+    { key: 'mrp', baseline: 104.273, pt: 6.35, face: 'bold' },
     { key: 'unit', baseline: 107.173, pt: 6.35, face: 'semi' },
     { key: 'batch', baseline: 110.073, pt: 6.35, face: 'semi' },
     { key: 'made', baseline: 112.973, pt: 6.35, face: 'semi' },
@@ -287,14 +299,12 @@ const STAMP_DB_100G: StampLayout = {
 const STAMP_CONTAINER: StampLayout = {
   align: 'left',
   valueLeft: 22.353,
-  /** Right edge of the value column: the gift "for you" lockup ends here. */
-  valueRight: 47.482,
   rows: [
-    { key: 'batch', baseline: 26.049, pt: 6.9, face: 'semi' },
-    { key: 'made', baseline: 30.282, pt: 6.9, face: 'semi' },
-    { key: 'useBy', baseline: 34.505, pt: 6.9, face: 'semi' },
-    { key: 'mrp', baseline: 38.738, pt: 7.82, face: 'bold' },
-    { key: 'unit', baseline: 42.972, pt: 6.9, face: 'semi' },
+    { key: 'batch', baseline: 26.049, pt: 6.35, face: 'semi' },
+    { key: 'made', baseline: 30.282, pt: 6.35, face: 'semi' },
+    { key: 'useBy', baseline: 34.505, pt: 6.35, face: 'semi' },
+    { key: 'mrp', baseline: 38.738, pt: 6.35, face: 'bold' },
+    { key: 'unit', baseline: 42.972, pt: 6.35, face: 'semi' },
   ],
   rules: [],
   // No writing rules on the -v2 art (owner, 2026-11-14).
