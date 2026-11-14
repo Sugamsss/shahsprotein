@@ -233,19 +233,22 @@ RPCs (all `authenticated`, admin only):
 
 Migration `20261114000000_admin_expenses.sql`. Admin only: the table has RLS on, no policies and nothing granted; everything goes through `security definer` RPCs that check `is_admin()` (a non-admin gets `P0001 Unauthorized`). Validation errors are `22023` with a plain message.
 
-**Stored once:** `admin_expenses` — the India day (`spent_on`), the India time (`spent_at`, to the minute), a title (1–200 characters), an optional note (up to 4,000), whole rupees (1 to 2^31−1), who saved it last, and `deleted_at` so delete is soft. Both owners read, change and delete every row: there is no per-owner rule and no "added by" on screen.
+**Stored once:** `admin_expenses` — the India day (`spent_on`), the India time (`spent_at`, to the minute), a title (1–200 characters), an optional vendor (up to 80, `''` when nobody is named; migration `20261114000001`), an optional note (up to 4,000), whole rupees (1 to 2^31−1), who saved it last, and `deleted_at` so delete is soft. Both owners read, change and delete every row: there is no per-owner rule and no "added by" on screen.
 
 **India civil time.** `spent_on` and `spent_at` are what the owners picked in India, never the device's time zone and never UTC sliced. `get_admin_expenses()` answers `today` as `(timezone('Asia/Kolkata', now()))::date`; an expense cannot be dated after that day, because it is money already paid. Audit stamps (`created_at`, `updated_at`) stay UTC.
 
 RPCs (all `authenticated`, admin only):
 
-- `get_admin_expenses(p_from, p_to, p_search)` → `{ today, expenses: [...] }`, newest day first then latest time first. `p_from` is included and `p_to` is left out (both India days); the defaults are the last 31 days. One call may span up to five years, so the admin's All list fits. `p_search` is a case-insensitive plain substring over the title, the note, the amount (plain and grouped), the day (also as "13 Nov") and the time; `%`, `_` and `\` match themselves.
-- `save_admin_expense(p_id, p_expense)` makes a row when `p_id` is null, else replaces its day, time, title, note and amount. It trims the title and note, and refuses a blank title, a note over 4,000, an amount that is not a whole number in range, a day before 2026 or after today, and a time that is not `HH:MM`.
+- `get_admin_expenses(p_from, p_to, p_search)` → `{ today, expenses: [...] }`, newest day first then latest time first. `p_from` is included and `p_to` is left out (both India days); the defaults are the last 31 days. One call may span up to five years, so the admin's All list fits. `p_search` is a case-insensitive plain substring over the title, the vendor, the note, the amount (plain and grouped), the day (also as "13 Nov") and the time; `%`, `_` and `\` match themselves.
+- `save_admin_expense(p_id, p_expense)` makes a row when `p_id` is null, else replaces its day, time, title, note and amount, and its vendor when the `vendor` key is in the object. **The vendor is touched only when the key is sent**, so a tab still running the old admin code (which never sends it) can't blank one on edit. It trims the title and note, and refuses a blank title, a note over 4,000, an amount that is not a whole number in range, a day before 2026 or after today, and a time that is not `HH:MM`.
+- `get_admin_expense_vendors()` → `[{ name, count, last_used }]`, newest first, at most 200. Live rows only, non-empty vendors, grouped case-insensitively: `name` is the spelling on the most recent entry and `last_used` that entry's India day. The sheet reads it once when it opens and filters in the browser, so typing is instant.
 - `delete_admin_expense(p_id, p_deleted)` hides it (`deleted_at`); `p_deleted false` is Undo and puts the same row back. Deleting twice, or restoring a row that is not deleted, is `22023`.
 
-**Rollout.** The admin ships before the migration and works on both sides of it: while `get_admin_expenses` answers `missing`, the Expenses link is hidden from More and the route shows the admin's "not set up yet" line (`src/admin/expenses/available.ts`). Deploy the code, then run `supabase test db` on a local stack and `supabase db push`. Nothing is seeded.
+**One spelling per vendor.** The server trims the vendor, collapses inner runs of spaces, and if the same name (any case) is already on a live expense it saves *that* spelling, so "satara packaging" never becomes a second vendor. The row being edited counts too, so a vendor never changes its own capitalisation; a real typo is a different name, and is fixed on that one entry. No rename-all in this round, and no index (a few hundred rows a year). Over 80 characters is `22023` "That vendor name is too long.".
 
-Tests: `supabase/tests/24_admin_expenses.test.sql`.
+**Rollout.** The admin ships before both migrations and works on both sides of them: while `get_admin_expenses` answers `missing`, the Expenses link is hidden from More and the route shows the admin's "not set up yet" line; while `get_admin_expense_vendors` answers `missing`, the Vendor field isn't in the sheet and no `vendor` is sent (`src/admin/expenses/available.ts`). Deploy the code, then run `supabase test db` on a local stack and `supabase db push`. Nothing is seeded.
+
+Tests: `supabase/tests/24_admin_expenses.test.sql`, `supabase/tests/25_expense_vendors.test.sql`.
 
 ## WhatsApp order click tracking
 

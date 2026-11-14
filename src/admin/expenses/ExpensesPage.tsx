@@ -56,18 +56,25 @@ const ExpensesPage: React.FC = () => {
       </section>
     );
   } else {
+    // While searching, the months under the bar are parts of one answer: quiet, and
+    // a single month's own total would only repeat the bar, so its heading keeps the name.
+    const manyMonths = months.length > 1;
     body = (
-      <div className="adm-exp__list" aria-busy={list.loading || undefined}>
-        {search && !list.error && (
-          <p className="adm-exp__found">
-            <b>{copy.entries(rows.length)}</b> · {copy.inAll(formatMoney(sumOf(rows)))}
-          </p>
+      <div className={`adm-exp__list${list.error ? ' is-stale' : ''}`} aria-busy={list.loading || undefined}>
+        {search && (
+          <div className="adm-exp__sum" role="status" aria-live="polite">
+            <span className="adm-exp__sum-label">{copy.totals(search, copy.rangeWords[range])}</span>
+            <b className="adm-exp__sum-total">{formatMoney(sumOf(rows))}</b>
+            <span className="adm-exp__sum-count">{copy.entries(rows.length)}</span>
+          </div>
         )}
         {months.map((month) => (
           <React.Fragment key={month.month}>
-            <div className="adm-exp__month">
+            <div className={`adm-exp__month${search ? ' adm-exp__month--part' : ''}`}>
               <h2>{monthHeading(month.month, today)}</h2>
-              <div><span>{copy.entries(month.count)}</span><b>{formatMoney(month.total)}</b></div>
+              {!(search && !manyMonths) && (
+                <div><span>{copy.entries(month.count)}</span><b>{formatMoney(month.total)}</b></div>
+              )}
             </div>
             {month.days.map((group) => (
               <section key={group.day} className="adm-card adm-xday" aria-label={dayTitle(group.day, today)}>
@@ -82,8 +89,12 @@ const ExpensesPage: React.FC = () => {
                   <button key={expense.id} type="button" className="adm-xrow" onClick={() => setSheet({ expense })}>
                     <span className="adm-xrow__main">
                       <span className="adm-xrow__title">{expense.title}</span>
-                      <span className="adm-xrow__sub">
-                        {timeOfDay12(expense.spent_at)}{expense.note ? ` · ${expense.note}` : ''}
+                      {/* Vendor · time · note. The time is never cut and the note gives
+                          way first; on a narrow row with a vendor the note steps aside. */}
+                      <span className="adm-xrow__meta">
+                        {expense.vendor && <span className="adm-xrow__vendor">{expense.vendor}</span>}
+                        <span className="adm-xrow__time">{timeOfDay12(expense.spent_at)}</span>
+                        {expense.note && <span className="adm-xrow__note">{expense.note}</span>}
                       </span>
                     </span>
                     <span className="adm-xrow__amt">{formatMoney(expense.amount)}</span>

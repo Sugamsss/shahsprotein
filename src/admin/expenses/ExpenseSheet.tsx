@@ -5,15 +5,18 @@ import { AdminSheet } from '../AdminSheet';
 import { deleteExpense, saveExpense, toAdminError } from '../api';
 import { Field } from '../parts';
 import { ToastSlot, useToast } from '../toast';
-import type { Expense } from '../types';
+import type { Expense, ExpenseInput } from '../types';
 import { useUnsavedWork } from '../unsavedWork';
 import { useUndoable } from '../useUndoable';
+import { useExpenseVendors } from './available';
 import { Calendar } from './Calendar';
 import {
-  amountError, dayError, dayFieldLabel, istNowTime, istToday, noteError, timeError, timeOfDay12, titleError,
+  amountError, dayError, dayFieldLabel, istNowTime, istToday, normalizeVendor, noteError, timeError, timeOfDay12,
+  titleError, vendorError,
 } from './model';
 import { PickerSheet } from './PickerSheet';
 import { TimePicker } from './TimePicker';
+import { VendorField } from './VendorField';
 
 const copy = adminCopy.expenses;
 
@@ -21,9 +24,11 @@ type Picker = 'date' | 'time';
 
 /**
  * Add an expense, or change one. Amount first (it's what you have in hand), then the
- * title and the day and time, then a note. Delete is a quiet red line at the foot,
- * soft, with Undo. The day and time come from the admin's own pickers, never the
- * phone's: an expense can't be dated ahead, and its time can't be later than now.
+ * title and who it went to, then the day and time, then a note. Delete is a quiet red
+ * line at the foot, soft, with Undo. The day and time come from the admin's own
+ * pickers, never the phone's: an expense can't be dated ahead, and its time can't be
+ * later than now. The Vendor field waits for the vendors read: on a database without
+ * 20261114000001 it isn't there, and nothing is sent for it.
  */
 export const ExpenseSheet: React.FC<{
   expense: Expense | null;
@@ -41,10 +46,12 @@ export const ExpenseSheet: React.FC<{
 
   const [amount, setAmount] = useState(expense ? String(expense.amount) : '');
   const [title, setTitle] = useState(expense?.title ?? '');
+  const [vendor, setVendor] = useState(expense?.vendor ?? '');
   const [day, setDay] = useState(expense?.spent_on ?? today);
   const [time, setTime] = useState(expense?.spent_at ?? istNowTime());
   const [note, setNote] = useState(expense?.note ?? '');
-  const [errors, setErrors] = useState<{ amount?: string; title?: string; note?: string }>({});
+  const [errors, setErrors] = useState<{ amount?: string; title?: string; vendor?: string; note?: string }>({});
+  const { vendors, show: vendorOn } = useExpenseVendors();
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<Picker | null>(null);
@@ -57,6 +64,7 @@ export const ExpenseSheet: React.FC<{
 
   const amountField = useRef<HTMLInputElement>(null);
   const titleField = useRef<HTMLInputElement>(null);
+  const vendorField = useRef<HTMLInputElement>(null);
   const noteField = useRef<HTMLTextAreaElement>(null);
   const dateButton = useRef<HTMLButtonElement>(null);
   const timeButton = useRef<HTMLButtonElement>(null);
@@ -69,37 +77,47 @@ export const ExpenseSheet: React.FC<{
   const dayMessage = dayError(day, currentToday);
   const timeMessage = timeError(time, day, currentToday, now);
 
-  const state = JSON.stringify({ amount, title, day, time, note });
+  const state = JSON.stringify({ amount, title, vendor, day, time, note });
   const baseline = useRef('');
   if (!baseline.current) baseline.current = state;
   const dirty = state !== baseline.current;
   useUnsavedWork(() => dirty || busy);
 
-  const focusFirst = (messages: { amount?: string | null; title?: string | null; note?: string | null }): void => {
+  const focusFirst = (messages: { amount?: string | null; title?: string | null; vendor?: string | null; note?: string | null }): void => {
     if (messages.amount) amountField.current?.focus();
     else if (messages.title) titleField.current?.focus();
+    else if (messages.vendor) vendorField.current?.focus();
     else if (messages.note) noteField.current?.focus();
   };
 
   const submit = async (event?: React.FormEvent) => {
     event?.preventDefault();
     if (busy) return;
-    const next = { amount: amountError(amount) ?? undefined, title: titleError(title) ?? undefined, note: noteError(note) ?? undefined };
+    const next = {
+      amount: amountError(amount) ?? undefined,
+      title: titleError(title) ?? undefined,
+      vendor: vendorError(vendor) ?? undefined,
+      note: noteError(note) ?? undefined,
+    };
     setErrors(next);
-    if (next.amount || next.title || next.note) { focusFirst(next); return; }
+    if (next.amount || next.title || next.vendor || next.note) { focusFirst(next); return; }
     const submitToday = istToday();
     if (dayError(day, submitToday)) { dateButton.current?.focus(); return; }
     if (timeError(time, day, submitToday, istNowTime())) { timeButton.current?.focus(); return; }
     setBusy(true);
     setFormError('');
     try {
-      await saveExpense({
+      const input: ExpenseInput = {
         spent_on: day,
         spent_at: time,
         title: title.trim(),
         note: note.trim(),
         amount: Number(amount),
-      }, expense?.id);
+      };
+      // Only where the vendors read answered: an older database has no column,
+      // and its save must not be handed a field it can't store.
+      if (vendorOn) input.vendor = normalizeVendor(vendor);
+      await saveExpense(input, expense?.id);
       baseline.current = state;
       onSaved();
       toast.show({ text: editing ? copy.saved : copy.added });
@@ -187,6 +205,13 @@ export const ExpenseSheet: React.FC<{
                 if (errors.title) setErrors((current) => ({ ...current, title: undefined }));
               }} />
           </Field>
+
+          {vendorOn && (
+            <VendorField value={vendor} onChange={(next) => {
+              setVendor(next);
+              if (errors.vendor) setErrors((current) => ({ ...current, vendor: undefined }));
+            }} vendors={vendors} error={errors.vendor ?? null} inputRef={vendorField} />
+          )}
 
           <div className="adm-form__pair">
             <div className="adm-field">

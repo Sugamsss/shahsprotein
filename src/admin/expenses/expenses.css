@@ -22,7 +22,7 @@
 /* The month rows and day cards keep the page's own rhythm: a heading sits 12px
    above its first card (16px gap less its own -4px), as in the mockup. */
 .adm-exp__list { display: grid; gap: 16px; }
-.adm-exp__list[aria-busy='true'] { opacity: 0.6; transition: opacity 160ms ease; }
+.adm-exp__list[aria-busy='true'], .adm-exp__list.is-stale { opacity: 0.6; transition: opacity 160ms ease; }
 
 .adm-exp__month { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 8px 4px -4px; }
 .adm-exp__month h2 { color: var(--adm-ink-1); }
@@ -48,19 +48,50 @@
 .adm-xrow + .adm-xrow { border-top: 1px solid var(--adm-hairline); }
 .adm-xrow:active { background: var(--adm-well-press); }
 .adm-xrow:focus-visible { outline-offset: -3px; border-radius: var(--radius-lg); }
-.adm-xrow__main { display: grid; gap: 2px; min-width: 0; }
+.adm-xrow__main { display: grid; gap: 2px; min-width: 0; container-type: inline-size; }
 .adm-xrow__title { font-size: var(--adm-text-body); font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
-.adm-xrow__sub {
-  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; line-height: 1.35;
-  font-variant-numeric: proportional-nums; overflow: hidden; display: -webkit-box;
-  -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+/* A row's second line: vendor, then time, then note. The time never gets cut; the
+   note gives way first, and drops altogether on a narrow row that has a vendor. */
+.adm-xrow__meta {
+  display: flex; min-width: 0; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500;
+  line-height: 1.35; font-variant-numeric: proportional-nums; white-space: nowrap;
 }
+.adm-xrow__vendor { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--adm-ink-1); }
+.adm-xrow__time { flex: none; }
+.adm-xrow__vendor + .adm-xrow__time::before, .adm-xrow__time + .adm-xrow__note::before { content: ' · '; white-space: pre; }
+.adm-xrow__note { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .adm-xrow__amt { font-size: var(--adm-text-head); font-weight: 600; text-align: right; }
 .adm-xrow__end { color: var(--adm-ink-3); }
 @media (hover: hover) { .adm-xrow:hover { background: var(--adm-well); } }
 
-.adm-exp__found { margin: 0 4px; color: var(--adm-ink-2); font-variant-numeric: proportional-nums; }
-.adm-exp__found b { color: var(--adm-ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* While a search shows more than one month, each month's part sits quietly under the
+   whole; its own total is small, so the bar stays the answer. */
+.adm-exp__month--part h2 { color: var(--adm-ink-2); }
+.adm-exp__month--part b { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-exp__month--part span { color: var(--adm-ink-3); }
+
+/* The totals bar: one careful answer to "how much is all of this?" while a search is
+   typed. A neutral well, not accent: accent is for things you tap. It is not sticky,
+   and it sums exactly the rows below it (the search and the switch together). */
+.adm-exp__sum {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 12px; row-gap: 2px;
+  padding: 12px 16px 14px; border-radius: var(--radius-lg); background: var(--adm-well);
+}
+.adm-exp__sum-label {
+  grid-column: 1 / -1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500;
+}
+.adm-exp__sum-total {
+  color: var(--adm-ink-1); font-size: var(--adm-text-head); font-weight: 600;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.adm-exp__sum-count { color: var(--adm-ink-2); font-size: var(--adm-text-small); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Narrow rows that name a vendor: the note steps aside so vendor and time stay whole
+   (the note is one tap away in the sheet). Rows without a vendor are untouched. */
+@container (max-width: 236px) {
+  .adm-xrow__vendor ~ .adm-xrow__note { display: none; }
+}
 
 .adm-exp__empty { display: grid; justify-items: center; gap: 6px; padding: 32px 20px; text-align: center; }
 .adm-exp__empty p { color: var(--adm-ink-2); max-width: 32ch; text-wrap: pretty; }
@@ -68,6 +99,22 @@
   display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
   background: var(--adm-well); color: var(--adm-ink-2); margin-bottom: 8px;
 }
+
+/* ---- The Vendor box: a combobox over vendors used before ------------------------ */
+/* The list sits inside the field (the sheet grows; nothing floats over Date and Time).
+   48px rows, hairlines, the typed letters bold, "3 entries" on the right. */
+
+.adm-vend { display: grid; margin: 2px 0 0; padding: 0; list-style: none; }
+.adm-vend li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px;
+  padding: 13px 18px; border-top: 1px solid var(--adm-hairline); cursor: pointer; touch-action: manipulation;
+}
+.adm-vend b { min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.adm-vend__hit { font-weight: 700; }
+.adm-vend small { flex: none; color: var(--adm-ink-2); font-size: var(--adm-text-small); font-variant-numeric: tabular-nums; }
+.adm-vend li[aria-selected='true'] { background: var(--adm-accent-tint); }
+.adm-vend li:active { background: var(--adm-accent-tint-press); }
+@media (hover: hover) { .adm-vend li:hover { background: var(--adm-well); } }
 
 /* ---- The sheet ----------------------------------------------------------------- */
 

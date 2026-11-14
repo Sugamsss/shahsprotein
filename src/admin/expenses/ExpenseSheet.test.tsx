@@ -12,7 +12,9 @@ import { ExpenseSheet } from './ExpenseSheet';
 // The toast is real here (inside the sheet's own bar), so a failure is followed
 // the way a person follows it: find Try again, focus it, tap it.
 
-const api = vi.hoisted(() => ({ deleteExpense: vi.fn(), saveExpense: vi.fn(), toAdminError: vi.fn() }));
+const api = vi.hoisted(() => ({
+  deleteExpense: vi.fn(), saveExpense: vi.fn(), toAdminError: vi.fn(), getExpenseVendors: vi.fn(),
+}));
 vi.mock('../api', () => api);
 vi.mock('../unsavedWork', () => ({ useUnsavedWork: () => undefined }));
 // The pickers have their own frame; here only what the sheet hands them matters.
@@ -23,7 +25,7 @@ vi.mock('./PickerSheet', () => ({
 const copy = adminCopy.expenses;
 
 const expense: Expense = {
-  id: 'e-1', spent_on: '2026-11-13', spent_at: '10:00', title: 'Zip pouches', note: '', amount: 3200,
+  id: 'e-1', spent_on: '2026-11-13', spent_at: '10:00', title: 'Zip pouches', vendor: '', note: '', amount: 3200,
   created_at: '2026-11-13T10:00:00Z', updated_at: '2026-11-13T10:00:00Z',
 };
 
@@ -56,6 +58,14 @@ describe('expense sheet', () => {
   const deleteButton = () => byText(copy.delete);
   const retryButton = () => byText(adminCopy.toast.retry);
   const dateField = () => document.querySelector('button[aria-haspopup="dialog"]') as HTMLButtonElement;
+  const vendorBox = () => document.querySelector('input[role="combobox"]') as HTMLInputElement | null;
+  const typeInto = async (element: HTMLInputElement, text: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setter.call(element, text);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
 
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -65,6 +75,8 @@ describe('expense sheet', () => {
     }));
     api.deleteExpense.mockReset();
     api.saveExpense.mockReset();
+    // The Vendor field waits for this answer; no vendors is a real answer ('' is fine).
+    api.getExpenseVendors.mockReset().mockResolvedValue([]);
     api.toAdminError.mockReset().mockReturnValue({ kind: 'message', message: "That didn't save." });
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -123,6 +135,48 @@ describe('expense sheet', () => {
     expect(api.deleteExpense).toHaveBeenLastCalledWith('e-1', true);
     expect(props.onDeleted).toHaveBeenCalledTimes(1);
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves the vendor it was given, tidied the way the server stores it', async () => {
+    api.saveExpense.mockResolvedValue(undefined);
+    renderSheet();
+    // The field waits for the vendors read, so it is there once that answer lands.
+    await act(async () => { await Promise.resolve(); });
+    expect(vendorBox()).not.toBeNull();
+
+    await typeInto(vendorBox()!, '  Satara   Packaging ');
+    await act(async () => { saveButton()!.click(); await flush(); });
+
+    expect(api.saveExpense).toHaveBeenCalledTimes(1);
+    expect(api.saveExpense.mock.calls[0][0]).toMatchObject({ vendor: 'Satara Packaging' });
+  });
+
+  it('says a vendor is too long and keeps the sheet open', async () => {
+    api.saveExpense.mockResolvedValue(undefined);
+    renderSheet();
+    await act(async () => { await Promise.resolve(); });
+    await typeInto(vendorBox()!, 'v'.repeat(81));
+
+    await act(async () => { saveButton()!.click(); await flush(); });
+
+    expect(api.saveExpense).not.toHaveBeenCalled();
+    expect(document.querySelector('.adm-field__error')?.textContent).toBe(copy.vendorLong);
+    expect(vendorBox()!.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(vendorBox());
+  });
+
+  it('leaves the vendor field out, and sends no vendor, while the vendors read is missing', async () => {
+    // A database without 20261114000001: the column isn't there, so the field isn't either.
+    api.toAdminError.mockReturnValue({ kind: 'missing', message: 'Not set up' });
+    api.getExpenseVendors.mockRejectedValue({ code: 'PGRST202' });
+    api.saveExpense.mockResolvedValue(undefined);
+    renderSheet();
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(vendorBox()).toBeNull();
+
+    await act(async () => { saveButton()!.click(); await flush(); });
+    expect(api.saveExpense).toHaveBeenCalledTimes(1);
+    expect(Object.prototype.hasOwnProperty.call(api.saveExpense.mock.calls[0][0], 'vendor')).toBe(false);
   });
 
   it('reads the clock again when the day turns over', async () => {
