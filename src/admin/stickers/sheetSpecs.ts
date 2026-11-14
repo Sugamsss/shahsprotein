@@ -83,7 +83,8 @@ export interface StampRule {
 export interface StampLayout {
   /** Which edge the value run is anchored to. */
   align: 'right' | 'left';
-  /** Right edge of a right-aligned run, label-local mm from the trim left. */
+  /** Right edge of a right-aligned run, label-local mm from the trim left.
+   *  On the left-aligned container it doubles as the gift lockup anchor. */
   valueRight?: number;
   /** Left edge of a left-aligned run (the Date Bites container only). */
   valueLeft?: number;
@@ -151,16 +152,19 @@ const spec = (s: SheetSpec): SheetSpec => s;
 //
 // On all five pouches the value baseline is the row label's own baseline
 // (value baseline = label baseline, verified within 0.02 mm on every row).
-// The gold writing rule sits 0.24 mm below that baseline, so the glyphs clear
-// the line without touching it.
+// Values print straight onto the label baseline with no rule beneath them.
 //
-// The three 100 g pouch backs carry NO rules (their configs set
-// `no_stamp_rules`), so their `rules` list is empty and nothing is erased.
-// Their MRP labels keep "(incl. of all taxes)" inline on the same line, which
-// leaves only the width between that note and valueRight free.
+// Every back now ships WITHOUT writing rules (owner, 2026-11-14): the -v2
+// sheets have no gold lines in the Product Details value column, so the
+// stamper draws each value directly and paints no paper band. The 100 g
+// backs already shipped this way (their configs set `no_stamp_rules`); the
+// 250 g, 500 g and container -v2 sheets were cut the same way by deleting
+// the five rule strokes from each cell's art. `rules` stays in the type so
+// an old sheet would still erase, but every live layout lists none.
 //
 // `rules` is always one entry per row, in row order: the stamper pairs
-// rules[i] with rows[i]. A layout with rules must list five.
+// rules[i] with rows[i]. A layout with rules must list five; every live
+// back lists zero.
 //
 // The two 500 g backs (same trim, 114 x 142, recovered art) carry the identical
 // details block: every row baseline, the `valueRight` column and all five gold
@@ -199,13 +203,9 @@ const stamp114x142 = (): StampLayout => ({
     { key: 'made', baseline: 128.473, pt: 5.2, face: 'semi' },
     { key: 'useBy', baseline: 130.873, pt: 5.2, face: 'semi' },
   ],
-  rules: [
-    { y: 119.819, x0: 58.17, x1: 73.8, thickness: 0.17 },
-    { y: 123.919, x0: 58.17, x1: 73.8, thickness: 0.17 },
-    { y: 126.319, x0: 58.17, x1: 73.8, thickness: 0.17 },
-    { y: 128.719, x0: 58.17, x1: 73.8, thickness: 0.17 },
-    { y: 131.119, x0: 58.17, x1: 73.8, thickness: 0.17 },
-  ],
+  rules: [],
+  // No writing rules on the -v2 art (owner, 2026-11-14), so nothing is
+  // erased: values print straight onto the card, as the 100 g backs do.
   // "(incl. of all taxes)" under MRP. The gift twins for the 250 g backs differ
   // from their priced art by exactly this line and nothing else (diffed
   // 2026-11-10), so a gift pack that prints here must lose it too. Ink measured
@@ -279,18 +279,16 @@ const STAMP_DB_100G: StampLayout = {
 
 /**
  * Date Bites container (96.6 x 82.8): five rows in a different order — Batch,
- * Mfg, Use By, then MRP and Unit Sale Price — left-aligned, with plain writing
- * rules that are erased under a filled value. Both money labels already print
+ * Mfg, Use By, then MRP and Unit Sale Price — left-aligned, with no writing
+ * rules (owner, 2026-11-14): the -v2 sheet deleted the five gold strokes, so
+ * values print straight onto the card. Both money labels already print
  * their own rupee sign ("MRP ₹"), so the stamper draws none here.
- *
- * The rules are read off the current blank asset (db-250g-container-15up-v1),
- * not the 2026-10-25 notes: three of that build's rules sit 0.688 mm lower
- * than this asset's. A value sits 0.231 mm above its rule's centre line
- * (baseline = y - 0.231), the same gap the pouches have.
  */
 const STAMP_CONTAINER: StampLayout = {
   align: 'left',
   valueLeft: 22.353,
+  /** Right edge of the value column: the gift "for you" lockup ends here. */
+  valueRight: 47.482,
   rows: [
     { key: 'batch', baseline: 26.049, pt: 6.9, face: 'semi' },
     { key: 'made', baseline: 30.282, pt: 6.9, face: 'semi' },
@@ -298,13 +296,8 @@ const STAMP_CONTAINER: StampLayout = {
     { key: 'mrp', baseline: 38.738, pt: 7.82, face: 'bold' },
     { key: 'unit', baseline: 42.972, pt: 6.9, face: 'semi' },
   ],
-  rules: [
-    { y: 26.28, x0: 20.05, x1: 47.482, thickness: 0.17 },
-    { y: 30.513, x0: 20.05, x1: 47.482, thickness: 0.17 },
-    { y: 34.736, x0: 20.05, x1: 47.482, thickness: 0.17 },
-    { y: 38.969, x0: 20.05, x1: 47.482, thickness: 0.17 },
-    { y: 43.203, x0: 20.05, x1: 47.482, thickness: 0.17 },
-  ],
+  rules: [],
+  // No writing rules on the -v2 art (owner, 2026-11-14).
   paper: '#FCF9F0',
   ink: VALUE_INK,
   currencyInArt: true,
@@ -315,28 +308,28 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
   // No gift twin was ever built for 500 g, so Gift prints on this blank art and
   // the layout's giftCover takes out "(incl. of all taxes)".
   'rj-500g-back': spec({
-    id: 'rj-500g-back', side: 'back', asset: '/assets/stickers/rj-500g-back-6up-blank-v1.pdf',
+    id: 'rj-500g-back', side: 'back', asset: '/assets/stickers/rj-500g-back-6up-blank-v2.pdf',
     cols: 2, rowsCount: 3, cells: 6,
     bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
     stamp: STAMP_RJ_500G,
   }),
   'ms-500g-back': spec({
-    id: 'ms-500g-back', side: 'back', asset: '/assets/stickers/ms-500g-back-6up-blank-v1.pdf',
+    id: 'ms-500g-back', side: 'back', asset: '/assets/stickers/ms-500g-back-6up-blank-v2.pdf',
     cols: 2, rowsCount: 3, cells: 6,
     bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
     stamp: STAMP_MS_500G,
   }),
   // 250 g backs — 6-up, 2 x 3. bleed 2, trim 114 x 142.
   'rj-250g-back': spec({
-    id: 'rj-250g-back', side: 'back', asset: '/assets/stickers/rj-250g-back-6up-blank-v1.pdf',
-    giftAsset: '/assets/stickers/rj-250g-back-6up-gift-v1.pdf',
+    id: 'rj-250g-back', side: 'back', asset: '/assets/stickers/rj-250g-back-6up-blank-v2.pdf',
+    giftAsset: '/assets/stickers/rj-250g-back-6up-gift-v2.pdf',
     cols: 2, rowsCount: 3, cells: 6,
     bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
     stamp: STAMP_RJ_250G,
   }),
   'ms-250g-back': spec({
-    id: 'ms-250g-back', side: 'back', asset: '/assets/stickers/ms-250g-back-6up-template-v1.pdf',
-    giftAsset: '/assets/stickers/ms-250g-back-6up-gift-v1.pdf',
+    id: 'ms-250g-back', side: 'back', asset: '/assets/stickers/ms-250g-back-6up-template-v2.pdf',
+    giftAsset: '/assets/stickers/ms-250g-back-6up-gift-v2.pdf',
     cols: 2, rowsCount: 3, cells: 6,
     bleedOrigin: [34.4, 9.6], pitch: [118, 146], trim: [114, 142], bleed: 2,
     stamp: STAMP_MS_250G,
@@ -365,8 +358,8 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
   }),
   // Date Bites container — 15-up, 3 x 5, single sided. bleed 1.84, trim 96.6 x 82.8.
   'db-250g-container': spec({
-    id: 'db-250g-container', side: 'back', asset: '/assets/stickers/db-250g-container-15up-v1.pdf',
-    giftAsset: '/assets/stickers/db-250g-container-15up-gift-v1.pdf',
+    id: 'db-250g-container', side: 'back', asset: '/assets/stickers/db-250g-container-15up-v2.pdf',
+    giftAsset: '/assets/stickers/db-250g-container-15up-gift-v2.pdf',
     cols: 3, rowsCount: 5, cells: 15,
     bleedOrigin: [1.98, 12.4], pitch: [100.28, 86.48], trim: [96.6, 82.8], bleed: 1.84,
     stamp: STAMP_CONTAINER,
