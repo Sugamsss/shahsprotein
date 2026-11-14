@@ -4,18 +4,18 @@ import { SHEET_SPECS, modeOptionsFor, specFor } from './sheetSpecs';
 describe('specFor gift swap', () => {
   it('swaps to the gift twin on a 250 g back', () => {
     const spec = specFor('raggi-jaggi', '250 g', 'back', 'gift');
-    expect(spec?.asset.endsWith('gift-v1.pdf')).toBe(true);
+    expect(spec?.asset.endsWith('gift-v2.pdf')).toBe(true);
   });
   it('front ignores the kind', () => {
     expect(specFor('raggi-jaggi', '250 g', 'front', 'gift')?.stamp).toBeNull();
   });
   it('swaps the Date Bites container to its gift art', () => {
     const spec = specFor('bites', '250 g', 'back', 'gift');
-    expect(spec?.asset.endsWith('container-15up-gift-v1.pdf')).toBe(true);
+    expect(spec?.asset.endsWith('container-15up-gift-v2.pdf')).toBe(true);
   });
   it('a default container build stays priced', () => {
     const spec = specFor('bites', '250 g', 'back', 'default');
-    expect(spec?.asset.endsWith('db-250g-container-15up-v1.pdf')).toBe(true);
+    expect(spec?.asset.endsWith('db-250g-container-15up-v2.pdf')).toBe(true);
   });
   it('the container has no front', () => {
     expect(specFor('bites', '250 g', 'front', 'default')).toBeNull();
@@ -64,7 +64,7 @@ describe('specFor blank', () => {
     }
   });
   it('a 500 g blank is the 500 g art', () => {
-    expect(specFor('muesli', '500 g', 'back', 'blank')?.asset).toBe('/assets/stickers/ms-500g-back-6up-blank-v1.pdf');
+    expect(specFor('muesli', '500 g', 'back', 'blank')?.asset).toBe('/assets/stickers/ms-500g-back-6up-blank-v2.pdf');
   });
   it('a front ignores blank too', () => {
     expect(specFor('raggi-jaggi', '250 g', 'front', 'blank')?.stamp).toBeNull();
@@ -114,7 +114,7 @@ describe('500 g sheets', () => {
   it('a 500 g back stamps the 250 g rows (same 114 x 142 art block)', () => {
     const big = specFor('raggi-jaggi', '500 g', 'back');
     const small = specFor('raggi-jaggi', '250 g', 'back');
-    expect(big?.asset).toBe('/assets/stickers/rj-500g-back-6up-blank-v1.pdf');
+    expect(big?.asset).toBe('/assets/stickers/rj-500g-back-6up-blank-v2.pdf');
     expect(big?.stamp).toEqual(small?.stamp);
     expect(big?.cells).toBe(6);
     expect(big?.trim).toEqual([114, 142]);
@@ -137,6 +137,19 @@ describe('500 g sheets', () => {
   it('Date Bites has no 500 g pack at all', () => {
     expect(specFor('bites', '500 g', 'back')).toBeNull();
     expect(specFor('bites', '500 g', 'front')).toBeNull();
+  });
+});
+
+describe('no writing rules on any back (owner, 2026-11-14)', () => {
+  it('every back lists no rules, so values print with no underlines', () => {
+    for (const spec of Object.values(SHEET_SPECS)) {
+      if (spec.side === 'back') expect(spec.stamp?.rules).toEqual([]);
+    }
+  });
+  it('the container gift lockup still ends at the value column', () => {
+    const spec = specFor('bites', '250 g', 'back');
+    expect(spec?.stamp?.align).toBe('left');
+    expect(spec?.stamp?.valueRight).toBe(47.482);
   });
 });
 

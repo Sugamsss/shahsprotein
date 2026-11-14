@@ -10,13 +10,10 @@ import { cellOrigin, GIFT_INK, type SheetSpec, type StampRow } from './sheetSpec
 // selectable or re-typesettable (CorelDraw rejected live text). RGB here; the
 // print file still goes through tools/sheet_to_cmyk.py before print.
 //
-// Two arrangements exist on the art:
-//   * backs with gold writing rules (250 g pouches, Date Bites container): the
-//     rule is covered with the card's paper hex first, then the value is drawn
-//     above it on the row's baseline;
-//   * backs with no rules (the 100 g pouches): the value goes straight onto
-//     the label baseline and no paper is painted, because a paper band across
-//     the cream card would show.
+// All backs ship with no writing rules (owner, 2026-11-14): the value goes
+// straight onto the label baseline and no paper is painted, because a paper
+// band across the cream card would show. The rule-erase below stays for an
+// old sheet that still carries rules, but every live layout lists none.
 //
 // Currency: the ART prints the rupee sign on the Date Bites container only
 // ("MRP ₹"), so that layout sets currencyInArt. The five pouches set it false
@@ -39,7 +36,7 @@ const RULE_ERASE_PAD = 0.15;
 const HEART_GAP = 0.8;
 
 /**
- * Air between a left-aligned gift lockup and the writing rule's right end, mm.
+ * Air between a left-aligned gift lockup and the value column's right end, mm.
  * On the Date Bites container that end sits on the art's own column divider, so
  * a run ending flush touches the printed hairline.
  */
@@ -263,8 +260,10 @@ export const makeSheetPdf = async (
       }
     }
 
-    // Cover the gold writing rule before the value goes above it. Only the
+    // Legacy erase for a sheet that still carries gold writing rules: cover
+    // the rule band with paper before the value goes above it. Only the
     // rule band — never the whole row: the card's gradient must survive.
+    // Every live sheet lists no rules, so this draws nothing.
     stamp.rows.forEach((row, index) => {
       const rule = stamp.rules[index];
       if (!rule || !textFor(row)) return;
@@ -293,11 +292,12 @@ export const makeSheetPdf = async (
         // The heart follows the words, never leads them (owner, 2026-11-10): the
         // pair reads as one run of type that happens to end in a heart.
         // A right-aligned sheet's value column ends at valueRight. A left-aligned
-        // one has no right anchor, so use the writing rule's right end; anchoring
+        // one has no right anchor in its rows, so use the value column's right
+        // edge (valueRight doubles as the gift lockup anchor there); anchoring
         // to the left edge instead put "for you" on top of the row label.
         const lockupRight = align === 'right'
           ? x0 + (stamp.valueRight as number)
-          : x0 + (stamp.rules[ri]?.x1 ?? (stamp.valueLeft as number)) - RULE_END_PAD;
+          : x0 + (stamp.valueRight ?? stamp.rules[ri]?.x1 ?? (stamp.valueLeft as number)) - RULE_END_PAD;
         const heartScale = (row.pt * CAP_RATIO) / 18.4;
         const heartLeftPt = lockupRight * MM - 20 * heartScale;
         drawRun(page, text, heartLeftPt / MM - HEART_GAP, baseline, row.pt, fonts.italic, ink, pageH, 'right');
