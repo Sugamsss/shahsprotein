@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SHEET_SPECS, modeOptionsFor, specFor } from './sheetSpecs';
+import { SHEET_SPECS, FRONT_PAPER_RGB, modeOptionsFor, specFor } from './sheetSpecs';
 
 describe('specFor gift swap', () => {
   it('swaps to the gift twin on a 250 g back', () => {
@@ -116,6 +116,9 @@ describe('front covers (net weight line painted out)', () => {
       if (spec.side === 'front') {
         expect(spec.stamp).toBeNull();
         expect(spec.cover?.paper).toBe('#F7F2E4');
+        // The painted fill is the art's own DeviceRGB, not the rounded hex.
+        expect(spec.cover?.rgb).toEqual([...FRONT_PAPER_RGB]);
+        expect(FRONT_PAPER_RGB).toEqual([0.9686, 0.949, 0.8941]);
         expect(spec.cover?.rects).toHaveLength(1);
         const [rect] = spec.cover?.rects ?? [];
         // The rect stays inside the trim box with room to spare.

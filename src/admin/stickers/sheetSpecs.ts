@@ -144,10 +144,10 @@ export interface SheetSpec {
   stamp: StampLayout | null;
   /**
    * Paint-out for a sheet with no stamp (every front): the net weight line is
-   * live text in the shipped art, so the writer covers it with `paper` on
+   * live text in the shipped art, so the writer covers it with `rgb` on
    * every cell. Backs never carry this; their stamp path owns their covers.
    */
-  cover?: { paper: string; rects: StampCover[] };
+  cover?: { paper: string; rgb?: readonly [number, number, number]; rects: StampCover[] };
 }
 
 const spec = (s: SheetSpec): SheetSpec => s;
@@ -331,33 +331,41 @@ const STAMP_CONTAINER: StampLayout = {
 // eye. Proof: temp/sticker-weight-removal/ in this repo.
 
 /**
- * The front card's cream. Measured #F7F2E4 on renders of all seven front
- * sheets (unanimous corner samples, every cell) — the design repo's front
- * cream, not the backs' #FCF9F0 card.
+ * The front card's cream. #F7F2E4 is the 8-bit rounding of the shipped art's
+ * own fill — DeviceRGB 0.9686, 0.949, 0.8941, sampled from the front sheets —
+ * so the cover paints that exact triplet, not the rounded hex. Kept as the
+ * 8-bit label for readability; `rgb` is what the writer uses.
  */
 const FRONT_PAPER = '#F7F2E4';
+
+/** The shipped front art's own fill, DeviceRGB (see FRONT_PAPER). */
+export const FRONT_PAPER_RGB: readonly [number, number, number] = [0.9686, 0.949, 0.8941];
 
 /** 250 g fronts (120 x 100): Raggi Jaggi and Muesli share the line position. */
 const FRONT_COVER_250G: NonNullable<SheetSpec['cover']> = {
   paper: FRONT_PAPER,
+  rgb: FRONT_PAPER_RGB,
   rects: [{ x: 45.5, y: 86.9, w: 28.9, h: 7.1 }],
 };
 
 /** 500 g fronts (120 x 100, 2 mm bleed): same line, its own position. */
 const FRONT_COVER_500G: NonNullable<SheetSpec['cover']> = {
   paper: FRONT_PAPER,
+  rgb: FRONT_PAPER_RGB,
   rects: [{ x: 45.8, y: 86.1, w: 28.4, h: 7.0 }],
 };
 
 /** 100 g fronts (112.5 x 67.5): Raggi Jaggi and Muesli share the position. */
 const FRONT_COVER_100G: NonNullable<SheetSpec['cover']> = {
   paper: FRONT_PAPER,
+  rgb: FRONT_PAPER_RGB,
   rects: [{ x: 42.5, y: 56.7, w: 27.5, h: 6.8 }],
 };
 
 /** Date Bites 100 g front: same box, ~1.8 mm higher on the card. */
 const FRONT_COVER_100G_DB: NonNullable<SheetSpec['cover']> = {
   paper: FRONT_PAPER,
+  rgb: FRONT_PAPER_RGB,
   rects: [{ x: 42.5, y: 54.9, w: 27.5, h: 6.8 }],
 };
 

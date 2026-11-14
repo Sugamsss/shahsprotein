@@ -135,6 +135,13 @@ const hex = (hexColour: string): RGB => {
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 };
 
+/**
+ * The fill for a cover rect: the exact DeviceRGB triplet when the spec
+ * carries it (the front covers do), the paper hex otherwise.
+ */
+const coverColor = (cover: { paper: string; rgb?: readonly [number, number, number] }): RGB =>
+  cover.rgb ? rgb(cover.rgb[0], cover.rgb[1], cover.rgb[2]) : hex(cover.paper);
+
 const isGift = (values: StampValues): boolean => values.gift ?? values.unitIsGift ?? false;
 
 /** A value is printed only when the page actually filled it in. */
@@ -203,7 +210,9 @@ export const makeSheetPdf = async (
     const doc = await PDFDocument.load(new Uint8Array(assets.basePdf));
     const page = doc.getPages()[0];
     const pageH = page.getHeight();
-    const paper = hex(spec.cover.paper);
+    // The front cover paints the art's own fill: the exact DeviceRGB triplet
+    // when the spec carries it, the paper hex otherwise.
+    const paper = coverColor(spec.cover);
     for (let i = 0; i < spec.cells; i++) {
       const [bleedX, bleedY] = cellOrigin(spec, i);
       const x0 = bleedX + spec.bleed;
