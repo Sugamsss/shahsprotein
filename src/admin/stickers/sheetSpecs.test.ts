@@ -146,10 +146,32 @@ describe('no writing rules on any back (owner, 2026-11-14)', () => {
       if (spec.side === 'back') expect(spec.stamp?.rules).toEqual([]);
     }
   });
-  it('the container gift lockup still ends at the value column', () => {
-    const spec = specFor('bites', '250 g', 'back');
-    expect(spec?.stamp?.align).toBe('left');
-    expect(spec?.stamp?.valueRight).toBe(47.482);
+});
+
+describe('uniform product details (owner, 2026-11-14)', () => {
+  it('pouches right-anchor, the container left-anchors, as approved', () => {
+    for (const [id, spec] of Object.entries(SHEET_SPECS)) {
+      if (spec.side !== 'back') continue;
+      if (id === 'db-250g-container') {
+        expect(spec.stamp?.align).toBe('left');
+        expect(spec.stamp?.valueLeft).toBe(22.353);
+      } else {
+        expect(spec.stamp?.align).toBe('right');
+        expect(spec.stamp?.valueRight).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('every back value row matches its layout size, MRP bold, the rest semi', () => {
+    for (const [id, spec] of Object.entries(SHEET_SPECS)) {
+      if (spec.side !== 'back') continue;
+      // Roomy layouts print at label size; the narrow 100 g column steps
+      // down once more so values clear labels and the divider.
+      const pt = id.endsWith('100g-back') ? 4.5 : 5.2;
+      for (const row of spec.stamp?.rows ?? []) {
+        expect(row.pt).toBe(pt);
+        expect(row.face).toBe(row.key === 'mrp' ? 'bold' : 'semi');
+      }
+    }
   });
 });
 
