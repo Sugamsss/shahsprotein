@@ -930,6 +930,8 @@ export interface Expense {
   /** India time, "18:05" (24h). */
   spent_at: string;
   title: string;
+  /** Who it was paid to; '' when nobody is named (migration 20261114000001). */
+  vendor: string;
   note: string;
   /** Whole rupees. */
   amount: number;
@@ -942,6 +944,8 @@ export interface ExpenseInput {
   spent_on: string;
   spent_at: string;
   title: string;
+  /** Sent only where the vendors read is live, so an older database keeps what it has. */
+  vendor?: string;
   note: string;
   amount: number;
 }
@@ -950,4 +954,13 @@ export interface ExpenseInput {
 export interface ExpenseList {
   today: string;
   expenses: Expense[];
+}
+
+/** get_admin_expense_vendors: who was paid before, newest first (at most 200). */
+export interface ExpenseVendor {
+  /** The spelling on the most recent entry. */
+  name: string;
+  count: number;
+  /** India day of that entry, "2026-11-14". */
+  last_used: string;
 }

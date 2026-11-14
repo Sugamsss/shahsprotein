@@ -1,7 +1,7 @@
 import { adminCopy } from '../../data/adminCopy';
 import { istDateValue } from '../format';
 import { addDays, dayShort } from '../journal/model';
-import type { Expense } from '../types';
+import type { Expense, ExpenseVendor } from '../types';
 
 // Expenses' pure parts: India days and times, the ranges the switch asks for,
 // grouping a list into months and days, and the same checks the database makes.
@@ -157,6 +157,65 @@ export const titleError = (title: string): string | null => {
   const value = title.trim();
   if (!value) return copy.titleMissing;
   return value.length > 200 ? copy.titleLong : null;
+};
+
+/** The most characters a vendor name can hold: the database's own limit. */
+export const VENDOR_MAX = 80;
+
+/** Trimmed, with inner runs of spaces collapsed: the form the server stores. */
+export const normalizeVendor = (vendor: string): string => vendor.replace(/\s+/g, ' ').trim();
+
+export const vendorError = (vendor: string): string | null =>
+  (normalizeVendor(vendor).length > VENDOR_MAX ? copy.vendorLong : null);
+
+/** How many vendors the sheet's list shows at once. */
+export const VENDOR_SHOWN = 5;
+
+export interface VendorSuggestion {
+  name: string;
+  count: number;
+  /** Where the typed letters begin in `name`, for the bold part; -1 for the recent five. */
+  at: number;
+}
+
+export interface VendorMatches {
+  /** Rows to show: at most five, and none when the typed name is exactly one we know. */
+  items: VendorSuggestion[];
+  /** What was typed is exactly a vendor already on a live expense, so there is nothing to offer. */
+  exact: boolean;
+}
+
+/**
+ * The vendor list under the box, the way Add order's names behave: names that start
+ * with what was typed come first, then names with a word that starts with it ("pa"
+ * finds Patil Traders, then Satara Packaging). Never a match inside a word, so "ck"
+ * finds nothing. Case-insensitive; the list arrives newest first and keeps that order.
+ * An empty box shows the five most recently used, so a repeat vendor is one tap.
+ */
+export const vendorMatches = (vendors: ExpenseVendor[], typed: string): VendorMatches => {
+  const query = normalizeVendor(typed);
+  const recent = (): VendorMatches =>
+    ({ items: vendors.slice(0, VENDOR_SHOWN).map((v) => ({ name: v.name, count: v.count, at: -1 })), exact: false });
+  if (!query) return recent();
+
+  const q = query.toLowerCase();
+  const starts: VendorSuggestion[] = [];
+  const word: VendorSuggestion[] = [];
+  for (const vendor of vendors) {
+    const name = vendor.name.toLowerCase();
+    if (name.startsWith(q)) {
+      starts.push({ name: vendor.name, count: vendor.count, at: 0 });
+    } else {
+      // A word starts the query: the space before it is what makes it a word.
+      const at = ` ${name}`.indexOf(` ${q}`);
+      if (at > -1) word.push({ name: vendor.name, count: vendor.count, at });
+    }
+  }
+  const all = [...starts, ...word];
+  // Exactly the name that's already there, and nothing else to offer: a row that
+  // would do nothing. Another case still shows, so a typo'd case gets fixed by a tap.
+  const exact = all.length === 1 && all[0].name === query;
+  return { items: exact ? [] : all.slice(0, VENDOR_SHOWN), exact };
 };
 
 export const noteError = (note: string): string | null => (note.length > 4000 ? copy.noteLong : null);

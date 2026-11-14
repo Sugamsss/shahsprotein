@@ -6,7 +6,7 @@ import type {
   PaymentInput, PayRestInput, PriceChange, Prices, PriorityGiveEffects, RestorePayment, Totals, UpdatedOrder, WriteOffReason,
   WebsiteRequest, WebsiteRequestPage, EntryInput, HomeExtras, IngredientBook, IngredientInput, JournalEntry, JournalFeed,
   JournalLookback, JournalMilestone, JournalMonth, JournalSearch, JournalSearchFilter, Todo, TodoInput, TodoList, WorkDay,
-  Expense, ExpenseInput, ExpenseList,
+  Expense, ExpenseInput, ExpenseList, ExpenseVendor,
 } from './types';
 import type { DeliveryRule, OrderQuoteSnapshot } from '../types/offer';
 import { holdUntilDone } from './unsavedWork';
@@ -373,6 +373,12 @@ export const saveExpense = (expense: ExpenseInput, id?: string) =>
 /** Hides it; deleteExpense(id, false) is the Undo. */
 export const deleteExpense = (id: string, deleted = true) =>
   rpc<{ id: string; deleted: boolean; deleted_at: string | null }>('delete_admin_expense', { id, deleted });
+/**
+ * Who was paid before, newest first: the sheet's vendor suggestions, read once when
+ * it opens and filtered in the browser (20261114000001). Where it answers 'missing'
+ * the Vendor field stays hidden.
+ */
+export const getExpenseVendors = () => rpc<ExpenseVendor[]>('get_admin_expense_vendors');
 
 /** Changes the signed-in admin's password (Settings). */
 export const changePassword = async (password: string): Promise<void> => {

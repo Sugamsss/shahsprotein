@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { Expense } from '../types';
+import type { Expense, ExpenseVendor } from '../types';
 import {
   amountError, dayError, dayFieldLabel, daysInMonth, from24, groupExpenses, istNowTime, istToday, monthCells,
-  monthHeading, monthOf, monthTitle, noteError, rangeFor, shiftMonth, sumOf, timeError, timeNotYet, timeOfDay12,
-  titleError, to24,
+  monthHeading, monthOf, monthTitle, noteError, normalizeVendor, rangeFor, shiftMonth, sumOf, timeError, timeNotYet,
+  timeOfDay12, titleError, to24, vendorError, vendorMatches,
 } from './model';
 
 const TODAY = '2026-11-14';
 
 const expense = (over: Partial<Expense> = {}): Expense => ({
-  id: 'e', spent_on: TODAY, spent_at: '09:40', title: 'Zip pouches', note: '', amount: 3200,
+  id: 'e', spent_on: TODAY, spent_at: '09:40', title: 'Zip pouches', vendor: '', note: '', amount: 3200,
   created_at: '2026-11-14T04:10:00Z', updated_at: '2026-11-14T04:10:00Z', ...over,
 });
 
@@ -163,5 +163,65 @@ describe('the checks the database also makes', () => {
     expect(timeError('08:01', TODAY, TODAY, '08:00')).toBe('That time hasn’t happened yet today.');
     expect(timeError('07:59', TODAY, TODAY, '08:00')).toBeNull();
     expect(timeError('23:59', '2026-11-13', TODAY, '08:00')).toBeNull();
+  });
+});
+
+describe('vendors', () => {
+  const vendors = (...names: string[]): ExpenseVendor[] =>
+    names.map((name, i) => ({ name, count: i + 1, last_used: '2026-11-14' }));
+
+  it('trims the typing and collapses its spaces, the way the server stores it', () => {
+    expect(normalizeVendor('  Patil   Traders ')).toBe('Patil Traders');
+    expect(normalizeVendor('   ')).toBe('');
+  });
+
+  it('keeps a vendor under 80 characters, ignoring the ends', () => {
+    expect(vendorError('v'.repeat(80))).toBeNull();
+    expect(vendorError(`  ${'v'.repeat(80)}  `)).toBeNull();
+    expect(vendorError('v'.repeat(81))).toBe('Keep the vendor under 80 characters.');
+  });
+
+  it('shows the five most recent in an empty box, newest first', () => {
+    const six = vendors('Satara Packaging', 'Patil Traders', 'DTDC Satara', 'Bharat Gas', 'Rajesh Printers', 'Blue Dart');
+    expect(vendorMatches(six, '').items.map((v) => [v.name, v.at])).toEqual([
+      ['Satara Packaging', -1], ['Patil Traders', -1], ['DTDC Satara', -1], ['Bharat Gas', -1], ['Rajesh Printers', -1],
+    ]);
+    expect(vendorMatches(six, '   ').items).toHaveLength(5);
+  });
+
+  it('puts names that start with the typing first, then a word that starts with it', () => {
+    const list = vendors('Satara Packaging', 'Patil Traders', 'Rajesh Printers', 'Saoner Boxes');
+    expect(vendorMatches(list, 'pa').items.map((v) => [v.name, v.at])).toEqual([
+      ['Patil Traders', 0], ['Satara Packaging', 7],
+    ]);
+    expect(vendorMatches(list, 'pa').items).toHaveLength(2);
+  });
+
+  it('never matches inside a word', () => {
+    const { items, exact } = vendorMatches(vendors('Satara Packaging'), 'ck');
+    expect(items).toEqual([]);
+    expect(exact).toBe(false);
+  });
+
+  it('ignores case, and finds a later word', () => {
+    const list = vendors('Patil Traders', 'Satara Packaging');
+    expect(vendorMatches(list, 'TRADERS').items.map((v) => v.name)).toEqual(['Patil Traders']);
+    expect(vendorMatches(list, 'traders').items[0].at).toBe(6);
+    expect(vendorMatches(list, 'PACK').items.map((v) => v.name)).toEqual(['Satara Packaging']);
+    expect(vendorMatches(list, 'patil tr').items.map((v) => v.name)).toEqual(['Patil Traders']);
+  });
+
+  it('offers nothing when the typed name is exactly one it already has', () => {
+    const list = vendors('Patil Traders', 'Satara Packaging');
+    expect(vendorMatches(list, 'Satara Packaging')).toEqual({ items: [], exact: true });
+    // Another case is still offered, so a tap fixes the spelling.
+    expect(vendorMatches(list, 'satara packaging').items.map((v) => v.name)).toEqual(['Satara Packaging']);
+    // With something else to offer, the exact one stays in the list.
+    expect(vendorMatches(vendors('Patil Traders', 'Patil Traders Satara'), 'Patil Traders').items).toHaveLength(2);
+  });
+
+  it('stops at five', () => {
+    const many = vendors(...Array.from({ length: 9 }, (_, i) => `Patil ${i}`));
+    expect(vendorMatches(many, 'patil').items).toHaveLength(5);
   });
 });

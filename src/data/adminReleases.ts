@@ -22,6 +22,13 @@ export interface AdminRelease {
 
 export const adminReleases: AdminRelease[] = [
   {
+    id: '2026-11-14-expense-vendors',
+    for: ['admin', 'cook'],
+    kind: 'new',
+    title: 'Who you paid, and a search total',
+    body: 'An expense can now name the vendor: start typing and one you have used fills in. While a search is typed, one bar adds up everything it finds, for the switch you picked.',
+  },
+  {
     id: '2026-11-14-expenses',
     for: ['cook', 'admin'],
     kind: 'new',
