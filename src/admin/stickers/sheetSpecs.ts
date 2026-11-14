@@ -341,21 +341,21 @@ export const SHEET_SPECS: Record<SheetId, SheetSpec> = {
   }),
   // 100 g backs — 9-up, 3 x 3. bleed 2, trim 93.75 x 127.5.
   'rj-100g-back': spec({
-    id: 'rj-100g-back', side: 'back', asset: '/assets/stickers/rj-100g-back-9up-v1.pdf',
+    id: 'rj-100g-back', side: 'back', asset: '/assets/stickers/rj-100g-back-9up-v2.pdf',
     giftAsset: '/assets/stickers/rj-100g-back-9up-gift-v1.pdf',
     cols: 3, rowsCount: 3, cells: 9,
     bleedOrigin: [5.775, 31.35], pitch: [97.74, 131.5], trim: [93.75, 127.5], bleed: 2,
     stamp: STAMP_RJ_100G,
   }),
   'ms-100g-back': spec({
-    id: 'ms-100g-back', side: 'back', asset: '/assets/stickers/ms-100g-back-9up-v1.pdf',
+    id: 'ms-100g-back', side: 'back', asset: '/assets/stickers/ms-100g-back-9up-v2.pdf',
     giftAsset: '/assets/stickers/ms-100g-back-9up-gift-v1.pdf',
     cols: 3, rowsCount: 3, cells: 9,
     bleedOrigin: [5.775, 31.35], pitch: [97.74, 131.5], trim: [93.75, 127.5], bleed: 2,
     stamp: STAMP_MS_100G,
   }),
   'db-100g-back': spec({
-    id: 'db-100g-back', side: 'back', asset: '/assets/stickers/db-100g-back-9up-v1.pdf',
+    id: 'db-100g-back', side: 'back', asset: '/assets/stickers/db-100g-back-9up-v2.pdf',
     giftAsset: '/assets/stickers/db-100g-back-9up-gift-v1.pdf',
     cols: 3, rowsCount: 3, cells: 9,
     bleedOrigin: [5.775, 31.35], pitch: [97.74, 131.5], trim: [93.75, 127.5], bleed: 2,
