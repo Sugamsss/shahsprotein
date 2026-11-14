@@ -149,11 +149,15 @@ describe('no writing rules on any back (owner, 2026-11-14)', () => {
 });
 
 describe('uniform product details (owner, 2026-11-14)', () => {
-  it('every back starts its values at one left edge', () => {
-    for (const spec of Object.values(SHEET_SPECS)) {
-      if (spec.side === 'back') {
+  it('pouches right-anchor, the container left-anchors, as approved', () => {
+    for (const [id, spec] of Object.entries(SHEET_SPECS)) {
+      if (spec.side !== 'back') continue;
+      if (id === 'db-250g-container') {
         expect(spec.stamp?.align).toBe('left');
-        expect(spec.stamp?.valueLeft).toBeGreaterThan(0);
+        expect(spec.stamp?.valueLeft).toBe(22.353);
+      } else {
+        expect(spec.stamp?.align).toBe('right');
+        expect(spec.stamp?.valueRight).toBeGreaterThan(0);
       }
     }
   });
@@ -165,13 +169,6 @@ describe('uniform product details (owner, 2026-11-14)', () => {
         expect(row.face).toBe(row.key === 'mrp' ? 'bold' : 'semi');
       }
     }
-  });
-  it('value columns start right of the labels', () => {
-    expect(specFor('raggi-jaggi', '250 g', 'back')?.stamp?.valueLeft).toBe(59.3);
-    expect(specFor('raggi-jaggi', '100 g', 'back')?.stamp?.valueLeft).toBe(47.5);
-    expect(specFor('muesli', '100 g', 'back')?.stamp?.valueLeft).toBe(46.8);
-    expect(specFor('bites', '100 g', 'back')?.stamp?.valueLeft).toBe(48.2);
-    expect(specFor('bites', '250 g', 'back')?.stamp?.valueLeft).toBe(22.353);
   });
 });
 

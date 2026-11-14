@@ -154,11 +154,11 @@ const spec = (s: SheetSpec): SheetSpec => s;
 // Values print straight onto the label baseline with no rule beneath them.
 //
 // Every value row on every back is one size (owner, 2026-11-14): 6.35 pt,
-// MRP bold, the rest semi. Every value starts at one left edge per layout
-// (`valueLeft`, just right of the widest row label), so the whole Product
-// Details block reads as one column with one start. The 100 g column is the
-// tightest: its values must still end at the old right edge, which the
-// widest realistic values (unit price, dates) do — verified on renders.
+// MRP bold, the rest semi. Alignment follows the approved art: the pouches
+// right-anchor their values at the value column's right edge, the container
+// left-anchors at its valueLeft. The 100 g column is too narrow to left-align
+// uniform values without printing over its own labels or the divider, so it
+// keeps its approved right alignment.
 //
 // Every back now ships WITHOUT writing rules (owner, 2026-11-14): the -v2
 // sheets have no gold lines in the Product Details value column, so the
@@ -198,8 +198,7 @@ export const GIFT_INK = '#861520';
 
 /** The 114 x 142 backs (250 g and 500 g): 2 x 3, same details block. */
 const stamp114x142 = (): StampLayout => ({
-  align: 'left',
-  valueLeft: 59.3,
+  align: 'right',
   valueRight: 73.8,
   rows: [
     { key: 'mrp', baseline: 119.573, pt: 6.35, face: 'bold' },
@@ -231,12 +230,10 @@ const STAMP_MS_250G = stamp114x142();
 const STAMP_RJ_500G = stamp114x142();
 const STAMP_MS_500G = stamp114x142();
 
-/** 100 g pouch backs (93.75 x 127.5) — Raggi Jaggi: one 6.35 pt column.
- * The column is narrow: values start just right of the labels and the
- * longest dates stop half a millimetre shy of the divider. */
+/** 100 g pouch backs (93.75 x 127.5) — Raggi Jaggi: one 6.35 pt column,
+ * right-anchored as the approved art has it. */
 const STAMP_RJ_100G: StampLayout = {
-  align: 'left',
-  valueLeft: 47.5,
+  align: 'right',
   valueRight: 60.4,
   rows: [
     { key: 'mrp', baseline: 105.071, pt: 6.35, face: 'bold' },
@@ -251,11 +248,9 @@ const STAMP_RJ_100G: StampLayout = {
   currencyInArt: false,
 };
 
-/** 100 g pouch backs — Muesli: one 6.35 pt column. Same narrow-column
- * rule as Raggi Jaggi: dates stop shy of the divider. */
+/** 100 g pouch backs — Muesli: one 6.35 pt column, right-anchored. */
 const STAMP_MS_100G: StampLayout = {
-  align: 'left',
-  valueLeft: 46.8,
+  align: 'right',
   valueRight: 59.2,
   rows: [
     { key: 'mrp', baseline: 104.373, pt: 6.35, face: 'bold' },
@@ -270,11 +265,9 @@ const STAMP_MS_100G: StampLayout = {
   currencyInArt: false,
 };
 
-/** 100 g pouch backs — Date Bites: one 6.35 pt column. Same narrow-column
- * rule: dates stop shy of the divider. */
+/** 100 g pouch backs — Date Bites: one 6.35 pt column, right-anchored. */
 const STAMP_DB_100G: StampLayout = {
-  align: 'left',
-  valueLeft: 48.2,
+  align: 'right',
   valueRight: 61.2,
   rows: [
     { key: 'mrp', baseline: 104.273, pt: 6.35, face: 'bold' },

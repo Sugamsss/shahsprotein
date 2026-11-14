@@ -280,21 +280,37 @@ export const makeSheetPdf = async (
       if (row.key === 'unit' && gift) {
         // An inline lockup: "for you ♥" — both on the row's baseline, the heart
         // one cap height tall so it reads with the words instead of floating
-        // over the corner. It starts at the value column's left edge like every
-        // other row, so a gift line starts where a priced one would.
+        // over the corner.
         // The heart follows the words, never leads them (owner, 2026-11-10): the
         // pair reads as one run of type that happens to end in a heart.
-        const textWmm = drawRun(page, text, anchor, baseline, row.pt, fonts.italic, ink, pageH, 'left');
+        // A right-aligned lockup ends at the value column (heart's right edge on
+        // valueRight); a left-aligned one starts at it, so a gift line shares
+        // its layout's edge with every priced row.
         const heartScale = (row.pt * CAP_RATIO) / 18.4;
-        const heartLeftMm = anchor + textWmm + HEART_GAP;
-        // pdf-lib maps a path point (px, py) to (x + px·s, y − py·s): the ink's
-        // left edge is x + 2s and its seat on the baseline is y − 21.4s.
-        page.drawSvgPath(HEART_PATH, {
-          x: heartLeftMm * MM - 2 * heartScale,
-          y: pageH - baseline * MM + 21.4 * heartScale,
-          scale: heartScale,
-          color: giftInk,
-        });
+        if (align === 'right') {
+          const lockupRight = x0 + (stamp.valueRight as number);
+          const heartLeftPt = lockupRight * MM - 20 * heartScale;
+          drawRun(page, text, heartLeftPt / MM - HEART_GAP, baseline, row.pt, fonts.italic, ink, pageH, 'right');
+          // pdf-lib maps a path point (px, py) to (x + px·s, y − py·s): the ink's
+          // left edge is x + 2s and its seat on the baseline is y − 21.4s.
+          page.drawSvgPath(HEART_PATH, {
+            x: heartLeftPt - 2 * heartScale,
+            y: pageH - baseline * MM + 21.4 * heartScale,
+            scale: heartScale,
+            color: giftInk,
+          });
+        } else {
+          const textWmm = drawRun(page, text, anchor, baseline, row.pt, fonts.italic, ink, pageH, 'left');
+          const heartLeftMm = anchor + textWmm + HEART_GAP;
+          // pdf-lib maps a path point (px, py) to (x + px·s, y − py·s): the ink's
+          // left edge is x + 2s and its seat on the baseline is y − 21.4s.
+          page.drawSvgPath(HEART_PATH, {
+            x: heartLeftMm * MM - 2 * heartScale,
+            y: pageH - baseline * MM + 21.4 * heartScale,
+            scale: heartScale,
+            color: giftInk,
+          });
+        }
         continue;
       }
 
