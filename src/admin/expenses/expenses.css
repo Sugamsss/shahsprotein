@@ -82,6 +82,12 @@
   display: grid; margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--adm-hairline);
 }
 .adm-exp__delete .adm-text-btn { margin-top: 8px; }
+/* Delete's failure belongs inside the pinned bar, not floating above the clipped
+   sheet: while the sheet is open it covers the page toast and its focus trap
+   keeps Tab inside, so this is where Try again can be tapped and tabbed to. */
+.adm-exp__actions { display: grid; gap: 10px; }
+.adm-exp__actions .adm-toast-slot { position: static; padding: 0; }
+.adm-exp__actions .adm-toast { width: 100%; }
 
 /* ---- The Date and Time fields: 48px buttons with an icon ----------------------- */
 

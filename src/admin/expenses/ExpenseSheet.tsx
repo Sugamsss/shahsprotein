@@ -1,16 +1,16 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { CalendarDays, Clock, Trash2 } from 'lucide-react';
 import { adminCopy } from '../../data/adminCopy';
 import { AdminSheet } from '../AdminSheet';
 import { deleteExpense, saveExpense, toAdminError } from '../api';
 import { Field } from '../parts';
-import { useToast } from '../toast';
+import { ToastSlot, useToast } from '../toast';
 import type { Expense } from '../types';
 import { useUnsavedWork } from '../unsavedWork';
 import { useUndoable } from '../useUndoable';
 import { Calendar } from './Calendar';
 import {
-  amountError, dayError, dayFieldLabel, istNowTime, noteError, timeError, timeOfDay12, titleError,
+  amountError, dayError, dayFieldLabel, istNowTime, istToday, noteError, timeError, timeOfDay12, titleError,
 } from './model';
 import { PickerSheet } from './PickerSheet';
 import { TimePicker } from './TimePicker';
@@ -48,6 +48,12 @@ export const ExpenseSheet: React.FC<{
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<Picker | null>(null);
+  const [, setClockTick] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockTick((tick) => tick + 1), 15_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const amountField = useRef<HTMLInputElement>(null);
   const titleField = useRef<HTMLInputElement>(null);
@@ -59,8 +65,9 @@ export const ExpenseSheet: React.FC<{
 
   // The clock is read again on every render: a time in the future is caught on save too.
   const now = istNowTime();
-  const dayMessage = dayError(day, today);
-  const timeMessage = timeError(time, day, today, now);
+  const currentToday = istToday();
+  const dayMessage = dayError(day, currentToday);
+  const timeMessage = timeError(time, day, currentToday, now);
 
   const state = JSON.stringify({ amount, title, day, time, note });
   const baseline = useRef('');
@@ -80,8 +87,9 @@ export const ExpenseSheet: React.FC<{
     const next = { amount: amountError(amount) ?? undefined, title: titleError(title) ?? undefined, note: noteError(note) ?? undefined };
     setErrors(next);
     if (next.amount || next.title || next.note) { focusFirst(next); return; }
-    if (dayMessage) { dateButton.current?.focus(); return; }
-    if (timeMessage) { timeButton.current?.focus(); return; }
+    const submitToday = istToday();
+    if (dayError(day, submitToday)) { dateButton.current?.focus(); return; }
+    if (timeError(time, day, submitToday, istNowTime())) { timeButton.current?.focus(); return; }
     setBusy(true);
     setFormError('');
     try {
@@ -102,18 +110,40 @@ export const ExpenseSheet: React.FC<{
     }
   };
 
-  const remove = () => {
-    if (!expense) return;
-    const hide = (deleted: boolean, quiet = false): void => void run({
-      apply: () => () => undefined,
-      save: async () => { await deleteExpense(expense.id, deleted); if (deleted) onDeleted(); else onSaved(); },
-      text: copy.deleted,
-      undo: () => hide(false, true),
-      quiet,
-    });
-    baseline.current = state;
-    hide(true);
+  // Undo brings the row back; it's the same delete call with the flag off.
+  const hide = (id: string, quiet = false): void => void run({
+    apply: () => () => undefined,
+    save: async () => { await deleteExpense(id, false); onSaved(); },
+    text: copy.deleted,
+    undo: () => hide(id, true),
+    quiet,
+  });
+
+  // Delete leaves through the same door on its first try and on Try again (the
+  // toast re-runs this save): the row goes once the server has it, then the sheet
+  // closes and the list reloads. While it waits, Save and Delete are disabled and
+  // closing asks first, so a retry can't be raced by a second submit.
+  const deleteNow = async (id: string): Promise<void> => {
+    setBusy(true);
+    try {
+      await deleteExpense(id, true);
+    } catch (err) {
+      setBusy(false);
+      throw err;
+    }
+    onDeleted();
     onClose();
+  };
+
+  const remove = () => {
+    if (!expense || busy) return;
+    baseline.current = state;
+    void run({
+      apply: () => () => undefined,
+      save: () => deleteNow(expense.id),
+      text: copy.deleted,
+      undo: () => hide(expense.id, true),
+    });
   };
 
   const pickDate = (next: string) => {
@@ -131,16 +161,21 @@ export const ExpenseSheet: React.FC<{
         closeLabel={adminCopy.close}
         initialFocus={amountField}
         canClose={() => !busy && (!dirty || window.confirm(adminCopy.journal.sheet.unsaved))}
-        bar={<button type="submit" form={formId} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
-          {busy ? copy.saving : editing ? copy.saveEdit : copy.save}
-        </button>}
+        bar={<div className="adm-exp__actions">
+          {/* Delete's failure lands here: a sheet covers the page toast, and its
+              focus trap keeps Tab inside, so Try again has to be in the bar. */}
+          <ToastSlot />
+          <button type="submit" form={formId} className="adm-btn adm-btn--primary adm-btn--block" disabled={busy}>
+            {busy ? copy.saving : editing ? copy.saveEdit : copy.save}
+          </button>
+        </div>}
       >
         <form id={formId} className="adm-form" noValidate onSubmit={(event) => void submit(event)}>
           {formError && <p className="adm-form__error" role="alert">{formError}</p>}
           <Field label={copy.amount} prefix="₹" className="adm-field--amount" error={errors.amount ?? null} hint={copy.amountHint}>
-            <input ref={amountField} className="adm-input" inputMode="numeric" autoComplete="off" placeholder={copy.amountPlaceholder}
+            <input ref={amountField} className="adm-input" inputMode="numeric" autoComplete="off" maxLength={16} placeholder={copy.amountPlaceholder}
               value={amount} onChange={(event) => {
-                setAmount(event.target.value.replace(/[^0-9]/g, '').slice(0, 10));
+                setAmount(event.target.value.slice(0, 16));
                 if (errors.amount) setErrors((current) => ({ ...current, amount: undefined }));
               }} />
           </Field>
@@ -160,7 +195,7 @@ export const ExpenseSheet: React.FC<{
                 <button id={`${formId}-date`} ref={dateButton} type="button" className="adm-input adm-picker-btn"
                   aria-haspopup="dialog" aria-expanded={picker === 'date'} aria-describedby={dayMessage ? dateNoteId : undefined}
                   aria-invalid={dayMessage ? true : undefined} onClick={() => setPicker('date')}>
-                  <span>{dayFieldLabel(day, today)}</span>
+                  <span>{dayFieldLabel(day, currentToday)}</span>
                   <CalendarDays size={20} strokeWidth={1.75} aria-hidden="true" />
                 </button>
               </div>
@@ -191,7 +226,7 @@ export const ExpenseSheet: React.FC<{
 
           {editing && (
             <div className="adm-exp__delete">
-              <button type="button" className="adm-text-btn adm-text-btn--danger" onClick={remove}>
+              <button type="button" className="adm-text-btn adm-text-btn--danger" onClick={remove} disabled={busy}>
                 <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />{copy.delete}
               </button>
               <p className="adm-field__hint">{copy.deleteHint}</p>
@@ -208,9 +243,9 @@ export const ExpenseSheet: React.FC<{
           initialFocus={pickerFocus}
           closeRef={closePicker}
           onClose={() => setPicker(null)}
-          bar={<button type="button" className="adm-btn adm-btn--quiet" onClick={() => pickDate(today)}>{copy.todayButton}</button>}
+          bar={<button type="button" className="adm-btn adm-btn--quiet" onClick={() => pickDate(currentToday)}>{copy.todayButton}</button>}
         >
-          <Calendar value={day} today={today} onChange={pickDate} initialFocus={pickerFocus} />
+          <Calendar value={day} today={currentToday} onChange={pickDate} initialFocus={pickerFocus} />
         </PickerSheet>
       )}
 

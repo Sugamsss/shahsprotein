@@ -58,7 +58,7 @@ const ExpensesPage: React.FC = () => {
   } else {
     body = (
       <div className="adm-exp__list" aria-busy={list.loading || undefined}>
-        {search && (
+        {search && !list.error && (
           <p className="adm-exp__found">
             <b>{copy.entries(rows.length)}</b> · {copy.inAll(formatMoney(sumOf(rows)))}
           </p>
@@ -135,12 +135,17 @@ const ExpensesPage: React.FC = () => {
         </div>
       )}
 
+      {list.error && data && <div className="adm-exp__refresh-error" role="alert">
+        <span>{copy.refreshFailed} {copy.staleResults}</span>
+        <button type="button" className="adm-text-btn" onClick={() => void list.reload()}>{copy.retry}</button>
+      </div>}
+
       {body}
 
       {sheet && (
         <ExpenseSheet
           expense={sheet.expense}
-          today={data?.today ?? today}
+          today={istToday()}
           onSaved={() => void list.reload()}
           onDeleted={() => void list.reload()}
           onClose={() => setSheet(null)}

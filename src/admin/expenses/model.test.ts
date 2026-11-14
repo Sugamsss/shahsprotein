@@ -44,6 +44,12 @@ describe('India days and months', () => {
   it('takes India today, not the device day', () => {
     expect(istToday(Date.parse('2026-11-13T18:00:00Z'))).toBe('2026-11-13');
     expect(istToday(Date.parse('2026-11-13T19:00:00Z'))).toBe('2026-11-14'); // 00:30 IST
+    const beforeRollover = Date.parse('2026-11-13T18:29:00Z');
+    const afterRollover = Date.parse('2026-11-13T18:31:00Z');
+    expect(istToday(beforeRollover)).toBe('2026-11-13');
+    expect(istNowTime(beforeRollover)).toBe('23:59');
+    expect(istToday(afterRollover)).toBe('2026-11-14');
+    expect(istNowTime(afterRollover)).toBe('00:01');
   });
 });
 
@@ -123,6 +129,9 @@ describe('the checks the database also makes', () => {
     expect(amountError('   ')).toBe('Add an amount first.');
     expect(amountError('0')).toBe('Just the number, like 500.');
     expect(amountError('12.5')).toBe('Just the number, like 500.');
+    expect(amountError('12.50')).toBe('Just the number, like 500.');
+    expect(amountError('-500')).toBe('Just the number, like 500.');
+    expect(amountError('1e3')).toBe('Just the number, like 500.');
     expect(amountError('12a')).toBe('Just the number, like 500.');
     expect(amountError('2147483648')).toBe('Just the number, like 500.');
     expect(amountError('1')).toBeNull();

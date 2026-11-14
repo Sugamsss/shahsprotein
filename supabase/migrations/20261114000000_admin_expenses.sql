@@ -161,6 +161,10 @@ begin
     raise exception using message = 'That time doesn''t look right.', errcode = '22023';
   end if;
   v_at := (p_expense ->> 'spent_at')::time(0);
+  if v_on = (timezone('Asia/Kolkata', now()))::date
+    and v_on + v_at > timezone('Asia/Kolkata', now()) then
+    raise exception using message = 'That time hasn''t happened yet today.', errcode = '22023';
+  end if;
 
   v_title := btrim(p_expense ->> 'title', E' \t\n\r');
   if v_title = '' or char_length(v_title) > 200 then
